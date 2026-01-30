@@ -7,9 +7,7 @@
 - tool to compress/extract entire code directory, while gitignoring things
 - check all remaining tasks in paper notebook
 - discuss task management cost and its potential relevance to inability to complete trivial tasks (such as pushups)
-- .command files to update homebrew/pip packages AND ones that run ai clis
 - practice writing the what, following 01 doc
-- license for the repos and apps that they will contain
 - read the claude code book on mcp, parallel development, sub-agents
 - what's python's Protocol?
 - try developing 2 projects in parallel
@@ -17,9 +15,7 @@
 - hello world python gui apps using different packages
 - establish straightforward workflow. inbox zero strategy may be key
 - simple todo management cli tool that works well with git and inbox zero strategy
-- generate doc on commonly used metadata
-- system-wide python3 is used and poetry isnt found on macbook
-- make sure poetry is installed via homebrew on all pcs
+- sqlalchemy?
 
 ### done
 
@@ -29,7 +25,12 @@
 - consider replacing _private in docs with "secrets" => replaced and refactored
 - clone repos on mac mini
 - generate doc on python dependency management
-- what is .zprofile? check it on all pcs => unsuitable for setting api keys as environment variables. plaintext. exposed to all processes. use keychain.
+- what is .zprofile? check it on all pcs => unsuitable for setting api keys as environment variables. plaintext. exposed to all processes. use keychain
+- system-wide python3 is used and poetry isnt found on macbook => fixed
+- make sure poetry is installed via homebrew on all pcs
+- .command files to update homebrew/pip packages AND ones that run ai clis => first half done. second half violates yagni
+- license for the repos and apps that they will contain => gpl good enough
+- generate doc on commonly used metadata => saved in secrets repo
 
 ### declined
 
