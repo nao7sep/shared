@@ -5,7 +5,6 @@
 - branch management best practices
 - check all existing tasks to draw a bigger picture. currently work is in bits
 - tool to compress/extract entire code directory, while gitignoring things
-- clone repos on mac mini
 - check all remaining tasks in paper notebook
 - discuss task management cost and its potential relevance to inability to complete trivial tasks (such as pushups)
 - .command files to update homebrew/pip packages AND ones that run ai clis
@@ -16,6 +15,11 @@
 - try developing 2 projects in parallel
 - try using mac keychain
 - hello world python gui apps using different packages
+- establish straightforward workflow. inbox zero strategy may be key
+- simple todo management cli tool that works well with git and inbox zero strategy
+- generate doc on commonly used metadata
+- system-wide python3 is used and poetry isnt found on macbook
+- make sure poetry is installed via homebrew on all pcs
 
 ### done
 
@@ -23,6 +27,9 @@
 - beyond compare on macbook as well
 - minimal .gitignore in 2 repos
 - consider replacing _private in docs with "secrets" => replaced and refactored
+- clone repos on mac mini
+- generate doc on python dependency management
+- what is .zprofile? check it on all pcs => unsuitable for setting api keys as environment variables. plaintext. exposed to all processes. use keychain.
 
 ### declined
 
