@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "tk"
+version = "0.1.0"
+description = "A quick CLI app to manage tasks"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "tk", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.scripts]
+tk = "tk.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
