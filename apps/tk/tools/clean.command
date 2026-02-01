@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Clean build artifacts from tk project
+# Removes .venv, __pycache__, .pyc files
+
+set -e  # Exit on any error
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+
+echo ""
+echo "=== tk Cleanup ==="
+echo ""
+echo "Project directory: $PROJECT_DIR"
+echo ""
+
+# Navigate to project directory
+cd "$PROJECT_DIR"
+
+# Remove .venv directory
+if [ -d ".venv" ]; then
+    echo "Removing .venv directory..."
+    rm -rf .venv
+    echo "✓ Removed .venv"
+else
+    echo "✓ No .venv directory found"
+fi
+
+# Remove __pycache__ directories
+echo ""
+echo "Removing __pycache__ directories..."
+PYCACHE_COUNT=$(find . -type d -name "__pycache__" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$PYCACHE_COUNT" -gt 0 ]; then
+    find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    echo "✓ Removed $PYCACHE_COUNT __pycache__ directories"
+else
+    echo "✓ No __pycache__ directories found"
+fi
+
+# Remove .pyc files
+echo ""
+echo "Removing .pyc files..."
+PYC_COUNT=$(find . -type f -name "*.pyc" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$PYC_COUNT" -gt 0 ]; then
+    find . -type f -name "*.pyc" -delete 2>/dev/null || true
+    echo "✓ Removed $PYC_COUNT .pyc files"
+else
+    echo "✓ No .pyc files found"
+fi
+
+echo ""
+echo "=== Cleanup Complete! ==="
+echo ""
