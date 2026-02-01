@@ -43,3 +43,9 @@ then i made sure the diffs were insignificant. no large refactoring or "patches 
 this is not a log of work, rather a decision note: i will not have how.md updated. its sole purpose was to save all vital points of the initial conversation. i had what.md, but it was messy. along the way of initial design, i asked some questions and ai clarified things, which i then agreed on. so, what.md alone wouldnt have been enough for implementation.
 
 i actually thought about deleting what.md too once i had how.md, but ai suggested me to keep it. then i added more and more instructions to it. i am not sure how to define the actual purpose of what.md now and part of me wants to delete it together with how.md, but deletion can be done any time. keeping the files currently doesnt hurt. if ais get confused or something because of them, eventually, i'll find a new place for them.
+
+## bug fixes and improvements
+
+i fixed bugs in one iteration and made improvements in the following one.
+
+major discomfort with python comes from differences between python culture and c# culture. so, i still ask ai to read transition-guide before any work. i might make a more concise version of this to save context, but not today. i'll work on typescript, node.js, etc as well. when i know enough about what i am playing with, i'll try reducing this 48 kb set of documents to 5-10 kb, while adding ts-related info.
