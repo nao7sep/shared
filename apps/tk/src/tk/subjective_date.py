@@ -1,7 +1,7 @@
 """Subjective date calculation with timezone and day-start offset."""
 
 from datetime import datetime, time
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from tk.profile import parse_time
 
 
@@ -44,7 +44,7 @@ def calculate_subjective_date(
     # Convert to target timezone
     try:
         tz = ZoneInfo(timezone_str)
-    except Exception as e:
+    except ZoneInfoNotFoundError as e:
         raise ValueError(f"Invalid timezone '{timezone_str}': {e}")
 
     local_dt = utc_dt.astimezone(tz)

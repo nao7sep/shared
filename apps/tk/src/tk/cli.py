@@ -18,10 +18,14 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
         Tuple of (command, args, kwargs)
 
     Examples:
-        "add foo bar" → ("add", ["foo bar"], {})
+        "add foo bar" → ("add", ["foo", "bar"], {})
         "done 1 --note 'finished'" → ("done", [1], {"note": "finished"})
         "history --days 7" → ("history", [], {"days": 7})
-        "edit 1 new text here" → ("edit", [1, "new text here"], {})
+        "edit 1 new text here" → ("edit", [1, "new", "text", "here"], {})
+
+    Note:
+        Commands that don't support flags (like 'add') will have all
+        arguments treated as literal text, even if they start with '--'.
     """
     # Use shlex to handle quoted strings properly
     try:
@@ -33,6 +37,19 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
         return "", [], {}
 
     cmd = parts[0]
+
+    # Commands that should not parse flags - treat everything as literal text
+    # These are commands where the text argument is free-form and may contain "--"
+    no_flag_commands = {
+        "add", "a",     # 'a' is the shortcut for 'add'
+        "edit", "e",    # 'e' is the shortcut for 'edit'
+        "note", "n"     # 'n' is the shortcut for 'note'
+    }
+
+    if cmd in no_flag_commands:
+        # For these commands, all parts after command are regular args
+        return cmd, parts[1:], {}
+
     args = []
     kwargs = {}
 
@@ -151,7 +168,7 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
 
     elif cmd == "add":
         if len(args) != 1:
-            raise ValueError("Usage: add <text>")
+            raise ValueError("Usage: add <text...>")
         return commands.cmd_add(session, args[0])
 
     elif cmd == "list":
@@ -195,7 +212,7 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
         if len(args) < 1:
             raise ValueError("Usage: note <num> [<text>]")
         num = args[0]
-        note_text = " ".join(args[1:]) if len(args) > 1 else None
+        note_text = " ".join(str(a) for a in args[1:]) if len(args) > 1 else None
         return commands.cmd_note(session, num, note_text)
 
     elif cmd == "date":
@@ -356,6 +373,9 @@ Examples:
             prof = profile.create_profile(args.profile)
             print(f"Profile created: {args.profile}")
 
+            # Reload profile to get properly mapped paths
+            prof = profile.load_profile(args.profile)
+
             # Create empty tasks file
             tasks_data = {"tasks": []}
             data.save_tasks(prof["data_path"], tasks_data)
@@ -401,14 +421,24 @@ Examples:
 
         except FileNotFoundError:
             print(f"Profile not found: {args.profile}")
-            print(f"Create it with: tk new {args.profile}")
-            print()
+            print(f"Create it with: tk new --profile {args.profile}")
+            sys.exit(1)
 
         except Exception as e:
             print(f"Error loading profile: {e}")
             sys.exit(1)
+    else:
+        # No profile specified
+        print("Error: No profile specified")
+        print()
+        print("Create a new profile:")
+        print("  tk new --profile <path>")
+        print()
+        print("Or start with an existing profile:")
+        print("  tk --profile <path>")
+        sys.exit(1)
 
-    # Start REPL
+    # Start REPL (only reached if profile loaded successfully)
     repl(session)
 
 

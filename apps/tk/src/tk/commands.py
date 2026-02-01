@@ -30,7 +30,10 @@ def cmd_new(profile_path: str, session: dict[str, Any]) -> str:
     Returns:
         Success message
     """
-    prof = profile.create_profile(profile_path)
+    profile.create_profile(profile_path)
+
+    # Reload profile to get properly mapped paths
+    prof = profile.load_profile(profile_path)
     session["profile_path"] = profile_path
     session["profile"] = prof
 
@@ -141,8 +144,19 @@ def cmd_history(session: dict[str, Any], days: int | None = None) -> str:
 
     if days is not None:
         # Filter by subjective_date (last N days)
-        from datetime import date, timedelta
-        cutoff = date.today() - timedelta(days=days - 1)
+        # Use subjective date calculation for consistency with how tasks are marked done/cancelled
+        from datetime import timedelta
+
+        # Get current subjective date using the profile's timezone and day start
+        current_subjective = subjective_date.get_current_subjective_date(
+            session["profile"]["timezone"],
+            session["profile"]["subjective_day_start"]
+        )
+        # Parse as date object to do arithmetic
+        from datetime import date as date_type
+        today = date_type.fromisoformat(current_subjective)
+        cutoff = today - timedelta(days=days - 1)
+        # String comparison works correctly because ISO 8601 format (YYYY-MM-DD) is lexicographically sortable
         handled_with_indices = [
             (i, t) for i, t in handled_with_indices
             if t.get("subjective_date") and t["subjective_date"] >= cutoff.isoformat()
@@ -234,7 +248,7 @@ def cmd_cancel(session: dict[str, Any], num: int, note: str | None = None, date_
     return _handle_task(session, num, "cancelled", note, date_str)
 
 
-def _handle_task(session: dict[str, Any], num: int, status: str, note: str | None, date_str: str | None, interactive: bool = True) -> str:
+def _handle_task(session: dict[str, Any], num: int, status: str, note: str | None, date_str: str | None) -> str:
     """Helper to handle a task (done or cancelled).
 
     Args:
@@ -243,7 +257,6 @@ def _handle_task(session: dict[str, Any], num: int, status: str, note: str | Non
         status: "done" or "cancelled"
         note: Optional note
         date_str: Optional subjective date (YYYY-MM-DD)
-        interactive: If True, prompt for confirmation and missing fields
 
     Returns:
         Success message
@@ -280,30 +293,30 @@ def _handle_task(session: dict[str, Any], num: int, status: str, note: str | Non
             session["profile"]["subjective_day_start"]
         )
 
-    # Interactive confirmation if enabled
-    if interactive:
-        try:
-            print(f"Task: {task['text']}")
-            print(f"Will be marked as: {status}")
-            print(f"Subjective date: {subj_date}")
-            print("(Press Ctrl+C to cancel)")
+    # Interactive confirmation and prompts
+    try:
+        print(f"Task: {task['text']}")
+        print(f"Will be marked as: {status}")
+        print(f"Subjective date: {subj_date}")
+        print("(Press Ctrl+C to cancel)")
 
-            # Prompt for note if not provided
-            if note is None:
-                note_input = input("Note (press Enter to skip): ").strip()
-                note = note_input if note_input else None
+        # Prompt for note if not provided
+        if note is None:
+            note_input = input("Note (press Enter to skip): ").strip()
+            note = note_input if note_input else None
 
-            # Prompt for date override if not provided
-            if not date_str:
-                date_input = input(f"Date override (press Enter to use {subj_date}): ").strip()
-                if date_input:
-                    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_input):
-                        raise ValueError("Invalid date format. Expected: YYYY-MM-DD")
-                    subj_date = date_input
+        # Prompt for date override if not provided
+        if not date_str:
+            date_input = input(f"Date override (press Enter to use {subj_date}): ").strip()
+            if date_input:
+                if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_input):
+                    raise ValueError("Invalid date format. Expected: YYYY-MM-DD")
+                subj_date = date_input
 
-        except KeyboardInterrupt:
-            print()  # New line after ^C
-            return "Cancelled."
+    except KeyboardInterrupt:
+        print()  # New line after ^C
+        session["last_list"] = []
+        return "Cancelled."
 
     # Update task
     now_utc = datetime.now(timezone.utc).isoformat()

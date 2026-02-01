@@ -11,25 +11,34 @@ def map_path(path: str, profile_dir: str) -> str:
     """Map relative paths with ~ or @ prefix to absolute paths.
 
     Args:
-        path: Path to map (can start with ~, @, or be absolute)
+        path: Path to map (can start with ~, @, or be relative/absolute)
         profile_dir: Directory where the profile file is located
 
     Returns:
         Absolute path string
 
     Mapping rules:
-        ~ -> user home directory
-        @ -> app directory (where pyproject.toml is located)
-        Otherwise: treat as absolute path
+        ~ or ~/ -> user home directory
+        @ or @/ -> app directory (where pyproject.toml is located)
+        Relative paths -> relative to profile_dir
+        Absolute paths -> used as-is
     """
-    if path.startswith("~"):
-        return str(Path.home() / path[2:])  # Skip "~/"
-    elif path.startswith("@"):
+    if path.startswith("~/"):
+        return str(Path.home() / path[2:])
+    elif path == "~":
+        return str(Path.home())
+    elif path.startswith("@/"):
         # App directory is the root of the tk package (where pyproject.toml is)
         app_dir = Path(__file__).parent.parent.parent
-        return str(app_dir / path[2:])  # Skip "@/"
-    else:
+        return str(app_dir / path[2:])
+    elif path == "@":
+        app_dir = Path(__file__).parent.parent.parent
+        return str(app_dir)
+    elif Path(path).is_absolute():
         return path
+    else:
+        # Relative path - resolve relative to profile directory
+        return str(Path(profile_dir) / path)
 
 
 def parse_time(time_str: str) -> tuple[int, int, int]:
@@ -178,8 +187,8 @@ def create_profile(path: str) -> dict[str, Any]:
     profile_dir = str(profile_path.parent)
 
     profile = {
-        "data_path": str(profile_path.parent / "tasks.json"),
-        "output_path": str(profile_path.parent / "TODO.md"),
+        "data_path": "./tasks.json",
+        "output_path": "./TODO.md",
         "timezone": system_timezone,
         "subjective_day_start": "04:00:00",
         "auto_sync": True,
