@@ -17,7 +17,6 @@ def load_tasks(path: str) -> dict[str, Any]:
 
     If file doesn't exist, returns empty structure:
     {
-        "next_id": 1,
         "tasks": []
     }
     """
@@ -26,14 +25,14 @@ def load_tasks(path: str) -> dict[str, Any]:
     if not task_path.exists():
         # Create directory if needed
         task_path.parent.mkdir(parents=True, exist_ok=True)
-        return {"next_id": 1, "tasks": []}
+        return {"tasks": []}
 
     try:
         with open(task_path, "r") as f:
             data = json.load(f)
 
         # Validate structure
-        if "next_id" not in data or "tasks" not in data:
+        if "tasks" not in data:
             raise ValueError("Invalid tasks file structure")
 
         return data
@@ -65,10 +64,9 @@ def add_task(data: dict[str, Any], text: str) -> int:
         text: Task text
 
     Returns:
-        New task ID
+        Array index of the new task
 
     Task is created with:
-    - id: next_id (then incremented)
     - text: provided text
     - status: "pending"
     - created_at: current UTC time
@@ -76,11 +74,9 @@ def add_task(data: dict[str, Any], text: str) -> int:
     - subjective_date: null
     - note: null
     """
-    task_id = data["next_id"]
     now_utc = datetime.now(timezone.utc).isoformat()
 
     task = {
-        "id": task_id,
         "text": text,
         "status": "pending",
         "created_at": now_utc,
@@ -90,39 +86,38 @@ def add_task(data: dict[str, Any], text: str) -> int:
     }
 
     data["tasks"].append(task)
-    data["next_id"] += 1
 
-    return task_id
+    # Return the index of the newly added task
+    return len(data["tasks"]) - 1
 
 
-def get_task_by_id(data: dict[str, Any], task_id: int) -> dict[str, Any] | None:
-    """Find task by ID.
+def get_task_by_index(data: dict[str, Any], index: int) -> dict[str, Any] | None:
+    """Get task by array index.
 
     Args:
         data: Tasks data structure
-        task_id: Task ID to find
+        index: Array index
 
     Returns:
-        Task dict or None if not found
+        Task dict or None if index is out of range
     """
-    for task in data["tasks"]:
-        if task["id"] == task_id:
-            return task
+    if 0 <= index < len(data["tasks"]):
+        return data["tasks"][index]
     return None
 
 
-def update_task(data: dict[str, Any], task_id: int, **updates) -> bool:
+def update_task(data: dict[str, Any], index: int, **updates) -> bool:
     """Update task fields.
 
     Args:
         data: Tasks data structure
-        task_id: Task ID to update
+        index: Array index of task to update
         **updates: Fields to update
 
     Returns:
         True if task was found and updated, False otherwise
     """
-    task = get_task_by_id(data, task_id)
+    task = get_task_by_index(data, index)
     if task is None:
         return False
 
@@ -132,20 +127,17 @@ def update_task(data: dict[str, Any], task_id: int, **updates) -> bool:
     return True
 
 
-def delete_task(data: dict[str, Any], task_id: int) -> bool:
+def delete_task(data: dict[str, Any], index: int) -> bool:
     """Remove task from list.
 
     Args:
         data: Tasks data structure
-        task_id: Task ID to delete
+        index: Array index of task to delete
 
     Returns:
         True if task was found and deleted, False otherwise
-
-    Note: IDs are never reused - gaps are fine
     """
-    for i, task in enumerate(data["tasks"]):
-        if task["id"] == task_id:
-            data["tasks"].pop(i)
-            return True
+    if 0 <= index < len(data["tasks"]):
+        data["tasks"].pop(index)
+        return True
     return False

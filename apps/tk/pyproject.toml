@@ -2,7 +2,8 @@
 name = "tk"
 version = "0.1.0"
 description = "A quick CLI app to manage tasks"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["nao7sep <nao7sep@gmail.com>"]
+license = "GPL-3.0"
 readme = "README.md"
 packages = [{include = "tk", from = "src"}]
 

@@ -114,6 +114,12 @@ def load_profile(path: str) -> dict[str, Any]:
 
     validate_profile(profile)
 
+    # Set defaults for optional sync settings (backward compatibility)
+    if "auto_sync" not in profile:
+        profile["auto_sync"] = True
+    if "sync_on_exit" not in profile:
+        profile["sync_on_exit"] = False
+
     # Map relative paths
     profile_dir = str(profile_path.parent)
     profile["data_path"] = map_path(profile["data_path"], profile_dir)
@@ -136,6 +142,8 @@ def create_profile(path: str) -> dict[str, Any]:
         - subjective_day_start: "04:00:00"
         - data_path: same directory as profile, "tasks.json"
         - output_path: same directory as profile, "TODO.md"
+        - auto_sync: true (sync TODO.md on every data change)
+        - sync_on_exit: false (sync on app exit - redundant if auto_sync is true)
     """
     profile_path = Path(path).expanduser().resolve()
 
@@ -144,28 +152,36 @@ def create_profile(path: str) -> dict[str, Any]:
 
     # Get system timezone
     try:
-        # Try to get system timezone
-        import time
-        if time.daylight:
-            offset = time.altzone
+        # Method 1: Try to read from /etc/localtime symlink (macOS/Linux)
+        import os
+        localtime_path = Path("/etc/localtime")
+        if localtime_path.exists() and localtime_path.is_symlink():
+            # /etc/localtime -> /var/db/timezone/zoneinfo/Asia/Tokyo
+            target = os.readlink(localtime_path)
+            if "zoneinfo/" in target:
+                system_timezone = target.split("zoneinfo/")[-1]
+            else:
+                raise ValueError("Could not parse timezone from symlink")
         else:
-            offset = time.timezone
+            # Method 2: Try datetime.now().astimezone().tzname()
+            from zoneinfo import ZoneInfo
+            local_tz = datetime.now().astimezone().tzinfo
 
-        # Convert offset to timezone name (fallback to UTC offset format)
-        hours = -offset // 3600
-        if hours >= 0:
-            tz_str = f"Etc/GMT+{hours}"
-        else:
-            tz_str = f"Etc/GMT{hours}"
-
-        # Try to use a better timezone name if possible
-        from datetime import timezone, timedelta
-        local_tz = datetime.now().astimezone().tzinfo
-        if hasattr(local_tz, 'key'):
-            system_timezone = local_tz.key
-        else:
-            system_timezone = tz_str
-    except:
+            # Try to get the key attribute (Python 3.9+)
+            if hasattr(local_tz, 'key'):
+                system_timezone = local_tz.key
+            else:
+                # Fallback: use tzname which returns abbreviation like "JST"
+                # We'll map common ones, otherwise default to UTC
+                tzname = datetime.now().astimezone().tzname()
+                timezone_map = {
+                    "JST": "Asia/Tokyo",
+                    "EST": "America/New_York",
+                    "PST": "America/Los_Angeles",
+                    "GMT": "Europe/London",
+                }
+                system_timezone = timezone_map.get(tzname, "UTC")
+    except Exception:
         system_timezone = "UTC"
 
     profile_dir = str(profile_path.parent)
@@ -174,7 +190,9 @@ def create_profile(path: str) -> dict[str, Any]:
         "data_path": str(profile_path.parent / "tasks.json"),
         "output_path": str(profile_path.parent / "TODO.md"),
         "timezone": system_timezone,
-        "subjective_day_start": "04:00:00"
+        "subjective_day_start": "04:00:00",
+        "auto_sync": True,
+        "sync_on_exit": False
     }
 
     # Save profile

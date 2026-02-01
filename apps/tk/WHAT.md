@@ -1,3 +1,5 @@
+## brainstorming
+
 a quick cli app to manage tasks.
 
 name hasnt been decided. please help. => "tk" would be good. i like "tasq," one of claude's suggestions, but it's all left hand and makes a X mark.
@@ -75,3 +77,83 @@ we use __init__ and __main__ and c#-ish but not too anti-pythonic soc-preferred 
 now you've said WHAT is complete. i asked for HOW.md, you generated it and i asked whether i should precisely review it or roughly take a look at it or not see it at all for maximum productivity and you told me not to see it at all so that i wouldnt be checking the HOW before tests are run. that is very reasonable. this decision and rationale must be noted here.
 
 but one part of the HOW that i cant help checking beforehand is folder structure. how directories and files are named and placed. your suggestion to make "tk" right under "tk" doesnt sound correct. let's at least make it tk/src/tk so that tk/tests can be added naturally. using "tk" twice feels wrong too, but if that is ok in python world, it is ok. if not, "tk/src/tkapp" or "tk/src/tkcli" may be good options, but this is really just extra thinking.
+
+## after initial implementation
+
+now first version has been implemented.
+
+poetry.lock says python version is 3.9. that should be system-wide python. i have 3.14 or so installed via homebrew. how do we make sure homebrew python will be used for installation? => sorry it was my misunderstanding. if the python version is merely minimum requirement and if homebrew python is already in use, we dont need to change anything.
+
+also, the new sub command is mentioned like "tk> new" in readme.md, indicating new works after the user is in the app. new should work before. otherwise, user has no profile to use. "tk new ~/work/my-profile.json" without the > symbol should make the profile.
+
+---
+
+now "tk new" works. i think tk new too should take --profile or -p explicitly (if -p is supported). if your HOW doesnt support shortened option names, --profile alone is sufficient.
+
+---
+
+after installation via poetry, "tk" alone, as instructed in README.md, didnt run the app. i got "zsh: command not found: tk". i dont even know what zsh means. it's been only 2 weeks since i switched from windows to mac.
+
+"poetry run" worked. i got "timezone: etc/gpt+9". why etc, not jst? my mac's config says jst. so i'm guessing it's not that mac has its own timezones defined and doesnt recognize jst. i would like to know what etc means and whether i should manage to get jst instead.
+
+in tasks.json, next_id is set to 1, which is probably a major inconsistency. if we need to give at least one id-ish thing, we should reconsider giving an uuid for extensibility. we dont need simple numbers preassigned to tasks for list/history as they would then show non-sequential numbers. merits of not assigning any id-ish things to tasks is currently significant as task lists will be version controlled.
+
+---
+
+when app loads profile, app should display timezone, whether dst is applied or not, actual time and subjective time start time. user should make it a habit to check these.
+
+readme.md doesnt cover all commands.
+
+add, decline, etc may feel redundant eventually. "a" for add, "d" for "done", etc should work. let's change "decline" to "cancel." then "c" will work for "cancel". "l" for "list" and "h" for "history." please make sure all commands are supported.
+
+when list/history is called, if you havent implemented this, let's check the number of items we are about to display and use the right string format for the numbers so that [ ] will be vertically aligned. like if we have 10 tasks to show, first one should be " 1" with leading padding.
+
+do we have a command that sets/updates/removes note to/from a task?
+
+also, can we set subjective handling date when we handle/update task?
+
+any part of anything should be editable anytime. please make sure.
+
+then let's implement confirmation. when we handle/update task, we need to know what we are about to do before we do it and be able to cancel it. especially planned subjective handling date must be checkable. probably, it'll be simpler if app asks for a note if unset and asks for handling date if user is marking the task done or cancelled. in each prompt, enter key should mean user has no intention to set it.
+
+we should also display an empty line after each command. like when task has been added, list has been displayed, etc.
+
+---
+
+there's no short form for "delete". let's document it. task deletion is dangerous. also, it is rarely needed. if we dont like a task, we can cancel it.
+
+profile should have 2 sync related settings. one is whether to sync every time when backend data is changed. default should be true. safer is better. the other is whether to sync before app closes. default should be false. if each event syncs, app closure time sync is redundant.
+
+let's document we dont check if task already exists when we are adding/editing one. if we use ai to meaningfully check that, it might be useful. if we only compare strings, it wont catch much and will only complicate the code. little benefit and more code.
+
+"d 1" when task #1 exists doesnt seem to work. i get "error: invalid task number". "done 1" seems to work.
+
+"c" and "cancel" dont work.
+
+"e" doesnt work and "edit" does.
+
+there can be more. please check how commands are parsed.
+
+---
+
+are tasks sorted everywhere necessary? how are they sorted?
+
+"history" shows 2 empty lines at the end of output. i am assuming one is as a separator between date-based groups. if so, separators should be only between groups.
+
+in todo.md, done tasks and cancelled tasks are separated. they must be merged. title of document must be "TODO". after an empty line, the pending task list without a heading. then "## History" in respect to the tool's command. then an empty line follows and the date heading. i dont think we need an empty line between a date heading and its tasks. between date-based groups, we need an empty line.
+
+before task deletion, app needs to confirm.
+
+is there a way to make edit/note commands cancellable? like by using a shortcut key. if that is possible, we can omit the final yes/no question of done/cancel commands.
+
+should we use a package to enable editable input so that user wont have to retype stuff when editing task/note? how complicated will app be? if editable input is hard to fully control, we probably dont need to bother.
+
+after close/exit, let's output an empty line so that the following prompt will start anew after the empty line. not strictly necessary, but it'll look more consistent.
+
+---
+
+app doesnt seem to have a command to directly edit subjective handling date. 
+
+d/c/delete command, when executed, emits an empty line before the wizard. this is redundant. even l/h doesnt do it. please check all commands.
+
+when user quits, let's show statistics. just how many tasks are pending, how many have been done and how many have been cancelled.

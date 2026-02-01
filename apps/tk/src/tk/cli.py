@@ -65,7 +65,40 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
             args.append(part)
             i += 1
 
-    # Special handling for certain commands
+    return cmd, args, kwargs
+
+
+def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: dict[str, Any]) -> str:
+    """Execute a command.
+
+    Args:
+        cmd: Command name (supports shortcuts)
+        args: Positional arguments
+        kwargs: Keyword arguments
+        session: Current session state
+
+    Returns:
+        Result message
+
+    Raises:
+        ValueError: If command is invalid or arguments are wrong
+    """
+    # Map shortcuts to full commands
+    command_aliases = {
+        "a": "add",
+        "l": "list",
+        "h": "history",
+        "d": "done",
+        "c": "cancel",
+        "e": "edit",
+        "n": "note",
+        "s": "sync",
+    }
+
+    # Expand shortcut if provided
+    cmd = command_aliases.get(cmd, cmd)
+
+    # Special argument handling after alias expansion
     if cmd == "add":
         # Join all args into single text
         if args:
@@ -81,7 +114,7 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
             except ValueError:
                 pass  # Let command handler deal with it
 
-    elif cmd in ("done", "decline"):
+    elif cmd in ("done", "cancel"):
         # First arg should be int
         if args:
             try:
@@ -97,24 +130,22 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
             except ValueError:
                 pass
 
-    return cmd, args, kwargs
+    elif cmd == "note":
+        # First arg is int, rest is note text
+        if args:
+            try:
+                args[0] = int(args[0])
+            except ValueError:
+                pass
 
+    elif cmd == "date":
+        # First arg should be int
+        if args:
+            try:
+                args[0] = int(args[0])
+            except ValueError:
+                pass
 
-def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: dict[str, Any]) -> str:
-    """Execute a command.
-
-    Args:
-        cmd: Command name
-        args: Positional arguments
-        kwargs: Keyword arguments
-        session: Current session state
-
-    Returns:
-        Result message
-
-    Raises:
-        ValueError: If command is invalid or arguments are wrong
-    """
     if cmd == "new":
         if len(args) != 1:
             raise ValueError("Usage: new <profile_path>")
@@ -143,12 +174,12 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
         date_str = kwargs.get("date")
         return commands.cmd_done(session, args[0], note, date_str)
 
-    elif cmd == "decline":
+    elif cmd == "cancel":
         if len(args) != 1:
-            raise ValueError("Usage: decline <num> [--note <text>] [--date YYYY-MM-DD]")
+            raise ValueError("Usage: cancel <num> [--note <text>] [--date YYYY-MM-DD]")
         note = kwargs.get("note")
         date_str = kwargs.get("date")
-        return commands.cmd_decline(session, args[0], note, date_str)
+        return commands.cmd_cancel(session, args[0], note, date_str)
 
     elif cmd == "edit":
         if len(args) != 2:
@@ -159,6 +190,18 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
         if len(args) != 1:
             raise ValueError("Usage: delete <num>")
         return commands.cmd_delete(session, args[0])
+
+    elif cmd == "note":
+        if len(args) < 1:
+            raise ValueError("Usage: note <num> [<text>]")
+        num = args[0]
+        note_text = " ".join(args[1:]) if len(args) > 1 else None
+        return commands.cmd_note(session, num, note_text)
+
+    elif cmd == "date":
+        if len(args) != 2:
+            raise ValueError("Usage: date <num> <YYYY-MM-DD>")
+        return commands.cmd_date(session, args[0], args[1])
 
     elif cmd == "sync":
         if args or kwargs:
@@ -208,6 +251,7 @@ def repl(session: dict[str, Any]) -> None:
                 break
 
             print(result)
+            print()  # Empty line after command output
 
         except EOFError:
             # Ctrl-D
@@ -222,6 +266,53 @@ def repl(session: dict[str, Any]) -> None:
         except Exception as e:
             print(f"Error: {e}")
 
+    # Sync on exit if enabled
+    if session.get("profile", {}).get("sync_on_exit", False) and session.get("tasks"):
+        from tk import markdown
+        markdown.generate_todo(
+            session["tasks"]["tasks"],
+            session["profile"]["output_path"]
+        )
+
+    # Show statistics
+    if session.get("tasks"):
+        tasks = session["tasks"]["tasks"]
+        pending_count = sum(1 for t in tasks if t["status"] == "pending")
+        done_count = sum(1 for t in tasks if t["status"] == "done")
+        cancelled_count = sum(1 for t in tasks if t["status"] == "cancelled")
+
+        print(f"\nStatistics: {pending_count} pending, {done_count} done, {cancelled_count} cancelled")
+
+    # Empty line after exit for cleaner prompt
+    print()
+
+
+def display_profile_info(prof: dict) -> None:
+    """Display profile information on startup.
+
+    Shows timezone, DST status, current time, and subjective day start.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    print("\nProfile Information:")
+    print(f"  Timezone: {prof['timezone']}")
+
+    # Get current time in the timezone
+    tz = ZoneInfo(prof['timezone'])
+    now = datetime.now(tz)
+
+    # Check if DST is currently in effect
+    dst_in_effect = bool(now.dst())
+    print(f"  DST: {'Yes' if dst_in_effect else 'No'}")
+
+    # Show current time
+    print(f"  Current time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Show subjective day start
+    print(f"  Subjective day starts at: {prof['subjective_day_start']}")
+    print()
+
 
 def main() -> None:
     """Main entry point for tk CLI."""
@@ -230,19 +321,61 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Create a new profile
+  tk new --profile ~/work/my-profile.json
+  tk new -p ~/work/my-profile.json
+
+  # Start with an existing profile
   tk --profile ~/work/my-profile.json
   tk -p ~/work/my-profile.json
-
-Inside the REPL, use 'new' command to create a profile if it doesn't exist.
         """
     )
 
+    # Subcommands
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
+
+    # new subcommand
+    parser_new = subparsers.add_parser("new", help="Create a new profile")
+    parser_new.add_argument(
+        "--profile", "-p",
+        required=True,
+        help="Path where to save the profile"
+    )
+
+    # Optional --profile argument for REPL mode
     parser.add_argument(
         "--profile", "-p",
         help="Path to profile JSON file"
     )
 
     args = parser.parse_args()
+
+    # Handle 'new' command
+    if args.command == "new":
+        try:
+            prof = profile.create_profile(args.profile)
+            print(f"Profile created: {args.profile}")
+
+            # Create empty tasks file
+            tasks_data = {"tasks": []}
+            data.save_tasks(prof["data_path"], tasks_data)
+
+            # Generate empty TODO.md
+            from tk import markdown
+            markdown.generate_todo([], prof["output_path"])
+
+            print(f"Data file: {prof['data_path']}")
+            print(f"Output file: {prof['output_path']}")
+            print(f"Timezone: {prof['timezone']}")
+            print(f"Subjective day starts at: {prof['subjective_day_start']}")
+            print()
+            print(f"Start the app with: tk --profile {args.profile}")
+
+        except Exception as e:
+            print(f"Error creating profile: {e}")
+            sys.exit(1)
+
+        return
 
     # Initialize session
     session = {
@@ -263,9 +396,12 @@ Inside the REPL, use 'new' command to create a profile if it doesn't exist.
             tasks_data = data.load_tasks(prof["data_path"])
             session["tasks"] = tasks_data
 
+            # Display profile info
+            display_profile_info(prof)
+
         except FileNotFoundError:
             print(f"Profile not found: {args.profile}")
-            print("Use 'new' command to create it, or check the path.")
+            print(f"Create it with: tk new {args.profile}")
             print()
 
         except Exception as e:
