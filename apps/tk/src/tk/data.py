@@ -28,7 +28,7 @@ def load_tasks(path: str) -> dict[str, Any]:
         return {"tasks": []}
 
     try:
-        with open(task_path, "r") as f:
+        with open(task_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         # Validate structure
@@ -52,8 +52,8 @@ def save_tasks(path: str, data: dict[str, Any]) -> None:
     # Create directory if needed
     task_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(task_path, "w") as f:
-        json.dump(data, f, indent=2)
+    with open(task_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 def add_task(data: dict[str, Any], text: str) -> int:

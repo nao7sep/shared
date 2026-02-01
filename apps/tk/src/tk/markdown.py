@@ -75,31 +75,48 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
 
     Structure:
         # TODO
+
         - [ ] pending task
 
         ## History
+
         ### YYYY-MM-DD (descending dates)
         - [x] done task (note if present)
         - [~] cancelled task (note if present)
 
     Formatting:
-    - Pending: `- [ ] task text` (no heading, just the list)
-    - History: merged done and cancelled tasks by date
-    - Dates in descending order
-    - Within date, tasks in ascending order by handled_at
-    - Empty line between date groups, not between date heading and tasks
+    - Empty line after "# TODO"
+    - If no pending tasks, show "No pending tasks."
+    - History section only shown if there are handled tasks
+    - Empty line after "## History"
+    - File ends with empty line
     """
     sorted_data = sort_tasks(tasks)
-    lines = ["# TODO"]
+    lines = ["# TODO", ""]
 
-    # Pending section (no heading, just tasks)
+    # Pending section
     if sorted_data["pending"]:
         for task in sorted_data["pending"]:
             lines.append(f"- [ ] {task['text']}")
+    else:
+        lines.append("No pending tasks.")
+
+    # Check if there are any handled tasks
+    has_handled = any(sorted_data["done"]) or any(sorted_data["cancelled"])
+
+    if not has_handled:
+        # No history to show, just end with empty line
+        lines.append("")
+        output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+        return
 
     # History section (merge done and cancelled)
     lines.append("")
     lines.append("## History")
+    lines.append("")
 
     # Merge done and cancelled by date
     all_dates = {}
@@ -135,13 +152,16 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
             status_char = "x" if task["status"] == "done" else "~"
 
             if note:
-                lines.append(f"- [{status_char}] {text} ({note})")
+                lines.append(f"- [{status_char}] {text} => {note}")
             else:
                 lines.append(f"- [{status_char}] {text}")
+
+    # End with empty line
+    lines.append("")
 
     # Write to file
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))

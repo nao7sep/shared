@@ -109,7 +109,7 @@ def load_profile(path: str) -> dict[str, Any]:
             f"Use 'new' command to create a profile"
         )
 
-    with open(profile_path, "r") as f:
+    with open(profile_path, "r", encoding="utf-8") as f:
         profile = json.load(f)
 
     validate_profile(profile)
@@ -163,24 +163,15 @@ def create_profile(path: str) -> dict[str, Any]:
             else:
                 raise ValueError("Could not parse timezone from symlink")
         else:
-            # Method 2: Try datetime.now().astimezone().tzname()
-            from zoneinfo import ZoneInfo
+            # Method 2: Use datetime to get local timezone (works on all platforms)
             local_tz = datetime.now().astimezone().tzinfo
 
-            # Try to get the key attribute (Python 3.9+)
+            # In Python 3.9+, this should have a 'key' attribute
             if hasattr(local_tz, 'key'):
                 system_timezone = local_tz.key
             else:
-                # Fallback: use tzname which returns abbreviation like "JST"
-                # We'll map common ones, otherwise default to UTC
-                tzname = datetime.now().astimezone().tzname()
-                timezone_map = {
-                    "JST": "Asia/Tokyo",
-                    "EST": "America/New_York",
-                    "PST": "America/Los_Angeles",
-                    "GMT": "Europe/London",
-                }
-                system_timezone = timezone_map.get(tzname, "UTC")
+                # Fallback to UTC if we can't determine IANA name
+                system_timezone = "UTC"
     except Exception:
         system_timezone = "UTC"
 
@@ -196,7 +187,7 @@ def create_profile(path: str) -> dict[str, Any]:
     }
 
     # Save profile
-    with open(profile_path, "w") as f:
-        json.dump(profile, f, indent=2)
+    with open(profile_path, "w", encoding="utf-8") as f:
+        json.dump(profile, f, indent=2, ensure_ascii=False)
 
     return profile

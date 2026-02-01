@@ -187,7 +187,7 @@ def cmd_history(session: dict[str, Any], days: int | None = None) -> str:
             padded_num = str(display_num).rjust(num_width)
 
             if note:
-                line = f"  {padded_num}. [{status_char}] {text} ({note})"
+                line = f"  {padded_num}. [{status_char}] {text} => {note}"
             else:
                 line = f"  {padded_num}. [{status_char}] {text}"
 
@@ -532,9 +532,15 @@ def cmd_sync(session: dict[str, Any]) -> str:
     Returns:
         Success message
     """
-    markdown.generate_todo(session["tasks"]["tasks"], session["profile"]["output_path"])
+    from pathlib import Path
+
+    output_path = session["profile"]["output_path"]
+    markdown.generate_todo(session["tasks"]["tasks"], output_path)
 
     # Clear last_list
     session["last_list"] = []
 
-    return "TODO.md regenerated."
+    # Get filename for user-facing message
+    filename = Path(output_path).name
+
+    return f"{filename} regenerated."

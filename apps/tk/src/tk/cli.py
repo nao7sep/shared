@@ -105,14 +105,12 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
             args = [" ".join(str(a) for a in args)]
 
     elif cmd == "edit":
-        # First arg is number, rest is text
-        if len(args) >= 2:
+        # First arg should be int
+        if args:
             try:
-                num = int(args[0])
-                text = " ".join(str(a) for a in args[1:])
-                args = [num, text]
+                args[0] = int(args[0])
             except ValueError:
-                pass  # Let command handler deal with it
+                pass
 
     elif cmd in ("done", "cancel"):
         # First arg should be int
@@ -182,9 +180,11 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
         return commands.cmd_cancel(session, args[0], note, date_str)
 
     elif cmd == "edit":
-        if len(args) != 2:
+        if len(args) < 2:
             raise ValueError("Usage: edit <num> <text>")
-        return commands.cmd_edit(session, args[0], args[1])
+        num = args[0]
+        text = " ".join(str(a) for a in args[1:])
+        return commands.cmd_edit(session, num, text)
 
     elif cmd == "delete":
         if len(args) != 1:

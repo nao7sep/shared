@@ -16,6 +16,7 @@
 - establish straightforward workflow. inbox zero strategy may be key
 - simple todo management cli tool that works well with git and inbox zero strategy
 - sqlalchemy?
+- update HOW.md of tk
 
 ### done
 

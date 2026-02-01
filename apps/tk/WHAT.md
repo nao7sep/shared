@@ -157,3 +157,23 @@ app doesnt seem to have a command to directly edit subjective handling date.
 d/c/delete command, when executed, emits an empty line before the wizard. this is redundant. even l/h doesnt do it. please check all commands.
 
 when user quits, let's show statistics. just how many tasks are pending, how many have been done and how many have been cancelled.
+
+## code review started
+
+in markdown.py, let's emit an empty line after "# TODO". then, if there's no pending task, let's emit a short message. we will show the history part only if at least one task has been handled. otherwise, we emit one new line after the pending task list and file ends. if there are handled tasks, after "## History", let's emit an empty line. at the end of the file, there should be an empty line. this is just a personal preference. if end key combined with something gets me to the last empty line, rather than the last position of the last line, i find it easier to add new content.
+
+when app reads/writes a file, we should  always specify utf-8 encoding but without bom. cjk letters are often broken in non-utf8 files.
+
+will mapping with the @ symbol work? i am too lazy to test it. also, such minor mistakes will come out eventually if they exist.
+
+profile.py reads system timezone in multiple ways. although i am a c#er, i wont scream with a megaphone why the hell profile.py is responsible for detecting system time zone. that is just how python is, i am beginning to understand (and accept). is the timezone detection mechanism optimal? if "asia/tokyo" and such are more mac-ish things and python fully supports abbreviations like jst, shouldnt we rather try getting the system timezone as an abbreviation so that the app will run on windows as well?
+
+---
+
+in todo.md, let's use " => " to output note like my current readme.md at repo root. in a parenthesis, note might look like additional info on task. it is basically "how the task went".
+
+in profile.py, how likely will hasattr succeed? i'll never run the app on old python. if it is highly likely, we dont need the premature mapping logic.
+
+app calls the markdown output file as "TODO.md". i dont think there's a strong reason to display the actual file name specified in the profile, but we cant assume the file name will always be TODO.md. let's fix it. also, let's look for such literals embedded in code and, if they might actually differ from user-facing strings (and ONLY if), let's fix them.
+
+in cli.py, "edit" joins most of args, but "note" doesnt. is this ok?
