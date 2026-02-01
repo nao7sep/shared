@@ -115,7 +115,7 @@ def cmd_list(session: dict[str, Any]) -> str:
     for display_num, (array_index, task) in enumerate(pending_with_indices, start=1):
         # Right-align the number for vertical alignment
         padded_num = str(display_num).rjust(num_width)
-        lines.append(f"{padded_num}. [ ] {task['text']}")
+        lines.append(f"{padded_num}. {task['text']}")
         last_list.append((display_num, array_index))
 
     session["last_list"] = last_list
@@ -123,18 +123,25 @@ def cmd_list(session: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def cmd_history(session: dict[str, Any], days: int | None = None) -> str:
+def cmd_history(session: dict[str, Any], days: int | None = None, working_days: int | None = None, specific_date: str | None = None) -> str:
     """List handled tasks (done or cancelled).
 
     Args:
         session: Current session state
-        days: Optional number of days to show
+        days: Optional number of calendar days to show
+        working_days: Optional number of working days (days with tasks) to show
+        specific_date: Optional specific date (YYYY-MM-DD) to show
 
     Returns:
         Formatted list of handled tasks
 
     Updates session.last_list with [(display_num, array_index), ...]
     """
+    # Validate that only one filter is specified
+    filters_specified = sum([days is not None, working_days is not None, specific_date is not None])
+    if filters_specified > 1:
+        raise ValueError("Cannot specify multiple filters (--days, --working-days, or specific_date)")
+
     all_tasks = session["tasks"]["tasks"]
 
     # Find handled tasks and their indices
@@ -143,28 +150,60 @@ def cmd_history(session: dict[str, Any], days: int | None = None) -> str:
     ]
 
     if days is not None:
-        # Filter by subjective_date (last N days)
-        # Use subjective date calculation for consistency with how tasks are marked done/cancelled
-        from datetime import timedelta
+        # Filter by subjective_date (last N calendar days)
+        from datetime import timedelta, date as date_type
 
-        # Get current subjective date using the profile's timezone and day start
+        # Get current subjective date
         current_subjective = subjective_date.get_current_subjective_date(
             session["profile"]["timezone"],
             session["profile"]["subjective_day_start"]
         )
-        # Parse as date object to do arithmetic
-        from datetime import date as date_type
         today = date_type.fromisoformat(current_subjective)
         cutoff = today - timedelta(days=days - 1)
-        # String comparison works correctly because ISO 8601 format (YYYY-MM-DD) is lexicographically sortable
+
         handled_with_indices = [
             (i, t) for i, t in handled_with_indices
             if t.get("subjective_date") and t["subjective_date"] >= cutoff.isoformat()
         ]
 
+    elif working_days is not None:
+        # Filter by last N working days (days that have handled tasks)
+        from collections import defaultdict
+
+        # Group tasks by subjective_date
+        by_date = defaultdict(list)
+        for i, task in handled_with_indices:
+            date_str = task.get("subjective_date")
+            if date_str:
+                by_date[date_str].append((i, task))
+
+        # Get the N most recent dates with tasks
+        sorted_dates = sorted(by_date.keys(), reverse=True)
+        dates_to_include = sorted_dates[:working_days]
+
+        # Filter to only tasks from those dates
+        handled_with_indices = [
+            (i, t) for i, t in handled_with_indices
+            if t.get("subjective_date") in dates_to_include
+        ]
+
+    elif specific_date is not None:
+        # Filter by specific date
+        handled_with_indices = [
+            (i, t) for i, t in handled_with_indices
+            if t.get("subjective_date") == specific_date
+        ]
+
     if not handled_with_indices:
         session["last_list"] = []
-        return "No handled tasks." if days is None else f"No handled tasks in last {days} days."
+        if days is not None:
+            return f"No handled tasks in last {days} days."
+        elif working_days is not None:
+            return f"No handled tasks in last {working_days} working days."
+        elif specific_date is not None:
+            return f"No handled tasks on {specific_date}."
+        else:
+            return "No handled tasks."
 
     # Group by subjective_date (descending), sort within group by handled_at (ascending)
     from collections import defaultdict
@@ -193,7 +232,7 @@ def cmd_history(session: dict[str, Any], days: int | None = None) -> str:
     for idx, date_str in enumerate(sorted_dates):
         lines.append(date_str)
         for array_index, task in by_date[date_str]:
-            status_char = "x" if task["status"] == "done" else "~"
+            status_emoji = "✅" if task["status"] == "done" else "❌"
             text = task["text"]
             note = task.get("note")
 
@@ -201,9 +240,9 @@ def cmd_history(session: dict[str, Any], days: int | None = None) -> str:
             padded_num = str(display_num).rjust(num_width)
 
             if note:
-                line = f"  {padded_num}. [{status_char}] {text} => {note}"
+                line = f"  {padded_num}. {status_emoji} {text} => {note}"
             else:
-                line = f"  {padded_num}. [{status_char}] {text}"
+                line = f"  {padded_num}. {status_emoji} {text}"
 
             lines.append(line)
             last_list.append((display_num, array_index))
@@ -557,3 +596,64 @@ def cmd_sync(session: dict[str, Any]) -> str:
     filename = Path(output_path).name
 
     return f"{filename} regenerated."
+
+
+def cmd_today(session: dict[str, Any]) -> str:
+    """List tasks handled today.
+
+    Args:
+        session: Current session state
+
+    Returns:
+        Formatted list of handled tasks from today
+
+    Updates session.last_list with [(display_num, array_index), ...]
+    """
+    # Get current subjective date
+    current_subjective = subjective_date.get_current_subjective_date(
+        session["profile"]["timezone"],
+        session["profile"]["subjective_day_start"]
+    )
+
+    # Use cmd_history with specific_date
+    return cmd_history(session, specific_date=current_subjective)
+
+
+def cmd_yesterday(session: dict[str, Any]) -> str:
+    """List tasks handled yesterday.
+
+    Args:
+        session: Current session state
+
+    Returns:
+        Formatted list of handled tasks from yesterday
+
+    Updates session.last_list with [(display_num, array_index), ...]
+    """
+    from datetime import date as date_type, timedelta
+
+    # Get yesterday's subjective date
+    current_subjective = subjective_date.get_current_subjective_date(
+        session["profile"]["timezone"],
+        session["profile"]["subjective_day_start"]
+    )
+    today = date_type.fromisoformat(current_subjective)
+    yesterday = (today - timedelta(days=1)).isoformat()
+
+    # Use cmd_history with specific_date
+    return cmd_history(session, specific_date=yesterday)
+
+
+def cmd_recent(session: dict[str, Any]) -> str:
+    """List tasks from last 3 working days (including today).
+
+    Args:
+        session: Current session state
+
+    Returns:
+        Formatted list of handled tasks from last 3 working days
+
+    Updates session.last_list with [(display_num, array_index), ...]
+    """
+    # Use cmd_history with working_days=3
+    return cmd_history(session, working_days=3)

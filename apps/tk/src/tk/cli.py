@@ -107,6 +107,9 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
         "e": "edit",
         "n": "note",
         "s": "sync",
+        "t": "today",
+        "y": "yesterday",
+        "r": "recent",
     }
 
     # Expand shortcut if provided
@@ -175,9 +178,10 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
 
     elif cmd == "history":
         days = kwargs.get("days")
+        working_days = kwargs.get("working_days")
         if args:
-            raise ValueError("Usage: history [--days N]")
-        return commands.cmd_history(session, days)
+            raise ValueError("Usage: history [--days N] [--working-days N]")
+        return commands.cmd_history(session, days, working_days)
 
     elif cmd == "done":
         if len(args) != 1:
@@ -221,6 +225,21 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
         if args or kwargs:
             raise ValueError("Usage: sync")
         return commands.cmd_sync(session)
+
+    elif cmd == "today":
+        if args or kwargs:
+            raise ValueError("Usage: today")
+        return commands.cmd_today(session)
+
+    elif cmd == "yesterday":
+        if args or kwargs:
+            raise ValueError("Usage: yesterday")
+        return commands.cmd_yesterday(session)
+
+    elif cmd == "recent":
+        if args or kwargs:
+            raise ValueError("Usage: recent")
+        return commands.cmd_recent(session)
 
     elif cmd in ("exit", "quit"):
         return "EXIT"

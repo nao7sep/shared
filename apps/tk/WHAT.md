@@ -178,10 +178,22 @@ app calls the markdown output file as "TODO.md". i dont think there's a strong r
 
 in cli.py, "edit" joins most of args, but "note" doesnt. is this ok?
 
-## bug fixes
+## bug fixes and improvements
 
 add "my task" and add my task both work, but add what's python's protocol? works incorrectly as the 2 apostrophes are dropped. in this app, any text that may contain 2 or more words is at the end of the command line. so, let's consider omitting quotation support completely.
 
 i still see an empty line between the quit/exit command line and the statistics. please remove it.
 
 instead of [ ], [x] and [~], let's use unicode emojis as [~] isnt supported even on github. please suggest a few combinations.
+
+---
+
+currently, "history --days 3" for example should display handled tasks on today, yesterday and day before yesterday. so, last 3 calender days, not last 3 WORKING days.
+
+let's add an exclusively effective option --working_days (or --working-days). --days and this one cant coexist. only one can be specified.
+
+then let's add 3 commands: today, yesterday, recent. if "t", "y" and "r" are all available, let's implement these as well. today and yesterday are obvious. recent returns the last 3 WORKING days including today. i believe i'll be hitting "r" all the time to know what i have been doing so that i can decide what to do next.
+
+i will not implement "week" because doing "last week" would require app to understand the calender. let's say today is wednesday and we happen to want a list of handled tasks during the last calender week. if this rare situation ever occurs, we'll just open TODO.md. we cant implement a feature for one specific rare situation.
+
+history shows the old [ ], [x], [~] things. when saving data as markdown, app no longer does this and uses emojis instead for handled tasks. let's use emojis in history to make it consistent. in "list", we dont need [ ] or any emojis. a simple numbered list is sufficient. then, please search for these 3 things ([ ], [x], [~]) to make sure they are not used anywhere else.

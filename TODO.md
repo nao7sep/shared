@@ -1,7 +1,6 @@
 # TODO
 
 - check all existing tasks to draw a bigger picture. currently work is in bits
-- tool to compress/extract entire code directory, while gitignoring things
 - check all remaining tasks in paper notebook
 - read the claude code book on mcp, parallel development, sub-agents
 - try developing 2 projects in parallel
@@ -13,14 +12,15 @@
 - try deepl/google translation apis
 - try openai/google transcription apis
 - decide what to do with blog/x
-- tk: faster way to show recent tasks. "h" currently shows everything
-- tk: use emojis in history
 
 ## History
 
 ### 2026-02-02
 - ❌ branch management best practices => my knowledge is enough for now
 - ✅ discuss task management cost and its potential relevance to inability to complete trivial tasks (such as pushups) => done. i will think of something
+- ❌ tool to compress/extract entire code directory, while gitignoring things => branches work better/faster
+- ✅ tk: faster way to show recent tasks. "h" currently shows everything => added today, yesterday and recent commands
+- ✅ tk: use emojis in history
 
 ### 2026-02-01
 - ✅ practice writing the what, following 01 doc => wrote what.md and also work_log.md for tk

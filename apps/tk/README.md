@@ -55,10 +55,30 @@ All commands support short forms (shown in parentheses).
   tk> l
   ```
 
-- **history (h)** `[--days N]` - List handled (done/cancelled) tasks
+- **history (h)** `[--days N] [--working-days N]` - List handled (done/cancelled) tasks
   ```
   tk> history
   tk> h --days 7
+  tk> h --working-days 5
+  ```
+  Note: `--days` shows last N calendar days, `--working-days` shows last N days with tasks. Cannot use both.
+
+- **today (t)** - List tasks handled today
+  ```
+  tk> today
+  tk> t
+  ```
+
+- **yesterday (y)** - List tasks handled yesterday
+  ```
+  tk> yesterday
+  tk> y
+  ```
+
+- **recent (r)** - List tasks from last 3 working days (including today)
+  ```
+  tk> recent
+  tk> r
   ```
 
 ### Handling Tasks
