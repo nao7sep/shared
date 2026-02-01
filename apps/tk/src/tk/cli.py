@@ -3,7 +3,6 @@
 import sys
 import argparse
 from typing import Any
-import shlex
 
 from tk import profile, data, commands
 
@@ -26,12 +25,10 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
     Note:
         Commands that don't support flags (like 'add') will have all
         arguments treated as literal text, even if they start with '--'.
+        Quotation marks are not supported - text at the end of command is used as-is.
     """
-    # Use shlex to handle quoted strings properly
-    try:
-        parts = shlex.split(line)
-    except ValueError as e:
-        raise ValueError(f"Parse error: {e}")
+    # Simple split by whitespace (no quote handling)
+    parts = line.split()
 
     if not parts:
         return "", [], {}
@@ -298,7 +295,7 @@ def repl(session: dict[str, Any]) -> None:
         done_count = sum(1 for t in tasks if t["status"] == "done")
         cancelled_count = sum(1 for t in tasks if t["status"] == "cancelled")
 
-        print(f"\nStatistics: {pending_count} pending, {done_count} done, {cancelled_count} cancelled")
+        print(f"Statistics: {pending_count} pending, {done_count} done, {cancelled_count} cancelled")
 
     # Empty line after exit for cleaner prompt
     print()

@@ -177,3 +177,11 @@ in profile.py, how likely will hasattr succeed? i'll never run the app on old py
 app calls the markdown output file as "TODO.md". i dont think there's a strong reason to display the actual file name specified in the profile, but we cant assume the file name will always be TODO.md. let's fix it. also, let's look for such literals embedded in code and, if they might actually differ from user-facing strings (and ONLY if), let's fix them.
 
 in cli.py, "edit" joins most of args, but "note" doesnt. is this ok?
+
+## bug fixes
+
+add "my task" and add my task both work, but add what's python's protocol? works incorrectly as the 2 apostrophes are dropped. in this app, any text that may contain 2 or more words is at the end of the command line. so, let's consider omitting quotation support completely.
+
+i still see an empty line between the quit/exit command line and the statistics. please remove it.
+
+instead of [ ], [x] and [~], let's use unicode emojis as [~] isnt supported even on github. please suggest a few combinations.

@@ -76,13 +76,13 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     Structure:
         # TODO
 
-        - [ ] pending task
+        - pending task
 
         ## History
 
         ### YYYY-MM-DD (descending dates)
-        - [x] done task (note if present)
-        - [~] cancelled task (note if present)
+        - ✅ done task (note if present)
+        - ❌ cancelled task (note if present)
 
     Formatting:
     - Empty line after "# TODO"
@@ -97,7 +97,7 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     # Pending section
     if sorted_data["pending"]:
         for task in sorted_data["pending"]:
-            lines.append(f"- [ ] {task['text']}")
+            lines.append(f"- {task['text']}")
     else:
         lines.append("No pending tasks.")
 
@@ -149,12 +149,12 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
         for task in date_tasks:
             text = task["text"]
             note = task.get("note")
-            status_char = "x" if task["status"] == "done" else "~"
+            status_emoji = "✅" if task["status"] == "done" else "❌"
 
             if note:
-                lines.append(f"- [{status_char}] {text} => {note}")
+                lines.append(f"- {status_emoji} {text} => {note}")
             else:
-                lines.append(f"- [{status_char}] {text}")
+                lines.append(f"- {status_emoji} {text}")
 
     # End with empty line
     lines.append("")
