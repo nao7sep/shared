@@ -4,8 +4,9 @@ import sys
 import asyncio
 import argparse
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
@@ -25,6 +26,56 @@ from .ai.perplexity_provider import PerplexityProvider
 from .ai.mistral_provider import MistralProvider
 from .ai.deepseek_provider import DeepSeekProvider
 
+# Type alias for provider instances
+ProviderInstance = (
+    OpenAIProvider
+    | ClaudeProvider
+    | GeminiProvider
+    | GrokProvider
+    | PerplexityProvider
+    | MistralProvider
+    | DeepSeekProvider
+)
+
+# Provider class registry
+PROVIDER_CLASSES: dict[str, type] = {
+    "openai": OpenAIProvider,
+    "claude": ClaudeProvider,
+    "gemini": GeminiProvider,
+    "grok": GrokProvider,
+    "perplexity": PerplexityProvider,
+    "mistral": MistralProvider,
+    "deepseek": DeepSeekProvider,
+}
+
+
+@dataclass
+class SessionState:
+    """Session state for the REPL loop."""
+
+    current_ai: str
+    current_model: str
+    profile: dict[str, Any]
+    conversation: dict[str, Any]
+    system_prompt: Optional[str] = None
+    system_prompt_key: Optional[str] = None
+    retry_mode: bool = False
+    _provider_cache: dict[tuple[str, str], ProviderInstance] = field(
+        default_factory=dict
+    )
+
+    def get_cached_provider(
+        self, provider_name: str, api_key: str
+    ) -> Optional[ProviderInstance]:
+        """Get cached provider instance if available."""
+        return self._provider_cache.get((provider_name, api_key))
+
+    def cache_provider(
+        self, provider_name: str, api_key: str, instance: ProviderInstance
+    ) -> None:
+        """Cache a provider instance."""
+        self._provider_cache[(provider_name, api_key)] = instance
+
 
 def setup_logging(log_file: Optional[str] = None) -> None:
     """Set up logging configuration.
@@ -43,12 +94,15 @@ def setup_logging(log_file: Optional[str] = None) -> None:
         logging.disable(logging.CRITICAL)
 
 
-def get_provider_instance(provider_name: str, api_key: str):
-    """Get AI provider instance.
+def get_provider_instance(
+    provider_name: str, api_key: str, session: Optional[SessionState] = None
+) -> ProviderInstance:
+    """Get AI provider instance, using cache if available.
 
     Args:
         provider_name: Name of provider (openai, claude, etc.)
         api_key: API key for provider
+        session: Optional session state for caching
 
     Returns:
         Provider instance
@@ -56,25 +110,27 @@ def get_provider_instance(provider_name: str, api_key: str):
     Raises:
         ValueError: If provider not supported
     """
-    providers = {
-        "openai": OpenAIProvider,
-        "claude": ClaudeProvider,
-        "gemini": GeminiProvider,
-        "grok": GrokProvider,
-        "perplexity": PerplexityProvider,
-        "mistral": MistralProvider,
-        "deepseek": DeepSeekProvider,
-    }
+    # Check cache first
+    if session:
+        cached = session.get_cached_provider(provider_name, api_key)
+        if cached:
+            return cached
 
-    provider_class = providers.get(provider_name)
+    provider_class = PROVIDER_CLASSES.get(provider_name)
     if not provider_class:
         raise ValueError(f"Unsupported provider: {provider_name}")
 
-    return provider_class(api_key)
+    instance = provider_class(api_key)
+
+    # Cache the instance
+    if session:
+        session.cache_provider(provider_name, api_key, instance)
+
+    return instance
 
 
 async def send_message_to_ai(
-    provider_instance,
+    provider_instance: ProviderInstance,
     messages: list[dict],
     model: str,
     system_prompt: Optional[str] = None,
@@ -92,12 +148,12 @@ async def send_message_to_ai(
     """
     try:
         # Stream response
-        stream = provider_instance.send_message(
+        response_stream = provider_instance.send_message(
             messages=messages, model=model, system_prompt=system_prompt, stream=True
         )
 
         # Display and accumulate
-        response_text = await display_streaming_response(stream, prefix="")
+        response_text = await display_streaming_response(response_stream, prefix="")
 
         # Get metadata (token usage, etc.)
         # For now, return empty metadata as streaming doesn't provide it
@@ -110,11 +166,49 @@ async def send_message_to_ai(
         raise
 
 
+def validate_and_get_provider(
+    session: SessionState,
+) -> tuple[Optional[ProviderInstance], Optional[str]]:
+    """Validate API key and get provider instance.
+
+    Args:
+        session: Session state
+
+    Returns:
+        Tuple of (provider_instance, error_message)
+        If successful, error_message is None
+        If failed, provider_instance is None
+    """
+    provider_name = session.current_ai
+    key_config = session.profile["api_keys"].get(provider_name)
+
+    if not key_config:
+        return None, f"No API key configured for {provider_name}"
+
+    try:
+        api_key = load_api_key(provider_name, key_config)
+    except Exception as e:
+        logging.error(f"API key loading error: {e}", exc_info=True)
+        return None, f"Error loading API key: {e}"
+
+    if not validate_api_key(api_key, provider_name):
+        return None, f"Invalid API key for {provider_name}"
+
+    try:
+        provider_instance = get_provider_instance(provider_name, api_key, session)
+    except Exception as e:
+        logging.error(f"Provider initialization error: {e}", exc_info=True)
+        return None, f"Error initializing provider: {e}"
+
+    return provider_instance, None
+
+
 async def repl_loop(
     profile_data: dict,
     conversation_data: dict,
     conversation_path: str,
     system_prompt: Optional[str] = None,
+    system_prompt_key: Optional[str] = None,
 ) -> None:
     """Run the REPL loop.
 
@@ -123,18 +217,35 @@ async def repl_loop(
         conversation_data: Loaded conversation
         conversation_path: Path to conversation file
         system_prompt: Optional system prompt text
+        system_prompt_key: Optional path/key to system prompt (for metadata)
     """
     # Initialize session state
-    session = {
-        "current_ai": profile_data["default_ai"],
-        "current_model": profile_data["models"][profile_data["default_ai"]],
-        "profile": profile_data,
-        "conversation": conversation_data,
-        "system_prompt": system_prompt,
-    }
+    session = SessionState(
+        current_ai=profile_data["default_ai"],
+        current_model=profile_data["models"][profile_data["default_ai"]],
+        profile=profile_data,
+        conversation=conversation_data,
+        system_prompt=system_prompt,
+        system_prompt_key=system_prompt_key,
+    )
 
-    # Initialize command handler
-    cmd_handler = CommandHandler(session)
+    # Set system_prompt_key in conversation metadata if not already set
+    if system_prompt_key and not conversation_data["metadata"].get("system_prompt_key"):
+        conversation.update_metadata(
+            conversation_data, system_prompt_key=system_prompt_key
+        )
+
+    # Initialize command handler (pass session as dict for compatibility)
+    session_dict = {
+        "current_ai": session.current_ai,
+        "current_model": session.current_model,
+        "profile": session.profile,
+        "conversation": session.conversation,
+        "conversation_path": conversation_path,
+        "system_prompt": session.system_prompt,
+        "retry_mode": session.retry_mode,
+    }
+    cmd_handler = CommandHandler(session_dict)
 
     # Set up prompt_toolkit session with history
     history_file = Path.home() / ".poly-chat-history"
@@ -144,8 +255,8 @@ async def repl_loop(
     print("=" * 60)
     print("PolyChat - Multi-AI CLI Chat Tool")
     print("=" * 60)
-    print(f"Provider: {session['current_ai']}")
-    print(f"Model: {session['current_model']}")
+    print(f"Provider: {session.current_ai}")
+    print(f"Model: {session.current_model}")
     print("Type /help for commands, Ctrl-D or /exit to quit")
     print("=" * 60)
     print()
@@ -169,58 +280,49 @@ async def repl_loop(
                     if response:
                         print(response)
                         print()
+                    # Sync session state back from command handler
+                    session.current_ai = session_dict["current_ai"]
+                    session.current_model = session_dict["current_model"]
+                    session.retry_mode = session_dict.get("retry_mode", False)
                 except ValueError as e:
                     print(f"Error: {e}")
                     print()
                 continue
 
-            # Add user message to conversation
+            # Validate provider BEFORE adding user message
+            provider_instance, error = validate_and_get_provider(session)
+            if error:
+                print(f"Error: {error}")
+                print()
+                continue
+
+            # Handle retry mode - remove last assistant message before adding new user message
+            if session.retry_mode and conversation_data["messages"]:
+                last_msg = conversation_data["messages"][-1]
+                if last_msg["role"] == "assistant":
+                    conversation_data["messages"].pop()
+                    print("[Retry mode: replacing last response]")
+                session.retry_mode = False
+                session_dict["retry_mode"] = False
+
+            # NOW add user message (after validation passed)
             conversation.add_user_message(conversation_data, user_input)
-
-            # Load API key for current provider
-            try:
-                provider_name = session["current_ai"]
-                key_config = profile_data["api_keys"].get(provider_name)
-
-                if not key_config:
-                    print(f"Error: No API key configured for {provider_name}")
-                    print()
-                    continue
-
-                api_key = load_api_key(provider_name, key_config)
-
-                if not validate_api_key(api_key, provider_name):
-                    print(f"Error: Invalid API key for {provider_name}")
-                    print()
-                    continue
-
-            except Exception as e:
-                print(f"Error loading API key: {e}")
-                logging.error(f"API key loading error: {e}", exc_info=True)
-                print()
-                continue
-
-            # Get provider instance
-            try:
-                provider_instance = get_provider_instance(provider_name, api_key)
-            except Exception as e:
-                print(f"Error initializing provider: {e}")
-                logging.error(f"Provider initialization error: {e}", exc_info=True)
-                print()
-                continue
 
             # Get messages for AI
             messages = conversation.get_messages_for_ai(conversation_data)
 
             # Send to AI
             try:
-                print(f"\n{session['current_ai'].capitalize()}: ", end="", flush=True)
+                print(f"\n{session.current_ai.capitalize()}: ", end="", flush=True)
                 response_text, metadata = await send_message_to_ai(
-                    provider_instance, messages, session["current_model"], system_prompt
+                    provider_instance,
+                    messages,
+                    session.current_model,
+                    session.system_prompt,
                 )
 
                 # Add assistant response to conversation
-                actual_model = metadata.get("model", session["current_model"])
+                actual_model = metadata.get("model", session.current_model)
                 conversation.add_assistant_message(
                     conversation_data, response_text, actual_model
                 )
@@ -252,11 +354,18 @@ async def repl_loop(
                 print(f"\nError: {e}")
                 logging.error(f"AI response error: {e}", exc_info=True)
 
+                # Remove user message and add error instead
+                if (
+                    conversation_data["messages"]
+                    and conversation_data["messages"][-1]["role"] == "user"
+                ):
+                    conversation_data["messages"].pop()
+
                 # Add error message to conversation
                 conversation.add_error_message(
                     conversation_data,
                     str(e),
-                    {"provider": provider_name, "model": session["current_model"]},
+                    {"provider": session.current_ai, "model": session.current_model},
                 )
 
                 # Save conversation with error
@@ -318,9 +427,7 @@ def main() -> None:
         # Get conversation file path
         if args.chat:
             # Map the path
-            conversation_path = profile.map_path(
-                args.chat, str(Path(args.profile).parent)
-            )
+            conversation_path = profile.map_path(args.chat)
         else:
             # Prompt for conversation file
             print("\nConversation file:")
@@ -333,9 +440,7 @@ def main() -> None:
                 if not conv_name:
                     print("Error: Conversation file name required")
                     sys.exit(1)
-                conversation_path = profile.map_path(
-                    conv_name, profile_data["conversations_dir"]
-                )
+                conversation_path = profile.map_path(conv_name)
             else:
                 # Generate new filename
                 import uuid
@@ -352,8 +457,10 @@ def main() -> None:
 
         # Load system prompt if configured
         system_prompt = None
+        system_prompt_key = None
         if isinstance(profile_data.get("system_prompt"), str):
-            # It's a file path
+            # It's a file path - store the key for metadata
+            system_prompt_key = profile_data["system_prompt"]
             try:
                 with open(profile_data["system_prompt"], "r", encoding="utf-8") as f:
                     system_prompt = f.read().strip()
@@ -365,7 +472,13 @@ def main() -> None:
 
         # Run REPL loop
         asyncio.run(
-            repl_loop(profile_data, conversation_data, conversation_path, system_prompt)
+            repl_loop(
+                profile_data,
+                conversation_data,
+                conversation_path,
+                system_prompt,
+                system_prompt_key,
+            )
         )
 
     except KeyboardInterrupt:

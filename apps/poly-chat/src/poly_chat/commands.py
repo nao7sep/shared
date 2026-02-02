@@ -5,7 +5,11 @@ This module handles parsing and executing commands like /model, /gpt, /retry, et
 
 from typing import Optional, Any
 from . import models
-from .conversation import update_metadata, delete_message_and_following
+from .conversation import (
+    update_metadata,
+    delete_message_and_following,
+    save_conversation,
+)
 
 
 class CommandHandler:
@@ -154,8 +158,20 @@ class CommandHandler:
         Returns:
             Info message
         """
-        # This is handled in the main REPL loop
-        return "Retry mode: The last assistant response will be replaced if you send a new message."
+        conversation = self.session["conversation"]
+        messages = conversation["messages"]
+
+        # Check if there's an assistant message to retry
+        if not messages:
+            return "No messages to retry"
+
+        last_msg = messages[-1]
+        if last_msg["role"] != "assistant":
+            return "Last message is not an assistant response. Nothing to retry."
+
+        # Set retry mode flag - the REPL loop will handle the actual replacement
+        self.session["retry_mode"] = True
+        return "Retry mode enabled. Your next message will replace the last assistant response."
 
     async def delete_messages(self, args: str) -> str:
         """Delete message and all following messages.
@@ -182,6 +198,10 @@ class CommandHandler:
 
         try:
             count = delete_message_and_following(conversation, index)
+            # Save conversation after deletion
+            conversation_path = self.session.get("conversation_path")
+            if conversation_path:
+                await save_conversation(conversation_path, conversation)
             return f"Deleted {count} message(s) from index {index} onwards"
         except IndexError:
             raise ValueError(

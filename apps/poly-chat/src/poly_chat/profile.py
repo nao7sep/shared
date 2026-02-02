@@ -9,12 +9,11 @@ from pathlib import Path
 from typing import Any
 
 
-def map_path(path: str, base_dir: str | None = None) -> str:
+def map_path(path: str) -> str:
     """Map path with special prefixes to absolute path.
 
     Args:
-        path: Path to map (can have ~, @, or be absolute/relative)
-        base_dir: Base directory for relative paths (unused, but kept for compatibility)
+        path: Path to map (can have ~, @, or be absolute)
 
     Returns:
         Absolute path string
@@ -81,19 +80,18 @@ def load_profile(path: str) -> dict[str, Any]:
     validate_profile(profile)
 
     # Map all path fields
-    profile_dir = str(profile_path.parent)
-    profile["conversations_dir"] = map_path(profile["conversations_dir"], profile_dir)
-    profile["log_dir"] = map_path(profile["log_dir"], profile_dir)
+    profile["conversations_dir"] = map_path(profile["conversations_dir"])
+    profile["log_dir"] = map_path(profile["log_dir"])
 
     # Map system_prompt if it's a path (string)
     if isinstance(profile.get("system_prompt"), str):
-        profile["system_prompt"] = map_path(profile["system_prompt"], profile_dir)
+        profile["system_prompt"] = map_path(profile["system_prompt"])
     # If it's a dict with type="text", leave as-is
 
     # Map API key paths (for type="json")
     for provider, key_config in profile.get("api_keys", {}).items():
         if isinstance(key_config, dict) and key_config.get("type") == "json":
-            key_config["path"] = map_path(key_config["path"], profile_dir)
+            key_config["path"] = map_path(key_config["path"])
 
     return profile
 

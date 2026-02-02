@@ -39,6 +39,7 @@ class ClaudeProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        max_tokens: int = 4096,
     ) -> AsyncIterator[str]:
         """Send message to Claude and yield response chunks.
 
@@ -47,6 +48,7 @@ class ClaudeProvider:
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
+            max_tokens: Maximum tokens in response (default 4096)
 
         Yields:
             Response text chunks
@@ -58,7 +60,7 @@ class ClaudeProvider:
         kwargs = {
             "model": model,
             "messages": formatted_messages,
-            "max_tokens": 4096,
+            "max_tokens": max_tokens,
             "stream": stream,
         }
 
@@ -66,12 +68,16 @@ class ClaudeProvider:
             kwargs["system"] = system_prompt
 
         # Create streaming request
-        async with self.client.messages.stream(**kwargs) as stream:
-            async for text in stream.text_stream:
+        async with self.client.messages.stream(**kwargs) as response_stream:
+            async for text in response_stream.text_stream:
                 yield text
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None
+        self,
+        messages: list[dict],
+        model: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
     ) -> tuple[str, dict]:
         """Get full response from Claude.
 
@@ -79,6 +85,7 @@ class ClaudeProvider:
             messages: Conversation messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
+            max_tokens: Maximum tokens in response (default 4096)
 
         Returns:
             Tuple of (response_text, metadata)
@@ -87,7 +94,11 @@ class ClaudeProvider:
         formatted_messages = self.format_messages(messages)
 
         # Claude handles system prompt separately
-        kwargs = {"model": model, "messages": formatted_messages, "max_tokens": 4096}
+        kwargs = {
+            "model": model,
+            "messages": formatted_messages,
+            "max_tokens": max_tokens,
+        }
 
         if system_prompt:
             kwargs["system"] = system_prompt

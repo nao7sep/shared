@@ -56,6 +56,10 @@ class GeminiProvider:
         # Format messages
         formatted_messages = self.format_messages(messages)
 
+        # Handle empty messages case
+        if not formatted_messages:
+            return
+
         # Create model instance
         model_instance = genai.GenerativeModel(
             model_name=model,
@@ -63,12 +67,8 @@ class GeminiProvider:
         )
 
         # Gemini expects chat history without the last message
-        if formatted_messages:
-            history = formatted_messages[:-1]
-            last_message = formatted_messages[-1]["parts"][0]
-        else:
-            history = []
-            last_message = ""
+        history = formatted_messages[:-1]
+        last_message = formatted_messages[-1]["parts"][0]
 
         # Create chat
         chat = model_instance.start_chat(history=history)
@@ -97,6 +97,10 @@ class GeminiProvider:
         # Format messages
         formatted_messages = self.format_messages(messages)
 
+        # Handle empty messages case
+        if not formatted_messages:
+            return "", {"model": model, "usage": {}}
+
         # Create model instance
         model_instance = genai.GenerativeModel(
             model_name=model,
@@ -104,12 +108,8 @@ class GeminiProvider:
         )
 
         # Gemini expects chat history without the last message
-        if formatted_messages:
-            history = formatted_messages[:-1]
-            last_message = formatted_messages[-1]["parts"][0]
-        else:
-            history = []
-            last_message = ""
+        history = formatted_messages[:-1]
+        last_message = formatted_messages[-1]["parts"][0]
 
         # Create chat
         chat = model_instance.start_chat(history=history)
