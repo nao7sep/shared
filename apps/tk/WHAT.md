@@ -78,6 +78,8 @@ now you've said WHAT is complete. i asked for HOW.md, you generated it and i ask
 
 but one part of the HOW that i cant help checking beforehand is folder structure. how directories and files are named and placed. your suggestion to make "tk" right under "tk" doesnt sound correct. let's at least make it tk/src/tk so that tk/tests can be added naturally. using "tk" twice feels wrong too, but if that is ok in python world, it is ok. if not, "tk/src/tkapp" or "tk/src/tkcli" may be good options, but this is really just extra thinking.
 
+(HOW.md was generated at this point. no further updates were applied to it since then).
+
 ## after initial implementation
 
 now first version has been implemented.

@@ -168,3 +168,5 @@ should we also reduce consecutive whitespace-only lines within visible content i
 as for logging, i dont need obvious things like profile is loaded, model is changed, etc. i should have said "error details." if something unexpected happens such as api returning an error response, app needing to throw an exception, etc, let's log all of them. good things, successful events dont need to be logged. only bad things.
 
 metadata operation messages should not be logged in the chat file. if app is good and i use it daily, i'll definitely scope creep and enjoy it. like, secret mode where i can talk without adding the interactions into the log, secretly asking if the log contains anything private or unsafe, etc. /safe will check these and return a response without adding the result in the log or even remembering it. but not today. well, /safe may be useful immediately, though. :)
+
+(HOW.md was generated at this point. no further updates were applied to it since then).
