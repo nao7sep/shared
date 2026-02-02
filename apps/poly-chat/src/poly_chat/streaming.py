@@ -4,13 +4,11 @@ This module handles displaying streaming responses in real-time,
 accumulating the full response, and handling errors mid-stream.
 """
 
-import sys
 from typing import AsyncIterator
 
 
 async def display_streaming_response(
-    stream: AsyncIterator[str],
-    prefix: str = ""
+    stream: AsyncIterator[str], prefix: str = ""
 ) -> str:
     """Display streaming response in real-time and accumulate full text.
 

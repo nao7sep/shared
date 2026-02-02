@@ -53,8 +53,6 @@ def load_from_json(file_path: str, key_name: str) -> str:
             )
 
     if not isinstance(value, str):
-        raise ValueError(
-            f"Key '{key_name}' in {file_path} is not a string"
-        )
+        raise ValueError(f"Key '{key_name}' in {file_path} is not a string")
 
     return value.strip()

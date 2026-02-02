@@ -25,26 +25,21 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
 
     if key_type == "env":
         from .env_vars import load_from_env
+
         return load_from_env(config["key"])
 
     elif key_type == "keychain":
         from .keychain import load_from_keychain
-        return load_from_keychain(
-            config["service"],
-            config["account"]
-        )
+
+        return load_from_keychain(config["service"], config["account"])
 
     elif key_type == "json":
         from .json_files import load_from_json
-        return load_from_json(
-            config["path"],
-            config["key"]
-        )
+
+        return load_from_json(config["path"], config["key"])
 
     else:
-        raise ValueError(
-            f"Unknown key type '{key_type}' for provider '{provider}'"
-        )
+        raise ValueError(f"Unknown key type '{key_type}' for provider '{provider}'")
 
 
 def validate_api_key(key: str, provider: str) -> bool:

@@ -9,13 +9,11 @@ from typing import Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
-from prompt_toolkit.key_binding import KeyBindings
 
-from . import profile, conversation, models
+from . import profile, conversation
 from .commands import CommandHandler
 from .keys.loader import load_api_key, validate_api_key
 from .streaming import display_streaming_response
-from .message_formatter import lines_to_text
 
 
 # AI provider imports
@@ -38,7 +36,7 @@ def setup_logging(log_file: Optional[str] = None) -> None:
         logging.basicConfig(
             filename=log_file,
             level=logging.ERROR,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
     else:
         # Disable logging
@@ -65,7 +63,7 @@ def get_provider_instance(provider_name: str, api_key: str):
         "grok": GrokProvider,
         "perplexity": PerplexityProvider,
         "mistral": MistralProvider,
-        "deepseek": DeepSeekProvider
+        "deepseek": DeepSeekProvider,
     }
 
     provider_class = providers.get(provider_name)
@@ -79,7 +77,7 @@ async def send_message_to_ai(
     provider_instance,
     messages: list[dict],
     model: str,
-    system_prompt: Optional[str] = None
+    system_prompt: Optional[str] = None,
 ) -> tuple[str, dict]:
     """Send message to AI and get response.
 
@@ -95,10 +93,7 @@ async def send_message_to_ai(
     try:
         # Stream response
         stream = provider_instance.send_message(
-            messages=messages,
-            model=model,
-            system_prompt=system_prompt,
-            stream=True
+            messages=messages, model=model, system_prompt=system_prompt, stream=True
         )
 
         # Display and accumulate
@@ -119,7 +114,7 @@ async def repl_loop(
     profile_data: dict,
     conversation_data: dict,
     conversation_path: str,
-    system_prompt: Optional[str] = None
+    system_prompt: Optional[str] = None,
 ) -> None:
     """Run the REPL loop.
 
@@ -135,7 +130,7 @@ async def repl_loop(
         "current_model": profile_data["models"][profile_data["default_ai"]],
         "profile": profile_data,
         "conversation": conversation_data,
-        "system_prompt": system_prompt
+        "system_prompt": system_prompt,
     }
 
     # Initialize command handler
@@ -151,7 +146,7 @@ async def repl_loop(
     print("=" * 60)
     print(f"Provider: {session['current_ai']}")
     print(f"Model: {session['current_model']}")
-    print(f"Type /help for commands, Ctrl-D or /exit to quit")
+    print("Type /help for commands, Ctrl-D or /exit to quit")
     print("=" * 60)
     print()
 
@@ -159,10 +154,7 @@ async def repl_loop(
     while True:
         try:
             # Get user input (multiline)
-            user_input = await prompt_session.prompt_async(
-                "You: ",
-                multiline=True
-            )
+            user_input = await prompt_session.prompt_async("You: ", multiline=True)
 
             if not user_input.strip():
                 continue
@@ -224,22 +216,19 @@ async def repl_loop(
             try:
                 print(f"\n{session['current_ai'].capitalize()}: ", end="", flush=True)
                 response_text, metadata = await send_message_to_ai(
-                    provider_instance,
-                    messages,
-                    session["current_model"],
-                    system_prompt
+                    provider_instance, messages, session["current_model"], system_prompt
                 )
 
                 # Add assistant response to conversation
                 actual_model = metadata.get("model", session["current_model"])
                 conversation.add_assistant_message(
-                    conversation_data,
-                    response_text,
-                    actual_model
+                    conversation_data, response_text, actual_model
                 )
 
                 # Save conversation
-                await conversation.save_conversation(conversation_path, conversation_data)
+                await conversation.save_conversation(
+                    conversation_path, conversation_data
+                )
 
                 # Display token usage if available
                 if "usage" in metadata:
@@ -251,7 +240,10 @@ async def repl_loop(
             except KeyboardInterrupt:
                 print("\n[Message cancelled]")
                 # Remove the user message since we didn't get a response
-                if conversation_data["messages"] and conversation_data["messages"][-1]["role"] == "user":
+                if (
+                    conversation_data["messages"]
+                    and conversation_data["messages"][-1]["role"] == "user"
+                ):
                     conversation_data["messages"].pop()
                 print()
                 continue
@@ -264,11 +256,13 @@ async def repl_loop(
                 conversation.add_error_message(
                     conversation_data,
                     str(e),
-                    {"provider": provider_name, "model": session["current_model"]}
+                    {"provider": provider_name, "model": session["current_model"]},
                 )
 
                 # Save conversation with error
-                await conversation.save_conversation(conversation_path, conversation_data)
+                await conversation.save_conversation(
+                    conversation_path, conversation_data
+                )
                 print()
 
         except (EOFError, KeyboardInterrupt):
@@ -281,29 +275,25 @@ def main() -> None:
     """Main entry point for PolyChat CLI."""
     parser = argparse.ArgumentParser(
         description="PolyChat - Multi-AI CLI Chat Tool",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument(
-        "-p", "--profile",
-        required=True,
-        help="Path to profile file (required)"
+        "-p", "--profile", required=True, help="Path to profile file (required)"
     )
 
     parser.add_argument(
-        "-c", "--chat",
-        help="Path to conversation file (optional, will prompt if not provided)"
+        "-c",
+        "--chat",
+        help="Path to conversation file (optional, will prompt if not provided)",
     )
 
     parser.add_argument(
-        "-l", "--log",
-        help="Path to log file for error logging (optional)"
+        "-l", "--log", help="Path to log file for error logging (optional)"
     )
 
     parser.add_argument(
-        "command",
-        nargs="?",
-        help="Command to run (e.g., 'new' to create profile)"
+        "command", nargs="?", help="Command to run (e.g., 'new' to create profile)"
     )
 
     args = parser.parse_args()
@@ -328,7 +318,9 @@ def main() -> None:
         # Get conversation file path
         if args.chat:
             # Map the path
-            conversation_path = profile.map_path(args.chat, str(Path(args.profile).parent))
+            conversation_path = profile.map_path(
+                args.chat, str(Path(args.profile).parent)
+            )
         else:
             # Prompt for conversation file
             print("\nConversation file:")
@@ -341,12 +333,17 @@ def main() -> None:
                 if not conv_name:
                     print("Error: Conversation file name required")
                     sys.exit(1)
-                conversation_path = profile.map_path(conv_name, profile_data["conversations_dir"])
+                conversation_path = profile.map_path(
+                    conv_name, profile_data["conversations_dir"]
+                )
             else:
                 # Generate new filename
                 import uuid
+
                 conv_name = f"poly-chat_{uuid.uuid4()}.json"
-                conversation_path = str(Path(profile_data["conversations_dir"]) / conv_name)
+                conversation_path = str(
+                    Path(profile_data["conversations_dir"]) / conv_name
+                )
                 print(f"Creating new conversation: {conv_name}")
 
         # Load conversation
@@ -367,7 +364,9 @@ def main() -> None:
             system_prompt = profile_data["system_prompt"].get("content")
 
         # Run REPL loop
-        asyncio.run(repl_loop(profile_data, conversation_data, conversation_path, system_prompt))
+        asyncio.run(
+            repl_loop(profile_data, conversation_data, conversation_path, system_prompt)
+        )
 
     except KeyboardInterrupt:
         print("\nInterrupted")

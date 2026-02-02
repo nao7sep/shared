@@ -18,10 +18,7 @@ class GeminiProvider:
         genai.configure(api_key=api_key)
         self.api_key = api_key
 
-    def format_messages(
-        self,
-        conversation_messages: list[dict]
-    ) -> list[dict]:
+    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
         """Convert conversation format to Gemini format.
 
         Args:
@@ -35,10 +32,7 @@ class GeminiProvider:
             content = lines_to_text(msg["content"])
             # Gemini uses "user" and "model" roles
             role = "model" if msg["role"] == "assistant" else "user"
-            formatted.append({
-                "role": role,
-                "parts": [content]
-            })
+            formatted.append({"role": role, "parts": [content]})
         return formatted
 
     async def send_message(
@@ -46,7 +40,7 @@ class GeminiProvider:
         messages: list[dict],
         model: str,
         system_prompt: str | None = None,
-        stream: bool = True
+        stream: bool = True,
     ) -> AsyncIterator[str]:
         """Send message to Gemini and yield response chunks.
 
@@ -65,7 +59,7 @@ class GeminiProvider:
         # Create model instance
         model_instance = genai.GenerativeModel(
             model_name=model,
-            system_instruction=system_prompt if system_prompt else None
+            system_instruction=system_prompt if system_prompt else None,
         )
 
         # Gemini expects chat history without the last message
@@ -88,10 +82,7 @@ class GeminiProvider:
                 yield chunk.text
 
     async def get_full_response(
-        self,
-        messages: list[dict],
-        model: str,
-        system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None
     ) -> tuple[str, dict]:
         """Get full response from Gemini.
 
@@ -109,7 +100,7 @@ class GeminiProvider:
         # Create model instance
         model_instance = genai.GenerativeModel(
             model_name=model,
-            system_instruction=system_prompt if system_prompt else None
+            system_instruction=system_prompt if system_prompt else None,
         )
 
         # Gemini expects chat history without the last message
@@ -133,10 +124,22 @@ class GeminiProvider:
         metadata = {
             "model": model,
             "usage": {
-                "prompt_tokens": response.usage_metadata.prompt_token_count if hasattr(response, "usage_metadata") else 0,
-                "completion_tokens": response.usage_metadata.candidates_token_count if hasattr(response, "usage_metadata") else 0,
-                "total_tokens": response.usage_metadata.total_token_count if hasattr(response, "usage_metadata") else 0
-            }
+                "prompt_tokens": (
+                    response.usage_metadata.prompt_token_count
+                    if hasattr(response, "usage_metadata")
+                    else 0
+                ),
+                "completion_tokens": (
+                    response.usage_metadata.candidates_token_count
+                    if hasattr(response, "usage_metadata")
+                    else 0
+                ),
+                "total_tokens": (
+                    response.usage_metadata.total_token_count
+                    if hasattr(response, "usage_metadata")
+                    else 0
+                ),
+            },
         }
 
         return content, metadata

@@ -18,10 +18,7 @@ class ClaudeProvider:
         self.client = AsyncAnthropic(api_key=api_key)
         self.api_key = api_key
 
-    def format_messages(
-        self,
-        conversation_messages: list[dict]
-    ) -> list[dict]:
+    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
         """Convert conversation format to Claude format.
 
         Args:
@@ -33,10 +30,7 @@ class ClaudeProvider:
         formatted = []
         for msg in conversation_messages:
             content = lines_to_text(msg["content"])
-            formatted.append({
-                "role": msg["role"],
-                "content": content
-            })
+            formatted.append({"role": msg["role"], "content": content})
         return formatted
 
     async def send_message(
@@ -44,7 +38,7 @@ class ClaudeProvider:
         messages: list[dict],
         model: str,
         system_prompt: str | None = None,
-        stream: bool = True
+        stream: bool = True,
     ) -> AsyncIterator[str]:
         """Send message to Claude and yield response chunks.
 
@@ -65,7 +59,7 @@ class ClaudeProvider:
             "model": model,
             "messages": formatted_messages,
             "max_tokens": 4096,
-            "stream": stream
+            "stream": stream,
         }
 
         if system_prompt:
@@ -77,10 +71,7 @@ class ClaudeProvider:
                 yield text
 
     async def get_full_response(
-        self,
-        messages: list[dict],
-        model: str,
-        system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None
     ) -> tuple[str, dict]:
         """Get full response from Claude.
 
@@ -96,11 +87,7 @@ class ClaudeProvider:
         formatted_messages = self.format_messages(messages)
 
         # Claude handles system prompt separately
-        kwargs = {
-            "model": model,
-            "messages": formatted_messages,
-            "max_tokens": 4096
-        }
+        kwargs = {"model": model, "messages": formatted_messages, "max_tokens": 4096}
 
         if system_prompt:
             kwargs["system"] = system_prompt
@@ -120,8 +107,9 @@ class ClaudeProvider:
             "usage": {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
-                "total_tokens": response.usage.input_tokens + response.usage.output_tokens
-            }
+                "total_tokens": response.usage.input_tokens
+                + response.usage.output_tokens,
+            },
         }
 
         return content, metadata

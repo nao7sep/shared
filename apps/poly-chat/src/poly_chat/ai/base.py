@@ -17,7 +17,7 @@ class AIProvider(Protocol):
         messages: list[dict],
         model: str,
         system_prompt: str | None = None,
-        stream: bool = True
+        stream: bool = True,
     ) -> AsyncIterator[str]:
         """Send message to AI and yield response chunks if streaming.
 
@@ -36,10 +36,7 @@ class AIProvider(Protocol):
         ...
 
     async def get_full_response(
-        self,
-        messages: list[dict],
-        model: str,
-        system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None
     ) -> tuple[str, dict]:
         """Get full response (non-streaming).
 
@@ -57,10 +54,7 @@ class AIProvider(Protocol):
         """
         ...
 
-    def format_messages(
-        self,
-        conversation_messages: list[dict]
-    ) -> list[dict]:
+    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
         """Convert conversation format to provider-specific format.
 
         Args:

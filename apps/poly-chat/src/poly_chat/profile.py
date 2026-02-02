@@ -107,25 +107,15 @@ def validate_profile(profile: dict[str, Any]) -> None:
     Raises:
         ValueError: If profile is invalid
     """
-    required = [
-        "default_ai",
-        "models",
-        "conversations_dir",
-        "log_dir",
-        "api_keys"
-    ]
+    required = ["default_ai", "models", "conversations_dir", "log_dir", "api_keys"]
 
     missing = [f for f in required if f not in profile]
     if missing:
-        raise ValueError(
-            f"Profile missing required fields: {', '.join(missing)}"
-        )
+        raise ValueError(f"Profile missing required fields: {', '.join(missing)}")
 
     # Validate default_ai is in models
     if profile["default_ai"] not in profile["models"]:
-        raise ValueError(
-            f"default_ai '{profile['default_ai']}' not found in models"
-        )
+        raise ValueError(f"default_ai '{profile['default_ai']}' not found in models")
 
     # Validate models is a dict
     if not isinstance(profile["models"], dict):
@@ -170,7 +160,7 @@ def create_profile(path: str) -> dict[str, Any]:
         "4": "grok",
         "5": "perplexity",
         "6": "mistral",
-        "7": "deepseek"
+        "7": "deepseek",
     }
 
     choice = input("Select default AI (1-7) [2]: ").strip() or "2"
@@ -178,15 +168,14 @@ def create_profile(path: str) -> dict[str, Any]:
 
     # Get conversations directory
     default_conv_dir = "~/poly-chat-logs"
-    conv_dir = input(
-        f"Conversations directory [{default_conv_dir}]: "
-    ).strip() or default_conv_dir
+    conv_dir = (
+        input(f"Conversations directory [{default_conv_dir}]: ").strip()
+        or default_conv_dir
+    )
 
     # Get log directory
     default_log_dir = f"{conv_dir}/logs"
-    log_dir = input(
-        f"Log directory [{default_log_dir}]: "
-    ).strip() or default_log_dir
+    log_dir = input(f"Log directory [{default_log_dir}]: ").strip() or default_log_dir
 
     # Create profile structure
     profile = {
@@ -198,12 +187,12 @@ def create_profile(path: str) -> dict[str, Any]:
             "grok": "grok-2",
             "perplexity": "sonar-pro",
             "mistral": "mistral-large",
-            "deepseek": "deepseek-chat"
+            "deepseek": "deepseek-chat",
         },
         "system_prompt": "@/system-prompts/default.txt",
         "conversations_dir": conv_dir,
         "log_dir": log_dir,
-        "api_keys": {}
+        "api_keys": {},
     }
 
     # Configure API keys
@@ -215,32 +204,30 @@ def create_profile(path: str) -> dict[str, Any]:
         choice = input("  Configure as (e/k/j/s) [s]: ").strip().lower() or "s"
 
         if choice == "e":
-            var_name = input(f"  Environment variable name [" +
-                           f"{provider.upper()}_API_KEY]: ").strip()
+            var_name = input(
+                "  Environment variable name [" + f"{provider.upper()}_API_KEY]: "
+            ).strip()
             var_name = var_name or f"{provider.upper()}_API_KEY"
-            profile["api_keys"][provider] = {
-                "type": "env",
-                "key": var_name
-            }
+            profile["api_keys"][provider] = {"type": "env", "key": var_name}
 
         elif choice == "k":
-            service = input(f"  Keychain service [poly-chat]: ").strip() or "poly-chat"
+            service = input("  Keychain service [poly-chat]: ").strip() or "poly-chat"
             account = input(f"  Keychain account [{provider}-api-key]: ").strip()
             account = account or f"{provider}-api-key"
             profile["api_keys"][provider] = {
                 "type": "keychain",
                 "service": service,
-                "account": account
+                "account": account,
             }
 
         elif choice == "j":
-            json_path = input(f"  JSON file path [~/.secrets/api-keys.json]: ").strip()
+            json_path = input("  JSON file path [~/.secrets/api-keys.json]: ").strip()
             json_path = json_path or "~/.secrets/api-keys.json"
             key_name = input(f"  Key in JSON [{provider}]: ").strip() or provider
             profile["api_keys"][provider] = {
                 "type": "json",
                 "path": json_path,
-                "key": key_name
+                "key": key_name,
             }
 
     # Save profile

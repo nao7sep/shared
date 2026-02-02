@@ -3,7 +3,7 @@
 This module handles parsing and executing commands like /model, /gpt, /retry, etc.
 """
 
-from typing import Optional, Callable, Any
+from typing import Optional, Any
 from . import models
 from .conversation import update_metadata, delete_message_and_following
 
@@ -86,7 +86,7 @@ class CommandHandler:
             "safe": self.check_safety,
             "help": self.show_help,
             "exit": self.exit_app,
-            "quit": self.exit_app
+            "quit": self.exit_app,
         }
 
         if command in command_map:
@@ -130,7 +130,9 @@ class CommandHandler:
             # Show available models for current provider
             provider = self.session["current_ai"]
             available_models = models.get_models_for_provider(provider)
-            return f"Available models for {provider}:\n" + "\n".join(f"  - {m}" for m in available_models)
+            return f"Available models for {provider}:\n" + "\n".join(
+                f"  - {m}" for m in available_models
+            )
 
         # Check if model exists and switch provider if needed
         provider = models.get_provider_for_model(args)
@@ -182,7 +184,9 @@ class CommandHandler:
             count = delete_message_and_following(conversation, index)
             return f"Deleted {count} message(s) from index {index} onwards"
         except IndexError:
-            raise ValueError(f"Message index {index} out of range (0-{len(messages)-1})")
+            raise ValueError(
+                f"Message index {index} out of range (0-{len(messages)-1})"
+            )
 
     async def set_title(self, args: str) -> str:
         """Set conversation title.
@@ -233,7 +237,7 @@ class CommandHandler:
             return "Summary cleared"
         else:
             update_metadata(conversation, summary=args)
-            return f"Summary set"
+            return "Summary set"
 
     async def generate_summary(self, args: str) -> str:
         """Generate summary using AI.

@@ -37,9 +37,9 @@ def load_conversation(path: str) -> dict[str, Any]:
                 "system_prompt_key": None,
                 "default_model": None,
                 "created_at": None,
-                "updated_at": None
+                "updated_at": None,
             },
-            "messages": []
+            "messages": [],
         }
 
     try:
@@ -98,17 +98,13 @@ def add_user_message(data: dict[str, Any], content: str) -> None:
     message = {
         "role": "user",
         "content": lines,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     data["messages"].append(message)
 
 
-def add_assistant_message(
-    data: dict[str, Any],
-    content: str,
-    model: str
-) -> None:
+def add_assistant_message(data: dict[str, Any], content: str, model: str) -> None:
     """Add assistant message to conversation.
 
     Args:
@@ -122,16 +118,14 @@ def add_assistant_message(
         "role": "assistant",
         "content": lines,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "model": model
+        "model": model,
     }
 
     data["messages"].append(message)
 
 
 def add_error_message(
-    data: dict[str, Any],
-    content: str,
-    details: dict[str, Any] | None = None
+    data: dict[str, Any], content: str, details: dict[str, Any] | None = None
 ) -> None:
     """Add error message to conversation.
 
@@ -145,7 +139,7 @@ def add_error_message(
     message = {
         "role": "error",
         "content": lines,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     if details:
@@ -196,8 +190,7 @@ def update_metadata(data: dict[str, Any], **kwargs) -> None:
 
 
 def get_messages_for_ai(
-    data: dict[str, Any],
-    max_messages: int | None = None
+    data: dict[str, Any], max_messages: int | None = None
 ) -> list[dict[str, Any]]:
     """Get messages formatted for AI (excluding error messages).
 
@@ -209,10 +202,7 @@ def get_messages_for_ai(
         List of messages (user and assistant only)
     """
     # Filter out error messages
-    messages = [
-        msg for msg in data["messages"]
-        if msg["role"] in ("user", "assistant")
-    ]
+    messages = [msg for msg in data["messages"] if msg["role"] in ("user", "assistant")]
 
     # Limit if specified
     if max_messages is not None:

@@ -18,10 +18,7 @@ class OpenAIProvider:
         self.client = AsyncOpenAI(api_key=api_key)
         self.api_key = api_key
 
-    def format_messages(
-        self,
-        conversation_messages: list[dict]
-    ) -> list[dict]:
+    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
         """Convert conversation format to OpenAI format.
 
         Args:
@@ -33,10 +30,7 @@ class OpenAIProvider:
         formatted = []
         for msg in conversation_messages:
             content = lines_to_text(msg["content"])
-            formatted.append({
-                "role": msg["role"],
-                "content": content
-            })
+            formatted.append({"role": msg["role"], "content": content})
         return formatted
 
     async def send_message(
@@ -44,7 +38,7 @@ class OpenAIProvider:
         messages: list[dict],
         model: str,
         system_prompt: str | None = None,
-        stream: bool = True
+        stream: bool = True,
     ) -> AsyncIterator[str]:
         """Send message to OpenAI and yield response chunks.
 
@@ -62,16 +56,11 @@ class OpenAIProvider:
 
         # Add system prompt if provided
         if system_prompt:
-            formatted_messages.insert(0, {
-                "role": "system",
-                "content": system_prompt
-            })
+            formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
         # Create streaming request
         response = await self.client.chat.completions.create(
-            model=model,
-            messages=formatted_messages,
-            stream=stream
+            model=model, messages=formatted_messages, stream=stream
         )
 
         # Yield chunks
@@ -80,10 +69,7 @@ class OpenAIProvider:
                 yield chunk.choices[0].delta.content
 
     async def get_full_response(
-        self,
-        messages: list[dict],
-        model: str,
-        system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None
     ) -> tuple[str, dict]:
         """Get full response from OpenAI.
 
@@ -100,16 +86,11 @@ class OpenAIProvider:
 
         # Add system prompt if provided
         if system_prompt:
-            formatted_messages.insert(0, {
-                "role": "system",
-                "content": system_prompt
-            })
+            formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
         # Create non-streaming request
         response = await self.client.chat.completions.create(
-            model=model,
-            messages=formatted_messages,
-            stream=False
+            model=model, messages=formatted_messages, stream=False
         )
 
         # Extract response
@@ -120,9 +101,11 @@ class OpenAIProvider:
             "model": response.model,
             "usage": {
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                "completion_tokens": response.usage.completion_tokens if response.usage else 0,
-                "total_tokens": response.usage.total_tokens if response.usage else 0
-            }
+                "completion_tokens": (
+                    response.usage.completion_tokens if response.usage else 0
+                ),
+                "total_tokens": response.usage.total_tokens if response.usage else 0,
+            },
         }
 
         return content, metadata
