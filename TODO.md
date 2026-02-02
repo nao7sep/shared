@@ -12,6 +12,9 @@
 - try deepl/google translation apis
 - try openai/google transcription apis
 - decide what to do with blog/x
+- mechanism to store/retrieve api keys
+- docs on config-related python packages
+- multi-ai cli chat tool
 
 ## History
 
