@@ -1,7 +1,8 @@
 """Gemini (Google) provider implementation for PolyChat."""
 
 from typing import AsyncIterator
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from ..message_formatter import lines_to_text
 
@@ -15,10 +16,10 @@ class GeminiProvider:
         Args:
             api_key: Google API key
         """
-        genai.configure(api_key=api_key)
+        self.client = genai.Client(api_key=api_key)
         self.api_key = api_key
 
-    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
+    def format_messages(self, conversation_messages: list[dict]) -> list[types.Content]:
         """Convert conversation format to Gemini format.
 
         Args:
@@ -32,7 +33,7 @@ class GeminiProvider:
             content = lines_to_text(msg["content"])
             # Gemini uses "user" and "model" roles
             role = "model" if msg["role"] == "assistant" else "user"
-            formatted.append({"role": role, "parts": [content]})
+            formatted.append(types.Content(role=role, parts=[types.Part(text=content)]))
         return formatted
 
     async def send_message(
@@ -60,21 +61,17 @@ class GeminiProvider:
         if not formatted_messages:
             return
 
-        # Create model instance
-        model_instance = genai.GenerativeModel(
-            model_name=model,
+        # Build config with system instruction if provided
+        config = types.GenerateContentConfig(
             system_instruction=system_prompt if system_prompt else None,
         )
 
-        # Gemini expects chat history without the last message
-        history = formatted_messages[:-1]
-        last_message = formatted_messages[-1]["parts"][0]
-
-        # Create chat
-        chat = model_instance.start_chat(history=history)
-
         # Send message with streaming
-        response = await chat.send_message_async(last_message, stream=stream)
+        response = await self.client.aio.models.generate_content_stream(
+            model=model,
+            contents=formatted_messages,
+            config=config,
+        )
 
         # Yield chunks
         async for chunk in response:
@@ -101,24 +98,20 @@ class GeminiProvider:
         if not formatted_messages:
             return "", {"model": model, "usage": {}}
 
-        # Create model instance
-        model_instance = genai.GenerativeModel(
-            model_name=model,
+        # Build config with system instruction if provided
+        config = types.GenerateContentConfig(
             system_instruction=system_prompt if system_prompt else None,
         )
 
-        # Gemini expects chat history without the last message
-        history = formatted_messages[:-1]
-        last_message = formatted_messages[-1]["parts"][0]
-
-        # Create chat
-        chat = model_instance.start_chat(history=history)
-
         # Send message
-        response = await chat.send_message_async(last_message)
+        response = await self.client.aio.models.generate_content(
+            model=model,
+            contents=formatted_messages,
+            config=config,
+        )
 
         # Extract response
-        content = response.text
+        content = response.text if response.text else ""
 
         # Extract metadata
         metadata = {

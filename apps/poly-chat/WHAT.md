@@ -193,4 +193,18 @@ with this new feature, plan how to test ai features, please.
 
 test code must test actual api calls. i currently dont know how you implemented the app, but if concerns were separated, we should be able to generate a temporary profile file, load it to run the app, interact with all the supported ais, save the conversation as a json file, load it in another run of the app and ask ai to count the interactions and make sure the count is correct. other things like retry, going back in time, etc can be tested easily. first, we need to do this "sending a message to another ai each time" test to ensure the bridges between the conversation data structure and the ai sdks are correctly implemented. in other words, we dont need to test anything else. we only need a one-shot test that does the whole thing. please implement it and make it output sufficient info (like test is trying what and then what happens in how many seconds and more). if this test doesnt pass, i dont need to human test the actual app.
 
+## after test_end_to_end.py worked and all 7 ais responded
+
+let's update the test to make it a conversation. is there a smart way to ask a fixed question each time that will get a meaningful, various answer from each ai, based on which the conversation will evolve and the next question makes good sense?
+
 ---
+
+we had a dependency issue. one package was too old.
+
+as you generated pyproject.toml based on old knowledge, a lot of packages are old/obsolete. we even use google-generativeai, which will be deprecated soon.
+
+let's update pyproject.toml to use latest versions of everything, learn the latest version numbers by temporarily deleting version numbers from pyproject.toml, delete poetry.lock, have it regenerated, set latest version numbers explicitly back to pyproject.toml. some old packages are stable and we probably dont always need the latest versions of everything, but ai-related packages are advancing rapidly and old packages probably lack a lot of features. so, it's better to get the app to run with the latest versions and get used to that.
+
+let's also migrate to google.genai now. we dont do much with gemini. so, migration should be easy.
+
+we should also update minimum python version to 3.10. unlike dependency versions, we cant casually expect a too new python version as a requirement as a lot of people seem to still use older python. i believe that is why "openai" for example still supports 3.09. but the version you generated, 3.09, doesnt seem to work with "black", a code formatter.

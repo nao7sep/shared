@@ -61,13 +61,12 @@ class ClaudeProvider:
             "model": model,
             "messages": formatted_messages,
             "max_tokens": max_tokens,
-            "stream": stream,
         }
 
         if system_prompt:
             kwargs["system"] = system_prompt
 
-        # Create streaming request
+        # Create streaming request (stream parameter not needed in .stream() method)
         async with self.client.messages.stream(**kwargs) as response_stream:
             async for text in response_stream.text_stream:
                 yield text

@@ -26,11 +26,23 @@ class PerplexityProvider:
         self.client = AsyncOpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
 
     def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
-        """Convert conversation format to Perplexity format."""
+        """Convert conversation format to Perplexity format.
+
+        Perplexity requires messages to alternate between user and assistant.
+        This method ensures alternation by keeping only the last message of
+        consecutive same-role messages.
+        """
         formatted = []
         for msg in conversation_messages:
             content = lines_to_text(msg["content"])
-            formatted.append({"role": msg["role"], "content": content})
+            new_msg = {"role": msg["role"], "content": content}
+
+            # If this message has the same role as the previous one, replace the previous
+            if formatted and formatted[-1]["role"] == new_msg["role"]:
+                formatted[-1] = new_msg
+            else:
+                formatted.append(new_msg)
+
         return formatted
 
     async def send_message(
