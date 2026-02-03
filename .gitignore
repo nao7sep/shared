@@ -9,3 +9,6 @@ __pycache__/
 
 # tools
 .claude/
+
+# test secrets
+__TEST_API_KEYS.json

@@ -190,3 +190,7 @@ then, please generate it at repo root, .gitignore it and generate code in test_a
 with this new feature, plan how to test ai features, please.
 
 ---
+
+test code must test actual api calls. i currently dont know how you implemented the app, but if concerns were separated, we should be able to generate a temporary profile file, load it to run the app, interact with all the supported ais, save the conversation as a json file, load it in another run of the app and ask ai to count the interactions and make sure the count is correct. other things like retry, going back in time, etc can be tested easily. first, we need to do this "sending a message to another ai each time" test to ensure the bridges between the conversation data structure and the ai sdks are correctly implemented. in other words, we dont need to test anything else. we only need a one-shot test that does the whole thing. please implement it and make it output sufficient info (like test is trying what and then what happens in how many seconds and more). if this test doesnt pass, i dont need to human test the actual app.
+
+---

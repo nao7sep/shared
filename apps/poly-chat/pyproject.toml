@@ -2,7 +2,8 @@
 name = "poly-chat"
 version = "0.1.0"
 description = "Multi-AI CLI chat tool for long-term, version-controlled conversations"
-authors = ["nao7sep"]
+authors = ["nao7sep <nao7sep@gmail.com>"]
+license = "GPL-3.0"
 readme = "README.md"
 packages = [{include = "poly_chat", from = "src"}]
 
@@ -36,6 +37,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "integration: marks tests that make real API calls (deselect with '-m \"not integration\"')",
+    "e2e: marks end-to-end tests that validate complete workflows",
+]
 
 [tool.black]
 line-length = 88

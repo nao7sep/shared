@@ -20,10 +20,15 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
         {"type": "env", "key": "OPENAI_API_KEY"}
         {"type": "keychain", "service": "poly-chat", "account": "claude-key"}
         {"type": "json", "path": "~/.secrets/keys.json", "key": "gemini"}
+        {"type": "direct", "value": "sk-..."} (testing only)
     """
     key_type = config.get("type")
 
-    if key_type == "env":
+    if key_type == "direct":
+        # Direct value (for testing)
+        return config["value"]
+
+    elif key_type == "env":
         from .env_vars import load_from_env
 
         return load_from_env(config["key"])
