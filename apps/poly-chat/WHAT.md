@@ -170,3 +170,23 @@ as for logging, i dont need obvious things like profile is loaded, model is chan
 metadata operation messages should not be logged in the chat file. if app is good and i use it daily, i'll definitely scope creep and enjoy it. like, secret mode where i can talk without adding the interactions into the log, secretly asking if the log contains anything private or unsafe, etc. /safe will check these and return a response without adding the result in the log or even remembering it. but not today. well, /safe may be useful immediately, though. :)
 
 (HOW.md was generated at this point. no further updates were applied to it since then).
+
+## post implementation
+
+i wont read code before i finish human testing, but i want to at least reduce diffs to more efficiently understand how concerns are separated.
+
+do we need the app root .gitignore? i dont know how git or python works. maybe, ai expected a situation where the app alone would be cloned. shared repo has its root .gitignore. if poly-chat's app root .gitignore is not strictly necessary, please delete it. => ai suggested to keep it as it contained app specific patterns and i agreed.
+
+some __init__.py files are empty. let's at least write one comment in all of them. some tools ignore empty files. please understand the context and generate a meaningful comment for each.
+
+---
+
+test_ai currently contains just the __init__.py file.
+
+please suggest an all capital, underscore-connected file name for a json file that will contain api keys and mandatory parameters such as model names. we probably should use _ or __ as an prefix to clarify that it is a private file. a lot of apps' tests will use this file from now on.
+
+then, please generate it at repo root, .gitignore it and generate code in test_ai that gets the keys and mandatory parameters. not all keys will be provided. so, "is this ai available" method would be useful. to find the file, test code should recursively move to the parent directory until it finds the file or reaches the file system root. this searching mechanism should be useful if we want to place the file outside the repo.
+
+with this new feature, plan how to test ai features, please.
+
+---
