@@ -208,3 +208,5 @@ let's update pyproject.toml to use latest versions of everything, learn the late
 let's also migrate to google.genai now. we dont do much with gemini. so, migration should be easy.
 
 we should also update minimum python version to 3.10. unlike dependency versions, we cant casually expect a too new python version as a requirement as a lot of people seem to still use older python. i believe that is why "openai" for example still supports 3.09. but the version you generated, 3.09, doesnt seem to work with "black", a code formatter.
+
+(I have just added prefix _ to WHAT.md and HOW.md as these are committed, personal-use files).

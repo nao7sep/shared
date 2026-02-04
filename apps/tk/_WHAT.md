@@ -199,3 +199,5 @@ then let's add 3 commands: today, yesterday, recent. if "t", "y" and "r" are all
 i will not implement "week" because doing "last week" would require app to understand the calender. let's say today is wednesday and we happen to want a list of handled tasks during the last calender week. if this rare situation ever occurs, we'll just open TODO.md. we cant implement a feature for one specific rare situation.
 
 history shows the old [ ], [x], [~] things. when saving data as markdown, app no longer does this and uses emojis instead for handled tasks. let's use emojis in history to make it consistent. in "list", we dont need [ ] or any emojis. a simple numbered list is sufficient. then, please search for these 3 things ([ ], [x], [~]) to make sure they are not used anywhere else.
+
+(I have just added prefix _ to WHAT.md, HOW.md and WORK_LOG.md as these are committed, personal-use files).

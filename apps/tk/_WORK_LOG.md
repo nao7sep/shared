@@ -49,3 +49,9 @@ i actually thought about deleting what.md too once i had how.md, but ai suggeste
 i fixed bugs in one iteration and made improvements in the following one.
 
 major discomfort with python comes from differences between python culture and c# culture. so, i still ask ai to read transition-guide before any work. i might make a more concise version of this to save context, but not today. i'll work on typescript, node.js, etc as well. when i know enough about what i am playing with, i'll try reducing this 48 kb set of documents to 5-10 kb, while adding ts-related info.
+
+as i added __TEST_API_KEYS.json (which is .gitignored), i also renamed WHAT.md, HOW.md and WORK_LOG.md by prepending _ as prefix.
+
+part of me still wants to delete them or move them to a private repository, but they, especially WHAT.md, contain a lot of refined-through-chat specs as plaintext and i probably can ask ais to refer to them to obtain pure WHAT rather than WHAT (specs) and HOW (implementation) tangled in code. one issue of the latter is ais may mimic the implementation as well when all i want is that they understand what i want them to do and think of optimal NEW implementation for the circumstances.
+
+then, if i want to give a prompt like "please refer to tk's _WHAT.md and understand how it has been done before" for another open source tool development, tk's _WHAT.md cant be in a private repo. if one is public, all must be public. if not, other developers (and future i) wont be able to analyze what i was initially thinking. 

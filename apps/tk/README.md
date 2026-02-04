@@ -153,4 +153,4 @@ This helps prevent mistakes when handling tasks.
 
 **Sync settings:** Profiles include `auto_sync` (default: true) and `sync_on_exit` (default: false). With `auto_sync` enabled, TODO.md regenerates after every data change. The `sync` command always works regardless of settings.
 
-See WHAT.md and HOW.md for detailed documentation.
+See _WHAT.md and _HOW.md for detailed documentation.

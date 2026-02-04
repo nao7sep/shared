@@ -71,8 +71,8 @@ poly-chat/
 │   └── concise.txt
 ├── pyproject.toml
 ├── README.md
-├── WHAT.md
-├── HOW.md
+├── _WHAT.md
+├── _HOW.md
 └── .gitignore
 ```
 
