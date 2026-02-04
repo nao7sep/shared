@@ -81,6 +81,7 @@ class CommandHandler:
         # Other commands
         command_map = {
             "model": self.set_model,
+            "timeout": self.set_timeout,
             "retry": self.retry_mode,
             "delete": self.delete_messages,
             "title": self.set_title,
@@ -148,6 +149,43 @@ class CommandHandler:
             # Model not in registry, but allow it anyway (might be new)
             self.session["current_model"] = args
             return f"Set model to {args} (provider: {self.session['current_ai']})"
+
+    async def set_timeout(self, args: str) -> str:
+        """Set or show the timeout setting.
+
+        Args:
+            args: Timeout in seconds or empty to show current
+
+        Returns:
+            Confirmation message or current timeout
+        """
+        if not args:
+            # Show current timeout
+            timeout = self.session["profile"].get("timeout", 30)
+            if timeout == 0:
+                return "Current timeout: 0 (wait forever)"
+            else:
+                return f"Current timeout: {timeout} seconds"
+
+        # Parse and set timeout
+        try:
+            timeout = float(args)
+            if timeout < 0:
+                raise ValueError("Timeout must be non-negative")
+
+            self.session["profile"]["timeout"] = timeout
+
+            # Clear provider cache since timeout changed
+            if "_provider_cache" in self.session:
+                self.session["_provider_cache"].clear()
+
+            if timeout == 0:
+                return "Timeout set to 0 (wait forever). Provider cache cleared."
+            else:
+                return f"Timeout set to {timeout} seconds. Provider cache cleared."
+
+        except ValueError:
+            raise ValueError("Invalid timeout value. Use a number (e.g., /timeout 60) or 0 for no timeout.")
 
     async def retry_mode(self, args: str) -> str:
         """Enter retry mode (ask again without saving previous attempt).
@@ -309,6 +347,10 @@ Provider Shortcuts:
 Model Management:
   /model            Show available models for current provider
   /model <name>     Switch to specified model (auto-detects provider)
+
+Configuration:
+  /timeout          Show current timeout setting
+  /timeout <secs>   Set timeout in seconds (0 = wait forever)
 
 Conversation Control:
   /retry            Replace last response (enter retry mode)

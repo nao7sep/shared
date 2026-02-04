@@ -120,7 +120,10 @@ def get_provider_instance(
     if not provider_class:
         raise ValueError(f"Unsupported provider: {provider_name}")
 
-    instance = provider_class(api_key)
+    # Get timeout from profile (default 30)
+    timeout = session.profile.get("timeout", 30) if session else 30
+
+    instance = provider_class(api_key, timeout=timeout)
 
     # Cache the instance
     if session:

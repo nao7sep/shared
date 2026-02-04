@@ -9,14 +9,17 @@ from ..message_formatter import lines_to_text
 class ClaudeProvider:
     """Claude (Anthropic) provider implementation."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, timeout: float = 30.0):
         """Initialize Claude provider.
 
         Args:
             api_key: Anthropic API key
+            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
-        self.client = AsyncAnthropic(api_key=api_key)
+        timeout_value = timeout if timeout > 0 else None
+        self.client = AsyncAnthropic(api_key=api_key, timeout=timeout_value)
         self.api_key = api_key
+        self.timeout = timeout
 
     def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
         """Convert conversation format to Claude format.
@@ -53,23 +56,29 @@ class ClaudeProvider:
         Yields:
             Response text chunks
         """
-        # Format messages
-        formatted_messages = self.format_messages(messages)
+        try:
+            # Format messages
+            formatted_messages = self.format_messages(messages)
 
-        # Claude handles system prompt separately
-        kwargs = {
-            "model": model,
-            "messages": formatted_messages,
-            "max_tokens": max_tokens,
-        }
+            # Claude handles system prompt separately
+            kwargs = {
+                "model": model,
+                "messages": formatted_messages,
+                "max_tokens": max_tokens,
+            }
 
-        if system_prompt:
-            kwargs["system"] = system_prompt
+            if system_prompt:
+                kwargs["system"] = system_prompt
 
-        # Create streaming request (stream parameter not needed in .stream() method)
-        async with self.client.messages.stream(**kwargs) as response_stream:
-            async for text in response_stream.text_stream:
-                yield text
+            # Create streaming request (stream parameter not needed in .stream() method)
+            async with self.client.messages.stream(**kwargs) as response_stream:
+                async for text in response_stream.text_stream:
+                    yield text
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"\n[ERROR] {error_msg}")
+            raise
 
     async def get_full_response(
         self,
@@ -89,37 +98,44 @@ class ClaudeProvider:
         Returns:
             Tuple of (response_text, metadata)
         """
-        # Format messages
-        formatted_messages = self.format_messages(messages)
+        try:
+            # Format messages
+            formatted_messages = self.format_messages(messages)
 
-        # Claude handles system prompt separately
-        kwargs = {
-            "model": model,
-            "messages": formatted_messages,
-            "max_tokens": max_tokens,
-        }
+            # Claude handles system prompt separately
+            kwargs = {
+                "model": model,
+                "messages": formatted_messages,
+                "max_tokens": max_tokens,
+            }
 
-        if system_prompt:
-            kwargs["system"] = system_prompt
+            if system_prompt:
+                kwargs["system"] = system_prompt
 
-        # Create non-streaming request
-        response = await self.client.messages.create(**kwargs)
+            # Create non-streaming request
+            response = await self.client.messages.create(**kwargs)
 
-        # Extract response
-        content = ""
-        for block in response.content:
-            if hasattr(block, "text"):
-                content += block.text
+            # Extract response
+            content = ""
+            for block in response.content:
+                if hasattr(block, "text"):
+                    content += block.text
 
-        # Extract metadata
-        metadata = {
-            "model": response.model,
-            "usage": {
-                "prompt_tokens": response.usage.input_tokens,
-                "completion_tokens": response.usage.output_tokens,
-                "total_tokens": response.usage.input_tokens
-                + response.usage.output_tokens,
-            },
-        }
+            # Extract metadata
+            metadata = {
+                "model": response.model,
+                "stop_reason": response.stop_reason,
+                "usage": {
+                    "prompt_tokens": response.usage.input_tokens,
+                    "completion_tokens": response.usage.output_tokens,
+                    "total_tokens": response.usage.input_tokens
+                    + response.usage.output_tokens,
+                },
+            }
 
-        return content, metadata
+            return content, metadata
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"\n[ERROR] {error_msg}")
+            raise

@@ -3,6 +3,7 @@
 from typing import AsyncIterator
 from google import genai
 from google.genai import types
+import asyncio
 
 from ..message_formatter import lines_to_text
 
@@ -10,14 +11,16 @@ from ..message_formatter import lines_to_text
 class GeminiProvider:
     """Gemini (Google) provider implementation."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, timeout: float = 30.0):
         """Initialize Gemini provider.
 
         Args:
             api_key: Google API key
+            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
         self.client = genai.Client(api_key=api_key)
         self.api_key = api_key
+        self.timeout = timeout
 
     def format_messages(self, conversation_messages: list[dict]) -> list[types.Content]:
         """Convert conversation format to Gemini format.
@@ -54,29 +57,44 @@ class GeminiProvider:
         Yields:
             Response text chunks
         """
-        # Format messages
-        formatted_messages = self.format_messages(messages)
+        try:
+            # Format messages
+            formatted_messages = self.format_messages(messages)
 
-        # Handle empty messages case
-        if not formatted_messages:
-            return
+            # Handle empty messages case
+            if not formatted_messages:
+                return
 
-        # Build config with system instruction if provided
-        config = types.GenerateContentConfig(
-            system_instruction=system_prompt if system_prompt else None,
-        )
+            # Build config with system instruction if provided
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt if system_prompt else None,
+            )
 
-        # Send message with streaming
-        response = await self.client.aio.models.generate_content_stream(
-            model=model,
-            contents=formatted_messages,
-            config=config,
-        )
+            # Apply timeout if configured
+            if self.timeout > 0:
+                async with asyncio.timeout(self.timeout):
+                    response = await self.client.aio.models.generate_content_stream(
+                        model=model,
+                        contents=formatted_messages,
+                        config=config,
+                    )
+                    async for chunk in response:
+                        if chunk.text:
+                            yield chunk.text
+            else:
+                response = await self.client.aio.models.generate_content_stream(
+                    model=model,
+                    contents=formatted_messages,
+                    config=config,
+                )
+                async for chunk in response:
+                    if chunk.text:
+                        yield chunk.text
 
-        # Yield chunks
-        async for chunk in response:
-            if chunk.text:
-                yield chunk.text
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"\n[ERROR] {error_msg}")
+            raise
 
     async def get_full_response(
         self, messages: list[dict], model: str, system_prompt: str | None = None
@@ -91,48 +109,62 @@ class GeminiProvider:
         Returns:
             Tuple of (response_text, metadata)
         """
-        # Format messages
-        formatted_messages = self.format_messages(messages)
+        try:
+            # Format messages
+            formatted_messages = self.format_messages(messages)
 
-        # Handle empty messages case
-        if not formatted_messages:
-            return "", {"model": model, "usage": {}}
+            # Handle empty messages case
+            if not formatted_messages:
+                return "", {"model": model, "usage": {}}
 
-        # Build config with system instruction if provided
-        config = types.GenerateContentConfig(
-            system_instruction=system_prompt if system_prompt else None,
-        )
+            # Build config with system instruction if provided
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt if system_prompt else None,
+            )
 
-        # Send message
-        response = await self.client.aio.models.generate_content(
-            model=model,
-            contents=formatted_messages,
-            config=config,
-        )
+            # Apply timeout if configured
+            if self.timeout > 0:
+                async with asyncio.timeout(self.timeout):
+                    response = await self.client.aio.models.generate_content(
+                        model=model,
+                        contents=formatted_messages,
+                        config=config,
+                    )
+            else:
+                response = await self.client.aio.models.generate_content(
+                    model=model,
+                    contents=formatted_messages,
+                    config=config,
+                )
 
-        # Extract response
-        content = response.text if response.text else ""
+            # Extract response
+            content = response.text if response.text else ""
 
-        # Extract metadata
-        metadata = {
-            "model": model,
-            "usage": {
-                "prompt_tokens": (
-                    response.usage_metadata.prompt_token_count
-                    if hasattr(response, "usage_metadata")
-                    else 0
-                ),
-                "completion_tokens": (
-                    response.usage_metadata.candidates_token_count
-                    if hasattr(response, "usage_metadata")
-                    else 0
-                ),
-                "total_tokens": (
-                    response.usage_metadata.total_token_count
-                    if hasattr(response, "usage_metadata")
-                    else 0
-                ),
-            },
-        }
+            # Extract metadata
+            metadata = {
+                "model": model,
+                "usage": {
+                    "prompt_tokens": (
+                        response.usage_metadata.prompt_token_count
+                        if hasattr(response, "usage_metadata")
+                        else 0
+                    ),
+                    "completion_tokens": (
+                        response.usage_metadata.candidates_token_count
+                        if hasattr(response, "usage_metadata")
+                        else 0
+                    ),
+                    "total_tokens": (
+                        response.usage_metadata.total_token_count
+                        if hasattr(response, "usage_metadata")
+                        else 0
+                    ),
+                },
+            }
 
-        return content, metadata
+            return content, metadata
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"\n[ERROR] {error_msg}")
+            raise

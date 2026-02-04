@@ -9,14 +9,17 @@ from ..message_formatter import lines_to_text
 class OpenAIProvider:
     """OpenAI (GPT) provider implementation."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, timeout: float = 30.0):
         """Initialize OpenAI provider.
 
         Args:
             api_key: OpenAI API key
+            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
-        self.client = AsyncOpenAI(api_key=api_key)
+        timeout_value = timeout if timeout > 0 else None
+        self.client = AsyncOpenAI(api_key=api_key, timeout=timeout_value)
         self.api_key = api_key
+        self.timeout = timeout
 
     def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
         """Convert conversation format to OpenAI format.
@@ -51,22 +54,28 @@ class OpenAIProvider:
         Yields:
             Response text chunks
         """
-        # Format messages
-        formatted_messages = self.format_messages(messages)
+        try:
+            # Format messages
+            formatted_messages = self.format_messages(messages)
 
-        # Add system prompt if provided
-        if system_prompt:
-            formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+            # Add system prompt if provided
+            if system_prompt:
+                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-        # Create streaming request
-        response = await self.client.chat.completions.create(
-            model=model, messages=formatted_messages, stream=stream
-        )
+            # Create streaming request
+            response = await self.client.chat.completions.create(
+                model=model, messages=formatted_messages, stream=stream
+            )
 
-        # Yield chunks
-        async for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+            # Yield chunks
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"\n[ERROR] {error_msg}")
+            raise
 
     async def get_full_response(
         self, messages: list[dict], model: str, system_prompt: str | None = None
@@ -81,31 +90,52 @@ class OpenAIProvider:
         Returns:
             Tuple of (response_text, metadata)
         """
-        # Format messages
-        formatted_messages = self.format_messages(messages)
+        try:
+            # Format messages
+            formatted_messages = self.format_messages(messages)
 
-        # Add system prompt if provided
-        if system_prompt:
-            formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+            # Add system prompt if provided
+            if system_prompt:
+                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-        # Create non-streaming request
-        response = await self.client.chat.completions.create(
-            model=model, messages=formatted_messages, stream=False
-        )
+            # Create non-streaming request
+            response = await self.client.chat.completions.create(
+                model=model, messages=formatted_messages, stream=False
+            )
 
-        # Extract response
-        content = response.choices[0].message.content or ""
+            # Extract response
+            content = response.choices[0].message.content or ""
 
-        # Extract metadata
-        metadata = {
-            "model": response.model,
-            "usage": {
-                "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                "completion_tokens": (
-                    response.usage.completion_tokens if response.usage else 0
-                ),
-                "total_tokens": response.usage.total_tokens if response.usage else 0,
-            },
-        }
+            # Extract metadata
+            metadata = {
+                "model": response.model,
+                "finish_reason": response.choices[0].finish_reason,
+                "usage": {
+                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+                    "completion_tokens": (
+                        response.usage.completion_tokens if response.usage else 0
+                    ),
+                    "total_tokens": response.usage.total_tokens if response.usage else 0,
+                },
+            }
 
-        return content, metadata
+            # Add cached tokens if available
+            if response.usage and hasattr(response.usage, "prompt_tokens_details"):
+                if hasattr(response.usage.prompt_tokens_details, "cached_tokens"):
+                    metadata["usage"]["cached_tokens"] = (
+                        response.usage.prompt_tokens_details.cached_tokens
+                    )
+
+            # Add reasoning tokens if available (for o1/o3 models)
+            if response.usage and hasattr(response.usage, "completion_tokens_details"):
+                if hasattr(response.usage.completion_tokens_details, "reasoning_tokens"):
+                    metadata["usage"]["reasoning_tokens"] = (
+                        response.usage.completion_tokens_details.reasoning_tokens
+                    )
+
+            return content, metadata
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"\n[ERROR] {error_msg}")
+            raise

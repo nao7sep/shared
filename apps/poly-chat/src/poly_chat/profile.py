@@ -79,6 +79,10 @@ def load_profile(path: str) -> dict[str, Any]:
     # Validate required fields
     validate_profile(profile)
 
+    # Set default timeout if not present
+    if "timeout" not in profile:
+        profile["timeout"] = 30
+
     # Map all path fields
     profile["conversations_dir"] = map_path(profile["conversations_dir"])
     profile["log_dir"] = map_path(profile["log_dir"])
@@ -178,6 +182,7 @@ def create_profile(path: str) -> dict[str, Any]:
     # Create profile structure
     profile = {
         "default_ai": default_ai,
+        "timeout": 30,
         "models": {
             "openai": "gpt-5-mini",
             "claude": "claude-haiku-4-5",

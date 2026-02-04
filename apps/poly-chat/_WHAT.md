@@ -251,3 +251,23 @@ now let's move to test_keys. it tests environment variables. it must also test k
 ---
 
 please read _WHAT.md to understand how user/assistant/error messages must be saved as arrays of lines (where empty lines too are preserved). then, please update code that seems to be based on old thinking such as "content": ["Hello", "How are you?"] in conftest.py. there should be others.
+
+---
+
+please check all providers. do they handle all major known errors, timeouts and edge cases? do they also extract model name, token usage data and whatever the app currently stores, following the latest ways? please search the web and retrieve latest info on their response structures.
+
+---
+
+ok, now we know a lot of things are missing. please document them in ai/README.md in detail. i might use it to implement other ai-related apps. so, it should be a general-purpose detailed document for other developers and coding agents to know what to cover, what to anticipate, etc.
+
+among these missing things, what are critical? i dont want to over-engineer.
+
+for users of the app, WHY an error occurs is often not that important.
+
+without timeouts, app will hang. we must include default timeout in profile and /timeout should allow us to set it in seconds (and 0 will mean wait forever; this must be documented). default should be 30 seconds. i often used that number. what do you think about 30?
+
+in python, can we serialize errors? if there's a way to save errors as-is as plaintext, we should log everything by minimal code. here, distinguishing issues really isnt important. important things are 1) app doesnt freeze or crash, 2) user can go on (like by deleting last message).
+
+---
+
+the document is more comprehensive than i thought, but i see weak links between the document and poly-chat. it's not a 100% general-purpose document. so, please rename it and move it to the root of poly-chat where README.md is.
