@@ -210,3 +210,44 @@ let's also migrate to google.genai now. we dont do much with gemini. so, migrati
 we should also update minimum python version to 3.10. unlike dependency versions, we cant casually expect a too new python version as a requirement as a lot of people seem to still use older python. i believe that is why "openai" for example still supports 3.09. but the version you generated, 3.09, doesnt seem to work with "black", a code formatter.
 
 (I have just added prefix _ to WHAT.md and HOW.md as these are committed, personal-use files).
+
+---
+
+now the storytelling test and the actual app seem to be working. there are a lot of bugs and mistakes. let's work on them. i will review the code from now on.
+
+where does the storytelling test save temp profile? does it delete it at the end of test? now the test tests storytelling capabilities of the ais. the example in readme.md must be updated. anything else to update in there? like the cost estimates part.
+
+in the storytelling test, let's make sure we are really calling the right ai. when the actual app worked, i asked each ai for their model info and deepseek alone said something unexpected; it said it was chatgpt. if that is by design and deepseek is merely mimicking the behavior of chatgpt, that is ok.
+
+as for endpoints, gemini's endpoint appears as "unknown". also gemini alone returned just 2 chunks while the others returned 20-40. we need to investigate this.
+
+in phase 2 and phase 6 (and maybe some others), responses are truncated. they shouldnt be much longer than what are currently displayed. let's not truncate them. then in phase 6, we dont need to repeat the summary. let's display what ai has returned as-is.
+
+---
+
+how does the app retrieve other ais' endpoints? you embedded "https://generativelanguage.googleapis.com" as literal and changed the test to display it when provider is gemini. that is a hack, not a solution. we migrated from google's old sdk to a new one. probably, we are running code for the old sdk with the new one. please search the web for more information.
+
+---
+
+you discovered:
+
+1. Gemini uses a different SDK structure than OpenAI-compatible clients
+2. The endpoint is stored at: client._api_client._http_options.base_url
+3. Each provider has different internal structures:
+  - OpenAI-compatible (OpenAI, DeepSeek, Grok, etc.): client.base_url
+  - Claude (Anthropic): client._client.base_url
+  - Gemini (Google GenAI): client._api_client._http_options.base_url
+
+should we fix something in the main app as well?
+
+---
+
+now is time for micro modifications. this is not critical, but makes app less credible: embedded model names and version are old. my current config uses latest flash/fast models. you can carefully refer to __TEST_API_KEYS.json to know what i have selected. with a little bit of web search, please update all occurrences of model names and versions in code, docs, etc. => you updated _HOW.md as well and i reverted it. _HOW.md must not be updated once it's generated.
+
+---
+
+now let's move to test_keys. it tests environment variables. it must also test keychain, json and direct strings. luckily, we wont be sending these keys to actual apis. so, we only need to make sure features in poly_chat/keys work.
+
+---
+
+please read _WHAT.md to understand how user/assistant/error messages must be saved as arrays of lines (where empty lines too are preserved). then, please update code that seems to be based on old thinking such as "content": ["Hello", "How are you?"] in conftest.py. there should be others.

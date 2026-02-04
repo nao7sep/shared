@@ -23,13 +23,13 @@ def test_add_user_message(sample_conversation):
 
 def test_add_assistant_message(sample_conversation):
     """Test adding assistant message."""
-    add_assistant_message(sample_conversation, "Response text", "gpt-4o")
+    add_assistant_message(sample_conversation, "Response text", "gpt-5-mini")
 
     messages = sample_conversation["messages"]
     assert len(messages) == 3
     assert messages[-1]["role"] == "assistant"
     assert messages[-1]["content"] == ["Response text"]
-    assert messages[-1]["model"] == "gpt-4o"
+    assert messages[-1]["model"] == "gpt-5-mini"
 
 
 def test_add_error_message(sample_conversation):
@@ -51,7 +51,7 @@ def test_delete_message_and_following(sample_conversation):
     """Test deleting messages."""
     # Add more messages
     add_user_message(sample_conversation, "Message 3")
-    add_assistant_message(sample_conversation, "Response 3", "gpt-4o")
+    add_assistant_message(sample_conversation, "Response 3", "gpt-5-mini")
 
     # Delete from index 1 onwards
     count = delete_message_and_following(sample_conversation, 1)
@@ -97,7 +97,7 @@ def test_get_messages_for_ai_with_limit(sample_conversation):
     """Test getting limited messages for AI."""
     # Add more messages
     add_user_message(sample_conversation, "Message 3")
-    add_assistant_message(sample_conversation, "Response 3", "gpt-4o")
+    add_assistant_message(sample_conversation, "Response 3", "gpt-5-mini")
 
     # Get last 2 messages
     messages = get_messages_for_ai(sample_conversation, max_messages=2)

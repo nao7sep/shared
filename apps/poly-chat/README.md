@@ -112,9 +112,9 @@ pc -p <profile-path> -l debug.log
 {
   "default_ai": "claude",
   "models": {
-    "openai": "gpt-4o",
-    "claude": "claude-sonnet-4",
-    "gemini": "gemini-2.0-flash"
+    "openai": "gpt-5-mini",
+    "claude": "claude-haiku-4-5",
+    "gemini": "gemini-3-flash-preview"
   },
   "system_prompt": "@/system-prompts/default.txt",
   "conversations_dir": "~/poly-chat-logs",
@@ -205,8 +205,9 @@ Conversations are stored as JSON with git-friendly formatting:
     {
       "role": "user",
       "content": [
-        "What are the key considerations",
-        "for expanding into Asian markets?"
+        "I'm planning to expand our business into Asian markets.",
+        "",
+        "What are the key considerations I should focus on?"
       ],
       "timestamp": "2026-02-02T10:00:00.123456Z"
     },
@@ -219,7 +220,7 @@ Conversations are stored as JSON with git-friendly formatting:
         "2. Regulatory Environment"
       ],
       "timestamp": "2026-02-02T10:00:05.789012Z",
-      "model": "claude-sonnet-4"
+      "model": "claude-haiku-4-5"
     }
   ]
 }

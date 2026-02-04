@@ -227,10 +227,17 @@ async def test_full_conversation_flow():
             # Show API endpoint being used (to prove different AIs)
             endpoint_info = "unknown"
             if hasattr(provider, 'client'):
+                # For OpenAI-compatible clients (OpenAI, DeepSeek, Grok, etc.)
                 if hasattr(provider.client, 'base_url'):
                     endpoint_info = str(provider.client.base_url)
+                # For Claude (Anthropic) client
                 elif hasattr(provider.client, '_client') and hasattr(provider.client._client, 'base_url'):
                     endpoint_info = str(provider.client._client.base_url)
+                # For Gemini (Google GenAI) client
+                elif hasattr(provider.client, '_api_client') and hasattr(provider.client._api_client, '_http_options'):
+                    http_opts = provider.client._api_client._http_options
+                    if hasattr(http_opts, 'base_url') and http_opts.base_url:
+                        endpoint_info = str(http_opts.base_url)
             log(f"API endpoint: {endpoint_info}", indent=2)
 
             # Get contextual prompt that builds on conversation
@@ -257,7 +264,7 @@ async def test_full_conversation_flow():
                     last_chunk = timings[-1]
                     streaming_proof = f" [1st chunk: {first_chunk:.3f}s, last: {last_chunk:.3f}s]"
 
-                log(f"Response ({elapsed:.2f}s, {chunks} chunks{streaming_proof}): {response[:80]}{'...' if len(response) > 80 else ''}", indent=2)
+                log(f"Response ({elapsed:.2f}s, {chunks} chunks{streaming_proof}): {response}", indent=2)
 
                 # Add assistant message
                 add_assistant_message(conversation, response, model)
@@ -375,12 +382,8 @@ async def test_full_conversation_flow():
         )
 
         log(f"Verification prompt: {verification_prompt}", indent=1)
-        log(f"AI response ({verify_elapsed:.2f}s, {verify_chunks} chunks): {verification_response.strip()[:200]}...", indent=1)
-
-        # Extract summary and count from response
-        log(f"Story summary and count:", indent=1)
-        for line in verification_response.strip().split('\n'):
-            log(f"  {line}", indent=1)
+        log(f"AI response ({verify_elapsed:.2f}s, {verify_chunks} chunks):", indent=1)
+        log(f"{verification_response.strip()}", indent=1)
 
         # Try to find the count in the response
         try:

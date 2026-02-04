@@ -42,7 +42,7 @@ class CommandHandler:
         """Parse command text into command and arguments.
 
         Args:
-            text: Command text (e.g., "/model gpt-4o")
+            text: Command text (e.g., "/model gpt-5-mini")
 
         Returns:
             Tuple of (command, args) where command is without / and args is the rest

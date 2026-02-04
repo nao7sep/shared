@@ -179,12 +179,12 @@ def create_profile(path: str) -> dict[str, Any]:
     profile = {
         "default_ai": default_ai,
         "models": {
-            "openai": "gpt-4o",
-            "claude": "claude-sonnet-4",
-            "gemini": "gemini-2.0-flash",
-            "grok": "grok-2",
-            "perplexity": "sonar-pro",
-            "mistral": "mistral-large",
+            "openai": "gpt-5-mini",
+            "claude": "claude-haiku-4-5",
+            "gemini": "gemini-3-flash-preview",
+            "grok": "grok-4-1-fast-non-reasoning",
+            "perplexity": "sonar",
+            "mistral": "mistral-small-latest",
             "deepseek": "deepseek-chat",
         },
         "system_prompt": "@/system-prompts/default.txt",

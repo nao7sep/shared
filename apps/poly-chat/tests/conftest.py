@@ -19,9 +19,9 @@ def sample_profile(temp_dir):
     profile = {
         "default_ai": "claude",
         "models": {
-            "openai": "gpt-4o",
-            "claude": "claude-sonnet-4",
-            "gemini": "gemini-2.0-flash"
+            "openai": "gpt-5-mini",
+            "claude": "claude-haiku-4-5",
+            "gemini": "gemini-3-flash-preview"
         },
         "system_prompt": "You are a helpful assistant.",
         "conversations_dir": str(temp_dir / "conversations"),
@@ -49,21 +49,31 @@ def sample_conversation():
             "title": "Test Conversation",
             "summary": None,
             "system_prompt_key": None,
-            "default_model": "claude-sonnet-4",
+            "default_model": "claude-haiku-4-5",
             "created_at": "2026-02-02T10:00:00.000000Z",
             "updated_at": "2026-02-02T10:00:00.000000Z"
         },
         "messages": [
             {
                 "role": "user",
-                "content": ["Hello", "How are you?"],
+                "content": [
+                    "I need help with a project.",
+                    "",
+                    "What are the key steps to get started?"
+                ],
                 "timestamp": "2026-02-02T10:00:00.000000Z"
             },
             {
                 "role": "assistant",
-                "content": ["I'm doing well, thank you!"],
+                "content": [
+                    "Here are the key steps:",
+                    "",
+                    "1. Define your goals",
+                    "2. Create a timeline",
+                    "3. Gather resources"
+                ],
                 "timestamp": "2026-02-02T10:00:05.000000Z",
-                "model": "claude-sonnet-4"
+                "model": "claude-haiku-4-5"
             }
         ]
     }

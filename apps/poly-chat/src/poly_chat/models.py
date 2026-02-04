@@ -20,8 +20,9 @@ PROVIDER_SHORTCUTS = {
 
 # Model registry: provider -> list of models
 MODEL_REGISTRY: Dict[str, List[str]] = {
-    "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+    "openai": ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
     "claude": [
+        "claude-haiku-4-5",
         "claude-sonnet-4",
         "claude-opus-4",
         "claude-3-5-sonnet-20241022",
@@ -30,15 +31,16 @@ MODEL_REGISTRY: Dict[str, List[str]] = {
         "claude-3-haiku-20240307",
     ],
     "gemini": [
+        "gemini-3-flash-preview",
         "gemini-2.0-flash",
         "gemini-1.5-pro",
         "gemini-1.5-flash",
         "gemini-1.0-pro",
     ],
-    "grok": ["grok-2", "grok-1"],
-    "perplexity": ["sonar-pro", "sonar"],
-    "mistral": ["mistral-large", "mistral-medium", "mistral-small"],
-    "deepseek": ["deepseek-chat", "deepseek-coder"],
+    "grok": ["grok-4-1-fast-non-reasoning", "grok-2", "grok-1"],
+    "perplexity": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-deep-research"],
+    "mistral": ["mistral-small-latest", "mistral-large", "mistral-medium", "mistral-small"],
+    "deepseek": ["deepseek-chat", "deepseek-reasoner"],
 }
 
 # Reverse mapping: model -> provider
