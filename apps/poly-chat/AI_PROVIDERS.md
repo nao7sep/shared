@@ -262,23 +262,38 @@ class OpenAIProvider:
 
 ### Provider-Specific Notes
 
-- **OpenAI/Mistral/Grok/DeepSeek/Perplexity:** Use SDK's `timeout` parameter
-- **Anthropic:** Use SDK's `timeout` parameter
-- **Gemini:** Use `asyncio.timeout()` wrapper if SDK doesn't support timeout
+- **OpenAI/Mistral/Grok/DeepSeek/Perplexity:** Use SDK's `timeout` parameter (in seconds)
+- **Anthropic:** Use SDK's `timeout` parameter (in seconds)
+- **Gemini (NEW SDK):** Configure timeout in `Client` via `http_options` (**in milliseconds**)
+
+**IMPORTANT: Gemini SDK Timeout Configuration**
+
+The new `google-genai` SDK (v1.0+) uses a different approach:
 
 ```python
-import asyncio
+from google import genai
+from google.genai import types
 
-async def send_message_with_timeout(self, ...):
-    if self.timeout > 0:
-        async with asyncio.timeout(self.timeout):
-            # API call here
-            pass
-    else:
-        # No timeout
-        # API call here
-        pass
+class GeminiProvider:
+    def __init__(self, api_key: str, timeout: float = 30.0):
+        # Convert timeout from seconds to milliseconds
+        # Gemini SDK uses milliseconds, not seconds!
+        timeout_ms = int(timeout * 1000) if timeout > 0 else None
+
+        self.client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=timeout_ms) if timeout_ms else None,
+        )
 ```
+
+**Key differences between Gemini SDKs:**
+
+| Feature | New SDK (`google-genai`) | Old SDK (`google-generativeai`) |
+|---------|--------------------------|--------------------------------|
+| **Import** | `from google import genai` | `import google.generativeai as genai` |
+| **Timeout location** | In `Client(http_options=...)` | In `generate_content(request_options=...)` |
+| **Timeout unit** | **Milliseconds** (30000 = 30s) | **Seconds** (30 = 30s) |
+| **When set** | Client initialization | Per-request |
 
 ---
 

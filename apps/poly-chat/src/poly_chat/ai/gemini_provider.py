@@ -3,7 +3,6 @@
 from typing import AsyncIterator
 from google import genai
 from google.genai import types
-import asyncio
 
 from ..message_formatter import lines_to_text
 
@@ -18,7 +17,14 @@ class GeminiProvider:
             api_key: Google API key
             timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
-        self.client = genai.Client(api_key=api_key)
+        # Convert timeout from seconds to milliseconds (Gemini SDK uses ms)
+        # 0 means no timeout -> use None
+        timeout_ms = int(timeout * 1000) if timeout > 0 else None
+
+        self.client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=timeout_ms) if timeout_ms else None,
+        )
         self.api_key = api_key
         self.timeout = timeout
 
@@ -70,26 +76,17 @@ class GeminiProvider:
                 system_instruction=system_prompt if system_prompt else None,
             )
 
-            # Apply timeout if configured
-            if self.timeout > 0:
-                async with asyncio.timeout(self.timeout):
-                    response = await self.client.aio.models.generate_content_stream(
-                        model=model,
-                        contents=formatted_messages,
-                        config=config,
-                    )
-                    async for chunk in response:
-                        if chunk.text:
-                            yield chunk.text
-            else:
-                response = await self.client.aio.models.generate_content_stream(
-                    model=model,
-                    contents=formatted_messages,
-                    config=config,
-                )
-                async for chunk in response:
-                    if chunk.text:
-                        yield chunk.text
+            # Timeout is already configured in the Client via http_options
+            response = await self.client.aio.models.generate_content_stream(
+                model=model,
+                contents=formatted_messages,
+                config=config,
+            )
+
+            # Yield chunks
+            async for chunk in response:
+                if chunk.text:
+                    yield chunk.text
 
         except Exception as e:
             error_msg = f"{type(e).__name__}: {str(e)}"
@@ -122,20 +119,12 @@ class GeminiProvider:
                 system_instruction=system_prompt if system_prompt else None,
             )
 
-            # Apply timeout if configured
-            if self.timeout > 0:
-                async with asyncio.timeout(self.timeout):
-                    response = await self.client.aio.models.generate_content(
-                        model=model,
-                        contents=formatted_messages,
-                        config=config,
-                    )
-            else:
-                response = await self.client.aio.models.generate_content(
-                    model=model,
-                    contents=formatted_messages,
-                    config=config,
-                )
+            # Timeout is already configured in the Client via http_options
+            response = await self.client.aio.models.generate_content(
+                model=model,
+                contents=formatted_messages,
+                config=config,
+            )
 
             # Extract response
             content = response.text if response.text else ""
