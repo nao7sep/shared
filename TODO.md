@@ -15,6 +15,10 @@
 - mechanism to store/retrieve api keys
 - docs on config-related python packages
 - multi-ai cli chat tool
+- blog + rag + ai consulting on international businesses, ai applications and parenting?
+- tk: smoother workflow. must be something my windows user wife could use
+- tk: task addition without "add"?
+- add prefix _ to what.md and how.md
 
 ## History
 

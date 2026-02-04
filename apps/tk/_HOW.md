@@ -17,8 +17,8 @@ tk/
 ├── tests/                       # Future tests if needed
 ├── pyproject.toml
 ├── README.md
-├── WHAT.md
-└── HOW.md
+├── _WHAT.md
+└── _HOW.md
 ```
 
 ## Data Models
