@@ -5,13 +5,13 @@ from pathlib import Path
 from typing import Optional
 
 
-_TEST_API_KEYS_FILENAME = "__TEST_API_KEYS.json"
+_TEST_API_KEYS_FILENAME = ".TEST_API_KEYS.json"
 _config_cache: Optional[dict] = None
 
 
 def find_test_api_keys_file() -> Optional[Path]:
     """
-    Search for __TEST_API_KEYS.json by recursively checking parent directories.
+    Search for .TEST_API_KEYS.json by recursively checking parent directories.
 
     Starts from the current file's directory and moves up until:
     - File is found (returns Path)
@@ -40,7 +40,7 @@ def load_test_config() -> dict:
     Load test API keys configuration.
 
     Returns the full config dict. Caches result after first load.
-    Raises FileNotFoundError if __TEST_API_KEYS.json is not found.
+    Raises FileNotFoundError if .TEST_API_KEYS.json is not found.
     """
     global _config_cache
 

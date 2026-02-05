@@ -1,10 +1,17 @@
 """Gemini (Google) provider implementation for PolyChat."""
 
+import logging
 from typing import AsyncIterator
 from google import genai
 from google.genai import types
+from google.genai.errors import (
+    ClientError,
+    ServerError,
+)
 
 from ..message_formatter import lines_to_text
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiProvider:
@@ -21,9 +28,24 @@ class GeminiProvider:
         # 0 means no timeout -> use None
         timeout_ms = int(timeout * 1000) if timeout > 0 else None
 
+        # Configure retry policy for transient errors
+        retry_policy = types.HttpRetryOptions(
+            attempts=5,  # Try up to 5 times
+            initial_delay=1.0,  # Wait 1 second initially
+            exp_base=2.0,  # Double the delay each time
+            jitter=0.5,  # Add randomness to prevent thundering herd
+            max_delay=60.0,  # Never wait more than 60 seconds
+            http_status_codes=[429, 503, 504],  # Only retry on these codes
+        )
+
+        # Create HTTP options with timeout and retry configuration
+        http_options = types.HttpOptions(
+            timeout=timeout_ms, retry_options=retry_policy
+        )
+
         self.client = genai.Client(
             api_key=api_key,
-            http_options=types.HttpOptions(timeout=timeout_ms) if timeout_ms else None,
+            http_options=http_options if timeout_ms else types.HttpOptions(retry_options=retry_policy),
         )
         self.api_key = api_key
         self.timeout = timeout
@@ -76,7 +98,7 @@ class GeminiProvider:
                 system_instruction=system_prompt if system_prompt else None,
             )
 
-            # Timeout is already configured in the Client via http_options
+            # Timeout and retry are configured in the Client via http_options
             response = await self.client.aio.models.generate_content_stream(
                 model=model,
                 contents=formatted_messages,
@@ -85,12 +107,44 @@ class GeminiProvider:
 
             # Yield chunks
             async for chunk in response:
+                # Check for finish_reason in chunk candidates
+                if chunk.candidates:
+                    candidate = chunk.candidates[0]
+                    if hasattr(candidate, "finish_reason") and candidate.finish_reason:
+                        finish_reason = candidate.finish_reason
+                        if finish_reason == "SAFETY":
+                            logger.warning("Response blocked by safety filter")
+                            yield "\n[Response was blocked by safety filter]"
+                            return
+                        elif finish_reason == "RECITATION":
+                            logger.warning("Response blocked due to recitation/copyright")
+                            yield "\n[Response was blocked due to copyright concerns]"
+                            return
+                        elif finish_reason == "MAX_TOKENS":
+                            logger.warning("Response truncated due to max tokens")
+
+                # Yield text content
                 if chunk.text:
                     yield chunk.text
 
+        except ClientError as e:
+            # 400-499 errors - don't retry, these are client-side issues
+            status_code = getattr(e, "status_code", "unknown")
+            logger.error(f"Client error ({status_code}): {e}")
+            if status_code == 400:
+                logger.error("Bad request - check message format and parameters")
+            elif status_code == 403:
+                logger.error("Permission denied - check API key and access")
+            elif status_code == 429:
+                logger.error("Rate limit exceeded - retries exhausted")
+            raise
+        except ServerError as e:
+            # 500-599 errors - retry handled by SDK, but if all retries fail:
+            status_code = getattr(e, "status_code", "unknown")
+            logger.error(f"Server error ({status_code}) after retries: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise
 
     async def get_full_response(
@@ -119,19 +173,39 @@ class GeminiProvider:
                 system_instruction=system_prompt if system_prompt else None,
             )
 
-            # Timeout is already configured in the Client via http_options
+            # Timeout and retry are configured in the Client via http_options
             response = await self.client.aio.models.generate_content(
                 model=model,
                 contents=formatted_messages,
                 config=config,
             )
 
-            # Extract response
-            content = response.text if response.text else ""
+            # Check finish_reason for edge cases
+            content = ""
+            finish_reason = None
+
+            if response.candidates:
+                candidate = response.candidates[0]
+                finish_reason = getattr(candidate, "finish_reason", "STOP")
+
+                if finish_reason == "SAFETY":
+                    logger.warning("Response blocked by safety filter")
+                    content = "[Response was blocked by safety filter]"
+                elif finish_reason == "RECITATION":
+                    logger.warning("Response blocked due to recitation/copyright")
+                    content = "[Response was blocked due to copyright concerns]"
+                elif finish_reason == "MAX_TOKENS":
+                    logger.warning("Response truncated due to max tokens")
+                    content = response.text if response.text else ""
+                    content += "\n[Response was truncated due to token limit]"
+                else:
+                    # Normal completion (STOP)
+                    content = response.text if response.text else ""
 
             # Extract metadata
             metadata = {
                 "model": model,
+                "finish_reason": finish_reason,
                 "usage": {
                     "prompt_tokens": (
                         response.usage_metadata.prompt_token_count
@@ -151,9 +225,29 @@ class GeminiProvider:
                 },
             }
 
+            logger.info(
+                f"Response: {metadata['usage']['total_tokens']} tokens, "
+                f"finish_reason={finish_reason}"
+            )
+
             return content, metadata
 
+        except ClientError as e:
+            # 400-499 errors - don't retry, these are client-side issues
+            status_code = getattr(e, "status_code", "unknown")
+            logger.error(f"Client error ({status_code}): {e}")
+            if status_code == 400:
+                logger.error("Bad request - check message format and parameters")
+            elif status_code == 403:
+                logger.error("Permission denied - check API key and access")
+            elif status_code == 429:
+                logger.error("Rate limit exceeded - retries exhausted")
+            raise
+        except ServerError as e:
+            # 500-599 errors - retry handled by SDK, but if all retries fail:
+            status_code = getattr(e, "status_code", "unknown")
+            logger.error(f"Server error ({status_code}) after retries: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise

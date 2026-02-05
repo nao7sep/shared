@@ -4,7 +4,7 @@
 
 ### 1. Configure API Keys
 
-Fill in `__TEST_API_KEYS.json` at repo root (or any parent directory):
+Fill in `.TEST_API_KEYS.json` at repo root (or any parent directory):
 
 ```json
 {
@@ -37,7 +37,7 @@ pytest -m e2e -v -s
 
 The end-to-end test validates the **complete application flow** using **collaborative storytelling**:
 
-1. **Creates temporary profile** with your API keys from `__TEST_API_KEYS.json` (auto-deleted after test)
+1. **Creates temporary profile** with your API keys from `.TEST_API_KEYS.json` (auto-deleted after test)
 2. **Sends contextual prompts to each available AI** - each AI adds one sentence to build a collaborative story
 3. **Saves conversation** to JSON file
 4. **Loads conversation** in a new session (simulating app restart)
@@ -156,7 +156,7 @@ pytest tests/test_ai/
 
 ### "No AI providers configured"
 
-- Check `__TEST_API_KEYS.json` exists
+- Check `.TEST_API_KEYS.json` exists
 - Verify at least one provider has non-empty `api_key`
 
 ### "API key not available"

@@ -3,9 +3,28 @@
 Note: Perplexity uses OpenAI-compatible API.
 """
 
+import logging
 from typing import AsyncIterator
+import httpx
+from openai import (
+    APIConnectionError,
+    RateLimitError,
+    APITimeoutError,
+    InternalServerError,
+    BadRequestError,
+    AuthenticationError,
+)
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from ..message_formatter import lines_to_text
+
+logger = logging.getLogger(__name__)
 
 
 class PerplexityProvider:
@@ -14,20 +33,41 @@ class PerplexityProvider:
     Perplexity uses OpenAI-compatible API.
     """
 
-    def __init__(self, api_key: str, timeout: float = 30.0):
+    def __init__(self, api_key: str, timeout: float = 60.0):
         """Initialize Perplexity provider.
 
         Args:
             api_key: Perplexity API key
-            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
+            timeout: Request timeout in seconds (0 = no timeout, default: 60.0)
+                    NOTE: Perplexity performs web searches which take longer than
+                    standard LLM inference. Default increased to 60s minimum.
         """
         from openai import AsyncOpenAI
 
-        timeout_value = timeout if timeout > 0 else None
+        # CRITICAL: Perplexity performs web searches during generation
+        # sonar-pro typically takes 15+ seconds, reasoning models 15-60s
+        # This is the "single most common failure point" per documentation
+        if timeout > 0:
+            # Ensure read timeout is at least 60s for search operations
+            read_timeout = max(timeout, 60.0)
+            timeout_config = httpx.Timeout(
+                connect=5.0,  # Fast fail on connection issues
+                read=read_timeout,  # MUST be 60s+ for Perplexity search operations
+                write=10.0,  # Should be quick to send request
+                pool=2.0,  # Fast fail if connection pool exhausted
+            )
+        else:
+            timeout_config = None
+
         self.api_key = api_key
         self.timeout = timeout
+
+        # Configure retries for search-dependent operations
         self.client = AsyncOpenAI(
-            api_key=api_key, base_url="https://api.perplexity.ai", timeout=timeout_value
+            api_key=api_key,
+            base_url="https://api.perplexity.ai",
+            timeout=timeout_config,
+            max_retries=3,
         )
 
     def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
@@ -50,6 +90,34 @@ class PerplexityProvider:
 
         return formatted
 
+    @retry(
+        retry=retry_if_exception_type(
+            (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
+        ),
+        wait=wait_exponential_jitter(initial=1, max=60),
+        stop=stop_after_attempt(4),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):
+        """Create chat completion with retry logic.
+
+        Args:
+            model: Model name
+            messages: Formatted messages
+            stream: Whether to stream
+
+        Returns:
+            API response
+        """
+        # Perplexity supports stream_options like OpenAI
+        stream_options = {"include_usage": True} if stream else None
+        return await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=stream,
+            stream_options=stream_options,
+        )
+
     async def send_message(
         self,
         messages: list[dict],
@@ -64,17 +132,58 @@ class PerplexityProvider:
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-            response = await self.client.chat.completions.create(
+            # Create streaming request with retry logic
+            response = await self._create_chat_completion(
                 model=model, messages=formatted_messages, stream=stream
             )
 
+            # Yield chunks
             async for chunk in response:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                # Check if this is a usage-only chunk (no choices)
+                if not chunk.choices:
+                    if chunk.usage:
+                        logger.info(
+                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
+                            f"{chunk.usage.completion_tokens} completion = "
+                            f"{chunk.usage.total_tokens} total tokens"
+                        )
+                    continue
 
+                # Check for content
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+
+                # Check finish reason for edge cases
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+                    if finish_reason == "length":
+                        logger.warning("Response truncated due to max_tokens limit")
+                    elif finish_reason == "content_filter":
+                        logger.warning("Response filtered due to content policy")
+                        yield "\n[Response was filtered due to content policy]"
+
+        except APITimeoutError as e:
+            # Special handling for timeouts - common with long search operations
+            logger.error(f"Timeout error (Perplexity search took too long): {e}")
+            logger.error("Consider increasing timeout for search-heavy models like sonar-pro")
+            raise
+        except AuthenticationError as e:
+            logger.error(f"Authentication failed: {e}")
+            raise
+        except BadRequestError as e:
+            logger.error(f"Bad request (check parameters): {e}")
+            raise
+        except (
+            APIConnectionError,
+            RateLimitError,
+            InternalServerError,
+        ) as e:
+            # These are handled by retry decorator, but if all retries fail:
+            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise
 
     async def get_full_response(
@@ -87,18 +196,30 @@ class PerplexityProvider:
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-            response = await self.client.chat.completions.create(
+            # Create non-streaming request with retry logic
+            response = await self._create_chat_completion(
                 model=model, messages=formatted_messages, stream=False
             )
 
+            # Extract response
             content = response.choices[0].message.content or ""
 
-            # Extract citations if available
+            # Check finish reason for edge cases
+            finish_reason = response.choices[0].finish_reason
+            if finish_reason == "length":
+                logger.warning("Response truncated due to max_tokens limit")
+                content += "\n[Response was truncated due to length limit]"
+            elif finish_reason == "content_filter":
+                logger.warning("Response filtered due to content policy")
+                content = "[Response was filtered due to content policy]"
+
+            # Extract citations if available (Perplexity-specific feature)
             citations = getattr(response, "citations", None)
 
+            # Extract metadata
             metadata = {
                 "model": response.model,
-                "finish_reason": response.choices[0].finish_reason,
+                "finish_reason": finish_reason,
                 "usage": {
                     "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
                     "completion_tokens": (
@@ -108,13 +229,37 @@ class PerplexityProvider:
                 },
             }
 
-            # Add citations if available
+            # Add citations if available (Perplexity provides source URLs)
             if citations:
                 metadata["citations"] = citations
+                logger.info(f"Response included {len(citations)} citations")
+
+            logger.info(
+                f"Response: {metadata['usage']['total_tokens']} tokens, "
+                f"finish_reason={finish_reason}"
+            )
 
             return content, metadata
 
+        except APITimeoutError as e:
+            # Special handling for timeouts - common with long search operations
+            logger.error(f"Timeout error (Perplexity search took too long): {e}")
+            logger.error("Consider increasing timeout for search-heavy models like sonar-pro")
+            raise
+        except AuthenticationError as e:
+            logger.error(f"Authentication failed: {e}")
+            raise
+        except BadRequestError as e:
+            logger.error(f"Bad request (check parameters): {e}")
+            raise
+        except (
+            APIConnectionError,
+            RateLimitError,
+            InternalServerError,
+        ) as e:
+            # These are handled by retry decorator, but if all retries fail:
+            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise

@@ -79,10 +79,10 @@ async def send_and_receive(provider, messages: list, model: str, provider_name: 
 
 
 def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
-    """Create temporary profile file using __TEST_API_KEYS.json data.
+    """Create temporary profile file using .TEST_API_KEYS.json data.
 
     Args:
-        test_config: Loaded __TEST_API_KEYS.json content
+        test_config: Loaded .TEST_API_KEYS.json content
         temp_dir: Temporary directory path
 
     Returns:
@@ -98,7 +98,7 @@ def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
             break
 
     if not default_ai:
-        raise ValueError("No AI providers available in __TEST_API_KEYS.json")
+        raise ValueError("No AI providers available in .TEST_API_KEYS.json")
 
     # Build models dict and api_keys from test config
     models = {}
@@ -160,14 +160,14 @@ async def test_full_conversation_flow():
     # Check if we have test config
     test_config_file = find_test_api_keys_file()
     if not test_config_file:
-        pytest.skip("__TEST_API_KEYS.json not found")
+        pytest.skip(".TEST_API_KEYS.json not found")
 
     test_config = load_test_config()
 
     # Count available AIs
     available_ais = [ai for ai in test_config.keys() if is_ai_available(ai)]
     if not available_ais:
-        pytest.skip("No AI providers configured in __TEST_API_KEYS.json")
+        pytest.skip("No AI providers configured in .TEST_API_KEYS.json")
 
     log(f"Found {len(available_ais)} available AI provider(s): {', '.join(available_ais)}")
     log("")

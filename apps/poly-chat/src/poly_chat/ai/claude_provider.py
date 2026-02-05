@@ -1,9 +1,23 @@
 """Claude (Anthropic) provider implementation for PolyChat."""
 
+import logging
 from typing import AsyncIterator
+import httpx
 from anthropic import AsyncAnthropic
+from anthropic import (
+    RateLimitError,
+    BadRequestError,
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    PermissionDeniedError,
+    InternalServerError,
+    APIStatusError,
+)
 
 from ..message_formatter import lines_to_text
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeProvider:
@@ -16,8 +30,21 @@ class ClaudeProvider:
             api_key: Anthropic API key
             timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
-        timeout_value = timeout if timeout > 0 else None
-        self.client = AsyncAnthropic(api_key=api_key, timeout=timeout_value)
+        # Configure granular timeouts for better error handling
+        if timeout > 0:
+            timeout_config = httpx.Timeout(
+                connect=5.0,  # Fast fail on connection issues
+                read=timeout,  # Allow model time to generate
+                write=10.0,  # Should be quick to send request
+                pool=2.0,  # Fast fail if connection pool exhausted
+            )
+        else:
+            timeout_config = None
+
+        # Configure retries - SDK default is 2, we use 3 for better resilience
+        self.client = AsyncAnthropic(
+            api_key=api_key, timeout=timeout_config, max_retries=3
+        )
         self.api_key = api_key
         self.timeout = timeout
 
@@ -75,9 +102,44 @@ class ClaudeProvider:
                 async for text in response_stream.text_stream:
                     yield text
 
+                # After stream completes, check stop reason
+                final_message = await response_stream.get_final_message()
+                if final_message.stop_reason == "max_tokens":
+                    logger.warning("Response truncated due to max_tokens limit")
+                    yield "\n[Response was truncated due to token limit]"
+
+        except APIStatusError as e:
+            # Check for 529 - System overloaded (critical error)
+            if e.status_code == 529:
+                logger.error(f"Anthropic system overloaded (529): {e}")
+                logger.error(
+                    "System is under heavy load. Consider implementing backoff or fallback."
+                )
+            else:
+                logger.error(f"API status error ({e.status_code}): {e}")
+            raise
+        except RateLimitError as e:
+            # 429 - Rate limit exceeded, SDK will retry but if all retries fail:
+            logger.error(f"Rate limit exceeded after retries: {e}")
+            raise
+        except BadRequestError as e:
+            # 400 - Invalid request, don't retry
+            logger.error(f"Bad request: {e}")
+            raise
+        except AuthenticationError as e:
+            # 401 - Invalid API key
+            logger.error(f"Authentication failed: {e}")
+            raise
+        except PermissionDeniedError as e:
+            # 403 - No access to resource
+            logger.error(f"Permission denied: {e}")
+            raise
+        except (APIConnectionError, APITimeoutError, InternalServerError) as e:
+            # Network/timeout/server errors - SDK will retry, but if all fail:
+            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise
 
     async def get_full_response(
@@ -121,10 +183,16 @@ class ClaudeProvider:
                 if hasattr(block, "text"):
                     content += block.text
 
+            # Check stop reason for edge cases
+            stop_reason = response.stop_reason
+            if stop_reason == "max_tokens":
+                logger.warning("Response truncated due to max_tokens limit")
+                content += "\n[Response was truncated due to token limit]"
+
             # Extract metadata
             metadata = {
                 "model": response.model,
-                "stop_reason": response.stop_reason,
+                "stop_reason": stop_reason,
                 "usage": {
                     "prompt_tokens": response.usage.input_tokens,
                     "completion_tokens": response.usage.output_tokens,
@@ -133,9 +201,43 @@ class ClaudeProvider:
                 },
             }
 
+            logger.info(
+                f"Response: {metadata['usage']['total_tokens']} tokens, "
+                f"stop_reason={stop_reason}"
+            )
+
             return content, metadata
 
+        except APIStatusError as e:
+            # Check for 529 - System overloaded (critical error)
+            if e.status_code == 529:
+                logger.error(f"Anthropic system overloaded (529): {e}")
+                logger.error(
+                    "System is under heavy load. Consider implementing backoff or fallback."
+                )
+            else:
+                logger.error(f"API status error ({e.status_code}): {e}")
+            raise
+        except RateLimitError as e:
+            # 429 - Rate limit exceeded, SDK will retry but if all retries fail:
+            logger.error(f"Rate limit exceeded after retries: {e}")
+            raise
+        except BadRequestError as e:
+            # 400 - Invalid request, don't retry
+            logger.error(f"Bad request: {e}")
+            raise
+        except AuthenticationError as e:
+            # 401 - Invalid API key
+            logger.error(f"Authentication failed: {e}")
+            raise
+        except PermissionDeniedError as e:
+            # 403 - No access to resource
+            logger.error(f"Permission denied: {e}")
+            raise
+        except (APIConnectionError, APITimeoutError, InternalServerError) as e:
+            # Network/timeout/server errors - SDK will retry, but if all fail:
+            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise

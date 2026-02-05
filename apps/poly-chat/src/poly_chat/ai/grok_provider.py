@@ -1,11 +1,30 @@
 """Grok (xAI) provider implementation for PolyChat.
 
-Note: This is a placeholder implementation. Grok may use OpenAI-compatible API.
+Note: Grok uses OpenAI-compatible API.
 """
 
+import logging
 from typing import AsyncIterator
+import httpx
+from openai import (
+    APIConnectionError,
+    RateLimitError,
+    APITimeoutError,
+    InternalServerError,
+    BadRequestError,
+    AuthenticationError,
+)
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from ..message_formatter import lines_to_text
+
+logger = logging.getLogger(__name__)
 
 
 class GrokProvider:
@@ -23,11 +42,27 @@ class GrokProvider:
         """
         from openai import AsyncOpenAI
 
-        timeout_value = timeout if timeout > 0 else None
+        # Configure granular timeouts for better error handling
+        # Reasoning models can have long TTFT (Time to First Token) delays
+        if timeout > 0:
+            timeout_config = httpx.Timeout(
+                connect=5.0,  # Fast fail on connection issues
+                read=timeout,  # Allow model time to generate (important for reasoning)
+                write=10.0,  # Should be quick to send request
+                pool=2.0,  # Fast fail if connection pool exhausted
+            )
+        else:
+            timeout_config = None
+
         self.api_key = api_key
         self.timeout = timeout
+
+        # Disable default retries - we handle retries explicitly
         self.client = AsyncOpenAI(
-            api_key=api_key, base_url="https://api.x.ai/v1", timeout=timeout_value
+            api_key=api_key,
+            base_url="https://api.x.ai/v1",
+            timeout=timeout_config,
+            max_retries=0,
         )
 
     def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
@@ -37,6 +72,33 @@ class GrokProvider:
             content = lines_to_text(msg["content"])
             formatted.append({"role": msg["role"], "content": content})
         return formatted
+
+    @retry(
+        retry=retry_if_exception_type(
+            (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
+        ),
+        wait=wait_exponential_jitter(initial=1, max=60),
+        stop=stop_after_attempt(4),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):
+        """Create chat completion with retry logic.
+
+        Args:
+            model: Model name
+            messages: Formatted messages
+            stream: Whether to stream
+
+        Returns:
+            API response
+        """
+        stream_options = {"include_usage": True} if stream else None
+        return await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=stream,
+            stream_options=stream_options,
+        )
 
     async def send_message(
         self,
@@ -52,17 +114,59 @@ class GrokProvider:
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-            response = await self.client.chat.completions.create(
+            # Create streaming request with retry logic
+            response = await self._create_chat_completion(
                 model=model, messages=formatted_messages, stream=stream
             )
 
+            # Yield chunks
             async for chunk in response:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                # Check if this is a usage-only chunk (no choices)
+                if not chunk.choices:
+                    if chunk.usage:
+                        logger.info(
+                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
+                            f"{chunk.usage.completion_tokens} completion = "
+                            f"{chunk.usage.total_tokens} total tokens"
+                        )
+                        # Log reasoning tokens if present (Grok reasoning models)
+                        if hasattr(chunk.usage, "completion_tokens_details"):
+                            details = chunk.usage.completion_tokens_details
+                            if hasattr(details, "reasoning_tokens"):
+                                logger.info(f"Reasoning tokens: {details.reasoning_tokens}")
+                    continue
 
+                # Check for content
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+
+                # Check finish reason for edge cases
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+                    if finish_reason == "length":
+                        logger.warning("Response truncated due to max_tokens limit")
+                    elif finish_reason == "content_filter":
+                        logger.warning("Response filtered due to content policy")
+                        yield "\n[Response was filtered due to content policy]"
+
+        except AuthenticationError as e:
+            logger.error(f"Authentication failed: {e}")
+            raise
+        except BadRequestError as e:
+            logger.error(f"Bad request (check parameters, unsupported features): {e}")
+            raise
+        except (
+            APIConnectionError,
+            RateLimitError,
+            APITimeoutError,
+            InternalServerError,
+        ) as e:
+            # These are handled by retry decorator, but if all retries fail:
+            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise
 
     async def get_full_response(
@@ -75,15 +179,27 @@ class GrokProvider:
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-            response = await self.client.chat.completions.create(
+            # Create non-streaming request with retry logic
+            response = await self._create_chat_completion(
                 model=model, messages=formatted_messages, stream=False
             )
 
+            # Extract response
             content = response.choices[0].message.content or ""
 
+            # Check finish reason for edge cases
+            finish_reason = response.choices[0].finish_reason
+            if finish_reason == "length":
+                logger.warning("Response truncated due to max_tokens limit")
+                content += "\n[Response was truncated due to length limit]"
+            elif finish_reason == "content_filter":
+                logger.warning("Response filtered due to content policy")
+                content = "[Response was filtered due to content policy]"
+
+            # Extract metadata
             metadata = {
                 "model": response.model,
-                "finish_reason": response.choices[0].finish_reason,
+                "finish_reason": finish_reason,
                 "usage": {
                     "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
                     "completion_tokens": (
@@ -100,16 +216,36 @@ class GrokProvider:
                         response.usage.prompt_tokens_details.cached_tokens
                     )
 
-            # Add reasoning tokens if available (for reasoning models)
+            # Add reasoning tokens if available (for Grok reasoning models)
             if response.usage and hasattr(response.usage, "completion_tokens_details"):
                 if hasattr(response.usage.completion_tokens_details, "reasoning_tokens"):
                     metadata["usage"]["reasoning_tokens"] = (
                         response.usage.completion_tokens_details.reasoning_tokens
                     )
+                    logger.info(f"Reasoning tokens used: {metadata['usage']['reasoning_tokens']}")
+
+            logger.info(
+                f"Response: {metadata['usage']['total_tokens']} tokens, "
+                f"finish_reason={finish_reason}"
+            )
 
             return content, metadata
 
+        except AuthenticationError as e:
+            logger.error(f"Authentication failed: {e}")
+            raise
+        except BadRequestError as e:
+            logger.error(f"Bad request (check parameters, unsupported features): {e}")
+            raise
+        except (
+            APIConnectionError,
+            RateLimitError,
+            APITimeoutError,
+            InternalServerError,
+        ) as e:
+            # These are handled by retry decorator, but if all retries fail:
+            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            raise
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[ERROR] {error_msg}")
+            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
             raise

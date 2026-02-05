@@ -271,3 +271,27 @@ in python, can we serialize errors? if there's a way to save errors as-is as pla
 ---
 
 the document is more comprehensive than i thought, but i see weak links between the document and poly-chat. it's not a 100% general-purpose document. so, please rename it and move it to the root of poly-chat where README.md is.
+
+---
+
+i generated ai related documents for ai providers.
+
+- openai-integration-patterns-2026.md and openai-integration-guide.md for openai_provider.py
+- google-genai-reference.md for gemini_provider.py
+- anthropic-python-sdk-guide.md and anthropic-sdk-reference.md for claude_provider.py
+- xai-grok-openai-integration.md for grok_provider.py
+- mistral-openai-integration.md for mistral_provider.py
+- perplexity-api-guide.md for perplexity_provider.py
+- deepseek-api-integration.md for deepseek_provider.py
+
+if you are curious why there are 2 for openai and anthropic, refer to readme.md in the same directory please.
+
+now i want you to read all lines of all these documents to see if the python files are implemented correctly.
+
+we dont need to over-engineer. i am not trying to make a perfect sdk for these ais. i only need to make sure each provider correctly accesses the corresponding api, has support for timeouts and retries and handles errors including edge cases. we dont need to distinguish errors. we only need to log all errors and go on.
+
+from now on, in each interaction with me, please check one pair of documentation and code and see how you can improve the code.
+
+first iteration is openai. when i say next or something similar, please move on to the next pair.
+
+it is not realistic to read all lines of all documents in one iteration. even if we take turns, your context window will be full. then you will automatically summarize context. when you do, please make sure you will remember what you are doing and why. then you should be able to do the same quality of work for all the 7 ais in one chat session.
