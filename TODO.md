@@ -4,7 +4,6 @@
 - check all remaining tasks in paper notebook
 - read the claude code book on mcp, parallel development, sub-agents
 - try developing 2 projects in parallel
-- try using mac keychain
 - hello world python gui apps using different packages
 - try mail/sms apis
 - write web app that just sends todo mail
@@ -12,17 +11,19 @@
 - try deepl/google translation apis
 - try openai/google transcription apis
 - decide what to do with blog/x
-- mechanism to store/retrieve api keys
-- docs on config-related python packages
 - multi-ai cli chat tool
 - blog + rag + ai consulting on international businesses, ai applications and parenting?
-- tk: smoother workflow. must be something my windows user wife could use
-- tk: task addition without "add"?
+- vocabulary development infrastructure for my daughter
 
 ## History
 
 ### 2026-02-05
 - ❌ add prefix _ to what.md and how.md => did and reverted. made internal_docs instead
+- ✅ try using mac keychain => wrote code and tests
+- ✅ mechanism to store/retrieve api keys => implemented in poly-chat
+- ❌ docs on config-related python packages => yagni
+- ❌ tk: smoother workflow. must be something my windows user wife could use => workflow is just fine
+- ❌ tk: task addition without "add"? => risky
 
 ### 2026-02-02
 - ❌ branch management best practices => my knowledge is enough for now
