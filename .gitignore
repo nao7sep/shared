@@ -12,3 +12,4 @@ __pycache__/
 
 # test secrets
 __TEST_API_KEYS.json
+.TEST_API_KEYS.json

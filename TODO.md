@@ -18,9 +18,11 @@
 - blog + rag + ai consulting on international businesses, ai applications and parenting?
 - tk: smoother workflow. must be something my windows user wife could use
 - tk: task addition without "add"?
-- add prefix _ to what.md and how.md
 
 ## History
+
+### 2026-02-05
+- ❌ add prefix _ to what.md and how.md => did and reverted. made internal_docs instead
 
 ### 2026-02-02
 - ❌ branch management best practices => my knowledge is enough for now
