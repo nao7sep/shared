@@ -14,6 +14,8 @@
 - multi-ai cli chat tool
 - blog + rag + ai consulting on international businesses, ai applications and parenting?
 - vocabulary development infrastructure for my daughter
+- refine vibe coding workflow
+- (still) write app to zip-compress source code
 
 ## History
 
