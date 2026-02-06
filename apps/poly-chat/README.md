@@ -132,6 +132,7 @@ pc -p <profile-path> -l debug.log
     "claude": "claude-haiku-4-5",
     "gemini": "gemini-3-flash-preview"
   },
+  "timeout": 30,
   "system_prompt": "@/system-prompts/default.txt",
   "chats_dir": "~/poly-chat-logs",
   "log_dir": "~/poly-chat-logs/logs",

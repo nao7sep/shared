@@ -115,21 +115,62 @@ def validate_profile(profile: dict[str, Any]) -> None:
     if missing:
         raise ValueError(f"Profile missing required fields: {', '.join(missing)}")
 
+    # Validate models is a dict and non-empty
+    if not isinstance(profile["models"], dict):
+        raise ValueError("'models' must be a dictionary")
+
+    if not profile["models"]:
+        raise ValueError("'models' cannot be empty")
+
     # Validate default_ai is in models
     if profile["default_ai"] not in profile["models"]:
         raise ValueError(f"default_ai '{profile['default_ai']}' not found in models")
 
-    # Validate models is a dict
-    if not isinstance(profile["models"], dict):
-        raise ValueError("'models' must be a dictionary")
+    # Validate timeout if present
+    if "timeout" in profile:
+        timeout = profile["timeout"]
+        if not isinstance(timeout, (int, float)):
+            raise ValueError("'timeout' must be a number")
+        if timeout < 0:
+            raise ValueError("'timeout' cannot be negative")
 
     # Validate api_keys structure
     if not isinstance(profile.get("api_keys"), dict):
         raise ValueError("'api_keys' must be a dictionary")
 
+    # Validate each api_key configuration
+    for provider, key_config in profile.get("api_keys", {}).items():
+        if not isinstance(key_config, dict):
+            raise ValueError(f"API key config for '{provider}' must be a dictionary")
+
+        if "type" not in key_config:
+            raise ValueError(f"API key config for '{provider}' missing 'type' field")
+
+        key_type = key_config["type"]
+
+        # Validate type-specific required fields
+        if key_type == "env":
+            if "key" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=env) missing 'key' field")
+        elif key_type == "keychain":
+            if "service" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=keychain) missing 'service' field")
+            if "account" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=keychain) missing 'account' field")
+        elif key_type == "json":
+            if "path" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=json) missing 'path' field")
+            if "key" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=json) missing 'key' field")
+        elif key_type == "direct":
+            if "value" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=direct) missing 'value' field")
+        else:
+            raise ValueError(f"API key config for '{provider}' has unknown type '{key_type}'")
+
 
 def create_profile(path: str) -> dict[str, Any]:
-    """Create new profile with interactive wizard.
+    """Create new profile template with accompanying API keys file.
 
     Args:
         path: Where to save the profile
@@ -142,47 +183,36 @@ def create_profile(path: str) -> dict[str, Any]:
     # Create directory if needed
     profile_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"Creating new profile: {profile_path}")
-    print()
+    # Create API keys file next to profile
+    api_keys_path = profile_path.parent / "api-keys.json"
 
-    # Interactive prompts
-    print("Available AI providers:")
-    print("  1. OpenAI (GPT)")
-    print("  2. Claude (Anthropic)")
-    print("  3. Gemini (Google)")
-    print("  4. Grok (xAI)")
-    print("  5. Perplexity")
-    print("  6. Mistral")
-    print("  7. DeepSeek")
+    print(f"Creating template profile: {profile_path}")
+    print(f"Creating template API keys: {api_keys_path}")
 
-    provider_map = {
-        "1": "openai",
-        "2": "claude",
-        "3": "gemini",
-        "4": "grok",
-        "5": "perplexity",
-        "6": "mistral",
-        "7": "deepseek",
+    # Create template API keys file
+    api_keys_template = {
+        "openai": "sk-YOUR-OPENAI-API-KEY-HERE",
+        "claude": "sk-ant-YOUR-CLAUDE-API-KEY-HERE",
+        "gemini": "YOUR-GEMINI-API-KEY-HERE",
+        "grok": "xai-YOUR-GROK-API-KEY-HERE",
+        "perplexity": "pplx-YOUR-PERPLEXITY-API-KEY-HERE",
+        "mistral": "YOUR-MISTRAL-API-KEY-HERE",
+        "deepseek": "sk-YOUR-DEEPSEEK-API-KEY-HERE"
     }
 
-    choice = input("Select default AI (1-7) [2]: ").strip() or "2"
-    default_ai = provider_map.get(choice, "claude")
+    with open(api_keys_path, "w", encoding="utf-8") as f:
+        json.dump(api_keys_template, f, indent=2, ensure_ascii=False)
 
-    # Get chats directory
-    default_chats_dir = "~/poly-chat-logs"
-    chats_dir = (
-        input(f"Chat history directory [{default_chats_dir}]: ").strip()
-        or default_chats_dir
-    )
-
-    # Get error log directory
-    default_log_dir = f"{chats_dir}/logs"
-    log_dir = input(f"Error log directory [{default_log_dir}]: ").strip() or default_log_dir
+    # Determine relative path from profile to API keys file
+    # Use @ prefix if both are in same directory, otherwise use absolute path
+    if api_keys_path.parent == profile_path.parent:
+        api_keys_ref = f"@/{api_keys_path.name}"
+    else:
+        api_keys_ref = str(api_keys_path)
 
     # Create profile structure
     profile = {
-        "default_ai": default_ai,
-        "timeout": 30,
+        "default_ai": "claude",
         "models": {
             "openai": "gpt-5-mini",
             "claude": "claude-haiku-4-5",
@@ -190,52 +220,63 @@ def create_profile(path: str) -> dict[str, Any]:
             "grok": "grok-4-1-fast-non-reasoning",
             "perplexity": "sonar",
             "mistral": "mistral-small-latest",
-            "deepseek": "deepseek-chat",
+            "deepseek": "deepseek-chat"
         },
+        "timeout": 30,
         "system_prompt": "@/system-prompts/default.txt",
-        "chats_dir": chats_dir,
-        "log_dir": log_dir,
-        "api_keys": {},
-    }
-
-    # Configure API keys
-    print("\nAPI Key Configuration")
-    print("Options: [e]nv variable, [k]eychain, [j]son file, [s]kip")
-
-    for provider in profile["models"].keys():
-        print(f"\n{provider.upper()} API key:")
-        choice = input("  Configure as (e/k/j/s) [s]: ").strip().lower() or "s"
-
-        if choice == "e":
-            var_name = input(
-                "  Environment variable name [" + f"{provider.upper()}_API_KEY]: "
-            ).strip()
-            var_name = var_name or f"{provider.upper()}_API_KEY"
-            profile["api_keys"][provider] = {"type": "env", "key": var_name}
-
-        elif choice == "k":
-            service = input("  Keychain service [poly-chat]: ").strip() or "poly-chat"
-            account = input(f"  Keychain account [{provider}-api-key]: ").strip()
-            account = account or f"{provider}-api-key"
-            profile["api_keys"][provider] = {
-                "type": "keychain",
-                "service": service,
-                "account": account,
-            }
-
-        elif choice == "j":
-            json_path = input("  JSON file path [~/.secrets/api-keys.json]: ").strip()
-            json_path = json_path or "~/.secrets/api-keys.json"
-            key_name = input(f"  Key in JSON [{provider}]: ").strip() or provider
-            profile["api_keys"][provider] = {
+        "chats_dir": "@/chats",
+        "log_dir": "@/logs",
+        "api_keys": {
+            "openai": {
                 "type": "json",
-                "path": json_path,
-                "key": key_name,
+                "path": api_keys_ref,
+                "key": "openai"
+            },
+            "claude": {
+                "type": "json",
+                "path": api_keys_ref,
+                "key": "claude"
+            },
+            "gemini": {
+                "type": "json",
+                "path": api_keys_ref,
+                "key": "gemini"
+            },
+            "grok": {
+                "type": "json",
+                "path": api_keys_ref,
+                "key": "grok"
+            },
+            "perplexity": {
+                "type": "json",
+                "path": api_keys_ref,
+                "key": "perplexity"
+            },
+            "mistral": {
+                "type": "json",
+                "path": api_keys_ref,
+                "key": "mistral"
+            },
+            "deepseek": {
+                "type": "json",
+                "path": api_keys_ref,
+                "key": "deepseek"
             }
+        }
+    }
 
     # Save profile
     with open(profile_path, "w", encoding="utf-8") as f:
         json.dump(profile, f, indent=2, ensure_ascii=False)
 
-    print(f"\nProfile created: {profile_path}")
+    print()
+    print("Template files created successfully!")
+    print()
+    print("Next steps:")
+    print(f"  1. Edit {api_keys_path}")
+    print("     Replace placeholder API keys with your actual keys")
+    print()
+    print(f"  2. Start PolyChat:")
+    print(f"     poetry run pc -p {profile_path}")
+
     return profile

@@ -23,6 +23,7 @@ def sample_profile(temp_dir):
             "claude": "claude-haiku-4-5",
             "gemini": "gemini-3-flash-preview"
         },
+        "timeout": 30,
         "system_prompt": "You are a helpful assistant.",
         "chats_dir": str(temp_dir / "chats"),
         "log_dir": str(temp_dir / "logs"),

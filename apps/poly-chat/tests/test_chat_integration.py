@@ -116,6 +116,7 @@ def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
     profile_data = {
         "default_ai": default_ai,
         "models": models,
+        "timeout": 30,
         "system_prompt": None,
         "chats_dir": str(temp_dir / "chats"),
         "log_dir": str(temp_dir / "logs"),
@@ -193,7 +194,7 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         # Initialize chat
-        chat = load_chat(str(chat_path))
+        chat = load_chat(str(chat_file_path))
 
         # Collaborative storytelling - each AI builds on previous responses
         def get_next_prompt(interaction_count: int) -> str:
@@ -291,15 +292,15 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         save_start = time.time()
-        await save_chat(str(chat_path), chat)
+        await save_chat(str(chat_file_path), chat)
         save_elapsed = time.time() - save_start
 
-        log(f"Saved to: {chat_path}", indent=1)
+        log(f"Saved to: {chat_file_path}", indent=1)
         log(f"Save time: {save_elapsed:.3f}s", indent=1)
         log(f"Total messages: {len(chat['messages'])}", indent=1)
 
         # Verify file exists and check size
-        file_size = chat_path.stat().st_size
+        file_size = chat_file_path.stat().st_size
         log(f"File size: {file_size:,} bytes", indent=1)
         log("")
 
@@ -310,10 +311,10 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         load_start = time.time()
-        loaded_chat = load_chat(str(chat_path))
+        loaded_chat = load_chat(str(chat_file_path))
         load_elapsed = time.time() - load_start
 
-        log(f"Loaded from: {chat_path}", indent=1)
+        log(f"Loaded from: {chat_file_path}", indent=1)
         log(f"Load time: {load_elapsed:.3f}s", indent=1)
         log(f"Messages loaded: {len(loaded_chat['messages'])}", indent=1)
         log("")

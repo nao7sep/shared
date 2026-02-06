@@ -513,7 +513,7 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "-p", "--profile", required=True, help="Path to profile file (required)"
+        "-p", "--profile", help="Path to profile file (required for normal mode)"
     )
 
     parser.add_argument(
@@ -530,16 +530,30 @@ def main() -> None:
         "command", nargs="?", help="Command to run (e.g., 'init' to create profile)"
     )
 
+    parser.add_argument(
+        "profile_path", nargs="?", help="Profile path (for init command)"
+    )
+
     args = parser.parse_args()
 
     # Handle 'init' command for profile creation
     if args.command == "init":
+        if not args.profile_path:
+            print("Error: profile path required for init command")
+            print("Usage: pc init <profile-path>")
+            sys.exit(1)
         try:
-            profile.create_profile(args.profile)
+            profile.create_profile(args.profile_path)
             sys.exit(0)
         except Exception as e:
             print(f"Error creating profile: {e}")
             sys.exit(1)
+
+    # For normal mode, -p is required
+    if not args.profile:
+        print("Error: -p/--profile is required")
+        print("Usage: pc -p <profile-path> [-c <chat-path>] [-l <log-path>]")
+        sys.exit(1)
 
     # Set up logging
     setup_logging(args.log)
