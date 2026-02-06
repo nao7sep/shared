@@ -262,3 +262,78 @@ then, we can change /delete-chat to /delete.
 when we save a chat file, can we keep system_prompt_key as original as possible? this value is not mapped to a profile-specified directory path. so, if it starts with ~ or @, it should be stored as-is.
 
 the order of elements in a message in the json file is currently role => content => timestamp => model. let's change it to timestamp => role => model => content. created_at and updated_at in the metadata are merely "additional information" that give a little more value to the metadata. timestamps in messages, on the other hand, define the moments when they occur and are essentially primary keys. and model is closely related to role. so, it cant come after content.
+
+---
+
+let's update models.py, test_models.py and any relevant files containing ai model names.
+
+gpt
+https://platform.openai.com/docs/models
+ "Frontier models" contains:
+gpt-5.2-2025-12-11
+gpt-5-mini-2025-08-07
+gpt-5-nano-2025-08-07
+gpt-5.2-pro-2025-12-11
+gpt-5-2025-08-07
+gpt-4.1-2025-04-14
+dates must be removed.
+gpt-4.1 is retiring soon, but as of today (2026-02-07), it is considered a "frontier model".
+
+claude
+https://platform.claude.com/docs/en/about-claude/models/overview
+"Latest models comparison" contains:
+claude-opus-4-6
+claude-sonnet-4-5-20250929
+claude-haiku-4-5-20251001
+dates must be removed.
+opus-4.6 is just out.
+opus-4.5 should still work, but it's not in their list.
+probably, there's no reason to stick to 4.5.
+
+gemini
+https://ai.google.dev/gemini-api/docs/models?hl=en
+"Gemini models" contains:
+gemini-3-pro-preview
+gemini-3-flash-preview
+gemini-2.5-flash
+gemini-2.5-flash-lite
+gemini-2.5-pro
+for now, they think 3 is in preview and 2.5 is still current.
+
+grok
+https://docs.x.ai/developers/models
+"Language models" contains:
+grok-4-1-fast-reasoning
+grok-4-1-fast-non-reasoning
+grok-code-fast-1
+grok-4-fast-reasoning
+grok-4-fast-non-reasoning
+grok-4-0709
+grok-3-mini
+grok-3
+grok-2-vision-1212
+
+perplexity
+https://docs.perplexity.ai/docs/getting-started/models
+sonar
+sonar-pro
+sonar-reasoning-pro
+sonar-deep-research
+
+mistral
+https://docs.mistral.ai/getting-started/models
+"Generalist" contains:
+mistral-large-2512
+mistral-medium-2508
+mistral-small-2506
+ministral-14b-2512
+ministral-8b-2512
+ministral-3b-2512
+magistral-medium-2509
+magistral-small-2509
+the YYMM parts should be replaced with "latest".
+
+deepseek
+https://api-docs.deepseek.com/quick_start/pricing
+deepseek-chat
+deepseek-reasoner

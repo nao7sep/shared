@@ -20,27 +20,57 @@ PROVIDER_SHORTCUTS = {
 
 # Model registry: provider -> list of models
 MODEL_REGISTRY: Dict[str, List[str]] = {
-    "openai": ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+    "openai": [
+        "gpt-5.2-pro",
+        "gpt-5.2",
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
+        "gpt-4.1",
+    ],
     "claude": [
+        "claude-opus-4-6",
+        "claude-sonnet-4-5",
         "claude-haiku-4-5",
-        "claude-sonnet-4",
-        "claude-opus-4",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-opus-20240229",
-        "claude-3-sonnet-20240229",
-        "claude-3-haiku-20240307",
     ],
     "gemini": [
+        "gemini-3-pro-preview",
         "gemini-3-flash-preview",
-        "gemini-2.0-flash",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash",
-        "gemini-1.0-pro",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
     ],
-    "grok": ["grok-4-1-fast-non-reasoning", "grok-2", "grok-1"],
-    "perplexity": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-deep-research"],
-    "mistral": ["mistral-small-latest", "mistral-large", "mistral-medium", "mistral-small"],
-    "deepseek": ["deepseek-chat", "deepseek-reasoner"],
+    "grok": [
+        "grok-4-1-fast-reasoning",
+        "grok-4-1-fast-non-reasoning",
+        "grok-code-fast-1",
+        "grok-4-fast-reasoning",
+        "grok-4-fast-non-reasoning",
+        "grok-4-0709",
+        "grok-3-mini",
+        "grok-3",
+        "grok-2-vision-1212",
+    ],
+    "perplexity": [
+        "sonar",
+        "sonar-pro",
+        "sonar-reasoning-pro",
+        "sonar-deep-research",
+    ],
+    "mistral": [
+        "mistral-large-latest",
+        "mistral-medium-latest",
+        "mistral-small-latest",
+        "ministral-14b-latest",
+        "ministral-8b-latest",
+        "ministral-3b-latest",
+        "magistral-medium-latest",
+        "magistral-small-latest",
+    ],
+    "deepseek": [
+        "deepseek-chat",
+        "deepseek-reasoner",
+    ],
 }
 
 # Reverse mapping: model -> provider
