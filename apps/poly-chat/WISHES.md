@@ -337,3 +337,7 @@ deepseek
 https://api-docs.deepseek.com/quick_start/pricing
 deepseek-chat
 deepseek-reasoner
+
+---
+
+please generate another test that makes actual api calls to all models defined in models.py, following how test_chat_integration.py retrieves api keys. let's send one simple request to EVERY model in the list to check what works and what no longer does.

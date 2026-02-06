@@ -141,7 +141,7 @@ def load_api_key_direct(provider: str, config: dict) -> str:
     return load_api_key(provider, config)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_full_chat_flow():
     """
@@ -183,7 +183,7 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         profile_path = create_temp_profile(test_config, temp_path)
-        chat_file_path = temp_path / "chats" / "e2e-test.json"
+        chat_file_path = temp_path / "chats" / "integration-test.json"
 
         log("")
 
@@ -429,4 +429,4 @@ async def test_full_chat_flow():
 
 if __name__ == "__main__":
     # Allow running directly for manual testing
-    pytest.main([__file__, "-v", "-s", "-m", "e2e"])
+    pytest.main([__file__, "-v", "-s", "-m", "integration"])
