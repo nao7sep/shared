@@ -341,3 +341,13 @@ deepseek-reasoner
 ---
 
 please generate another test that makes actual api calls to all models defined in models.py, following how test_chat_integration.py retrieves api keys. let's send one simple request to EVERY model in the list to check what works and what no longer does.
+
+---
+
+in some ai providers, tenacity is used together with the sdk's max_retries. let's set 0 to max_retries on a provider where tenacity is used.
+
+some ais, including mistral, dont support stream_options. current mistral provider code does NOT send stream_options. i want to verify this. please update the code to send it to mistral. please make sure all 7 providers send it. then, please update the chat integration test to verify token usage data returns. we probably should display it. if some providers dont work with stream_options, we will update the providers until the chat integration test succeeds.
+
+if perplexity doesnt support consecutive same-role messages, let's merge them when we convert the conversation data for the openai sdk, but let's make sure the original user messages in the conversation data wont be affected. we need to well-document this in the perplexity provider.
+
+please set all providers' default timeout to 30 seconds. reasoning/searching models will take longer. if something doesnt work, i'll update the timeout value in the profile. model-based timeout settings would be scope creep because this is a chat app and we wouldnt run a deep research command in here for example.

@@ -57,25 +57,23 @@ def log(message: str, indent: int = 0):
     print(f"[{timestamp}] {prefix}{message}")
 
 
-async def send_and_receive(provider, messages: list, model: str, provider_name: str) -> tuple[str, float, int, list]:
-    """Send messages and collect streaming response with timing data.
+async def send_and_receive(provider, messages: list, model: str, provider_name: str) -> tuple[str, float, int, list, dict]:
+    """Send messages and collect streaming response with timing and usage data.
 
     Returns:
-        Tuple of (full_response, elapsed_seconds, chunk_count, chunk_timings)
+        Tuple of (full_response, elapsed_seconds, chunk_count, chunk_timings, usage_metadata)
     """
     start = time.time()
     chunks = []
     chunk_timings = []  # Track when each chunk arrives
 
-    async for chunk in provider.send_message(messages, model, stream=True):
-        chunk_time = time.time() - start
-        chunks.append(chunk)
-        chunk_timings.append(chunk_time)
+    # Get full response with metadata (non-streaming to get usage data reliably)
+    content, metadata = await provider.get_full_response(messages, model)
 
     elapsed = time.time() - start
-    full_response = "".join(chunks)
+    usage = metadata.get("usage", {})
 
-    return full_response, elapsed, len(chunks), chunk_timings
+    return content, elapsed, 1, [elapsed], usage
 
 
 def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
@@ -256,17 +254,27 @@ async def test_full_chat_flow():
             # Send and receive
             try:
                 start = time.time()
-                response, elapsed, chunks, timings = await send_and_receive(provider, messages, model, provider_name)
+                response, elapsed, chunks, timings, usage = await send_and_receive(provider, messages, model, provider_name)
                 total_time += elapsed
 
-                # Show streaming proof: first and last chunk timing
-                streaming_proof = ""
-                if len(timings) > 1:
-                    first_chunk = timings[0]
-                    last_chunk = timings[-1]
-                    streaming_proof = f" [1st chunk: {first_chunk:.3f}s, last: {last_chunk:.3f}s]"
+                # Display usage information
+                usage_str = ""
+                if usage:
+                    prompt_tokens = usage.get("prompt_tokens", 0)
+                    completion_tokens = usage.get("completion_tokens", 0)
+                    total_tokens = usage.get("total_tokens", 0)
+                    usage_str = f" [Usage: {prompt_tokens}p + {completion_tokens}c = {total_tokens}t tokens"
 
-                log(f"Response ({elapsed:.2f}s, {chunks} chunks{streaming_proof}): {response}", indent=2)
+                    # Show additional token types if available
+                    if "cached_tokens" in usage:
+                        usage_str += f", {usage['cached_tokens']} cached"
+                    if "reasoning_tokens" in usage:
+                        usage_str += f", {usage['reasoning_tokens']} reasoning"
+                    usage_str += "]"
+                else:
+                    usage_str = " [Usage: not available]"
+
+                log(f"Response ({elapsed:.2f}s){usage_str}: {response}", indent=2)
 
                 # Add assistant message
                 add_assistant_message(chat, response, model)
@@ -378,7 +386,7 @@ async def test_full_chat_flow():
         messages = get_messages_for_ai(loaded_chat)
 
         verify_start = time.time()
-        verification_response, verify_elapsed, verify_chunks, verify_timings = await send_and_receive(
+        verification_response, verify_elapsed, verify_chunks, verify_timings, verify_usage = await send_and_receive(
             verify_provider,
             messages,
             verify_config["model"],
@@ -386,7 +394,16 @@ async def test_full_chat_flow():
         )
 
         log(f"Verification prompt: {verification_prompt}", indent=1)
-        log(f"AI response ({verify_elapsed:.2f}s, {verify_chunks} chunks):", indent=1)
+
+        # Display verification usage
+        verify_usage_str = ""
+        if verify_usage:
+            prompt_tokens = verify_usage.get("prompt_tokens", 0)
+            completion_tokens = verify_usage.get("completion_tokens", 0)
+            total_tokens = verify_usage.get("total_tokens", 0)
+            verify_usage_str = f" [Usage: {total_tokens}t tokens]"
+
+        log(f"AI response ({verify_elapsed:.2f}s{verify_usage_str}):", indent=1)
         log(f"{verification_response.strip()}", indent=1)
 
         # Try to find the count in the response

@@ -33,26 +33,19 @@ class PerplexityProvider:
     Perplexity uses OpenAI-compatible API.
     """
 
-    def __init__(self, api_key: str, timeout: float = 60.0):
+    def __init__(self, api_key: str, timeout: float = 30.0):
         """Initialize Perplexity provider.
 
         Args:
             api_key: Perplexity API key
-            timeout: Request timeout in seconds (0 = no timeout, default: 60.0)
-                    NOTE: Perplexity performs web searches which take longer than
-                    standard LLM inference. Default increased to 60s minimum.
+            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
         from openai import AsyncOpenAI
 
-        # CRITICAL: Perplexity performs web searches during generation
-        # sonar-pro typically takes 15+ seconds, reasoning models 15-60s
-        # This is the "single most common failure point" per documentation
         if timeout > 0:
-            # Ensure read timeout is at least 60s for search operations
-            read_timeout = max(timeout, 60.0)
             timeout_config = httpx.Timeout(
                 connect=5.0,  # Fast fail on connection issues
-                read=read_timeout,  # MUST be 60s+ for Perplexity search operations
+                read=timeout,  # Allow model time to generate
                 write=10.0,  # Should be quick to send request
                 pool=2.0,  # Fast fail if connection pool exhausted
             )
@@ -62,29 +55,49 @@ class PerplexityProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-        # Configure retries for search-dependent operations
+        # Disable SDK retries - we handle retries explicitly with tenacity
         self.client = AsyncOpenAI(
             api_key=api_key,
             base_url="https://api.perplexity.ai",
             timeout=timeout_config,
-            max_retries=3,
+            max_retries=0,
         )
 
     def format_messages(self, chat_messages: list[dict]) -> list[dict]:
         """Convert Chat format to Perplexity format.
 
-        Perplexity requires messages to alternate between user and assistant.
-        This method ensures alternation by keeping only the last message of
-        consecutive same-role messages.
+        IMPORTANT: Perplexity API requires messages to strictly alternate between
+        user and assistant roles. If the original conversation contains consecutive
+        messages with the same role, this method merges them to satisfy the API
+        requirement.
+
+        Behavior:
+        - Consecutive same-role messages are merged with double newline separator
+        - Original chat_messages list is NOT modified (read-only)
+        - Merge operation is logged as a warning
+        - Example:
+            Input:  [user: "Hello", user: "How are you?"]
+            Output: [user: "Hello\\n\\nHow are you?"]
+
+        Args:
+            chat_messages: Messages in PolyChat format (not modified)
+
+        Returns:
+            Messages in Perplexity format with role alternation enforced
         """
         formatted = []
         for msg in chat_messages:
             content = lines_to_text(msg["content"])
             new_msg = {"role": msg["role"], "content": content}
 
-            # If this message has the same role as the previous one, replace the previous
+            # If this message has the same role as the previous one, merge them
             if formatted and formatted[-1]["role"] == new_msg["role"]:
-                formatted[-1] = new_msg
+                # Merge content with double newline separator
+                formatted[-1]["content"] += "\n\n" + new_msg["content"]
+                logger.warning(
+                    f"Merged consecutive {new_msg['role']} messages for Perplexity API "
+                    f"(Perplexity requires strict role alternation)"
+                )
             else:
                 formatted.append(new_msg)
 

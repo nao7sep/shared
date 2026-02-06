@@ -34,29 +34,21 @@ class DeepSeekProvider:
     DeepSeek uses OpenAI-compatible API.
     """
 
-    def __init__(self, api_key: str, timeout: float = 300.0):
+    def __init__(self, api_key: str, timeout: float = 30.0):
         """Initialize DeepSeek provider.
 
         Args:
             api_key: DeepSeek API key
-            timeout: Request timeout in seconds (0 = no timeout, default: 300.0)
-                    NOTE: DeepSeek reasoning models (R1/deepseek-reasoner) perform
-                    extensive "thinking" that can take several minutes.
-                    Default increased to 300s (5 minutes) for reasoning models.
+            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
         from openai import AsyncOpenAI
 
-        # CRITICAL: DeepSeek reasoning models have long "thinking" phases
-        # R1 models can take 1-5+ minutes for complex reasoning
-        # Documentation recommends 300s (5 minutes) read timeout minimum
         if timeout > 0:
-            # Ensure read timeout is at least 300s for reasoning models
-            read_timeout = max(timeout, 300.0)
             timeout_config = httpx.Timeout(
-                connect=10.0,  # 10s to establish connection
-                read=read_timeout,  # MUST be 300s+ for R1/reasoning models
-                write=30.0,  # 30s to send payload
-                pool=10.0,  # 10s to wait for connection from pool
+                connect=5.0,  # Fast fail on connection issues
+                read=timeout,  # Allow model time to generate
+                write=10.0,  # Should be quick to send request
+                pool=2.0,  # Fast fail if connection pool exhausted
             )
         else:
             timeout_config = None

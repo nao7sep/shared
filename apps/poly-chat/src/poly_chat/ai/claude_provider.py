@@ -14,6 +14,13 @@ from anthropic import (
     InternalServerError,
     APIStatusError,
 )
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from ..message_formatter import lines_to_text
 
@@ -41,9 +48,9 @@ class ClaudeProvider:
         else:
             timeout_config = None
 
-        # Configure retries - SDK default is 2, we use 3 for better resilience
+        # Disable SDK retries - we handle retries explicitly with tenacity
         self.client = AsyncAnthropic(
-            api_key=api_key, timeout=timeout_config, max_retries=3
+            api_key=api_key, timeout=timeout_config, max_retries=0
         )
         self.api_key = api_key
         self.timeout = timeout
@@ -62,6 +69,44 @@ class ClaudeProvider:
             content = lines_to_text(msg["content"])
             formatted.append({"role": msg["role"], "content": content})
         return formatted
+
+    @retry(
+        retry=retry_if_exception_type(
+            (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
+        ),
+        wait=wait_exponential_jitter(initial=1, max=60),
+        stop=stop_after_attempt(4),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def _create_message(self, **kwargs):
+        """Create message with retry logic.
+
+        Args:
+            **kwargs: Arguments to pass to client.messages.create()
+
+        Returns:
+            API response
+        """
+        return await self.client.messages.create(**kwargs)
+
+    @retry(
+        retry=retry_if_exception_type(
+            (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
+        ),
+        wait=wait_exponential_jitter(initial=1, max=60),
+        stop=stop_after_attempt(4),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def _create_message_stream(self, **kwargs):
+        """Create message stream with retry logic.
+
+        Args:
+            **kwargs: Arguments to pass to client.messages.stream()
+
+        Returns:
+            Stream context manager
+        """
+        return self.client.messages.stream(**kwargs)
 
     async def send_message(
         self,
@@ -97,8 +142,8 @@ class ClaudeProvider:
             if system_prompt:
                 kwargs["system"] = system_prompt
 
-            # Create streaming request (stream parameter not needed in .stream() method)
-            async with self.client.messages.stream(**kwargs) as response_stream:
+            # Create streaming request with retry logic
+            async with await self._create_message_stream(**kwargs) as response_stream:
                 async for text in response_stream.text_stream:
                     yield text
 
@@ -174,8 +219,8 @@ class ClaudeProvider:
             if system_prompt:
                 kwargs["system"] = system_prompt
 
-            # Create non-streaming request
-            response = await self.client.messages.create(**kwargs)
+            # Create non-streaming request with retry logic
+            response = await self._create_message(**kwargs)
 
             # Extract response
             content = ""

@@ -57,12 +57,12 @@ class MistralProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-        # Configure retries - Mistral rate limits can be strict on lower tiers
+        # Disable SDK retries - we handle retries explicitly with tenacity
         self.client = AsyncOpenAI(
             api_key=api_key,
             base_url="https://api.mistral.ai/v1",
             timeout=timeout_config,
-            max_retries=5,  # Higher retries for Mistral's rate limits
+            max_retries=0,
         )
 
     def format_messages(self, chat_messages: list[dict]) -> list[dict]:
@@ -92,9 +92,9 @@ class MistralProvider:
         Returns:
             API response
         """
-        # IMPORTANT: Mistral does NOT support stream_options and will return 422 error!
-        # Unlike OpenAI/Grok, do NOT include stream_options parameter.
-        # Mistral automatically includes usage in the final chunk.
+        # VERIFIED: Mistral does NOT support stream_options parameter
+        # Returns 422 error: "Input should be a valid dictionary or object to extract fields from"
+        # Mistral automatically includes usage data in responses without needing stream_options
         return await self.client.chat.completions.create(
             model=model,
             messages=messages,
