@@ -219,24 +219,24 @@ Chat history files are stored as JSON with git-friendly formatting:
   },
   "messages": [
     {
+      "timestamp": "2026-02-02T10:00:00.123456Z",
       "role": "user",
       "content": [
         "I'm planning to expand our business into Asian markets.",
         "",
         "What are the key considerations I should focus on?"
-      ],
-      "timestamp": "2026-02-02T10:00:00.123456Z"
+      ]
     },
     {
+      "timestamp": "2026-02-02T10:00:05.789012Z",
       "role": "assistant",
+      "model": "claude-haiku-4-5",
       "content": [
         "Here are the main factors:",
         "",
         "1. Market Research",
         "2. Regulatory Environment"
-      ],
-      "timestamp": "2026-02-02T10:00:05.789012Z",
-      "model": "claude-haiku-4-5"
+      ]
     }
   ]
 }

@@ -55,25 +55,25 @@ def sample_chat():
         },
         "messages": [
             {
+                "timestamp": "2026-02-02T10:00:00.000000Z",
                 "role": "user",
                 "content": [
                     "I need help with a project.",
                     "",
                     "What are the key steps to get started?"
-                ],
-                "timestamp": "2026-02-02T10:00:00.000000Z"
+                ]
             },
             {
+                "timestamp": "2026-02-02T10:00:05.000000Z",
                 "role": "assistant",
+                "model": "claude-haiku-4-5",
                 "content": [
                     "Here are the key steps:",
                     "",
                     "1. Define your goals",
                     "2. Create a timeline",
                     "3. Gather resources"
-                ],
-                "timestamp": "2026-02-02T10:00:05.000000Z",
-                "model": "claude-haiku-4-5"
+                ]
             }
         ]
     }

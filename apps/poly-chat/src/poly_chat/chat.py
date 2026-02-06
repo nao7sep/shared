@@ -95,9 +95,9 @@ def add_user_message(data: dict[str, Any], content: str) -> None:
     lines = text_to_lines(content)
 
     message = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "role": "user",
         "content": lines,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     data["messages"].append(message)
@@ -114,10 +114,10 @@ def add_assistant_message(data: dict[str, Any], content: str, model: str) -> Non
     lines = text_to_lines(content)
 
     message = {
-        "role": "assistant",
-        "content": lines,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "role": "assistant",
         "model": model,
+        "content": lines,
     }
 
     data["messages"].append(message)
@@ -136,9 +136,9 @@ def add_error_message(
     lines = text_to_lines(content)
 
     message = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "role": "error",
         "content": lines,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     if details:

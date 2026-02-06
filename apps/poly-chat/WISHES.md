@@ -256,3 +256,9 @@ if no chat is open and we call /new, app should ask whether to open it.
 "/delete" should be more intuitive. it sounds like we are deleting one specific message alone.
 
 then, we can change /delete-chat to /delete.
+
+---
+
+when we save a chat file, can we keep system_prompt_key as original as possible? this value is not mapped to a profile-specified directory path. so, if it starts with ~ or @, it should be stored as-is.
+
+the order of elements in a message in the json file is currently role => content => timestamp => model. let's change it to timestamp => role => model => content. created_at and updated_at in the metadata are merely "additional information" that give a little more value to the metadata. timestamps in messages, on the other hand, define the moments when they occur and are essentially primary keys. and model is closely related to role. so, it cant come after content.

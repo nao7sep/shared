@@ -1,6 +1,7 @@
 """CLI entry point and REPL loop for PolyChat."""
 
 import sys
+import json
 import asyncio
 import argparse
 import logging
@@ -16,7 +17,6 @@ from . import profile, chat
 from .commands import CommandHandler
 from .keys.loader import load_api_key, validate_api_key
 from .streaming import display_streaming_response
-from .chat_manager import prompt_chat_selection, generate_chat_filename
 
 
 # AI provider imports
@@ -286,7 +286,7 @@ async def repl_loop(
     if chat_path:
         print(f"Chat:             {Path(chat_path).name}")
     else:
-        print(f"Chat:             None (use /new or /open)")
+        print("Chat:             None (use /new or /open)")
     print()
     print("Press Alt+Enter (or Ctrl+Enter) to send • Enter for new line")
     print("Type /help for commands • Ctrl+D to exit")
@@ -561,8 +561,17 @@ def main() -> None:
         system_prompt = None
         system_prompt_key = None
         if isinstance(profile_data.get("system_prompt"), str):
-            # It's a file path - store the key for metadata
-            system_prompt_key = profile_data["system_prompt"]
+            # Read original profile to get unmapped path for system_prompt_key
+            # (profile_data has already mapped paths, but we want to preserve original format)
+            try:
+                with open(Path(args.profile).expanduser(), "r", encoding="utf-8") as f:
+                    original_profile = json.load(f)
+                    system_prompt_key = original_profile.get("system_prompt")
+            except Exception:
+                # Fallback to mapped path if can't read original
+                system_prompt_key = profile_data["system_prompt"]
+
+            # Load the actual prompt content using mapped path
             try:
                 with open(profile_data["system_prompt"], "r", encoding="utf-8") as f:
                     system_prompt = f.read().strip()
