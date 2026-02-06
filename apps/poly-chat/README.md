@@ -43,8 +43,12 @@ This interactive wizard will guide you through:
 # With existing chat
 poetry run pc -p ~/my-profile.json -c ~/chats/my-chat.json
 
-# Or let it prompt you for chat history file
+# Or let it prompt you for chat selection
 poetry run pc -p ~/my-profile.json
+# You can then:
+# - Open existing chat from a list
+# - Create new chat
+# - Start without a chat (use /new or /open later)
 ```
 
 ### 3. Chat
@@ -90,6 +94,13 @@ pc -p <profile-path> -l debug.log
 **Model Management:**
 - `/model` - Show available models for current provider
 - `/model <name>` - Switch to specified model
+
+**Chat File Management:**
+- `/new [name]` - Create new chat file
+- `/open [name]` - Open existing chat (shows list if no name provided)
+- `/close` - Close current chat
+- `/rename [name]` - Rename current chat or select from list
+- `/delete-chat [name]` - Delete a chat file (shows list if no name provided)
 
 **Chat Control:**
 - `/retry` - Replace last response (retry mode)

@@ -218,3 +218,11 @@ profile path as a commandline option is mandatory. path will be mapped if relati
 from now on, it is either a "chat history" file or an "error log" file. we will never say "chat log" because there'd be 2 types of "logs" and that would be confusing. when we need a short name for chat history related things such as a directory name, we use "chats". for error log related things, we use "logs".
 
 we currently use "new" command to make a new profile. let's change it to "init."
+
+---
+
+let's implement /new /open /close /rename /delete in the repl mode. these all work with chat files. i initially chose the simple design of one-chat-per-app-run, but claude code allows me to /clear the current chat, /resume an old one, etc and that is useful.
+
+also, let's make chat directory path and log directory path mandatory in profile. then, /open shows a list of chats in the specified directory and an option to directly input an absolute or to-be-mapped relative path. when app loads a profile and user chooses to open an existing conversation, it works the same as /open. this list thing should show up for /rename and /delete too.
+
+app should always show a list for user's convenience AND an option to directly input something else.

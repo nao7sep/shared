@@ -15,6 +15,7 @@ from . import profile, chat
 from .commands import CommandHandler
 from .keys.loader import load_api_key, validate_api_key
 from .streaming import display_streaming_response
+from .chat_manager import prompt_chat_selection, generate_chat_filename
 
 
 # AI provider imports
@@ -208,8 +209,8 @@ def validate_and_get_provider(
 
 async def repl_loop(
     profile_data: dict,
-    chat_data: dict,
-    chat_path: str,
+    chat_data: Optional[dict] = None,
+    chat_path: Optional[str] = None,
     system_prompt: Optional[str] = None,
     system_prompt_key: Optional[str] = None,
 ) -> None:
@@ -217,23 +218,23 @@ async def repl_loop(
 
     Args:
         profile_data: Loaded profile
-        chat_data: Loaded chat history
-        chat_path: Path to chat history file
+        chat_data: Loaded chat history (optional)
+        chat_path: Path to chat history file (optional)
         system_prompt: Optional system prompt text
         system_prompt_key: Optional path/key to system prompt (for metadata)
     """
-    # Initialize session state
+    # Initialize session state (chat can be None)
     session = SessionState(
         current_ai=profile_data["default_ai"],
         current_model=profile_data["models"][profile_data["default_ai"]],
         profile=profile_data,
-        chat=chat_data,
+        chat=chat_data if chat_data else {},
         system_prompt=system_prompt,
         system_prompt_key=system_prompt_key,
     )
 
-    # Set system_prompt_key in chat metadata if not already set
-    if system_prompt_key and not chat_data["metadata"].get("system_prompt_key"):
+    # Set system_prompt_key in chat metadata if chat is loaded
+    if chat_data and system_prompt_key and not chat_data["metadata"].get("system_prompt_key"):
         chat.update_metadata(
             chat_data, system_prompt_key=system_prompt_key
         )
@@ -260,6 +261,10 @@ async def repl_loop(
     print("=" * 60)
     print(f"Provider: {session.current_ai}")
     print(f"Model: {session.current_model}")
+    if chat_path:
+        print(f"Chat: {Path(chat_path).name}")
+    else:
+        print("Chat: None (use /new or /open to start)")
     print("Type /help for commands, Ctrl-D or /exit to quit")
     print("=" * 60)
     print()
@@ -277,19 +282,108 @@ async def repl_loop(
             if cmd_handler.is_command(user_input):
                 try:
                     response = await cmd_handler.execute_command(user_input)
+
+                    # Handle special command signals
                     if response == "__EXIT__":
                         print("\nGoodbye!")
                         break
-                    if response:
+
+                    elif response.startswith("__NEW_CHAT__:"):
+                        # Create new chat
+                        new_path = response.split(":", 1)[1]
+                        chat_path = new_path
+                        chat_data = chat.load_chat(chat_path)
+
+                        # Set system_prompt_key if configured
+                        if system_prompt_key:
+                            chat.update_metadata(chat_data, system_prompt_key=system_prompt_key)
+
+                        # Update session
+                        session.chat = chat_data
+                        session_dict["chat"] = chat_data
+                        session_dict["chat_path"] = chat_path
+
+                        print(f"Created new chat: {Path(chat_path).name}")
+                        print()
+
+                    elif response.startswith("__OPEN_CHAT__:"):
+                        # Open existing chat
+                        new_path = response.split(":", 1)[1]
+
+                        # Save current chat if any
+                        if chat_path and chat_data:
+                            await chat.save_chat(chat_path, chat_data)
+
+                        # Load new chat
+                        chat_path = new_path
+                        chat_data = chat.load_chat(chat_path)
+
+                        # Update session
+                        session.chat = chat_data
+                        session_dict["chat"] = chat_data
+                        session_dict["chat_path"] = chat_path
+
+                        print(f"Opened chat: {Path(chat_path).name}")
+                        print()
+
+                    elif response == "__CLOSE_CHAT__":
+                        # Save and close current chat
+                        if chat_path and chat_data:
+                            await chat.save_chat(chat_path, chat_data)
+
+                        chat_path = None
+                        chat_data = None
+
+                        # Update session
+                        session.chat = {}
+                        session_dict["chat"] = {}
+                        session_dict["chat_path"] = None
+
+                        print("Chat closed")
+                        print()
+
+                    elif response.startswith("__RENAME_CURRENT__:"):
+                        # Update current chat path
+                        new_path = response.split(":", 1)[1]
+                        chat_path = new_path
+                        session_dict["chat_path"] = chat_path
+
+                        print(f"Chat renamed to: {Path(chat_path).name}")
+                        print()
+
+                    elif response.startswith("__DELETE_CURRENT__:"):
+                        # Close current chat after deletion
+                        filename = response.split(":", 1)[1]
+                        chat_path = None
+                        chat_data = None
+
+                        # Update session
+                        session.chat = {}
+                        session_dict["chat"] = {}
+                        session_dict["chat_path"] = None
+
+                        print(f"Deleted and closed chat: {filename}")
+                        print()
+
+                    elif response:
                         print(response)
                         print()
+
                     # Sync session state back from command handler
                     session.current_ai = session_dict["current_ai"]
                     session.current_model = session_dict["current_model"]
                     session.retry_mode = session_dict.get("retry_mode", False)
+
                 except ValueError as e:
                     print(f"Error: {e}")
                     print()
+                continue
+
+            # Check if chat is loaded
+            if not chat_path:
+                print("\nNo chat is currently open.")
+                print("Use /new to create a new chat or /open to open an existing one.")
+                print()
                 continue
 
             # Validate provider BEFORE adding user message
@@ -428,35 +522,43 @@ def main() -> None:
         profile_data = profile.load_profile(args.profile)
 
         # Get chat history file path
+        chat_path = None
+        chat_data = None
+
         if args.chat:
             # Map the path
             chat_path = profile.map_path(args.chat)
+            print(f"Loading chat: {Path(chat_path).name}")
+            chat_data = chat.load_chat(chat_path)
         else:
             # Prompt for chat history file
-            print("\nChat history file:")
-            print("  1. Open existing")
-            print("  2. Create new")
-            choice = input("Select option (1/2) [2]: ").strip() or "2"
+            print("\nChat Selection:")
+            print("  1. Open existing chat")
+            print("  2. Create new chat")
+            print("  3. Start without a chat (open/create later)")
+            choice = input("Select option (1/2/3) [3]: ").strip() or "3"
 
             if choice == "1":
-                chat_name = input("Enter chat history file name or path: ").strip()
-                if not chat_name:
-                    print("Error: Chat history file name required")
-                    sys.exit(1)
-                chat_path = profile.map_path(chat_name)
-            else:
-                # Generate new filename
-                import uuid
+                # Open existing
+                chats_dir = profile_data["chats_dir"]
+                selected_path = prompt_chat_selection(chats_dir, action="open", allow_cancel=True)
 
-                chat_name = f"poly-chat_{uuid.uuid4()}.json"
-                chat_path = str(
-                    Path(profile_data["chats_dir"]) / chat_name
-                )
-                print(f"Creating new chat: {chat_name}")
+                if selected_path:
+                    chat_path = selected_path
+                    print(f"Loading chat: {Path(chat_path).name}")
+                    chat_data = chat.load_chat(chat_path)
+                else:
+                    print("No chat selected - starting without a chat")
 
-        # Load chat history
-        print("Loading chat...")
-        chat_data = chat.load_chat(chat_path)
+            elif choice == "2":
+                # Create new
+                chats_dir = profile_data["chats_dir"]
+                name = input("Enter chat name (or press Enter for default): ").strip() or None
+                chat_path = generate_chat_filename(chats_dir, name)
+                print(f"Creating new chat: {Path(chat_path).name}")
+                chat_data = chat.load_chat(chat_path)
+
+            # else: choice == "3" - start without chat
 
         # Load system prompt if configured
         system_prompt = None
