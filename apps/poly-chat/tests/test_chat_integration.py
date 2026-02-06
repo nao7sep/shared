@@ -1,5 +1,5 @@
 """
-End-to-end test for PolyChat.
+Integration test for PolyChat.
 
 This test validates the complete flow:
 1. Create temporary profile with real API keys
@@ -145,7 +145,7 @@ def load_api_key_direct(provider: str, config: dict) -> str:
 @pytest.mark.asyncio
 async def test_full_chat_flow():
     """
-    Complete end-to-end test:
+    Complete integration test:
     - Creates temp profile
     - Sends message to each available AI
     - Saves chat
@@ -155,7 +155,7 @@ async def test_full_chat_flow():
     test_start_time = time.time()
 
     log("=" * 80)
-    log("STARTING END-TO-END TEST")
+    log("STARTING INTEGRATION TEST")
     log("=" * 80)
 
     # Check if we have test config
@@ -221,9 +221,10 @@ async def test_full_chat_flow():
             model = config["model"]
             api_key = config["api_key"]
 
-            # Create provider instance
+            # Create provider instance with timeout from profile
             provider_class = PROVIDER_CLASSES[provider_name]
-            provider = provider_class(api_key=api_key)
+            timeout = test_config.get("timeout", 30)
+            provider = provider_class(api_key=api_key, timeout=timeout)
 
             # Show API endpoint being used (to prove different AIs)
             endpoint_info = "unknown"
@@ -360,7 +361,8 @@ async def test_full_chat_flow():
         # Use first available AI for verification
         verify_provider_name = available_ais[0]
         verify_config = test_config[verify_provider_name]
-        verify_provider = PROVIDER_CLASSES[verify_provider_name](api_key=verify_config["api_key"])
+        timeout = test_config.get("timeout", 30)
+        verify_provider = PROVIDER_CLASSES[verify_provider_name](api_key=verify_config["api_key"], timeout=timeout)
 
         log(f"Using {verify_provider_name} for verification", indent=1)
 
@@ -368,7 +370,8 @@ async def test_full_chat_flow():
         verification_prompt = (
             "We just wrote a collaborative story together. "
             "First, summarize the story in 2-3 sentences. "
-            "Then, on a new line, count how many user prompts I sent (just the number)."
+            "Then answer: How many user prompts did I send? "
+            "Format your answer as 'Count: X' or 'X prompts' or just the number."
         )
 
         add_user_message(loaded_chat, verification_prompt)
@@ -388,25 +391,36 @@ async def test_full_chat_flow():
 
         # Try to find the count in the response
         try:
-            # Look for a number at the end of the response
             import re
-            numbers = re.findall(r'\b\d+\b', verification_response)
-            if numbers:
-                reported_count = int(numbers[-1])  # Take the last number found
-                actual_user_count = len([m for m in loaded_chat['messages'] if m['role'] == 'user'])
+            actual_user_count = len([m for m in loaded_chat['messages'] if m['role'] == 'user'])
 
+            # Try multiple patterns to extract count
+            # Pattern 1: "Count: X" or "count: X"
+            match = re.search(r'count:\s*(\d+)', verification_response, re.IGNORECASE)
+            if not match:
+                # Pattern 2: "X prompts" or "X messages"
+                match = re.search(r'(\d+)\s+(?:prompts|messages)', verification_response, re.IGNORECASE)
+            if not match:
+                # Pattern 3: Just look for numbers
+                numbers = re.findall(r'\b(\d+)\b', verification_response)
+                if numbers:
+                    # Take the last number found (usually the count)
+                    match = type('obj', (object,), {'group': lambda self, x: numbers[-1]})()
+
+            if match:
+                reported_count = int(match.group(1))
                 log(f"AI reported: {reported_count} user messages", indent=1)
                 log(f"Actual count: {actual_user_count} user messages", indent=1)
 
                 if reported_count == actual_user_count:
-                    log("✓ AI verification successful!", indent=1)
+                    log("✓ AI verification successful - count matches!", indent=1)
                 else:
-                    log(f"⚠ Count mismatch (acceptable - AI read and understood the chat)", indent=1)
+                    log(f"⚠ Count mismatch ({reported_count} vs {actual_user_count}) - but AI read and understood the chat", indent=1)
             else:
-                log("✓ AI provided summary (count parsing optional)", indent=1)
+                log(f"✓ AI provided summary (could not parse count, but response shows chat understanding)", indent=1)
 
         except Exception as e:
-            log(f"✓ AI provided summary (count parsing failed: {e})", indent=1)
+            log(f"✓ AI provided summary (count parsing error: {e})", indent=1)
 
         log("")
 
@@ -423,7 +437,7 @@ async def test_full_chat_flow():
         log(f"✓ Data integrity verified")
         log(f"✓ Total test time: {time.time() - test_start_time:.2f}s")
         log("=" * 80)
-        log("END-TO-END TEST PASSED")
+        log("INTEGRATION TEST PASSED")
         log("=" * 80)
 
 
