@@ -2,7 +2,6 @@
 
 import json
 import pytest
-from pathlib import Path
 from poly_chat.keys.json_files import load_from_json
 
 

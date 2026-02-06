@@ -142,7 +142,10 @@ def prompt_chat_selection(
                 print(f"Invalid number. Choose 1-{len(chats)}")
                 continue
         except ValueError:
-            print(f"Please enter a number (1-{len(chats)}) or press Enter to cancel")
+            if allow_cancel:
+                print(f"Please enter a number (1-{len(chats)}) or press Enter to cancel")
+            else:
+                print(f"Please enter a number (1-{len(chats)})")
             continue
 
 

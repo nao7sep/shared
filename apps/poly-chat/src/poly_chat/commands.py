@@ -91,7 +91,7 @@ class CommandHandler:
             "model": self.set_model,
             "timeout": self.set_timeout,
             "retry": self.retry_mode,
-            "delete": self.delete_messages,
+            "rewind": self.rewind_messages,
             "title": self.set_title,
             "ai-title": self.generate_title,
             "summary": self.set_summary,
@@ -101,7 +101,7 @@ class CommandHandler:
             "open": self.open_chat,
             "close": self.close_chat,
             "rename": self.rename_chat_file,
-            "delete-chat": self.delete_chat_command,
+            "delete": self.delete_chat_command,
             "help": self.show_help,
             "exit": self.exit_app,
             "quit": self.exit_app,
@@ -210,6 +210,11 @@ class CommandHandler:
             Info message
         """
         chat = self.session["chat"]
+
+        # Check if chat is loaded
+        if not chat or "messages" not in chat:
+            return "No chat is currently open"
+
         messages = chat["messages"]
 
         # Check if there's an assistant message to retry
@@ -224,16 +229,21 @@ class CommandHandler:
         self.session["retry_mode"] = True
         return "Retry mode enabled. Your next message will replace the last assistant response."
 
-    async def delete_messages(self, args: str) -> str:
-        """Delete message and all following messages.
+    async def rewind_messages(self, args: str) -> str:
+        """Rewind chat history by deleting message at index and all following.
 
         Args:
-            args: Message index (0-based) or "last" to delete last message
+            args: Message index (0-based) or "last" to rewind to last message
 
         Returns:
             Confirmation message
         """
         chat = self.session["chat"]
+
+        # Check if chat is loaded
+        if not chat or "messages" not in chat:
+            return "No chat is currently open"
+
         messages = chat["messages"]
 
         if not messages:
@@ -270,6 +280,10 @@ class CommandHandler:
         """
         chat = self.session["chat"]
 
+        # Check if chat is loaded
+        if not chat or "metadata" not in chat:
+            return "No chat is currently open"
+
         if not args:
             # Clear title
             update_metadata(chat, title=None)
@@ -301,6 +315,10 @@ class CommandHandler:
             Confirmation message
         """
         chat = self.session["chat"]
+
+        # Check if chat is loaded
+        if not chat or "metadata" not in chat:
+            return "No chat is currently open"
 
         if not args:
             # Clear summary
@@ -605,12 +623,12 @@ Chat File Management:
   /open [name]      Open existing chat file (shows list if no name)
   /close            Close current chat
   /rename [name]    Rename current chat or select from list
-  /delete-chat [name] Delete a chat file (shows list if no name)
+  /delete [name]    Delete a chat file (shows list if no name)
 
 Chat Control:
   /retry            Replace last response (enter retry mode)
-  /delete <index>   Delete message at index and all following
-  /delete last      Delete last message
+  /rewind <index>   Rewind chat to message (delete from index onwards)
+  /rewind last      Rewind to last message
 
 Metadata:
   /title <text>     Set chat title

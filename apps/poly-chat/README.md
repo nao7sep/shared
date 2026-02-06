@@ -104,13 +104,13 @@ pc -p <profile-path> -l debug.log
 - `/close` - Close current chat
 - `/rename` - Select chat to rename
 - `/rename <new-name>` - Rename current chat
-- `/delete-chat` - Select chat to delete
-- `/delete-chat <path>` - Delete specific chat file
+- `/delete` - Select chat to delete
+- `/delete <path>` - Delete specific chat file
 
 **Chat Control:**
 - `/retry` - Replace last response (retry mode)
-- `/delete <index>` - Delete message and all following
-- `/delete last` - Delete last message
+- `/rewind <index>` - Rewind chat to message (time travel)
+- `/rewind last` - Rewind to last message
 
 **Metadata:**
 - `/title <text>` - Set chat title

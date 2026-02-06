@@ -1,7 +1,7 @@
 """Tests for keychain key loading."""
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from poly_chat.keys.keychain import load_from_keychain, store_in_keychain
 
 

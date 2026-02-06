@@ -20,11 +20,10 @@ def load_chat(path: str) -> dict[str, Any]:
         path: Path to chat history file (already mapped)
 
     Returns:
-        Chat dictionary
+        Chat dictionary (empty structure if file doesn't exist)
 
     Raises:
-        FileNotFoundError: If file doesn't exist (caller should create new)
-        ValueError: If JSON is invalid
+        ValueError: If JSON is invalid or structure is malformed
     """
     chat_path = Path(path)
 

@@ -250,3 +250,9 @@ as for the input field, do we need the "|" symbol at line start? i see [ and ] i
 when i /new a new chat file and immediately call /open, the file is not visible. we should save an empty chat. its file name pattern should be poly-chat_YYYY-MM-DD_HH-MM-SS.json.
 
 if no chat is open and we call /new, app should ask whether to open it.
+
+---
+
+"/delete" should be more intuitive. it sounds like we are deleting one specific message alone.
+
+then, we can change /delete-chat to /delete.
