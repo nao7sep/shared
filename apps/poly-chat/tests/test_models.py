@@ -15,7 +15,7 @@ from poly_chat.models import (
 
 def test_get_provider_for_model_openai():
     """Test getting provider for OpenAI models."""
-    assert get_provider_for_model("gpt-5.2-pro") == "openai"
+    assert get_provider_for_model("gpt-5.2") == "openai"
     assert get_provider_for_model("gpt-5-mini") == "openai"
     assert get_provider_for_model("gpt-4.1") == "openai"
 
@@ -72,7 +72,7 @@ def test_get_models_for_provider_openai():
     """Test getting models for OpenAI provider."""
     models = get_models_for_provider("openai")
     assert isinstance(models, list)
-    assert "gpt-5.2-pro" in models
+    assert "gpt-5.2" in models
     assert "gpt-5-mini" in models
     assert len(models) > 0
 
@@ -110,14 +110,14 @@ def test_get_all_models():
     """Test getting all supported models."""
     models = get_all_models()
     assert isinstance(models, list)
-    assert "gpt-5.2-pro" in models
+    assert "gpt-5.2" in models
     assert "claude-opus-4-6" in models
     assert "gemini-3-pro-preview" in models
     assert "grok-4-1-fast-reasoning" in models
     assert "sonar" in models
     assert "mistral-large-latest" in models
     assert "deepseek-chat" in models
-    assert len(models) >= 35  # Should have many models (6+4+5+9+4+8+2=38)
+    assert len(models) >= 31  # Should have many models (5+3+5+9+4+6+2=34)
 
 
 def test_resolve_provider_shortcut_all():

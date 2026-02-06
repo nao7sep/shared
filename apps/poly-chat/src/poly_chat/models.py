@@ -19,9 +19,17 @@ PROVIDER_SHORTCUTS = {
 }
 
 # Model registry: provider -> list of models
+# Official documentation for model verification:
+# - OpenAI: https://platform.openai.com/docs/models
+# - Claude: https://platform.claude.com/docs/en/about-claude/models/overview
+# - Gemini: https://ai.google.dev/gemini-api/docs/models?hl=en
+# - Grok: https://docs.x.ai/developers/models
+# - Perplexity: https://docs.perplexity.ai/docs/getting-started/models
+# - Mistral: https://docs.mistral.ai/getting-started/models
+# - DeepSeek: https://api-docs.deepseek.com/quick_start/pricing
 MODEL_REGISTRY: Dict[str, List[str]] = {
     "openai": [
-        "gpt-5.2-pro",
+        # "gpt-5.2-pro",  # Not a chat model
         "gpt-5.2",
         "gpt-5",
         "gpt-5-mini",
@@ -64,8 +72,8 @@ MODEL_REGISTRY: Dict[str, List[str]] = {
         "ministral-14b-latest",
         "ministral-8b-latest",
         "ministral-3b-latest",
-        "magistral-medium-latest",
-        "magistral-small-latest",
+        # "magistral-medium-latest",  # Requires different message format
+        # "magistral-small-latest",  # Requires different message format
     ],
     "deepseek": [
         "deepseek-chat",
