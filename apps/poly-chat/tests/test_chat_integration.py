@@ -35,7 +35,7 @@ from poly_chat.ai.perplexity_provider import PerplexityProvider
 from poly_chat.ai.mistral_provider import MistralProvider
 from poly_chat.ai.deepseek_provider import DeepSeekProvider
 
-from .test_config import find_test_api_keys_file, load_test_config, is_ai_available
+from conftest import find_test_api_keys_file, load_test_config, is_ai_available
 
 
 # Provider class mapping
