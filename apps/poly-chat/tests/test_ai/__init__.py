@@ -1,1 +1,1 @@
-# Tests for AI provider implementations.
+"""Tests for AI provider implementations."""

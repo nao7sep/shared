@@ -1,1 +1,1 @@
-# Tests for API key management functionality.
+"""Tests for API key management functionality."""

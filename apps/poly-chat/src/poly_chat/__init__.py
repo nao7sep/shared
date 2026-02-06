@@ -1,1 +1,1 @@
-# PolyChat: Multi-AI CLI chat tool supporting OpenAI, Claude, Gemini, Grok, and more.
+"""Multi-AI CLI chat tool for long-term, version-controlled conversations."""

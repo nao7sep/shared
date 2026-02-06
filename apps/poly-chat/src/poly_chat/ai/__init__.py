@@ -1,1 +1,1 @@
-# AI provider implementations: OpenAI, Claude, Gemini, Grok, Perplexity, Mistral, DeepSeek.
+"""AI provider implementations for OpenAI, Claude, Gemini, Grok, Perplexity, Mistral, and DeepSeek."""

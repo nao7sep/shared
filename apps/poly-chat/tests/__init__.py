@@ -1,1 +1,1 @@
-# Test suite for PolyChat.
+"""Test suite for PolyChat."""
