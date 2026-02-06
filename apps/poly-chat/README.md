@@ -37,24 +37,26 @@ This interactive wizard will guide you through:
 - Setting chat history and error log directories
 - Choosing a default system prompt
 
-### 2. Start a Chat
+### 2. Start PolyChat
 
 ```bash
-# With existing chat
+# Start with a specific chat
 poetry run pc -p ~/my-profile.json -c ~/chats/my-chat.json
 
-# Or let it prompt you for chat selection
+# Or start without a chat (use /new or /open commands)
 poetry run pc -p ~/my-profile.json
-# You can then:
-# - Open existing chat from a list
-# - Create new chat
-# - Start without a chat (use /new or /open later)
 ```
+
+The app goes straight to the REPL and shows configured AI providers.
 
 ### 3. Chat
 
+Messages are multiline - press **Alt+Enter** (or **Ctrl+Enter**) to send, **Enter** for new line:
+
 ```
-You: What are the key considerations for expanding into Asian markets?
+What are the key considerations for
+expanding into Asian markets?
+[Alt+Enter to send]
 
 Claude: Here are the main factors to consider:
 
@@ -96,11 +98,14 @@ pc -p <profile-path> -l debug.log
 - `/model <name>` - Switch to specified model
 
 **Chat File Management:**
-- `/new [name]` - Create new chat file
-- `/open [name]` - Open existing chat (shows list if no name provided)
+- `/new [name]` - Create new chat (timestamped filename if no name)
+- `/open` - Select from list of chats
+- `/open <path>` - Open specific chat file
 - `/close` - Close current chat
-- `/rename [name]` - Rename current chat or select from list
-- `/delete-chat [name]` - Delete a chat file (shows list if no name provided)
+- `/rename` - Select chat to rename
+- `/rename <new-name>` - Rename current chat
+- `/delete-chat` - Select chat to delete
+- `/delete-chat <path>` - Delete specific chat file
 
 **Chat Control:**
 - `/retry` - Replace last response (retry mode)

@@ -226,3 +226,27 @@ let's implement /new /open /close /rename /delete in the repl mode. these all wo
 also, let's make chat directory path and log directory path mandatory in profile. then, /open shows a list of chats in the specified directory and an option to directly input an absolute or to-be-mapped relative path. when app loads a profile and user chooses to open an existing conversation, it works the same as /open. this list thing should show up for /rename and /delete too.
 
 app should always show a list for user's convenience AND an option to directly input something else.
+
+---
+
+when app starts, we currently see a list so that we can open an existing chat or create a new one or start without a chat. this is redundant. we go straight to the repl mode. it wont hurt to have to type /open or /new.
+
+a list of available (supported and configured) ais at startup may be useful.
+
+the multiline input thing is buggy.
+
+do we need "you: " in the first place? cli-based coding agents usually use a colored background or borderlines for the input field. this input field visually shrinks as we hit backspace.
+
+"enter" key not sending the message immediately is very convenient for japanese speakers. we use the enter key to finalize kanji conversion. it is a very frequent mistake that we are only trying to type in 2 languages (japanese and english) and accidentally send the message.
+
+currently, opt + enter should send the message. should we use command or control instead? on windows, it'll be control + enter, i think. on mac, maybe command + enter. i am new on mac. so, i dont know any "good manners" of shortcut keys.
+
+---
+
+earlier, i said /open and some other commands should show a list and an option of direct input. i was wrong. parameter-less commands such as /open should always behave in an user-friendly manner ONLY. if we want to specify an absolute/relative path, we can do /<command> <path>.
+
+as for the input field, do we need the "|" symbol at line start? i see [ and ] in each line of the input field. how will it look on windows?
+
+when i /new a new chat file and immediately call /open, the file is not visible. we should save an empty chat. its file name pattern should be poly-chat_YYYY-MM-DD_HH-MM-SS.json.
+
+if no chat is open and we call /new, app should ask whether to open it.

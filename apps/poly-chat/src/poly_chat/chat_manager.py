@@ -87,12 +87,10 @@ def prompt_chat_selection(
     action: str = "open",
     allow_cancel: bool = True
 ) -> Optional[str]:
-    """Interactively prompt user to select a chat.
+    """Interactively prompt user to select a chat from a list.
 
-    Shows list of chats and allows:
-    - Selection by number
-    - Direct input of filename or path
-    - Cancel (if allow_cancel=True)
+    Shows numbered list of chats. User selects by number only.
+    For direct path input, use the command with an argument instead.
 
     Args:
         chats_dir: Absolute path to chats directory
@@ -106,10 +104,7 @@ def prompt_chat_selection(
 
     if not chats:
         print(f"No chat files found in: {chats_dir}")
-        path_input = input(f"\nEnter path to {action} (or press Enter to cancel): ").strip()
-        if not path_input:
-            return None
-        return path_input
+        return None
 
     # Display list
     print(f"\nAvailable chats in: {chats_dir}")
@@ -124,9 +119,9 @@ def prompt_chat_selection(
 
     # Prompt for selection
     if allow_cancel:
-        prompt = f"\nSelect chat to {action} (number, filename, or path) [Enter to cancel]: "
+        prompt = f"\nSelect chat number to {action} [Enter to cancel]: "
     else:
-        prompt = f"\nSelect chat to {action} (number, filename, or path): "
+        prompt = f"\nSelect chat number to {action}: "
 
     while True:
         selection = input(prompt).strip()
@@ -138,7 +133,7 @@ def prompt_chat_selection(
                 print("Selection required.")
                 continue
 
-        # Try as number
+        # Only accept numbers
         try:
             index = int(selection)
             if 1 <= index <= len(chats):
@@ -147,29 +142,8 @@ def prompt_chat_selection(
                 print(f"Invalid number. Choose 1-{len(chats)}")
                 continue
         except ValueError:
-            pass
-
-        # Try as filename (look in chats_dir)
-        if not selection.startswith("/") and not selection.startswith("~"):
-            # Relative filename - check in chats_dir
-            candidate = Path(chats_dir) / selection
-            if candidate.exists():
-                return str(candidate)
-
-            # Add .json if missing
-            if not selection.endswith(".json"):
-                candidate = Path(chats_dir) / f"{selection}.json"
-                if candidate.exists():
-                    return str(candidate)
-
-        # Try as absolute path or path with ~
-        path = Path(selection).expanduser()
-        if path.exists():
-            return str(path)
-
-        # Not found
-        print(f"Chat not found: {selection}")
-        print("Try again or press Enter to cancel.")
+            print(f"Please enter a number (1-{len(chats)}) or press Enter to cancel")
+            continue
 
 
 def generate_chat_filename(chats_dir: str, name: Optional[str] = None) -> str:
@@ -187,13 +161,13 @@ def generate_chat_filename(chats_dir: str, name: Optional[str] = None) -> str:
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
         base = f"{safe_name}.json"
     else:
-        # Use timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        base = f"chat_{timestamp}.json"
+        # Use timestamp: poly-chat_YYYY-MM-DD_HH-MM-SS.json
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        base = f"poly-chat_{timestamp}.json"
 
     candidate = Path(chats_dir) / base
 
-    # If exists, add counter
+    # If exists, add counter (rare case)
     if candidate.exists():
         counter = 1
         stem = candidate.stem
@@ -201,7 +175,7 @@ def generate_chat_filename(chats_dir: str, name: Optional[str] = None) -> str:
             if name:
                 candidate = Path(chats_dir) / f"{stem}_{counter}.json"
             else:
-                candidate = Path(chats_dir) / f"chat_{timestamp}_{counter}.json"
+                candidate = Path(chats_dir) / f"poly-chat_{timestamp}_{counter}.json"
             counter += 1
 
     return str(candidate)

@@ -354,6 +354,9 @@ class CommandHandler:
         # Create new chat structure
         new_chat_data = load_chat(new_path)  # Returns empty structure
 
+        # Save empty chat immediately so it appears in /open list
+        await save_chat(new_path, new_chat_data)
+
         # Signal to REPL to switch to new chat
         # Format: __NEW_CHAT__:path
         return f"__NEW_CHAT__:{new_path}"

@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
 
 from . import profile, chat
 from .commands import CommandHandler
@@ -251,29 +252,56 @@ async def repl_loop(
     }
     cmd_handler = CommandHandler(session_dict)
 
-    # Set up prompt_toolkit session with history
+    # Set up key bindings for message submission
+    kb = KeyBindings()
+
+    @kb.add('c-j')  # Ctrl+J (sent by Ctrl+Enter in many terminals)
+    @kb.add('escape', 'enter')  # Alt+Enter (Meta+Enter) - most reliable
+    def _(event):
+        """Submit message on Ctrl+Enter or Alt+Enter."""
+        event.current_buffer.validate_and_handle()
+
+    # Set up prompt_toolkit session with history and key bindings
     history_file = Path.home() / ".poly-chat-history"
-    prompt_session = PromptSession(history=FileHistory(str(history_file)))
+
+    prompt_session = PromptSession(
+        history=FileHistory(str(history_file)),
+        key_bindings=kb,
+        multiline=True,
+    )
+
+    # Get list of configured AI providers
+    configured_ais = []
+    for provider, model in profile_data["models"].items():
+        if provider in profile_data.get("api_keys", {}):
+            configured_ais.append(f"{provider} ({model})")
 
     # Display welcome message
-    print("=" * 60)
+    print("=" * 70)
     print("PolyChat - Multi-AI CLI Chat Tool")
-    print("=" * 60)
-    print(f"Provider: {session.current_ai}")
-    print(f"Model: {session.current_model}")
+    print("=" * 70)
+    print(f"Current Provider: {session.current_ai}")
+    print(f"Current Model:    {session.current_model}")
+    print(f"Configured AIs:   {', '.join(configured_ais)}")
     if chat_path:
-        print(f"Chat: {Path(chat_path).name}")
+        print(f"Chat:             {Path(chat_path).name}")
     else:
-        print("Chat: None (use /new or /open to start)")
-    print("Type /help for commands, Ctrl-D or /exit to quit")
-    print("=" * 60)
+        print(f"Chat:             None (use /new or /open)")
+    print()
+    print("Press Alt+Enter (or Ctrl+Enter) to send • Enter for new line")
+    print("Type /help for commands • Ctrl+D to exit")
+    print("=" * 70)
     print()
 
     # Main REPL loop
     while True:
         try:
             # Get user input (multiline)
-            user_input = await prompt_session.prompt_async("You: ", multiline=True)
+            user_input = await prompt_session.prompt_async(
+                '',  # Empty prompt
+                multiline=True,
+                prompt_continuation=lambda width, line_number, is_soft_wrap: ''
+            )
 
             if not user_input.strip():
                 continue
@@ -518,47 +546,16 @@ def main() -> None:
 
     try:
         # Load profile
-        print("Loading profile...")
         profile_data = profile.load_profile(args.profile)
 
-        # Get chat history file path
+        # Get chat history file path (optional)
         chat_path = None
         chat_data = None
 
         if args.chat:
-            # Map the path
+            # Map the path and load chat
             chat_path = profile.map_path(args.chat)
-            print(f"Loading chat: {Path(chat_path).name}")
             chat_data = chat.load_chat(chat_path)
-        else:
-            # Prompt for chat history file
-            print("\nChat Selection:")
-            print("  1. Open existing chat")
-            print("  2. Create new chat")
-            print("  3. Start without a chat (open/create later)")
-            choice = input("Select option (1/2/3) [3]: ").strip() or "3"
-
-            if choice == "1":
-                # Open existing
-                chats_dir = profile_data["chats_dir"]
-                selected_path = prompt_chat_selection(chats_dir, action="open", allow_cancel=True)
-
-                if selected_path:
-                    chat_path = selected_path
-                    print(f"Loading chat: {Path(chat_path).name}")
-                    chat_data = chat.load_chat(chat_path)
-                else:
-                    print("No chat selected - starting without a chat")
-
-            elif choice == "2":
-                # Create new
-                chats_dir = profile_data["chats_dir"]
-                name = input("Enter chat name (or press Enter for default): ").strip() or None
-                chat_path = generate_chat_filename(chats_dir, name)
-                print(f"Creating new chat: {Path(chat_path).name}")
-                chat_data = chat.load_chat(chat_path)
-
-            # else: choice == "3" - start without chat
 
         # Load system prompt if configured
         system_prompt = None
