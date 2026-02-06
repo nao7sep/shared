@@ -117,7 +117,7 @@ def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
         "default_ai": default_ai,
         "models": models,
         "system_prompt": None,
-        "conversations_dir": str(temp_dir / "conversations"),
+        "chats_dir": str(temp_dir / "chats"),
         "log_dir": str(temp_dir / "logs"),
         "api_keys": api_keys
     }
@@ -147,7 +147,7 @@ async def test_full_chat_flow():
     Complete end-to-end test:
     - Creates temp profile
     - Sends message to each available AI
-    - Saves conversation
+    - Saves chat
     - Loads it back
     - Verifies integrity via AI count
     """
@@ -182,7 +182,7 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         profile_path = create_temp_profile(test_config, temp_path)
-        conv_path = temp_path / "conversations" / "e2e-test.json"
+        chat_file_path = temp_path / "chats" / "e2e-test.json"
 
         log("")
 
@@ -193,7 +193,7 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         # Initialize chat
-        chat = load_chat(str(conv_path))
+        chat = load_chat(str(chat_path))
 
         # Collaborative storytelling - each AI builds on previous responses
         def get_next_prompt(interaction_count: int) -> str:
@@ -291,15 +291,15 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         save_start = time.time()
-        await save_chat(str(conv_path), chat)
+        await save_chat(str(chat_path), chat)
         save_elapsed = time.time() - save_start
 
-        log(f"Saved to: {conv_path}", indent=1)
+        log(f"Saved to: {chat_path}", indent=1)
         log(f"Save time: {save_elapsed:.3f}s", indent=1)
         log(f"Total messages: {len(chat['messages'])}", indent=1)
 
         # Verify file exists and check size
-        file_size = conv_path.stat().st_size
+        file_size = chat_path.stat().st_size
         log(f"File size: {file_size:,} bytes", indent=1)
         log("")
 
@@ -310,10 +310,10 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         load_start = time.time()
-        loaded_chat = load_chat(str(conv_path))
+        loaded_chat = load_chat(str(chat_path))
         load_elapsed = time.time() - load_start
 
-        log(f"Loaded from: {conv_path}", indent=1)
+        log(f"Loaded from: {chat_path}", indent=1)
         log(f"Load time: {load_elapsed:.3f}s", indent=1)
         log(f"Messages loaded: {len(loaded_chat['messages'])}", indent=1)
         log("")

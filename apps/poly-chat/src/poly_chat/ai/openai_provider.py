@@ -53,17 +53,17 @@ class OpenAIProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
-        """Convert conversation format to OpenAI format.
+    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+        """Convert Chat format to OpenAI format.
 
         Args:
-            conversation_messages: Messages in PolyChat format
+            chat_messages: Messages in PolyChat format
 
         Returns:
             Messages in OpenAI format
         """
         formatted = []
-        for msg in conversation_messages:
+        for msg in chat_messages:
             content = lines_to_text(msg["content"])
             formatted.append({"role": msg["role"], "content": content})
         return formatted
@@ -105,7 +105,7 @@ class OpenAIProvider:
         """Send message to OpenAI and yield response chunks.
 
         Args:
-            messages: Conversation messages in PolyChat format
+            messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
@@ -177,7 +177,7 @@ class OpenAIProvider:
         """Get full response from OpenAI.
 
         Args:
-            messages: Conversation messages in PolyChat format
+            messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
 

@@ -1,10 +1,10 @@
 # PolyChat
 
-Multi-AI CLI chat tool for long-term, version-controlled conversations.
+Multi-AI CLI chat tool for long-term, version-controlled chats.
 
 ## Overview
 
-PolyChat is a command-line chat interface that supports multiple AI providers (OpenAI, Claude, Gemini, Grok, Perplexity, Mistral, DeepSeek). Unlike code-focused AI tools, PolyChat is designed for thoughtful, long-term conversations with git-version-controlled chat history.
+PolyChat is a command-line chat interface that supports multiple AI providers (OpenAI, Claude, Gemini, Grok, Perplexity, Mistral, DeepSeek). Unlike code-focused AI tools, PolyChat is designed for thoughtful, long-term chats with git-version-controlled chat history.
 
 ## Features
 
@@ -117,7 +117,7 @@ pc -p <profile-path> -l debug.log
     "gemini": "gemini-3-flash-preview"
   },
   "system_prompt": "@/system-prompts/default.txt",
-  "conversations_dir": "~/poly-chat-logs",
+  "chats_dir": "~/poly-chat-logs",
   "log_dir": "~/poly-chat-logs/logs",
   "api_keys": {
     "openai": {
@@ -188,9 +188,9 @@ You can create custom prompts and reference them:
 }
 ```
 
-## Conversation Format
+## Chat History Format
 
-Conversations are stored as JSON with git-friendly formatting:
+Chat history files are stored as JSON with git-friendly formatting:
 
 ```json
 {
@@ -252,7 +252,7 @@ poetry run mypy src/poly_chat
 ## Architecture
 
 - `profile.py` - Profile management and path mapping
-- `conversation.py` - Conversation data management
+- `chat.py` - Chat history data management
 - `message_formatter.py` - Line array formatting
 - `keys/` - API key management (env vars, Keychain, JSON)
 - `ai/` - AI provider implementations

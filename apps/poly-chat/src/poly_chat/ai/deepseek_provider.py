@@ -73,10 +73,10 @@ class DeepSeekProvider:
             max_retries=0,  # We handle retries explicitly with tenacity
         )
 
-    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
-        """Convert conversation format to DeepSeek format."""
+    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+        """Convert chat format to DeepSeek format."""
         formatted = []
-        for msg in conversation_messages:
+        for msg in chat_messages:
             content = lines_to_text(msg["content"])
             formatted.append({"role": msg["role"], "content": content})
         return formatted
@@ -220,7 +220,7 @@ class DeepSeekProvider:
                 content = "[Response was filtered due to content policy]"
 
             # Extract reasoning_content if available (for R1/reasoning models)
-            # NOTE: Do NOT feed reasoning_content back to the model in multi-turn conversations!
+            # NOTE: Do NOT feed reasoning_content back to the model in multi-turn chats!
             reasoning_content = getattr(
                 response.choices[0].message, "reasoning_content", None
             )

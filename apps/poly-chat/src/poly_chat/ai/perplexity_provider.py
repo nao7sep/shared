@@ -70,15 +70,15 @@ class PerplexityProvider:
             max_retries=3,
         )
 
-    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
-        """Convert conversation format to Perplexity format.
+    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+        """Convert Chat format to Perplexity format.
 
         Perplexity requires messages to alternate between user and assistant.
         This method ensures alternation by keeping only the last message of
         consecutive same-role messages.
         """
         formatted = []
-        for msg in conversation_messages:
+        for msg in chat_messages:
             content = lines_to_text(msg["content"])
             new_msg = {"role": msg["role"], "content": content}
 

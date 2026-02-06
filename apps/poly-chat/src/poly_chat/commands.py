@@ -23,7 +23,7 @@ class CommandHandler:
                 - current_ai: Current AI provider
                 - current_model: Current model
                 - profile: Profile dict
-                - conversation: Conversation dict
+                - chat: Chat dict
         """
         self.session = session_state
 
@@ -196,7 +196,7 @@ class CommandHandler:
         Returns:
             Info message
         """
-        chat = self.session["conversation"]
+        chat = self.session["chat"]
         messages = chat["messages"]
 
         # Check if there's an assistant message to retry
@@ -220,7 +220,7 @@ class CommandHandler:
         Returns:
             Confirmation message
         """
-        chat = self.session["conversation"]
+        chat = self.session["chat"]
         messages = chat["messages"]
 
         if not messages:
@@ -255,7 +255,7 @@ class CommandHandler:
         Returns:
             Confirmation message
         """
-        chat = self.session["conversation"]
+        chat = self.session["chat"]
 
         if not args:
             # Clear title
@@ -287,7 +287,7 @@ class CommandHandler:
         Returns:
             Confirmation message
         """
-        chat = self.session["conversation"]
+        chat = self.session["chat"]
 
         if not args:
             # Clear summary

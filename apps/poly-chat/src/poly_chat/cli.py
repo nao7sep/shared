@@ -56,7 +56,7 @@ class SessionState:
     current_ai: str
     current_model: str
     profile: dict[str, Any]
-    conversation: dict[str, Any]
+    chat: dict[str, Any]
     system_prompt: Optional[str] = None
     system_prompt_key: Optional[str] = None
     retry_mode: bool = False
@@ -142,7 +142,7 @@ async def send_message_to_ai(
 
     Args:
         provider_instance: AI provider instance
-        messages: Conversation messages
+        messages: Chat messages
         model: Model name
         system_prompt: Optional system prompt
 
@@ -227,7 +227,7 @@ async def repl_loop(
         current_ai=profile_data["default_ai"],
         current_model=profile_data["models"][profile_data["default_ai"]],
         profile=profile_data,
-        conversation=chat_data,
+        chat=chat_data,
         system_prompt=system_prompt,
         system_prompt_key=system_prompt_key,
     )
@@ -243,7 +243,7 @@ async def repl_loop(
         "current_ai": session.current_ai,
         "current_model": session.current_model,
         "profile": session.profile,
-        "conversation": session.conversation,
+        "chat": session.chat,
         "chat_path": chat_path,
         "system_prompt": session.system_prompt,
         "retry_mode": session.retry_mode,

@@ -65,10 +65,10 @@ class GrokProvider:
             max_retries=0,
         )
 
-    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
-        """Convert conversation format to Grok format."""
+    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+        """Convert Chat format to Grok format."""
         formatted = []
-        for msg in conversation_messages:
+        for msg in chat_messages:
             content = lines_to_text(msg["content"])
             formatted.append({"role": msg["role"], "content": content})
         return formatted

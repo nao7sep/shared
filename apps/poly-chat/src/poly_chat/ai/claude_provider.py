@@ -48,17 +48,17 @@ class ClaudeProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-    def format_messages(self, conversation_messages: list[dict]) -> list[dict]:
-        """Convert conversation format to Claude format.
+    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+        """Convert Chat format to Claude format.
 
         Args:
-            conversation_messages: Messages in PolyChat format
+            chat_messages: Messages in PolyChat format
 
         Returns:
             Messages in Claude format
         """
         formatted = []
-        for msg in conversation_messages:
+        for msg in chat_messages:
             content = lines_to_text(msg["content"])
             formatted.append({"role": msg["role"], "content": content})
         return formatted
@@ -74,7 +74,7 @@ class ClaudeProvider:
         """Send message to Claude and yield response chunks.
 
         Args:
-            messages: Conversation messages in PolyChat format
+            messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
@@ -152,7 +152,7 @@ class ClaudeProvider:
         """Get full response from Claude.
 
         Args:
-            messages: Conversation messages in PolyChat format
+            messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
             max_tokens: Maximum tokens in response (default 4096)

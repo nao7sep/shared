@@ -50,17 +50,17 @@ class GeminiProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-    def format_messages(self, conversation_messages: list[dict]) -> list[types.Content]:
-        """Convert conversation format to Gemini format.
+    def format_messages(self, chat_messages: list[dict]) -> list[types.Content]:
+        """Convert Chat format to Gemini format.
 
         Args:
-            conversation_messages: Messages in PolyChat format
+            chat_messages: Messages in PolyChat format
 
         Returns:
             Messages in Gemini format
         """
         formatted = []
-        for msg in conversation_messages:
+        for msg in chat_messages:
             content = lines_to_text(msg["content"])
             # Gemini uses "user" and "model" roles
             role = "model" if msg["role"] == "assistant" else "user"
@@ -77,7 +77,7 @@ class GeminiProvider:
         """Send message to Gemini and yield response chunks.
 
         Args:
-            messages: Conversation messages in PolyChat format
+            messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
@@ -153,7 +153,7 @@ class GeminiProvider:
         """Get full response from Gemini.
 
         Args:
-            messages: Conversation messages in PolyChat format
+            messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
 

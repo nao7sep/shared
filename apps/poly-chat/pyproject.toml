@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "poly-chat"
 version = "0.1.0"
-description = "Multi-AI CLI chat tool for long-term, version-controlled conversations"
+description = "Multi-AI CLI chat tool for long-term, version-controlled chats"
 authors = ["nao7sep <nao7sep@gmail.com>"]
 license = "GPL-3.0"
 readme = "README.md"
