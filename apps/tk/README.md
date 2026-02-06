@@ -1,156 +1,205 @@
 # tk
 
-A quick CLI app to manage tasks.
+A timezone-aware CLI task manager with subjective day tracking.
 
-## Installation
+## What is tk?
 
+**tk** helps you track tasks across different timezones with a "subjective day" concept. If your day starts at 4 AM instead of midnight, tk handles that. It maintains a TODO.md file and stores task history with proper date attribution.
+
+**Key features:**
+- Timezone-aware with configurable day start time (default: 4 AM)
+- Simple REPL interface with single-letter shortcuts
+- Automatic TODO.md generation
+- Task history tracking with subjective dates
+- Interactive confirmation for task completion
+
+## Quick Start
+
+### 1. Install
 ```bash
 poetry install
 ```
 
-## Usage
-
+### 2. Create a profile
 ```bash
-# Run with poetry
-poetry run tk --profile ~/path/to/profile.json
-
-# Or activate virtualenv first, then run
-poetry shell
-tk --profile ~/path/to/profile.json
+poetry run tk init -p ~/work/my-profile.json
 ```
 
-## Quick Start
+This creates a profile with:
+- Your system timezone
+- Subjective day starting at 04:00:00
+- `tasks.json` for data storage
+- `TODO.md` for current task list
 
-1. Create a new profile:
+### 3. Start the REPL
 ```bash
-poetry run tk new --profile ~/work/my-profile.json
-# or use short form
-poetry run tk new -p ~/work/my-profile.json
-```
-
-2. Start the app with your profile:
-```bash
-poetry run tk --profile ~/work/my-profile.json
-# or use short form
 poetry run tk -p ~/work/my-profile.json
 ```
 
-3. Use the app (see Commands below)
+### 4. Use it
+```
+tk> a implement user login
+Task added.
+
+tk> l
+1. implement user login
+
+tk> d 1
+Task: implement user login
+Will be marked as: done
+Subjective date: 2026-02-06
+(Press Ctrl+C to cancel)
+Note (press Enter to skip): finished
+Date override (press Enter to use 2026-02-06): 
+Task marked as done.
+```
+
+## Core Concepts
+
+### Subjective Date
+If it's 2 AM and you haven't slept yet, it still feels like yesterday. tk uses a "subjective day start" time (default: 4 AM) to attribute tasks to the day that feels right.
+
+Example: Mark a task done at 3 AM on Feb 6th → recorded as completed on Feb 5th.
+
+### Number-Based Workflow
+After running `list` or `history`, you reference tasks by their displayed number:
+```
+tk> l
+1. task one
+2. task two
+
+tk> d 1    # completes "task one"
+```
+
+Numbers are only valid until you run another command that changes the list.
+
+### Profile Structure
+A profile JSON contains:
+- `timezone`: IANA timezone (e.g., "Asia/Tokyo")
+- `subjective_day_start`: Time when your day starts (e.g., "04:00:00")
+- `data_path`: Where tasks.json is stored (relative paths supported)
+- `output_path`: Where TODO.md is generated
+- `auto_sync`: Auto-regenerate TODO.md after changes (default: true)
+- `sync_on_exit`: Regenerate TODO.md on exit (default: false)
 
 ## Commands
 
-All commands support short forms (shown in parentheses).
+All commands support shortcuts shown in parentheses.
 
-### Task Management
+### Adding & Viewing
 
-- **add (a)** `<text>` - Add a new task
-  ```
-  tk> add "implement user authentication"
-  tk> a "fix bug in login"
-  ```
+**add (a)** `<text>` - Add a task
+```
+tk> a implement authentication
+tk> add fix navigation bug
+```
 
-- **list (l)** - List all pending tasks
-  ```
-  tk> list
-  tk> l
-  ```
+**list (l)** - Show pending tasks
+```
+tk> l
+```
 
-- **history (h)** `[--days N] [--working-days N]` - List handled (done/cancelled) tasks
-  ```
-  tk> history
-  tk> h --days 7
-  tk> h --working-days 5
-  ```
-  Note: `--days` shows last N calendar days, `--working-days` shows last N days with tasks. Cannot use both.
+**history (h)** `[--days N] [--working-days N]` - Show completed/cancelled tasks
+```
+tk> h                      # all history
+tk> h --days 7            # last 7 calendar days
+tk> h --working-days 5    # last 5 days with tasks
+```
 
-- **today (t)** - List tasks handled today
-  ```
-  tk> today
-  tk> t
-  ```
+**today (t)** - Show today's completed tasks
+**yesterday (y)** - Show yesterday's completed tasks
+**recent (r)** - Show last 3 working days
 
-- **yesterday (y)** - List tasks handled yesterday
-  ```
-  tk> yesterday
-  tk> y
-  ```
+### Completing Tasks
 
-- **recent (r)** - List tasks from last 3 working days (including today)
-  ```
-  tk> recent
-  tk> r
-  ```
+**done (d)** `<num>` - Mark as done (with interactive prompts)
+```
+tk> d 1
+tk> d 1 --note "deployed to prod" --date 2026-02-05
+```
 
-### Handling Tasks
+**cancel (c)** `<num>` - Mark as cancelled
+```
+tk> c 2
+tk> c 2 --note "no longer needed"
+```
 
-- **done (d)** `<num>` - Mark task as done (interactive)
-  ```
-  tk> list
-  tk> done 1
-  tk> d 2 --note "completed" --date 2026-01-30
-  ```
+### Editing
 
-- **cancel (c)** `<num>` - Mark task as cancelled (interactive)
-  ```
-  tk> cancel 1
-  tk> c 2 --note "not needed"
-  ```
+**edit (e)** `<num> <text>` - Change task text
+```
+tk> e 1 new task description
+```
 
-### Editing Tasks
+**note (n)** `<num> [<text>]` - Add/update/remove note
+```
+tk> n 1 additional context
+tk> n 1                    # removes note
+```
 
-- **edit (e)** `<num> <text>` - Change task text
-  ```
-  tk> list
-  tk> edit 1 new task text
-  tk> e 2 updated text
-  ```
+**date** `<num> <YYYY-MM-DD>` - Change subjective date (handled tasks only)
+```
+tk> date 1 2026-02-05
+```
 
-- **note (n)** `<num> [<text>]` - Set/update/remove task note
-  ```
-  tk> list
-  tk> note 1 "added details"
-  tk> n 2        # removes note
-  ```
+**delete** `<num>` - Permanently delete task (requires confirmation)
+```
+tk> delete 1
+```
 
-- **date** `<num> <YYYY-MM-DD>` - Change subjective handling date (no short form)
-  ```
-  tk> history
-  tk> date 1 2026-01-30
-  ```
-  Note: Only works on handled (done/cancelled) tasks. Cannot set date on pending tasks.
+### Other
 
-- **delete** `<num>` - Delete task permanently (no short form)
-  ```
-  tk> delete 1
-  ```
-  Note: Delete has no shortcut since it's dangerous and rarely needed. Use `cancel` instead if you just don't want to do the task.
+**sync (s)** - Regenerate TODO.md manually
+**exit** / **quit** - Exit REPL
 
-### Other Commands
+## TODO.md Format
 
-- **sync (s)** - Regenerate TODO.md from data
-  ```
-  tk> sync
-  ```
+Generated automatically after each change (if `auto_sync: true`):
 
-- **exit** / **quit** - Exit the app
-  ```
-  tk> exit
-  ```
+```markdown
+# TODO
 
-## Interactive Confirmation
+- pending task one
+- pending task two
 
-When using `done` or `cancel` without `--note` and `--date` flags, the app will:
-1. Show the task and calculated subjective date
-2. Prompt for a note (Enter to skip)
-3. Prompt for date override (Enter to use calculated date)
-4. Ask for confirmation before proceeding
+## History
 
-This helps prevent mistakes when handling tasks.
+### 2026-02-06
+- ✅ completed task => note here
+- ❌ cancelled task
 
-## Design Decisions
+### 2026-02-05
+- ✅ another done task
+```
 
-**No duplicate checking:** The app does not check if a task already exists when adding or editing. Simple string comparison wouldn't catch meaningful duplicates, and AI-based semantic checking would add complexity without much benefit. If you accidentally add a duplicate, just cancel or delete it.
+## Tips
 
-**Sync settings:** Profiles include `auto_sync` (default: true) and `sync_on_exit` (default: false). With `auto_sync` enabled, TODO.md regenerates after every data change. The `sync` command always works regardless of settings.
+- **Numbers reset:** After any command that changes state, run `list` or `history` again to get fresh numbers
+- **Use shortcuts:** `a`, `l`, `d`, `c`, `e` for speed
+- **Ctrl+C cancels:** Interactive prompts can be cancelled anytime
+- **No duplicate checking:** Intentional design choice - just cancel or delete if needed
+- **Delete is rare:** Use `cancel` for tasks you won't do; reserve `delete` for mistakes
 
-See WHAT.md and HOW.md for detailed documentation.
+## Installation for Daily Use
+
+After `poetry install`, you can either:
+
+**Option 1:** Use poetry shell
+```bash
+cd /path/to/tk
+poetry shell
+tk -p ~/my-profile.json
+```
+
+**Option 2:** Create an alias
+```bash
+alias tk='poetry run --directory /path/to/tk tk'
+tk -p ~/my-profile.json
+```
+
+**Option 3:** Install in editable mode
+```bash
+cd /path/to/tk
+pip install -e .
+tk -p ~/my-profile.json
+```

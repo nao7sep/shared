@@ -163,3 +163,9 @@ then let's add 3 commands: today, yesterday, recent. if "t", "y" and "r" are all
 history shows the old [ ], [x], [~] things. when saving data as markdown, app no longer does this and uses emojis instead for handled tasks. let's use emojis in history to make it consistent.
 
 in "list", we dont need [ ] or any emojis. a simple numbered list is sufficient.
+
+---
+
+we dont need to say "statistics: " when we show the statistics. kind of obvious.
+
+"tk new" makes a new profile. let's change it to "tk init". "new" is a very useful word. i want to reserve it for more frequently new-ed things.

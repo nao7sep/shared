@@ -161,9 +161,9 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
             except ValueError:
                 pass
 
-    if cmd == "new":
+    if cmd == "init":
         if len(args) != 1:
-            raise ValueError("Usage: new <profile_path>")
+            raise ValueError("Usage: init <profile_path>")
         return commands.cmd_new(args[0], session)
 
     elif cmd == "add":
@@ -314,7 +314,7 @@ def repl(session: dict[str, Any]) -> None:
         done_count = sum(1 for t in tasks if t["status"] == "done")
         cancelled_count = sum(1 for t in tasks if t["status"] == "cancelled")
 
-        print(f"Statistics: {pending_count} pending, {done_count} done, {cancelled_count} cancelled")
+        print(f"{pending_count} pending, {done_count} done, {cancelled_count} cancelled")
 
     # Empty line after exit for cleaner prompt
     print()
@@ -355,8 +355,8 @@ def main() -> None:
         epilog="""
 Examples:
   # Create a new profile
-  tk new --profile ~/work/my-profile.json
-  tk new -p ~/work/my-profile.json
+  tk init --profile ~/work/my-profile.json
+  tk init -p ~/work/my-profile.json
 
   # Start with an existing profile
   tk --profile ~/work/my-profile.json
@@ -367,8 +367,8 @@ Examples:
     # Subcommands
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
-    # new subcommand
-    parser_new = subparsers.add_parser("new", help="Create a new profile")
+    # init subcommand
+    parser_new = subparsers.add_parser("init", help="Create a new profile")
     parser_new.add_argument(
         "--profile", "-p",
         required=True,
@@ -383,8 +383,8 @@ Examples:
 
     args = parser.parse_args()
 
-    # Handle 'new' command
-    if args.command == "new":
+    # Handle 'init' command
+    if args.command == "init":
         try:
             prof = profile.create_profile(args.profile)
             print(f"Profile created: {args.profile}")
@@ -437,7 +437,7 @@ Examples:
 
         except FileNotFoundError:
             print(f"Profile not found: {args.profile}")
-            print(f"Create it with: tk new --profile {args.profile}")
+            print(f"Create it with: tk init --profile {args.profile}")
             sys.exit(1)
 
         except Exception as e:
@@ -448,7 +448,7 @@ Examples:
         print("Error: No profile specified")
         print()
         print("Create a new profile:")
-        print("  tk new --profile <path>")
+        print("  tk init --profile <path>")
         print()
         print("Or start with an existing profile:")
         print("  tk --profile <path>")
