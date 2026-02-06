@@ -4,12 +4,12 @@ Multi-AI CLI chat tool for long-term, version-controlled conversations.
 
 ## Overview
 
-PolyChat is a command-line chat interface that supports multiple AI providers (OpenAI, Claude, Gemini, Grok, Perplexity, Mistral, DeepSeek). Unlike code-focused AI tools, PolyChat is designed for thoughtful, long-term conversations with git-version-controlled conversation logs.
+PolyChat is a command-line chat interface that supports multiple AI providers (OpenAI, Claude, Gemini, Grok, Perplexity, Mistral, DeepSeek). Unlike code-focused AI tools, PolyChat is designed for thoughtful, long-term conversations with git-version-controlled chat history.
 
 ## Features
 
 - **Multiple AI Providers**: Switch seamlessly between OpenAI GPT, Claude, Gemini, and more
-- **Git-Friendly Logs**: Conversation logs stored as formatted JSON with messages as line arrays
+- **Git-Friendly Logs**: Chat history stored as formatted JSON with messages as line arrays
 - **Retry & Time Travel**: Re-ask questions without deleting history, or delete messages to "go back in time"
 - **Secure API Keys**: Support for environment variables, macOS Keychain, and JSON files
 - **System Prompts**: Predefined and custom system prompts with version control
@@ -28,22 +28,22 @@ poetry install
 ### 1. Create a Profile
 
 ```bash
-poetry run pc new ~/my-profile.json
+poetry run pc init ~/my-profile.json
 ```
 
 This interactive wizard will guide you through:
 - Selecting default AI provider
 - Configuring API keys (environment variables, Keychain, or JSON file)
-- Setting conversation and log directories
+- Setting chat history and error log directories
 - Choosing a default system prompt
 
-### 2. Start a Conversation
+### 2. Start a Chat
 
 ```bash
-# With existing conversation
+# With existing chat
 poetry run pc -p ~/my-profile.json -c ~/chats/my-chat.json
 
-# Or let it prompt you for conversation
+# Or let it prompt you for chat history file
 poetry run pc -p ~/my-profile.json
 ```
 
@@ -64,13 +64,13 @@ Claude: Here are the main factors to consider:
 
 ```bash
 # Create new profile
-pc new <profile-path>
+pc init <profile-path>
 
 # Start with profile
 pc -p <profile-path>
 
-# Start with specific conversation
-pc -p <profile-path> -c <conversation-path>
+# Start with specific chat
+pc -p <profile-path> -c <chat-path>
 
 # Enable error logging
 pc -p <profile-path> -l debug.log
@@ -91,14 +91,14 @@ pc -p <profile-path> -l debug.log
 - `/model` - Show available models for current provider
 - `/model <name>` - Switch to specified model
 
-**Conversation Control:**
+**Chat Control:**
 - `/retry` - Replace last response (retry mode)
 - `/delete <index>` - Delete message and all following
 - `/delete last` - Delete last message
 
 **Metadata:**
-- `/title <text>` - Set conversation title
-- `/summary <text>` - Set conversation summary
+- `/title <text>` - Set chat title
+- `/summary <text>` - Set chat summary
 
 **Other:**
 - `/help` - Show all commands

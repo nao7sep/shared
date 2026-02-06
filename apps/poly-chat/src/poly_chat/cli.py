@@ -11,7 +11,7 @@ from typing import Any, Optional
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 
-from . import profile, conversation
+from . import profile, chat
 from .commands import CommandHandler
 from .keys.loader import load_api_key, validate_api_key
 from .streaming import display_streaming_response
@@ -208,8 +208,8 @@ def validate_and_get_provider(
 
 async def repl_loop(
     profile_data: dict,
-    conversation_data: dict,
-    conversation_path: str,
+    chat_data: dict,
+    chat_path: str,
     system_prompt: Optional[str] = None,
     system_prompt_key: Optional[str] = None,
 ) -> None:
@@ -217,8 +217,8 @@ async def repl_loop(
 
     Args:
         profile_data: Loaded profile
-        conversation_data: Loaded conversation
-        conversation_path: Path to conversation file
+        chat_data: Loaded chat history
+        chat_path: Path to chat history file
         system_prompt: Optional system prompt text
         system_prompt_key: Optional path/key to system prompt (for metadata)
     """
@@ -227,15 +227,15 @@ async def repl_loop(
         current_ai=profile_data["default_ai"],
         current_model=profile_data["models"][profile_data["default_ai"]],
         profile=profile_data,
-        conversation=conversation_data,
+        conversation=chat_data,
         system_prompt=system_prompt,
         system_prompt_key=system_prompt_key,
     )
 
-    # Set system_prompt_key in conversation metadata if not already set
-    if system_prompt_key and not conversation_data["metadata"].get("system_prompt_key"):
-        conversation.update_metadata(
-            conversation_data, system_prompt_key=system_prompt_key
+    # Set system_prompt_key in chat metadata if not already set
+    if system_prompt_key and not chat_data["metadata"].get("system_prompt_key"):
+        chat.update_metadata(
+            chat_data, system_prompt_key=system_prompt_key
         )
 
     # Initialize command handler (pass session as dict for compatibility)
@@ -244,7 +244,7 @@ async def repl_loop(
         "current_model": session.current_model,
         "profile": session.profile,
         "conversation": session.conversation,
-        "conversation_path": conversation_path,
+        "chat_path": chat_path,
         "system_prompt": session.system_prompt,
         "retry_mode": session.retry_mode,
     }
@@ -300,19 +300,19 @@ async def repl_loop(
                 continue
 
             # Handle retry mode - remove last assistant message before adding new user message
-            if session.retry_mode and conversation_data["messages"]:
-                last_msg = conversation_data["messages"][-1]
+            if session.retry_mode and chat_data["messages"]:
+                last_msg = chat_data["messages"][-1]
                 if last_msg["role"] == "assistant":
-                    conversation_data["messages"].pop()
+                    chat_data["messages"].pop()
                     print("[Retry mode: replacing last response]")
                 session.retry_mode = False
                 session_dict["retry_mode"] = False
 
             # NOW add user message (after validation passed)
-            conversation.add_user_message(conversation_data, user_input)
+            chat.add_user_message(chat_data, user_input)
 
             # Get messages for AI
-            messages = conversation.get_messages_for_ai(conversation_data)
+            messages = chat.get_messages_for_ai(chat_data)
 
             # Send to AI
             try:
@@ -324,15 +324,15 @@ async def repl_loop(
                     session.system_prompt,
                 )
 
-                # Add assistant response to conversation
+                # Add assistant response to chat
                 actual_model = metadata.get("model", session.current_model)
-                conversation.add_assistant_message(
-                    conversation_data, response_text, actual_model
+                chat.add_assistant_message(
+                    chat_data, response_text, actual_model
                 )
 
-                # Save conversation
-                await conversation.save_conversation(
-                    conversation_path, conversation_data
+                # Save chat history
+                await chat.save_chat(
+                    chat_path, chat_data
                 )
 
                 # Display token usage if available
@@ -346,10 +346,10 @@ async def repl_loop(
                 print("\n[Message cancelled]")
                 # Remove the user message since we didn't get a response
                 if (
-                    conversation_data["messages"]
-                    and conversation_data["messages"][-1]["role"] == "user"
+                    chat_data["messages"]
+                    and chat_data["messages"][-1]["role"] == "user"
                 ):
-                    conversation_data["messages"].pop()
+                    chat_data["messages"].pop()
                 print()
                 continue
 
@@ -359,21 +359,21 @@ async def repl_loop(
 
                 # Remove user message and add error instead
                 if (
-                    conversation_data["messages"]
-                    and conversation_data["messages"][-1]["role"] == "user"
+                    chat_data["messages"]
+                    and chat_data["messages"][-1]["role"] == "user"
                 ):
-                    conversation_data["messages"].pop()
+                    chat_data["messages"].pop()
 
-                # Add error message to conversation
-                conversation.add_error_message(
-                    conversation_data,
+                # Add error message to chat
+                chat.add_error_message(
+                    chat_data,
                     str(e),
                     {"provider": session.current_ai, "model": session.current_model},
                 )
 
-                # Save conversation with error
-                await conversation.save_conversation(
-                    conversation_path, conversation_data
+                # Save chat history with error
+                await chat.save_chat(
+                    chat_path, chat_data
                 )
                 print()
 
@@ -397,7 +397,7 @@ def main() -> None:
     parser.add_argument(
         "-c",
         "--chat",
-        help="Path to conversation file (optional, will prompt if not provided)",
+        help="Path to chat history file (optional, will prompt if not provided)",
     )
 
     parser.add_argument(
@@ -405,13 +405,13 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "command", nargs="?", help="Command to run (e.g., 'new' to create profile)"
+        "command", nargs="?", help="Command to run (e.g., 'init' to create profile)"
     )
 
     args = parser.parse_args()
 
-    # Handle 'new' command for profile creation
-    if args.command == "new":
+    # Handle 'init' command for profile creation
+    if args.command == "init":
         try:
             profile.create_profile(args.profile)
             sys.exit(0)
@@ -427,36 +427,36 @@ def main() -> None:
         print("Loading profile...")
         profile_data = profile.load_profile(args.profile)
 
-        # Get conversation file path
+        # Get chat history file path
         if args.chat:
             # Map the path
-            conversation_path = profile.map_path(args.chat)
+            chat_path = profile.map_path(args.chat)
         else:
-            # Prompt for conversation file
-            print("\nConversation file:")
+            # Prompt for chat history file
+            print("\nChat history file:")
             print("  1. Open existing")
             print("  2. Create new")
             choice = input("Select option (1/2) [2]: ").strip() or "2"
 
             if choice == "1":
-                conv_name = input("Enter conversation file name or path: ").strip()
-                if not conv_name:
-                    print("Error: Conversation file name required")
+                chat_name = input("Enter chat history file name or path: ").strip()
+                if not chat_name:
+                    print("Error: Chat history file name required")
                     sys.exit(1)
-                conversation_path = profile.map_path(conv_name)
+                chat_path = profile.map_path(chat_name)
             else:
                 # Generate new filename
                 import uuid
 
-                conv_name = f"poly-chat_{uuid.uuid4()}.json"
-                conversation_path = str(
-                    Path(profile_data["conversations_dir"]) / conv_name
+                chat_name = f"poly-chat_{uuid.uuid4()}.json"
+                chat_path = str(
+                    Path(profile_data["chats_dir"]) / chat_name
                 )
-                print(f"Creating new conversation: {conv_name}")
+                print(f"Creating new chat: {chat_name}")
 
-        # Load conversation
-        print("Loading conversation...")
-        conversation_data = conversation.load_conversation(conversation_path)
+        # Load chat history
+        print("Loading chat...")
+        chat_data = chat.load_chat(chat_path)
 
         # Load system prompt if configured
         system_prompt = None
@@ -477,8 +477,8 @@ def main() -> None:
         asyncio.run(
             repl_loop(
                 profile_data,
-                conversation_data,
-                conversation_path,
+                chat_data,
+                chat_path,
                 system_prompt,
                 system_prompt_key,
             )

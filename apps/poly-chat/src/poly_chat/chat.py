@@ -1,6 +1,6 @@
-"""Conversation data management for PolyChat.
+"""Chat data management for PolyChat.
 
-This module handles loading, saving, and manipulating conversation data,
+This module handles loading, saving, and manipulating chat history data,
 including messages and metadata.
 """
 
@@ -13,23 +13,23 @@ import aiofiles
 from .message_formatter import text_to_lines
 
 
-def load_conversation(path: str) -> dict[str, Any]:
-    """Load conversation from JSON file.
+def load_chat(path: str) -> dict[str, Any]:
+    """Load chat history from JSON file.
 
     Args:
-        path: Path to conversation file (already mapped)
+        path: Path to chat history file (already mapped)
 
     Returns:
-        Conversation dictionary
+        Chat dictionary
 
     Raises:
         FileNotFoundError: If file doesn't exist (caller should create new)
         ValueError: If JSON is invalid
     """
-    conv_path = Path(path)
+    chat_path = Path(path)
 
-    if not conv_path.exists():
-        # Return empty conversation structure
+    if not chat_path.exists():
+        # Return empty chat structure
         return {
             "metadata": {
                 "title": None,
@@ -43,25 +43,25 @@ def load_conversation(path: str) -> dict[str, Any]:
         }
 
     try:
-        with open(conv_path, "r", encoding="utf-8") as f:
+        with open(chat_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         # Validate structure
         if "metadata" not in data or "messages" not in data:
-            raise ValueError("Invalid conversation file structure")
+            raise ValueError("Invalid chat history file structure")
 
         return data
 
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in conversation file: {e}")
+        raise ValueError(f"Invalid JSON in chat history file: {e}")
 
 
-async def save_conversation(path: str, data: dict[str, Any]) -> None:
-    """Save conversation to JSON file (async).
+async def save_chat(path: str, data: dict[str, Any]) -> None:
+    """Save chat history to JSON file (async).
 
     Args:
-        path: Path to conversation file
-        data: Conversation dictionary
+        path: Path to chat history file
+        data: Chat dictionary
 
     Updates metadata.updated_at before saving.
     """
@@ -74,21 +74,21 @@ async def save_conversation(path: str, data: dict[str, Any]) -> None:
         data["metadata"]["created_at"] = now
 
     # Ensure directory exists
-    conv_path = Path(path)
-    conv_path.parent.mkdir(parents=True, exist_ok=True)
+    chat_path = Path(path)
+    chat_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Write async
-    async with aiofiles.open(conv_path, "w", encoding="utf-8") as f:
+    async with aiofiles.open(chat_path, "w", encoding="utf-8") as f:
         # Use json.dumps first (it's not async), then write
         json_str = json.dumps(data, indent=2, ensure_ascii=False)
         await f.write(json_str)
 
 
 def add_user_message(data: dict[str, Any], content: str) -> None:
-    """Add user message to conversation.
+    """Add user message to chat.
 
     Args:
-        data: Conversation dictionary
+        data: Chat dictionary
         content: Message text (multiline string)
 
     Formats content as line array with trimming.
@@ -105,10 +105,10 @@ def add_user_message(data: dict[str, Any], content: str) -> None:
 
 
 def add_assistant_message(data: dict[str, Any], content: str, model: str) -> None:
-    """Add assistant message to conversation.
+    """Add assistant message to chat.
 
     Args:
-        data: Conversation dictionary
+        data: Chat dictionary
         content: Response text
         model: Model that generated the response
     """
@@ -127,10 +127,10 @@ def add_assistant_message(data: dict[str, Any], content: str, model: str) -> Non
 def add_error_message(
     data: dict[str, Any], content: str, details: dict[str, Any] | None = None
 ) -> None:
-    """Add error message to conversation.
+    """Add error message to chat.
 
     Args:
-        data: Conversation dictionary
+        data: Chat dictionary
         content: Error description
         details: Additional error information (optional)
     """
@@ -152,7 +152,7 @@ def delete_message_and_following(data: dict[str, Any], index: int) -> int:
     """Delete message at index and all following messages.
 
     Args:
-        data: Conversation dictionary
+        data: Chat dictionary
         index: Index of message to delete (0-based)
 
     Returns:
@@ -173,14 +173,14 @@ def delete_message_and_following(data: dict[str, Any], index: int) -> int:
 
 
 def update_metadata(data: dict[str, Any], **kwargs) -> None:
-    """Update conversation metadata.
+    """Update chat metadata.
 
     Args:
-        data: Conversation dictionary
+        data: Chat dictionary
         **kwargs: Metadata fields to update (title, summary, etc.)
 
     Example:
-        update_metadata(conv, title="New Title", summary="...")
+        update_metadata(chat, title="New Title", summary="...")
     """
     for key, value in kwargs.items():
         if key in data["metadata"]:
@@ -195,7 +195,7 @@ def get_messages_for_ai(
     """Get messages formatted for AI (excluding error messages).
 
     Args:
-        data: Conversation dictionary
+        data: Chat dictionary
         max_messages: Maximum number of messages to return (from end)
 
     Returns:

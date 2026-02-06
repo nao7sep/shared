@@ -4,8 +4,8 @@ End-to-end test for PolyChat.
 This test validates the complete flow:
 1. Create temporary profile with real API keys
 2. Send messages to all available AI providers
-3. Save conversation
-4. Load conversation in new session
+3. Save chat
+4. Load chat in new session
 5. Verify data integrity by asking AI to count interactions
 """
 
@@ -19,9 +19,9 @@ from datetime import datetime
 import pytest
 
 from poly_chat.profile import load_profile
-from poly_chat.conversation import (
-    load_conversation,
-    save_conversation,
+from poly_chat.chat import (
+    load_chat,
+    save_chat,
     add_user_message,
     add_assistant_message,
     get_messages_for_ai,
@@ -142,7 +142,7 @@ def load_api_key_direct(provider: str, config: dict) -> str:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_full_conversation_flow():
+async def test_full_chat_flow():
     """
     Complete end-to-end test:
     - Creates temp profile
@@ -192,12 +192,12 @@ async def test_full_conversation_flow():
         log("PHASE 2: Sending messages to AI providers", indent=0)
         log("-" * 80)
 
-        # Initialize conversation
-        conversation = load_conversation(str(conv_path))
+        # Initialize chat
+        chat = load_chat(str(conv_path))
 
         # Collaborative storytelling - each AI builds on previous responses
         def get_next_prompt(interaction_count: int) -> str:
-            """Generate contextual prompt that builds on conversation history."""
+            """Generate contextual prompt that builds on chat history."""
             prompts = [
                 "Start a short story with one sentence. Introduce a character and a setting.",
                 "Continue the story. Add one sentence describing what the character does next.",
@@ -240,16 +240,16 @@ async def test_full_conversation_flow():
                         endpoint_info = str(http_opts.base_url)
             log(f"API endpoint: {endpoint_info}", indent=2)
 
-            # Get contextual prompt that builds on conversation
+            # Get contextual prompt that builds on chat
             prompt = get_next_prompt(interaction_count)
 
             log(f"User message: {prompt}", indent=2)
 
             # Add user message
-            add_user_message(conversation, prompt)
+            add_user_message(chat, prompt)
 
             # Get messages for AI (exclude errors)
-            messages = get_messages_for_ai(conversation)
+            messages = get_messages_for_ai(chat)
 
             # Send and receive
             try:
@@ -267,7 +267,7 @@ async def test_full_conversation_flow():
                 log(f"Response ({elapsed:.2f}s, {chunks} chunks{streaming_proof}): {response}", indent=2)
 
                 # Add assistant message
-                add_assistant_message(conversation, response, model)
+                add_assistant_message(chat, response, model)
 
                 interaction_count += 1
 
@@ -285,18 +285,18 @@ async def test_full_conversation_flow():
         log("")
 
         # ========================================================================
-        # PHASE 3: Save conversation
+        # PHASE 3: Save chat
         # ========================================================================
-        log("PHASE 3: Saving conversation", indent=0)
+        log("PHASE 3: Saving chat", indent=0)
         log("-" * 80)
 
         save_start = time.time()
-        await save_conversation(str(conv_path), conversation)
+        await save_chat(str(conv_path), chat)
         save_elapsed = time.time() - save_start
 
         log(f"Saved to: {conv_path}", indent=1)
         log(f"Save time: {save_elapsed:.3f}s", indent=1)
-        log(f"Total messages: {len(conversation['messages'])}", indent=1)
+        log(f"Total messages: {len(chat['messages'])}", indent=1)
 
         # Verify file exists and check size
         file_size = conv_path.stat().st_size
@@ -304,18 +304,18 @@ async def test_full_conversation_flow():
         log("")
 
         # ========================================================================
-        # PHASE 4: Load conversation (simulate new session)
+        # PHASE 4: Load chat (simulate new session)
         # ========================================================================
-        log("PHASE 4: Loading conversation (simulating new session)", indent=0)
+        log("PHASE 4: Loading chat (simulating new session)", indent=0)
         log("-" * 80)
 
         load_start = time.time()
-        loaded_conversation = load_conversation(str(conv_path))
+        loaded_chat = load_chat(str(conv_path))
         load_elapsed = time.time() - load_start
 
         log(f"Loaded from: {conv_path}", indent=1)
         log(f"Load time: {load_elapsed:.3f}s", indent=1)
-        log(f"Messages loaded: {len(loaded_conversation['messages'])}", indent=1)
+        log(f"Messages loaded: {len(loaded_chat['messages'])}", indent=1)
         log("")
 
         # ========================================================================
@@ -325,8 +325,8 @@ async def test_full_conversation_flow():
         log("-" * 80)
 
         # Check message count matches
-        original_count = len(conversation['messages'])
-        loaded_count = len(loaded_conversation['messages'])
+        original_count = len(chat['messages'])
+        loaded_count = len(loaded_chat['messages'])
 
         log(f"Original message count: {original_count}", indent=1)
         log(f"Loaded message count: {loaded_count}", indent=1)
@@ -336,7 +336,7 @@ async def test_full_conversation_flow():
         log("✓ Message count matches", indent=1)
 
         # Verify message structure
-        for i, (orig, loaded) in enumerate(zip(conversation['messages'], loaded_conversation['messages'])):
+        for i, (orig, loaded) in enumerate(zip(chat['messages'], loaded_chat['messages'])):
             assert orig['role'] == loaded['role'], \
                 f"Message {i}: role mismatch"
             assert orig['content'] == loaded['content'], \
@@ -370,8 +370,8 @@ async def test_full_conversation_flow():
             "Then, on a new line, count how many user prompts I sent (just the number)."
         )
 
-        add_user_message(loaded_conversation, verification_prompt)
-        messages = get_messages_for_ai(loaded_conversation)
+        add_user_message(loaded_chat, verification_prompt)
+        messages = get_messages_for_ai(loaded_chat)
 
         verify_start = time.time()
         verification_response, verify_elapsed, verify_chunks, verify_timings = await send_and_receive(
@@ -392,7 +392,7 @@ async def test_full_conversation_flow():
             numbers = re.findall(r'\b\d+\b', verification_response)
             if numbers:
                 reported_count = int(numbers[-1])  # Take the last number found
-                actual_user_count = len([m for m in loaded_conversation['messages'] if m['role'] == 'user'])
+                actual_user_count = len([m for m in loaded_chat['messages'] if m['role'] == 'user'])
 
                 log(f"AI reported: {reported_count} user messages", indent=1)
                 log(f"Actual count: {actual_user_count} user messages", indent=1)
@@ -400,7 +400,7 @@ async def test_full_conversation_flow():
                 if reported_count == actual_user_count:
                     log("✓ AI verification successful!", indent=1)
                 else:
-                    log(f"⚠ Count mismatch (acceptable - AI read and understood the conversation)", indent=1)
+                    log(f"⚠ Count mismatch (acceptable - AI read and understood the chat)", indent=1)
             else:
                 log("✓ AI provided summary (count parsing optional)", indent=1)
 
@@ -417,8 +417,8 @@ async def test_full_conversation_flow():
         log("=" * 80)
         log(f"✓ Tested {len(available_ais)} AI provider(s)")
         log(f"✓ Successful interactions: {interaction_count}")
-        log(f"✓ Total messages in conversation: {len(conversation['messages'])}")
-        log(f"✓ Conversation saved and loaded successfully")
+        log(f"✓ Total messages in chat: {len(chat['messages'])}")
+        log(f"✓ Chat saved and loaded successfully")
         log(f"✓ Data integrity verified")
         log(f"✓ Total test time: {time.time() - test_start_time:.2f}s")
         log("=" * 80)

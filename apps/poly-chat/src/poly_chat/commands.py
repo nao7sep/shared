@@ -5,10 +5,10 @@ This module handles parsing and executing commands like /model, /gpt, /retry, et
 
 from typing import Optional, Any
 from . import models
-from .conversation import (
+from .chat import (
     update_metadata,
     delete_message_and_following,
-    save_conversation,
+    save_chat,
 )
 
 
@@ -196,8 +196,8 @@ class CommandHandler:
         Returns:
             Info message
         """
-        conversation = self.session["conversation"]
-        messages = conversation["messages"]
+        chat = self.session["conversation"]
+        messages = chat["messages"]
 
         # Check if there's an assistant message to retry
         if not messages:
@@ -220,8 +220,8 @@ class CommandHandler:
         Returns:
             Confirmation message
         """
-        conversation = self.session["conversation"]
-        messages = conversation["messages"]
+        chat = self.session["conversation"]
+        messages = chat["messages"]
 
         if not messages:
             return "No messages to delete"
@@ -235,11 +235,11 @@ class CommandHandler:
                 raise ValueError("Invalid message index. Use a number or 'last'")
 
         try:
-            count = delete_message_and_following(conversation, index)
-            # Save conversation after deletion
-            conversation_path = self.session.get("conversation_path")
-            if conversation_path:
-                await save_conversation(conversation_path, conversation)
+            count = delete_message_and_following(chat, index)
+            # Save chat history after deletion
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
             return f"Deleted {count} message(s) from index {index} onwards"
         except IndexError:
             raise ValueError(
@@ -247,7 +247,7 @@ class CommandHandler:
             )
 
     async def set_title(self, args: str) -> str:
-        """Set conversation title.
+        """Set chat title.
 
         Args:
             args: Title text or empty to clear
@@ -255,14 +255,14 @@ class CommandHandler:
         Returns:
             Confirmation message
         """
-        conversation = self.session["conversation"]
+        chat = self.session["conversation"]
 
         if not args:
             # Clear title
-            update_metadata(conversation, title=None)
+            update_metadata(chat, title=None)
             return "Title cleared"
         else:
-            update_metadata(conversation, title=args)
+            update_metadata(chat, title=args)
             return f"Title set to: {args}"
 
     async def generate_title(self, args: str) -> str:
@@ -279,7 +279,7 @@ class CommandHandler:
         return "AI title generation not yet implemented"
 
     async def set_summary(self, args: str) -> str:
-        """Set conversation summary.
+        """Set chat summary.
 
         Args:
             args: Summary text or empty to clear
@@ -287,14 +287,14 @@ class CommandHandler:
         Returns:
             Confirmation message
         """
-        conversation = self.session["conversation"]
+        chat = self.session["conversation"]
 
         if not args:
             # Clear summary
-            update_metadata(conversation, summary=None)
+            update_metadata(chat, summary=None)
             return "Summary cleared"
         else:
-            update_metadata(conversation, summary=args)
+            update_metadata(chat, summary=args)
             return "Summary set"
 
     async def generate_summary(self, args: str) -> str:
@@ -311,7 +311,7 @@ class CommandHandler:
         return "AI summary generation not yet implemented"
 
     async def check_safety(self, args: str) -> str:
-        """Check conversation for unsafe content.
+        """Check chat for unsafe content.
 
         Args:
             args: Not used
@@ -352,21 +352,21 @@ Configuration:
   /timeout          Show current timeout setting
   /timeout <secs>   Set timeout in seconds (0 = wait forever)
 
-Conversation Control:
+Chat Control:
   /retry            Replace last response (enter retry mode)
   /delete <index>   Delete message at index and all following
   /delete last      Delete last message
 
 Metadata:
-  /title <text>     Set conversation title
+  /title <text>     Set chat title
   /title            Clear title
   /ai-title         Generate title using AI
-  /summary <text>   Set conversation summary
+  /summary <text>   Set chat summary
   /summary          Clear summary
   /ai-summary       Generate summary using AI
 
 Other:
-  /safe             Check conversation for unsafe content
+  /safe             Check chat for unsafe content
   /help             Show this help
   /exit, /quit      Exit PolyChat
 """

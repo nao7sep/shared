@@ -69,7 +69,7 @@ def load_profile(path: str) -> dict[str, Any]:
     if not profile_path.exists():
         raise FileNotFoundError(
             f"Profile not found: {profile_path}\n"
-            f"Create a new profile with: pc new {path}"
+            f"Create a new profile with: pc init {path}"
         )
 
     # Load JSON
@@ -84,7 +84,7 @@ def load_profile(path: str) -> dict[str, Any]:
         profile["timeout"] = 30
 
     # Map all path fields
-    profile["conversations_dir"] = map_path(profile["conversations_dir"])
+    profile["chats_dir"] = map_path(profile["chats_dir"])
     profile["log_dir"] = map_path(profile["log_dir"])
 
     # Map system_prompt if it's a path (string)
@@ -109,7 +109,7 @@ def validate_profile(profile: dict[str, Any]) -> None:
     Raises:
         ValueError: If profile is invalid
     """
-    required = ["default_ai", "models", "conversations_dir", "log_dir", "api_keys"]
+    required = ["default_ai", "models", "chats_dir", "log_dir", "api_keys"]
 
     missing = [f for f in required if f not in profile]
     if missing:
@@ -168,16 +168,16 @@ def create_profile(path: str) -> dict[str, Any]:
     choice = input("Select default AI (1-7) [2]: ").strip() or "2"
     default_ai = provider_map.get(choice, "claude")
 
-    # Get conversations directory
-    default_conv_dir = "~/poly-chat-logs"
-    conv_dir = (
-        input(f"Conversations directory [{default_conv_dir}]: ").strip()
-        or default_conv_dir
+    # Get chats directory
+    default_chats_dir = "~/poly-chat-logs"
+    chats_dir = (
+        input(f"Chat history directory [{default_chats_dir}]: ").strip()
+        or default_chats_dir
     )
 
-    # Get log directory
-    default_log_dir = f"{conv_dir}/logs"
-    log_dir = input(f"Log directory [{default_log_dir}]: ").strip() or default_log_dir
+    # Get error log directory
+    default_log_dir = f"{chats_dir}/logs"
+    log_dir = input(f"Error log directory [{default_log_dir}]: ").strip() or default_log_dir
 
     # Create profile structure
     profile = {
@@ -193,7 +193,7 @@ def create_profile(path: str) -> dict[str, Any]:
             "deepseek": "deepseek-chat",
         },
         "system_prompt": "@/system-prompts/default.txt",
-        "conversations_dir": conv_dir,
+        "chats_dir": chats_dir,
         "log_dir": log_dir,
         "api_keys": {},
     }

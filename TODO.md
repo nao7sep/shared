@@ -14,10 +14,12 @@
 - multi-ai cli chat tool
 - blog + rag + ai consulting on international businesses, ai applications and parenting?
 - vocabulary development infrastructure for my daughter
-- refine vibe coding workflow
-- (still) write app to zip-compress source code
+- still write app to zip-archive source code to separate vibe coding from code review
 
 ## History
+
+### 2026-02-06
+- ✅ refine vibe coding workflow => watched some videos and simplified things
 
 ### 2026-02-05
 - ❌ add prefix _ to what.md and how.md => did and reverted. made internal_docs instead

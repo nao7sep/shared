@@ -208,3 +208,13 @@ i generated ai related documents for ai providers.
 - deepseek-api-integration.md for deepseek_provider.py
 
 without over engineering, let's make sure each provider correctly accesses the corresponding api, has support for timeouts and retries and handles errors including edge cases.
+
+---
+
+profile path as a commandline option is mandatory. path will be mapped if relative and starts with ~ or @. current directory is never used as it is unreliable and may lead to security vulnerabilities.
+
+"conversation" is a long word. we will call it "chat", which is consistent with the app name. we will rename methods, variables, literals, comments, etc.
+
+from now on, it is either a "chat history" file or an "error log" file. we will never say "chat log" because there'd be 2 types of "logs" and that would be confusing. when we need a short name for chat history related things such as a directory name, we use "chats". for error log related things, we use "logs".
+
+we currently use "new" command to make a new profile. let's change it to "init."

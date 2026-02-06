@@ -24,7 +24,7 @@ def sample_profile(temp_dir):
             "gemini": "gemini-3-flash-preview"
         },
         "system_prompt": "You are a helpful assistant.",
-        "conversations_dir": str(temp_dir / "conversations"),
+        "chats_dir": str(temp_dir / "chats"),
         "log_dir": str(temp_dir / "logs"),
         "api_keys": {
             "openai": {
@@ -42,11 +42,11 @@ def sample_profile(temp_dir):
 
 
 @pytest.fixture
-def sample_conversation():
-    """Create sample conversation data."""
+def sample_chat():
+    """Create sample chat data."""
     return {
         "metadata": {
-            "title": "Test Conversation",
+            "title": "Test Chat",
             "summary": None,
             "system_prompt_key": None,
             "default_model": "claude-haiku-4-5",
