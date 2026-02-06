@@ -159,29 +159,13 @@ def create_profile(path: str) -> dict[str, Any]:
     # Create directory if it doesn't exist
     profile_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Get system timezone
+    # Get system timezone using tzlocal
     try:
-        # Method 1: Try to read from /etc/localtime symlink (macOS/Linux)
-        import os
-        localtime_path = Path("/etc/localtime")
-        if localtime_path.exists() and localtime_path.is_symlink():
-            # /etc/localtime -> /var/db/timezone/zoneinfo/Asia/Tokyo
-            target = os.readlink(localtime_path)
-            if "zoneinfo/" in target:
-                system_timezone = target.split("zoneinfo/")[-1]
-            else:
-                raise ValueError("Could not parse timezone from symlink")
-        else:
-            # Method 2: Use datetime to get local timezone (works on all platforms)
-            local_tz = datetime.now().astimezone().tzinfo
-
-            # In Python 3.9+, this should have a 'key' attribute
-            if hasattr(local_tz, 'key'):
-                system_timezone = local_tz.key
-            else:
-                # Fallback to UTC if we can't determine IANA name
-                system_timezone = "UTC"
+        from tzlocal import get_localzone
+        tz = get_localzone()
+        system_timezone = str(tz)
     except Exception:
+        # Fallback to UTC if detection fails
         system_timezone = "UTC"
 
     profile_dir = str(profile_path.parent)

@@ -2,6 +2,7 @@
 
 from typing import Any
 from datetime import datetime, timezone
+from collections import defaultdict
 import re
 
 from tk import profile, data, subjective_date, markdown
@@ -20,7 +21,7 @@ def _sync_if_auto(session: dict[str, Any]) -> None:
         )
 
 
-def cmd_new(profile_path: str, session: dict[str, Any]) -> str:
+def cmd_init(profile_path: str, session: dict[str, Any]) -> str:
     """Create new profile.
 
     Args:
@@ -168,7 +169,6 @@ def cmd_history(session: dict[str, Any], days: int | None = None, working_days: 
 
     elif working_days is not None:
         # Filter by last N working days (days that have handled tasks)
-        from collections import defaultdict
 
         # Group tasks by subjective_date
         by_date = defaultdict(list)
@@ -206,7 +206,6 @@ def cmd_history(session: dict[str, Any], days: int | None = None, working_days: 
             return "No handled tasks."
 
     # Group by subjective_date (descending), sort within group by handled_at (ascending)
-    from collections import defaultdict
     by_date = defaultdict(list)
 
     for array_index, task in handled_with_indices:

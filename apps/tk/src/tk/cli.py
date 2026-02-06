@@ -164,7 +164,7 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
     if cmd == "init":
         if len(args) != 1:
             raise ValueError("Usage: init <profile_path>")
-        return commands.cmd_new(args[0], session)
+        return commands.cmd_init(args[0], session)
 
     elif cmd == "add":
         if len(args) != 1:

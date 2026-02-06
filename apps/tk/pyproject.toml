@@ -9,6 +9,7 @@ packages = [{include = "tk", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+tzlocal = "^5.3.1"
 
 [tool.poetry.scripts]
 tk = "tk.cli:main"
