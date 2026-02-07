@@ -111,7 +111,7 @@ async def test_all_models_smoke_test():
     skipped_count = 0
 
     print("\n" + "=" * 80)
-    print("TESTING ALL MODELS IN REGISTRY")
+    print("TESTING MODELS IN REGISTRY")
     print("=" * 80)
 
     # Test each provider's models
