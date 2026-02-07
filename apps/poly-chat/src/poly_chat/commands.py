@@ -3,6 +3,7 @@
 This module handles parsing and executing commands like /model, /gpt, /retry, etc.
 """
 
+import math
 from typing import Optional, Any
 from pathlib import Path
 from . import models, hex_id, profile
@@ -258,8 +259,8 @@ class CommandHandler:
         # Parse and set timeout
         try:
             timeout = float(args)
-            if timeout < 0:
-                raise ValueError("Timeout must be non-negative")
+            if not math.isfinite(timeout) or timeout < 0:
+                raise ValueError("Timeout must be a non-negative finite number")
 
             self.session["profile"]["timeout"] = timeout
 
@@ -1017,8 +1018,8 @@ Keep descriptions brief (one line max). For found items, mention location if che
                     from datetime import datetime
                     dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                     time_str = dt.strftime("%Y-%m-%d %H:%M")
-                except:
-                    time_str = timestamp[:16]  # Fallback: just take first 16 chars
+                except (ValueError, TypeError, AttributeError):
+                    time_str = timestamp[:16] if len(timestamp) >= 16 else timestamp
             else:
                 time_str = "unknown"
 
@@ -1084,7 +1085,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
                 from datetime import datetime
                 dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                 time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except:
+            except (ValueError, TypeError, AttributeError):
                 time_str = timestamp
         else:
             time_str = "unknown"
@@ -1154,10 +1155,23 @@ Keep descriptions brief (one line max). For found items, mention location if che
 
             # Try to resolve path
             if not path.startswith("/") and not path.startswith("~"):
-                # Relative to chats_dir
-                candidate = Path(chats_dir) / path
+                # Relative to chats_dir - must validate to prevent path traversal
+                candidate = (Path(chats_dir) / path).resolve()
+
+                # Security check: Ensure resolved path is within chats_dir
+                chats_dir_resolved = Path(chats_dir).resolve()
+                try:
+                    candidate.relative_to(chats_dir_resolved)
+                except ValueError:
+                    return f"Invalid path: {path} (outside chats directory)"
+
                 if not candidate.exists() and not path.endswith(".json"):
-                    candidate = Path(chats_dir) / f"{path}.json"
+                    candidate = (Path(chats_dir) / f"{path}.json").resolve()
+                    try:
+                        candidate.relative_to(chats_dir_resolved)
+                    except ValueError:
+                        return f"Invalid path: {path} (outside chats directory)"
+
                 if candidate.exists():
                     path = str(candidate)
                 else:

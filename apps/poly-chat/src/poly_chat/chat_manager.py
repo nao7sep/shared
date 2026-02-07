@@ -4,6 +4,7 @@ This module handles listing, selecting, creating, renaming, and deleting chat fi
 """
 
 import json
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Any
@@ -42,8 +43,9 @@ def list_chats(chats_dir: str) -> list[dict[str, Any]]:
                 "updated_at": metadata.get("updated_at"),
                 "message_count": len(messages),
             })
-        except Exception:
-            # Skip invalid files
+        except Exception as e:
+            # Skip invalid files but log the issue
+            logging.debug(f"Skipping invalid chat file {file_path}: {e}")
             continue
 
     # Sort by updated_at (most recent first), then by filename
@@ -205,14 +207,29 @@ def rename_chat(old_path: str, new_name: str, chats_dir: str) -> str:
         raise FileNotFoundError(f"Chat file not found: {old_path}")
 
     # Determine new path
+    chats_dir_resolved = Path(chats_dir).resolve()
+
     if "/" in new_name or new_name.startswith("~"):
         # Full path provided
-        new_file = Path(new_name).expanduser()
+        new_file = Path(new_name).expanduser().resolve()
+
+        # Security check: If it looks like a relative path, validate it's within chats_dir
+        if not Path(new_name).is_absolute() and not new_name.startswith("~"):
+            try:
+                new_file.relative_to(chats_dir_resolved)
+            except ValueError:
+                raise ValueError(f"Invalid path: {new_name} (outside chats directory)")
     else:
         # Just filename - put in chats_dir
         if not new_name.endswith(".json"):
             new_name = f"{new_name}.json"
-        new_file = Path(chats_dir) / new_name
+        new_file = (Path(chats_dir) / new_name).resolve()
+
+        # Security check: Ensure resolved path is within chats_dir
+        try:
+            new_file.relative_to(chats_dir_resolved)
+        except ValueError:
+            raise ValueError(f"Invalid filename: {new_name} (outside chats directory)")
 
     if new_file.exists():
         raise FileExistsError(f"Chat file already exists: {new_file}")

@@ -5,6 +5,7 @@ import json
 import asyncio
 import argparse
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -49,6 +50,30 @@ PROVIDER_CLASSES: dict[str, type] = {
     "mistral": MistralProvider,
     "deepseek": DeepSeekProvider,
 }
+
+
+def sanitize_error_message(error_msg: str) -> str:
+    """Sanitize error messages to remove sensitive information.
+
+    Args:
+        error_msg: Raw error message
+
+    Returns:
+        Sanitized error message with credentials redacted
+    """
+    # Redact common API key patterns (minimum 10 chars to catch various formats)
+    sanitized = re.sub(r'sk-[A-Za-z0-9]{10,}', '[REDACTED_API_KEY]', error_msg)
+    sanitized = re.sub(r'sk-ant-[A-Za-z0-9\-]{10,}', '[REDACTED_API_KEY]', sanitized)
+    sanitized = re.sub(r'xai-[A-Za-z0-9]{10,}', '[REDACTED_API_KEY]', sanitized)
+    sanitized = re.sub(r'pplx-[A-Za-z0-9]{10,}', '[REDACTED_API_KEY]', sanitized)
+
+    # Redact potential tokens in Bearer headers
+    sanitized = re.sub(r'Bearer\s+[A-Za-z0-9_\-\.]{20,}', 'Bearer [REDACTED_TOKEN]', sanitized)
+
+    # Redact anything that looks like a JWT
+    sanitized = re.sub(r'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[REDACTED_JWT]', sanitized)
+
+    return sanitized
 
 
 @dataclass
@@ -772,10 +797,11 @@ async def repl_loop(
                         hex_to_remove = session.message_hex_ids.pop(last_index)
                         session.hex_id_set.discard(hex_to_remove)
 
-                # Add error message to chat
+                # Add error message to chat (sanitized to remove credentials)
+                sanitized_error = sanitize_error_message(str(e))
                 chat.add_error_message(
                     chat_data,
-                    str(e),
+                    sanitized_error,
                     {"provider": session.current_ai, "model": session.current_model},
                 )
                 # Assign hex ID to new error message
