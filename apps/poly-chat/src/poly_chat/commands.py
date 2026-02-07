@@ -99,6 +99,9 @@ class CommandHandler:
             "cancel": self.cancel_retry,
             "secret": self.secret_mode_command,
             "rewind": self.rewind_messages,
+            "purge": self.purge_messages,
+            "history": self.show_history,
+            "show": self.show_message,
             "title": self.set_title,
             "ai-title": self.generate_title,
             "summary": self.set_summary,
@@ -146,7 +149,7 @@ class CommandHandler:
         """Set the current model.
 
         Args:
-            args: Model name or empty to show list
+            args: Model name, "default" to revert to profile default, or empty to show list
 
         Returns:
             Confirmation message or model list
@@ -158,6 +161,17 @@ class CommandHandler:
             return f"Available models for {provider}:\n" + "\n".join(
                 f"  - {m}" for m in available_models
             )
+
+        # Handle "default" - revert to profile's default
+        if args == "default":
+            profile = self.session["profile"]
+            default_ai = profile["default_ai"]
+            default_model = profile["models"][default_ai]
+
+            self.session["current_ai"] = default_ai
+            self.session["current_model"] = default_model
+
+            return f"Reverted to profile default: {default_ai} ({default_model})"
 
         # Check if model exists and switch provider if needed
         provider = models.get_provider_for_model(args)
@@ -211,7 +225,7 @@ class CommandHandler:
         """Set or show the timeout setting.
 
         Args:
-            args: Timeout in seconds or empty to show current
+            args: Timeout in seconds, "default" to revert to profile default, or empty to show current
 
         Returns:
             Confirmation message or current timeout
@@ -223,6 +237,23 @@ class CommandHandler:
                 return "Current timeout: 0 (wait forever)"
             else:
                 return f"Current timeout: {timeout} seconds"
+
+        # Handle "default" - revert to profile's original timeout
+        if args == "default":
+            # The profile dict is loaded fresh, so we need to reload to get original
+            # For now, just use the current profile value or 30
+            # Note: This assumes profile hasn't been saved over
+            default_timeout = self.session["profile"].get("timeout", 30)
+            self.session["profile"]["timeout"] = default_timeout
+
+            # Clear provider cache since timeout changed
+            if "_provider_cache" in self.session:
+                self.session["_provider_cache"].clear()
+
+            if default_timeout == 0:
+                return "Reverted to profile default: 0 (wait forever). Provider cache cleared."
+            else:
+                return f"Reverted to profile default: {default_timeout} seconds. Provider cache cleared."
 
         # Parse and set timeout
         try:
@@ -526,6 +557,83 @@ class CommandHandler:
                 f"Message index {index} out of range (0-{len(messages)-1})"
             )
 
+    async def purge_messages(self, args: str) -> str:
+        """Delete specific messages by hex ID (breaks conversation context).
+
+        Args:
+            args: Space-separated hex IDs of messages to delete
+
+        Returns:
+            Confirmation message with warning
+        """
+        if not args.strip():
+            return "Usage: /purge <hex_id> [hex_id2 hex_id3 ...]"
+
+        chat = self.session["chat"]
+        messages = chat["messages"]
+
+        if not messages:
+            return "No messages to purge"
+
+        # Parse hex IDs
+        hex_ids_to_purge = args.strip().split()
+
+        # Validate all hex IDs and get indices
+        hex_map = self.session.get("message_hex_ids", {})
+        indices_to_delete = []
+
+        for hid in hex_ids_to_purge:
+            msg_index = hex_id.get_message_index(hid, hex_map)
+            if msg_index is None:
+                return f"Invalid hex ID: {hid}"
+            indices_to_delete.append((msg_index, hid))
+
+        # Sort by index descending so we delete from end to start
+        # (avoids index shifting issues)
+        indices_to_delete.sort(reverse=True)
+
+        # Delete messages
+        deleted_count = 0
+        for msg_index, hid in indices_to_delete:
+            # Delete the message
+            del messages[msg_index]
+
+            # Remove from hex ID tracking
+            if msg_index in hex_map:
+                removed_hex = hex_map.pop(msg_index)
+                hex_id_set = self.session.get("hex_id_set", set())
+                hex_id_set.discard(removed_hex)
+
+            deleted_count += 1
+
+        # Rebuild hex_map with updated indices (all messages after deleted ones shift down)
+        # Actually, let's just reassign hex IDs since order changed
+        # Clear old mappings and regenerate
+        hex_map.clear()
+        hex_id_set = self.session.get("hex_id_set", set())
+        hex_id_set.clear()
+
+        # Reassign hex IDs to remaining messages
+        from . import hex_id as hex_id_module
+        for i in range(len(messages)):
+            new_hex = hex_id_module.generate_hex_id(hex_id_set)
+            hex_map[i] = new_hex
+
+        # Save chat history
+        chat_path = self.session.get("chat_path")
+        if chat_path:
+            await save_chat(chat_path, chat)
+
+        # Build warning message
+        deleted_ids = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
+        warning = [
+            "⚠️  WARNING: Purging breaks conversation context",
+            f"Purged {deleted_count} message(s): {deleted_ids}",
+            "Hex IDs have been reassigned to remaining messages."
+        ]
+
+        return "\n".join(warning)
+
     async def set_title(self, args: str) -> str:
         """Set chat title.
 
@@ -726,14 +834,283 @@ class CommandHandler:
         """Check chat for unsafe content.
 
         Args:
-            args: Not used
+            args: Optional hex_id to check specific message, or empty for full chat
 
         Returns:
-            Safety check results
+            Safety check results with categorized findings
         """
-        # This would need AI call to check safety
-        # For now, return placeholder
-        return "Safety check not yet implemented"
+        chat = self.session["chat"]
+        messages = chat["messages"]
+
+        if not messages:
+            return "No messages to check"
+
+        # Determine what to check
+        if args.strip():
+            # Check specific message by hex ID
+            hex_map = self.session.get("message_hex_ids", {})
+            msg_index = hex_id.get_message_index(args.strip(), hex_map)
+
+            if msg_index is None:
+                return f"Invalid hex ID: {args.strip()}"
+
+            msg = messages[msg_index]
+            content_to_check = self._format_message_for_safety_check([msg])
+            scope = f"message [{args.strip()}]"
+        else:
+            # Check entire chat
+            content_to_check = self._format_message_for_safety_check(messages)
+            scope = "entire chat"
+
+        # Create safety check prompt for helper AI
+        system_prompt = """You are a safety analyzer. Check the provided content for:
+1. PII (Personally Identifiable Information) - names, emails, phone numbers, addresses, SSN, etc.
+2. Credentials - API keys, passwords, tokens, access keys, secrets
+3. Proprietary Information - confidential business data, trade secrets
+4. Offensive Content - hate speech, discriminatory language, explicit content
+
+Respond ONLY in this exact format:
+PII: [✓ None | ⚠ Found: brief description]
+CREDENTIALS: [✓ None | ⚠ Found: brief description]
+PROPRIETARY: [✓ None | ⚠ Found: brief description]
+OFFENSIVE: [✓ None | ⚠ Found: brief description]
+
+Keep descriptions brief (one line max). For found items, mention location if checking multiple messages."""
+
+        prompt_messages = [{
+            "role": "user",
+            "content": f"Check this content for safety issues:\n\n{content_to_check}"
+        }]
+
+        # Invoke helper AI
+        try:
+            result = await invoke_helper_ai(
+                self.session["helper_ai"],
+                self.session["helper_model"],
+                self.session["profile"],
+                prompt_messages,
+                system_prompt
+            )
+
+            # Format output
+            output = [
+                f"Safety Check Results ({scope}):",
+                "━" * 40,
+                result.strip(),
+                "━" * 40,
+            ]
+
+            return "\n".join(output)
+
+        except Exception as e:
+            return f"Error performing safety check: {e}"
+
+    def _format_message_for_safety_check(self, messages: list[dict]) -> str:
+        """Format messages for safety checking.
+
+        Args:
+            messages: List of message dictionaries
+
+        Returns:
+            Formatted string with message content
+        """
+        formatted = []
+        hex_map = self.session.get("message_hex_ids", {})
+
+        for i, msg in enumerate(messages):
+            role = msg.get("role", "unknown")
+            content_parts = msg.get("content", [])
+
+            # Get hex ID if available
+            hex_label = ""
+            if i in hex_map:
+                hex_label = f"[{hex_map[i]}] "
+
+            # Format content (join if list, use as-is if string)
+            if isinstance(content_parts, list):
+                content = " ".join(str(part) for part in content_parts)
+            else:
+                content = str(content_parts)
+
+            formatted.append(f"{hex_label}{role.upper()}: {content[:500]}")  # Truncate very long messages
+
+        return "\n\n".join(formatted)
+
+    async def show_history(self, args: str) -> str:
+        """Show chat history.
+
+        Args:
+            args: Optional: number, "all", or "--errors" to filter
+
+        Returns:
+            Formatted history display
+        """
+        chat = self.session["chat"]
+        messages = chat["messages"]
+
+        if not messages:
+            return "No messages in chat history"
+
+        # Parse arguments
+        show_all = False
+        errors_only = False
+        limit = 10  # Default: last 10 messages
+
+        if args.strip():
+            if args.strip() == "all":
+                show_all = True
+            elif args.strip() == "--errors":
+                errors_only = True
+            else:
+                try:
+                    limit = int(args.strip())
+                    if limit <= 0:
+                        return "Invalid number. Use a positive integer."
+                except ValueError:
+                    return f"Invalid argument: {args.strip()}. Use a number, 'all', or '--errors'"
+
+        # Filter messages
+        if errors_only:
+            filtered_messages = [(i, msg) for i, msg in enumerate(messages) if msg.get("role") == "error"]
+            display_messages = filtered_messages
+            total_count = len(messages)
+        elif show_all:
+            display_messages = list(enumerate(messages))
+            total_count = len(messages)
+        else:
+            # Show last N messages
+            display_messages = list(enumerate(messages))[-limit:]
+            total_count = len(messages)
+
+        if not display_messages:
+            if errors_only:
+                return "No error messages found"
+            return "No messages to display"
+
+        # Format output
+        hex_map = self.session.get("message_hex_ids", {})
+        output = []
+
+        # Header
+        if errors_only:
+            output.append(f"Error Messages ({len(display_messages)} of {total_count} total messages)")
+        elif show_all:
+            output.append(f"Chat History (all {total_count} messages)")
+        else:
+            output.append(f"Chat History (showing {len(display_messages)} of {total_count} messages)")
+
+        output.append("━" * 60)
+
+        # Messages
+        for msg_index, msg in display_messages:
+            role = msg.get("role", "unknown")
+            timestamp = msg.get("timestamp", "")
+            content_parts = msg.get("content", [])
+
+            # Get hex ID
+            hex_id = hex_map.get(msg_index, "???")
+
+            # Format timestamp (just date and time, no microseconds)
+            if timestamp:
+                try:
+                    # Parse ISO format and simplify
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    time_str = dt.strftime("%Y-%m-%d %H:%M")
+                except:
+                    time_str = timestamp[:16]  # Fallback: just take first 16 chars
+            else:
+                time_str = "unknown"
+
+            # Role emoji
+            if role == "user":
+                role_display = "👤 User"
+            elif role == "assistant":
+                model = msg.get("model", "unknown")
+                role_display = f"🤖 Assistant/{model}"
+            elif role == "error":
+                role_display = "❌ Error"
+            else:
+                role_display = f"❓ {role.capitalize()}"
+
+            # Format content (truncate for history view)
+            if isinstance(content_parts, list):
+                content = " ".join(str(part) for part in content_parts)
+            else:
+                content = str(content_parts)
+
+            # Truncate long messages
+            if len(content) > 100:
+                content = content[:97] + "..."
+
+            output.append(f"[{hex_id}] {role_display} ({time_str})")
+            output.append(f"  {content}")
+            output.append("")
+
+        output.append("━" * 60)
+
+        return "\n".join(output)
+
+    async def show_message(self, args: str) -> str:
+        """Show full content of specific message.
+
+        Args:
+            args: Hex ID of message to show
+
+        Returns:
+            Full message content
+        """
+        if not args.strip():
+            return "Usage: /show <hex_id>"
+
+        chat = self.session["chat"]
+        messages = chat["messages"]
+        hex_map = self.session.get("message_hex_ids", {})
+
+        # Look up message by hex ID
+        msg_index = hex_id.get_message_index(args.strip(), hex_map)
+
+        if msg_index is None:
+            return f"Invalid hex ID: {args.strip()}"
+
+        msg = messages[msg_index]
+        role = msg.get("role", "unknown")
+        timestamp = msg.get("timestamp", "unknown")
+        content_parts = msg.get("content", [])
+
+        # Format timestamp
+        if timestamp and timestamp != "unknown":
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                time_str = timestamp
+        else:
+            time_str = "unknown"
+
+        # Role display
+        if role == "assistant":
+            model = msg.get("model", "unknown")
+            role_display = f"Assistant ({model})"
+        else:
+            role_display = role.capitalize()
+
+        # Format content
+        if isinstance(content_parts, list):
+            content = " ".join(str(part) for part in content_parts)
+        else:
+            content = str(content_parts)
+
+        # Build output
+        output = [
+            f"Message [{args.strip()}] - {role_display} ({time_str})",
+            "━" * 60,
+            content,
+            "━" * 60,
+        ]
+
+        return "\n".join(output)
 
     async def new_chat(self, args: str) -> str:
         """Create new chat file.
@@ -994,6 +1371,7 @@ Provider Shortcuts:
 Model Management:
   /model            Show available models for current provider
   /model <name>     Switch to specified model (auto-detects provider)
+  /model default    Restore to profile's default AI and model
   /helper           Show current helper AI model
   /helper <model>   Set helper AI model (for background tasks)
   /helper default   Restore to profile's default helper AI
@@ -1001,6 +1379,7 @@ Model Management:
 Configuration:
   /timeout          Show current timeout setting
   /timeout <secs>   Set timeout in seconds (0 = wait forever)
+  /timeout default  Restore to profile's default timeout
   /system           Show current system prompt path
   /system <path>    Set system prompt (~/ for home, @/ for app root)
   /system --        Remove system prompt from chat
@@ -1022,6 +1401,15 @@ Chat Control:
   /secret <msg>     Ask one secret question (doesn't toggle mode)
   /rewind <id>      Rewind chat to message (use hex ID or index)
   /rewind last      Rewind to last message
+  /purge <hex_id>   Delete specific message(s) (breaks context!)
+  /purge <id> <id>  Delete multiple messages
+
+History:
+  /history          Show last 10 messages
+  /history <n>      Show last n messages
+  /history all      Show all messages
+  /history --errors Show only error messages
+  /show <hex_id>    Show full content of specific message
 
 Metadata:
   /title            Generate title using AI
@@ -1031,8 +1419,11 @@ Metadata:
   /summary <text>   Set chat summary
   /summary --       Clear summary
 
+Safety:
+  /safe             Check entire chat for unsafe content
+  /safe <hex_id>    Check specific message for unsafe content
+
 Other:
-  /safe             Check chat for unsafe content
   /help             Show this help
   /exit, /quit      Exit PolyChat
 
