@@ -49,6 +49,24 @@ def map_path(path: str) -> str:
         )
 
 
+def map_system_prompt_path(system_prompt_path: str | None) -> str | None:
+    """Map system prompt path to absolute path for file reading.
+
+    Args:
+        system_prompt_path: Original system prompt path (with ~, @, or absolute)
+
+    Returns:
+        Absolute path string, or None if input is None
+
+    Raises:
+        ValueError: If path is relative without special prefix
+    """
+    if system_prompt_path is None:
+        return None
+
+    return map_path(system_prompt_path)
+
+
 def load_profile(path: str) -> dict[str, Any]:
     """Load profile from JSON file.
 
@@ -125,6 +143,11 @@ def validate_profile(profile: dict[str, Any]) -> None:
     # Validate default_ai is in models
     if profile["default_ai"] not in profile["models"]:
         raise ValueError(f"default_ai '{profile['default_ai']}' not found in models")
+
+    # Validate default_helper_ai if present
+    if "default_helper_ai" in profile:
+        if profile["default_helper_ai"] not in profile["models"]:
+            raise ValueError(f"default_helper_ai '{profile['default_helper_ai']}' not found in models")
 
     # Validate timeout if present
     if "timeout" in profile:

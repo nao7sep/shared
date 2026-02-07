@@ -33,7 +33,7 @@ def load_chat(path: str) -> dict[str, Any]:
             "metadata": {
                 "title": None,
                 "summary": None,
-                "system_prompt_key": None,
+                "system_prompt_path": None,
                 "default_model": None,
                 "created_at": None,
                 "updated_at": None,

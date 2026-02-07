@@ -5,12 +5,14 @@ This module handles parsing and executing commands like /model, /gpt, /retry, et
 
 from typing import Optional, Any
 from pathlib import Path
-from . import models, hex_id
+from . import models, hex_id, profile
+from .helper_ai import invoke_helper_ai
 from .chat import (
     update_metadata,
     delete_message_and_following,
     save_chat,
     load_chat,
+    get_messages_for_ai,
 )
 from .chat_manager import (
     prompt_chat_selection,
@@ -89,8 +91,13 @@ class CommandHandler:
         # Other commands
         command_map = {
             "model": self.set_model,
+            "helper": self.set_helper,
             "timeout": self.set_timeout,
+            "system": self.set_system_prompt,
             "retry": self.retry_mode,
+            "apply": self.apply_retry,
+            "cancel": self.cancel_retry,
+            "secret": self.secret_mode_command,
             "rewind": self.rewind_messages,
             "title": self.set_title,
             "ai-title": self.generate_title,
@@ -163,6 +170,43 @@ class CommandHandler:
             self.session["current_model"] = args
             return f"Set model to {args} (provider: {self.session['current_ai']})"
 
+    async def set_helper(self, args: str) -> str:
+        """Set or show the helper AI model.
+
+        Args:
+            args: Model name, 'default' to revert, or empty to show current
+
+        Returns:
+            Confirmation message or current helper
+        """
+        if not args:
+            # Show current helper
+            helper_ai = self.session.get("helper_ai", "not set")
+            helper_model = self.session.get("helper_model", "not set")
+            return f"Current helper AI: {helper_ai} ({helper_model})"
+
+        # 'default' - revert to profile default
+        if args == "default":
+            profile_data = self.session["profile"]
+            helper_ai_name = profile_data.get("default_helper_ai", profile_data["default_ai"])
+            helper_model_name = profile_data["models"][helper_ai_name]
+
+            self.session["helper_ai"] = helper_ai_name
+            self.session["helper_model"] = helper_model_name
+
+            return f"Helper AI restored to profile default: {helper_ai_name} ({helper_model_name})"
+
+        # Otherwise, it's a model name - check if it exists
+        provider = models.get_provider_for_model(args)
+        if provider:
+            self.session["helper_ai"] = provider
+            self.session["helper_model"] = args
+            return f"Helper AI set to {provider} ({args})"
+        else:
+            # Model not in registry, but allow it anyway (might be new)
+            self.session["helper_model"] = args
+            return f"Helper model set to {args} (provider: {self.session.get('helper_ai', 'unknown')})"
+
     async def set_timeout(self, args: str) -> str:
         """Set or show the timeout setting.
 
@@ -200,6 +244,119 @@ class CommandHandler:
         except ValueError:
             raise ValueError("Invalid timeout value. Use a number (e.g., /timeout 60) or 0 for no timeout.")
 
+    async def set_system_prompt(self, args: str) -> str:
+        """Set or show system prompt path for current chat session.
+
+        Args:
+            args: Path to system prompt file, '--' to remove, 'default' to restore, or empty to show
+
+        Returns:
+            Confirmation message
+        """
+        chat = self.session["chat"]
+
+        # Check if chat is loaded
+        if not chat or "metadata" not in chat:
+            return "No chat is currently open"
+
+        # No args - show current system prompt path
+        if not args:
+            current_path = chat["metadata"].get("system_prompt_path")
+            if current_path:
+                return f"Current system prompt: {current_path}"
+            else:
+                return "No system prompt set for this chat"
+
+        # '--' - remove system prompt
+        if args == "--":
+            update_metadata(chat, system_prompt_path=None)
+            # Also update session state
+            self.session["system_prompt"] = None
+            self.session["system_prompt_path"] = None
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
+            return "System prompt removed from chat"
+
+        # 'default' - restore profile default
+        if args == "default":
+            profile_data = self.session["profile"]
+            default_system_prompt = profile_data.get("system_prompt")
+
+            if not default_system_prompt:
+                return "No default system prompt configured in profile"
+
+            # Get original unmapped path from profile
+            # We need to read the original profile file to get the unmapped path
+            # For now, we'll use the profile data's system_prompt if it's a string
+            if isinstance(default_system_prompt, str):
+                # This is already the mapped path - we need the original
+                # For simplicity, we'll just use it as-is (it's already absolute)
+                system_prompt_path = default_system_prompt
+
+                # Load the prompt content
+                try:
+                    system_prompt_mapped_path = profile.map_system_prompt_path(system_prompt_path)
+                    with open(system_prompt_mapped_path, "r", encoding="utf-8") as f:
+                        system_prompt_content = f.read().strip()
+                except Exception as e:
+                    raise ValueError(f"Could not load default system prompt: {e}")
+            elif isinstance(default_system_prompt, dict):
+                # Inline text
+                system_prompt_path = None
+                system_prompt_content = default_system_prompt.get("content")
+            else:
+                return "Invalid default system prompt in profile"
+
+            # Update chat metadata
+            update_metadata(chat, system_prompt_path=system_prompt_path)
+
+            # Update session state
+            self.session["system_prompt"] = system_prompt_content
+            self.session["system_prompt_path"] = system_prompt_path
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
+            return f"System prompt restored to profile default"
+
+        # Otherwise, it's a path - validate and set it
+        try:
+            # Validate path mapping
+            system_prompt_mapped_path = profile.map_system_prompt_path(args)
+
+            # Try to read the file to make sure it exists
+            try:
+                with open(system_prompt_mapped_path, "r", encoding="utf-8") as f:
+                    system_prompt_content = f.read().strip()
+            except FileNotFoundError:
+                raise ValueError(f"System prompt file not found: {system_prompt_mapped_path}")
+            except Exception as e:
+                raise ValueError(f"Could not read system prompt file: {e}")
+
+            # Update chat metadata with ORIGINAL path (not mapped)
+            update_metadata(chat, system_prompt_path=args)
+
+            # Update session state
+            self.session["system_prompt"] = system_prompt_content
+            self.session["system_prompt_path"] = args
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
+            return f"System prompt set to: {args}"
+
+        except ValueError as e:
+            # Re-raise with original error message
+            raise
+
     async def retry_mode(self, args: str) -> str:
         """Enter retry mode (ask again without saving previous attempt).
 
@@ -217,17 +374,95 @@ class CommandHandler:
 
         messages = chat["messages"]
 
-        # Check if there's an assistant message to retry
+        # Check if there's an assistant message or error to retry
         if not messages:
             return "No messages to retry"
 
         last_msg = messages[-1]
-        if last_msg["role"] != "assistant":
-            return "Last message is not an assistant response. Nothing to retry."
+        if last_msg["role"] == "assistant":
+            message_type = "assistant response"
+        elif last_msg["role"] == "error":
+            message_type = "error"
+        else:
+            return "Last message is not an assistant response or error. Nothing to retry."
 
         # Set retry mode flag - the REPL loop will handle the actual replacement
         self.session["retry_mode"] = True
-        return "Retry mode enabled. Your next message will replace the last assistant response."
+        return f"Retry mode enabled. Your next message will replace the last {message_type}."
+
+    async def apply_retry(self, args: str) -> str:
+        """Apply current retry attempt and exit retry mode.
+
+        Args:
+            args: Not used
+
+        Returns:
+            Special signal for REPL loop to handle
+        """
+        # Check if in retry mode
+        if not self.session.get("retry_mode", False):
+            return "Not in retry mode"
+
+        # Signal to REPL loop to apply retry
+        return "__APPLY_RETRY__"
+
+    async def cancel_retry(self, args: str) -> str:
+        """Cancel retry mode and keep original messages.
+
+        Args:
+            args: Not used
+
+        Returns:
+            Special signal for REPL loop to handle
+        """
+        # Check if in retry mode
+        if not self.session.get("retry_mode", False):
+            return "Not in retry mode"
+
+        # Signal to REPL loop to cancel retry
+        return "__CANCEL_RETRY__"
+
+    async def secret_mode_command(self, args: str) -> str:
+        """Toggle or use secret mode (messages not saved to history).
+
+        Args:
+            args: Empty to toggle, 'on'/'off' to set explicitly, or message for one-shot
+
+        Returns:
+            Status message or special signal for one-shot mode
+        """
+        chat = self.session["chat"]
+
+        # Check if chat is loaded
+        if not chat or "messages" not in chat:
+            return "No chat is currently open"
+
+        # No args - toggle mode
+        if not args:
+            current_mode = self.session.get("secret_mode", False)
+            self.session["secret_mode"] = not current_mode
+
+            if self.session["secret_mode"]:
+                return "Secret mode enabled. Messages will not be saved to history."
+            else:
+                # Signal to clear frozen context
+                return "__CLEAR_SECRET_CONTEXT__"
+
+        # Explicit on
+        elif args == "on":
+            self.session["secret_mode"] = True
+            return "Secret mode enabled. Messages will not be saved to history."
+
+        # Explicit off
+        elif args == "off":
+            self.session["secret_mode"] = False
+            # Signal to clear frozen context
+            return "__CLEAR_SECRET_CONTEXT__"
+
+        # Otherwise it's a one-shot secret message
+        else:
+            # Signal to REPL loop to handle this as one-shot secret message
+            return f"__SECRET_ONESHOT__:{args}"
 
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting message at index and all following.
@@ -295,7 +530,7 @@ class CommandHandler:
         """Set chat title.
 
         Args:
-            args: Title text or empty to clear
+            args: Title text, '--' to clear, or empty to generate with AI
 
         Returns:
             Confirmation message
@@ -307,11 +542,27 @@ class CommandHandler:
             return "No chat is currently open"
 
         if not args:
+            # Generate title with AI
+            return await self.generate_title(args)
+        elif args == "--":
             # Clear title
             update_metadata(chat, title=None)
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
             return "Title cleared"
         else:
+            # Set explicit title
             update_metadata(chat, title=args)
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
             return f"Title set to: {args}"
 
     async def generate_title(self, args: str) -> str:
@@ -323,15 +574,63 @@ class CommandHandler:
         Returns:
             Generated title or error message
         """
-        # This would need AI call to generate title
-        # For now, return placeholder
-        return "AI title generation not yet implemented"
+        chat = self.session["chat"]
+
+        # Check if chat is loaded
+        if not chat or "messages" not in chat:
+            return "No chat is currently open"
+
+        # Get chat messages for context
+        messages = get_messages_for_ai(chat)
+        if not messages:
+            return "No messages in chat to generate title from"
+
+        # Build prompt for title generation
+        system_prompt = "You are a helpful assistant that generates concise, descriptive titles for chat conversations. Generate a title that captures the main topic or theme of the conversation in 3-8 words."
+
+        # Take first few messages for context (to keep it efficient)
+        context_messages = messages[:10] if len(messages) > 10 else messages
+        context_text = "\n".join([
+            f"{msg['role']}: {msg.get('content', '')[:200]}"
+            for msg in context_messages
+        ])
+
+        prompt_messages = [{
+            "role": "user",
+            "content": f"Generate a short, descriptive title for this conversation:\n\n{context_text}\n\nProvide only the title, nothing else."
+        }]
+
+        # Invoke helper AI
+        try:
+            title = await invoke_helper_ai(
+                self.session["helper_ai"],
+                self.session["helper_model"],
+                self.session["profile"],
+                prompt_messages,
+                system_prompt
+            )
+
+            # Clean up title (remove quotes if present)
+            title = title.strip().strip('"').strip("'")
+
+            # Update chat metadata
+            update_metadata(chat, title=title)
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
+            return f"Title generated: {title}"
+
+        except Exception as e:
+            return f"Error generating title: {e}"
 
     async def set_summary(self, args: str) -> str:
         """Set chat summary.
 
         Args:
-            args: Summary text or empty to clear
+            args: Summary text, '--' to clear, or empty to generate with AI
 
         Returns:
             Confirmation message
@@ -343,11 +642,27 @@ class CommandHandler:
             return "No chat is currently open"
 
         if not args:
+            # Generate summary with AI
+            return await self.generate_summary(args)
+        elif args == "--":
             # Clear summary
             update_metadata(chat, summary=None)
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
             return "Summary cleared"
         else:
+            # Set explicit summary
             update_metadata(chat, summary=args)
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
             return "Summary set"
 
     async def generate_summary(self, args: str) -> str:
@@ -359,9 +674,53 @@ class CommandHandler:
         Returns:
             Generated summary or error message
         """
-        # This would need AI call to generate summary
-        # For now, return placeholder
-        return "AI summary generation not yet implemented"
+        chat = self.session["chat"]
+
+        # Check if chat is loaded
+        if not chat or "messages" not in chat:
+            return "No chat is currently open"
+
+        # Get chat messages for context
+        messages = get_messages_for_ai(chat)
+        if not messages:
+            return "No messages in chat to generate summary from"
+
+        # Build prompt for summary generation
+        system_prompt = "You are a helpful assistant that generates concise summaries of chat conversations. Create a brief summary (2-4 sentences) that captures the key topics discussed and main outcomes."
+
+        # Take all messages for full context (summarize everything)
+        context_text = "\n".join([
+            f"{msg['role']}: {msg.get('content', '')}"
+            for msg in messages
+        ])
+
+        prompt_messages = [{
+            "role": "user",
+            "content": f"Generate a concise summary (2-4 sentences) of this conversation:\n\n{context_text}"
+        }]
+
+        # Invoke helper AI
+        try:
+            summary = await invoke_helper_ai(
+                self.session["helper_ai"],
+                self.session["helper_model"],
+                self.session["profile"],
+                prompt_messages,
+                system_prompt
+            )
+
+            # Update chat metadata
+            update_metadata(chat, summary=summary)
+
+            # Save chat
+            chat_path = self.session.get("chat_path")
+            if chat_path:
+                await save_chat(chat_path, chat)
+
+            return f"Summary generated:\n{summary}"
+
+        except Exception as e:
+            return f"Error generating summary: {e}"
 
     async def check_safety(self, args: str) -> str:
         """Check chat for unsafe content.
@@ -635,10 +994,17 @@ Provider Shortcuts:
 Model Management:
   /model            Show available models for current provider
   /model <name>     Switch to specified model (auto-detects provider)
+  /helper           Show current helper AI model
+  /helper <model>   Set helper AI model (for background tasks)
+  /helper default   Restore to profile's default helper AI
 
 Configuration:
   /timeout          Show current timeout setting
   /timeout <secs>   Set timeout in seconds (0 = wait forever)
+  /system           Show current system prompt path
+  /system <path>    Set system prompt (~/ for home, @/ for app root)
+  /system --        Remove system prompt from chat
+  /system default   Restore to profile's default system prompt
 
 Chat File Management:
   /new [name]       Create new chat file
@@ -648,22 +1014,29 @@ Chat File Management:
   /delete [name]    Delete a chat file (shows list if no name)
 
 Chat Control:
-  /retry            Replace last response (enter retry mode)
-  /rewind <index>   Rewind chat to message (delete from index onwards)
+  /retry            Enter retry mode (try different responses)
+  /apply            Accept current retry attempt and exit retry mode
+  /cancel           Abort retry and keep original response
+  /secret           Toggle secret mode (messages not saved)
+  /secret on/off    Enable/disable secret mode explicitly
+  /secret <msg>     Ask one secret question (doesn't toggle mode)
+  /rewind <id>      Rewind chat to message (use hex ID or index)
   /rewind last      Rewind to last message
 
 Metadata:
+  /title            Generate title using AI
   /title <text>     Set chat title
-  /title            Clear title
-  /ai-title         Generate title using AI
+  /title --         Clear title
+  /summary          Generate summary using AI
   /summary <text>   Set chat summary
-  /summary          Clear summary
-  /ai-summary       Generate summary using AI
+  /summary --       Clear summary
 
 Other:
   /safe             Check chat for unsafe content
   /help             Show this help
   /exit, /quit      Exit PolyChat
+
+Note: Use '--' to delete/clear values (e.g., /title --, /summary --)
 """
 
     async def exit_app(self, args: str) -> str:

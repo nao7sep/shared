@@ -37,7 +37,7 @@ def test_load_chat_valid_file(tmp_path):
         "metadata": {
             "title": "Test Chat",
             "summary": None,
-            "system_prompt_key": None,
+            "system_prompt_path": None,
             "default_model": None,
             "created_at": "2026-01-01T00:00:00+00:00",
             "updated_at": "2026-01-01T00:00:00+00:00",
@@ -93,7 +93,7 @@ def test_load_chat_missing_messages(tmp_path):
         "metadata": {
             "title": None,
             "summary": None,
-            "system_prompt_key": None,
+            "system_prompt_path": None,
             "default_model": None,
             "created_at": None,
             "updated_at": None,
@@ -116,7 +116,7 @@ async def test_save_chat_basic(tmp_path):
         "metadata": {
             "title": "Save Test",
             "summary": None,
-            "system_prompt_key": None,
+            "system_prompt_path": None,
             "default_model": None,
             "created_at": None,
             "updated_at": None,
@@ -152,7 +152,7 @@ async def test_save_chat_creates_directory(tmp_path):
         "metadata": {
             "title": None,
             "summary": None,
-            "system_prompt_key": None,
+            "system_prompt_path": None,
             "default_model": None,
             "created_at": None,
             "updated_at": None,
@@ -176,7 +176,7 @@ async def test_save_chat_updates_timestamps(tmp_path):
         "metadata": {
             "title": None,
             "summary": None,
-            "system_prompt_key": None,
+            "system_prompt_path": None,
             "default_model": None,
             "created_at": None,
             "updated_at": None,
@@ -211,7 +211,7 @@ async def test_save_chat_json_format(tmp_path):
         "metadata": {
             "title": "Formatted Test",
             "summary": None,
-            "system_prompt_key": None,
+            "system_prompt_path": None,
             "default_model": None,
             "created_at": None,
             "updated_at": None,
