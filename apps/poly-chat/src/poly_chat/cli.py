@@ -13,7 +13,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 
-from . import profile, chat
+from . import profile, chat, hex_id
 from .commands import CommandHandler
 from .keys.loader import load_api_key, validate_api_key
 from .streaming import display_streaming_response
@@ -62,6 +62,8 @@ class SessionState:
     system_prompt: Optional[str] = None
     system_prompt_key: Optional[str] = None
     retry_mode: bool = False
+    message_hex_ids: dict[int, str] = field(default_factory=dict)
+    hex_id_set: set[str] = field(default_factory=set)
     _provider_cache: dict[tuple[str, str], ProviderInstance] = field(
         default_factory=dict
     )
@@ -77,6 +79,42 @@ class SessionState:
     ) -> None:
         """Cache a provider instance."""
         self._provider_cache[(provider_name, api_key)] = instance
+
+
+def initialize_message_hex_ids(session: SessionState) -> None:
+    """Initialize hex IDs for all messages in the current chat.
+
+    Args:
+        session: Session state with chat data
+
+    This function assigns hex IDs to all existing messages and updates
+    the session's hex ID tracking structures.
+    """
+    # Clear existing IDs
+    session.message_hex_ids.clear()
+    session.hex_id_set.clear()
+
+    # Assign IDs to all messages
+    if session.chat and "messages" in session.chat:
+        message_count = len(session.chat["messages"])
+        session.message_hex_ids = hex_id.assign_hex_ids(
+            message_count, session.hex_id_set
+        )
+
+
+def assign_new_message_hex_id(session: SessionState, message_index: int) -> str:
+    """Assign hex ID to a newly added message.
+
+    Args:
+        session: Session state
+        message_index: Index of the new message
+
+    Returns:
+        The generated hex ID
+    """
+    new_hex_id = hex_id.generate_hex_id(session.hex_id_set)
+    session.message_hex_ids[message_index] = new_hex_id
+    return new_hex_id
 
 
 def setup_logging(log_file: Optional[str] = None) -> None:
@@ -240,6 +278,10 @@ async def repl_loop(
             chat_data, system_prompt_key=system_prompt_key
         )
 
+    # Initialize hex IDs for loaded chat
+    if chat_data:
+        initialize_message_hex_ids(session)
+
     # Initialize command handler (pass session as dict for compatibility)
     session_dict = {
         "current_ai": session.current_ai,
@@ -249,6 +291,8 @@ async def repl_loop(
         "chat_path": chat_path,
         "system_prompt": session.system_prompt,
         "retry_mode": session.retry_mode,
+        "message_hex_ids": session.message_hex_ids,
+        "hex_id_set": session.hex_id_set,
     }
     cmd_handler = CommandHandler(session_dict)
 
@@ -331,6 +375,9 @@ async def repl_loop(
                         session_dict["chat"] = chat_data
                         session_dict["chat_path"] = chat_path
 
+                        # Initialize hex IDs
+                        initialize_message_hex_ids(session)
+
                         print(f"Created new chat: {Path(chat_path).name}")
                         print()
 
@@ -351,6 +398,9 @@ async def repl_loop(
                         session_dict["chat"] = chat_data
                         session_dict["chat_path"] = chat_path
 
+                        # Initialize hex IDs
+                        initialize_message_hex_ids(session)
+
                         print(f"Opened chat: {Path(chat_path).name}")
                         print()
 
@@ -366,6 +416,10 @@ async def repl_loop(
                         session.chat = {}
                         session_dict["chat"] = {}
                         session_dict["chat_path"] = None
+
+                        # Clear hex IDs
+                        session.message_hex_ids.clear()
+                        session.hex_id_set.clear()
 
                         print("Chat closed")
                         print()
@@ -389,6 +443,10 @@ async def repl_loop(
                         session.chat = {}
                         session_dict["chat"] = {}
                         session_dict["chat_path"] = None
+
+                        # Clear hex IDs
+                        session.message_hex_ids.clear()
+                        session.hex_id_set.clear()
 
                         print(f"Deleted and closed chat: {filename}")
                         print()
@@ -425,13 +483,21 @@ async def repl_loop(
             if session.retry_mode and chat_data["messages"]:
                 last_msg = chat_data["messages"][-1]
                 if last_msg["role"] == "assistant":
+                    last_index = len(chat_data["messages"]) - 1
                     chat_data["messages"].pop()
+                    # Remove hex ID for popped message
+                    if last_index in session.message_hex_ids:
+                        hex_to_remove = session.message_hex_ids.pop(last_index)
+                        session.hex_id_set.discard(hex_to_remove)
                     print("[Retry mode: replacing last response]")
                 session.retry_mode = False
                 session_dict["retry_mode"] = False
 
             # NOW add user message (after validation passed)
             chat.add_user_message(chat_data, user_input)
+            # Assign hex ID to new user message
+            new_msg_index = len(chat_data["messages"]) - 1
+            assign_new_message_hex_id(session, new_msg_index)
 
             # Get messages for AI
             messages = chat.get_messages_for_ai(chat_data)
@@ -451,6 +517,9 @@ async def repl_loop(
                 chat.add_assistant_message(
                     chat_data, response_text, actual_model
                 )
+                # Assign hex ID to new assistant message
+                new_msg_index = len(chat_data["messages"]) - 1
+                assign_new_message_hex_id(session, new_msg_index)
 
                 # Save chat history
                 await chat.save_chat(
@@ -471,7 +540,12 @@ async def repl_loop(
                     chat_data["messages"]
                     and chat_data["messages"][-1]["role"] == "user"
                 ):
+                    last_index = len(chat_data["messages"]) - 1
                     chat_data["messages"].pop()
+                    # Remove hex ID for popped message
+                    if last_index in session.message_hex_ids:
+                        hex_to_remove = session.message_hex_ids.pop(last_index)
+                        session.hex_id_set.discard(hex_to_remove)
                 print()
                 continue
 
@@ -484,7 +558,12 @@ async def repl_loop(
                     chat_data["messages"]
                     and chat_data["messages"][-1]["role"] == "user"
                 ):
+                    last_index = len(chat_data["messages"]) - 1
                     chat_data["messages"].pop()
+                    # Remove hex ID for popped message
+                    if last_index in session.message_hex_ids:
+                        hex_to_remove = session.message_hex_ids.pop(last_index)
+                        session.hex_id_set.discard(hex_to_remove)
 
                 # Add error message to chat
                 chat.add_error_message(
@@ -492,6 +571,9 @@ async def repl_loop(
                     str(e),
                     {"provider": session.current_ai, "model": session.current_model},
                 )
+                # Assign hex ID to new error message
+                new_msg_index = len(chat_data["messages"]) - 1
+                assign_new_message_hex_id(session, new_msg_index)
 
                 # Save chat history with error
                 await chat.save_chat(

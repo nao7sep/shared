@@ -5,7 +5,7 @@ This module handles parsing and executing commands like /model, /gpt, /retry, et
 
 from typing import Optional, Any
 from pathlib import Path
-from . import models
+from . import models, hex_id
 from .chat import (
     update_metadata,
     delete_message_and_following,
@@ -233,7 +233,7 @@ class CommandHandler:
         """Rewind chat history by deleting message at index and all following.
 
         Args:
-            args: Message index (0-based) or "last" to rewind to last message
+            args: Message index (0-based), hex ID, or "last" to rewind to last message
 
         Returns:
             Confirmation message
@@ -251,19 +251,41 @@ class CommandHandler:
 
         if args == "last":
             index = len(messages) - 1
+        elif hex_id.is_hex_id(args):
+            # Look up hex ID
+            hex_map = self.session.get("message_hex_ids", {})
+            index = hex_id.get_message_index(args, hex_map)
+            if index is None:
+                raise ValueError(f"Hex ID '{args}' not found")
         else:
             try:
                 index = int(args)
             except ValueError:
-                raise ValueError("Invalid message index. Use a number or 'last'")
+                raise ValueError("Invalid message index. Use a number, hex ID, or 'last'")
 
         try:
+            # Get hex ID for display (if available)
+            hex_map = self.session.get("message_hex_ids", {})
+            hex_display = hex_id.get_hex_id(index, hex_map)
+            hex_str = f" [{hex_display}]" if hex_display else ""
+
             count = delete_message_and_following(chat, index)
+
+            # Update hex ID tracking - remove deleted messages
+            if hex_map:
+                # Get the list of indices to remove
+                indices_to_remove = list(range(index, index + count))
+                for idx in indices_to_remove:
+                    if idx in hex_map:
+                        removed_hex = hex_map.pop(idx)
+                        hex_id_set = self.session.get("hex_id_set", set())
+                        hex_id_set.discard(removed_hex)
+
             # Save chat history after deletion
             chat_path = self.session.get("chat_path")
             if chat_path:
                 await save_chat(chat_path, chat)
-            return f"Deleted {count} message(s) from index {index} onwards"
+            return f"Deleted {count} message(s) from index {index}{hex_str} onwards"
         except IndexError:
             raise ValueError(
                 f"Message index {index} out of range (0-{len(messages)-1})"

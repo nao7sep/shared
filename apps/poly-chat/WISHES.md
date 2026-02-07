@@ -351,3 +351,108 @@ some ais, including mistral, dont support stream_options. current mistral provid
 if perplexity doesnt support consecutive same-role messages, let's merge them when we convert the conversation data for the openai sdk, but let's make sure the original user messages in the conversation data wont be affected. we need to well-document this in the perplexity provider.
 
 please set all providers' default timeout to 30 seconds. reasoning/searching models will take longer. if something doesnt work, i'll update the timeout value in the profile. model-based timeout settings would be scope creep because this is a chat app and we wouldnt run a deep research command in here for example.
+
+---
+
+1. system prompt
+
+in multiple places, we use the identifier "system_prompt_key." in this app, it is always a file where its entire content is one system prompt. i dont think i'll complicate it by permitting multiple system prompts in a json file or something. so, system_prompt_key should be renamed to system_prompt_path which represents a path.
+
+then, we should use system_prompt_mapped_path or something you would like to clearly distinguish the original path string found in the profile or provided by the user and the mapped one that is always absolute because we'll implement a feature to dynamically change system prompt file and save the new setting in the chat history file for the next run. the path should be relative for security reasons. so, if the original path starts with ~ or @, we should store it as-is in the chat history file.
+
+/system <path> should change the path. path is mapped if necessary, but not to current directory. it is unreliable and may introduce security vulnerabilities. "/system-- should delete the system prompt path from the chat session, making it run without a system prompt from the next interaction. "/system default" should restore it to the one specified in the profile (if any).
+
+2. secret mode
+
+/secret should toggle secret mode on/off. "/secret on" and "/secret off" must be supported to make it more explicit. when in secret mode, right above the user input field, there should be a message that the chat is in the secret mode.
+
+/secret <entire user message> too should work. it's a quick way to ask a question without logging anything. one use case is "did i talk about this?" without actually writing it in detail. or, "what else should i add to make the context better for real problem solving?"
+
+secret mode does NOT support continuous interactions. rather, it is a one-shot feature to ask whatever the user wants without adding anything to the chat log both in the file and on the ram. even if the user asks 100 questions, in each time, only the messages before initiating the secret mode will be sent to the ai as context.
+
+3. -- support
+
+/system-- will delete the system prompt from the chat session. it should work for /title and /summary too. "/title" alone will no longer delete the title. it will use an ai to generate it. i will use /title and /summary a lot for ai generation. these shortest forms shouldnt be just deleting data. 
+
+4. safe command
+
+safe command is not implemented. let's do it.
+
+5. one more ai model setting
+
+for title/summary generation and the smart context feature i will explain later, we need another ai model setting.
+
+basically, this secondary ai will work in the background (if necessary) to assist the chat. i think this ai model should be independent. otherwise, when used for summarization of EACH message, depending on the ai, summarization styles may be inconsistent. like, we use claude first. we switch to deepseek because it knows so much more regarding china. if that also switches the assistive ai model to deepseek and deepseek starts generating some pending summaries, they might differ greatly from what claude has generated.
+
+in most cases, we will just go on with the default ai. so, default ai in the profile will be used for chat AND assist. we can change the chat model by commands like /gpt and /model and there should be another command to set the other ai model.
+
+please refine the terminology too.
+
+6. revert to default values
+
+/model default should set the chat model back to the default model specified in the profile. this must work for the other ai model too. what else should be able to be reverted?
+
+7. retry command
+
+retry command is buggy. it added temporary interactions into the chat history when i tested it.
+
+let's say we have 2 interactions (user => assistant => user => assistant) and then dont like the 3rd response from the assistant. we initiate the retry mode. then, for each interaction in this mode, app sends ONLY the first 2 interactions of chat history to the ai to get a NEW 3rd response from the ai. if the user adjusts the prompt again and again and gets a satisfactory response, user runs a command to replace the 3rd interaction (which is already in the chat history) with the new one. so, we need to delete the last 2 messages and add that selected interaction of messages to the chat history.
+
+retry mode is technically an infinite loop. once we initiate it, user can ask 100 different questions if they wish. at some point, user will need to get out of the loop without changing the last interaction OR replace it with one of the interactions within the loop. so, user wont be typing /retry again and again in the loop.
+
+when the chat is in the retry mode, user should see a message to acknowledge that the chat is in the retry mode like in the secret mode.
+
+8. purge command
+
+we should have /purge to be able to directly delete just one user/assistant/error message. this will break the context. that is why the abrupt nuance of "purge" may fit the purpose.
+
+9. history/show commands
+
+history will show a list of previous messages. show will show one specific message. we cant always show all messages entirely. so, there should be options and /history should have reasonable default parameters.
+
+10. smart context feature
+
+this will not be implemented now, but please know this idea now and make the code architecture ready for it.
+
+eventually, i will implement a feature to generate a summary for each message.
+
+these message summaries will be context aware. let's say we have:
+
+user message 1
+assistant message 1
+user message 2
+assistant message 2
+
+and we want to minimize the context.
+
+then, if we summarize each message individually, as ais are generally stateless, there's no guarantee that the summaries will come out in a similar way.
+
+so, for summarizing each message, we always send 3 except for the first user message which doesnt have a prior assistant message.
+
+logic will be like:
+
+1. ask the ai to summarize user message 1 so that getting assistant message 1 as a result of the summarized user message 1 will still be natural
+2. ask the ai to summarize assistant message 1 so that user message 1 and user message 2 will be naturally connected via the summarized assistant message 1
+3. it will go on like this; only if the message we are willing to summarize has a following message, we can summarize it in the context aware way
+
+this will of course consume more tokens, but the summaries should be better. if summaries too are stored in the chat history file to sustain SUPER long chats (like 1000+ interactions in years of time), it is reasonable to spend some money to generate high quality, context-aware summaries to avoid exponential rise of cost.
+
+IF i need this feature, i will implement it. if i dont, i will let myself just forget about it. summaries can be generated any time as they are not source of truth. i might even make an individual file or a local sqlite database for summaries (together with vector data for rag). so, this is merely an idea. please note it and spare some room for this feature when you update the design.
+
+11. 3+ digit hex id.
+
+each message will have a temporary id. it'll be a 3+ digit hex id. they wont be saved in the chat history. so, on each run of the same chat, they will change. that is ok.
+
+they will work as primary keys for message purging, rewinding, etc. so, they will be unique.
+
+to generate an id, we will maintain a set of existing ids. we generate one randomly. if it's in the list, we try again a reasonable number of times. then, we increase the number of digits. 3 digits will support 16*16*16 messages. if we try 3 times before we increase the digit count, we shouldnt have to see many 4 digit ids.
+
+12. misc
+
+should we use --default rather than just default? what about --on and --off?
+
+error messages too can be in the chat history. that is a safety feature. if the purpose of the chat is context building and user is brainstorming for example, just because the ai fails, user shouldnt lose what they have typed. so, the user message AND the error message will be in the chat history. with an error message, chat of course cant go on. when there's an pending error, user should see a message like /retry and /secret.
+
+i think i will change the "--" thing a little. it should have a space before it. so, it'll be like "/system --". it makes more sense. "--" represents None or just "not set" and we are setting the meaning of "--" rather than decrementing something. "-" alone is an option as well, but "--" is more explicit.
+
+please make sure current directory is never used in the app.
