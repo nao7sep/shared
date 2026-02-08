@@ -89,12 +89,17 @@ pc -p <profile-path> -c <chat-path>
 
 # Enable error logging
 pc -p <profile-path> -l debug.log
+
+# Override strict system-prompt loading for this run
+pc -p <profile-path> --strict-system-prompt
+pc -p <profile-path> --no-strict-system-prompt
 ```
 
 CLI path flags use the same path mapping rules:
 - `-p/--profile` (profile path)
 - `-c/--chat` (chat history path)
 - `-l/--log` (error log path)
+- `--strict-system-prompt` / `--no-strict-system-prompt` (override strict prompt loading)
 
 Use `~/...`, `@/...`, or absolute paths. Plain relative paths are rejected.
 
@@ -156,7 +161,7 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/history all` - Show all messages
 - `/history --errors` - Show error messages only
 - `/show <hex_id>` - Show full content of one message
-- `/status` - Show current profile/chat/session status
+- `/status` - Show current profile/chat/session status (including prompt strict mode)
 
 **Metadata:**
 - `/title` - Generate title using AI
@@ -202,6 +207,7 @@ When commands show chat lists for selection (`/open`, `/switch`, `/rename`, `/de
     "gemini": "gemini-3-flash-preview"
   },
   "timeout": 30,
+  "system_prompt_strict": false,
   "input_mode": "quick",
   "system_prompt": "@/system-prompts/default.txt",
   "chats_dir": "~/poly-chat-logs",
@@ -339,14 +345,17 @@ poetry run mypy src/poly_chat
 ## Architecture
 
 - `profile.py` - Profile management and path mapping
+- `session_manager.py` - Unified runtime session state, timeout/cache control
 - `chat.py` - Chat history data management
 - `message_formatter.py` - Line array formatting
 - `keys/` - API key management (env vars, Keychain, JSON)
 - `ai/` - AI provider implementations
 - `models.py` - Model registry and provider mapping
-- `commands.py` - Command system
+- `commands/` - Command handler and command mixins
 - `streaming.py` - Streaming response handling
-- `cli.py` - REPL loop and main entry point
+- `repl.py` - Interactive REPL loop
+- `orchestrator.py` - Chat flow orchestration and persistence decisions
+- `cli.py` - CLI bootstrap and app startup
 
 ## License
 
