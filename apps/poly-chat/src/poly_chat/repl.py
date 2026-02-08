@@ -46,7 +46,7 @@ async def repl_loop(
     if input_mode not in ("quick", "compose"):
         input_mode = "quick"
 
-    # Create SessionManager (replaces SessionState + session_dict)
+    # Create SessionManager as single runtime source of truth.
     manager = SessionManager(
         profile=profile_data,
         current_ai=profile_data["default_ai"],
@@ -54,6 +54,9 @@ async def repl_loop(
         helper_ai=helper_ai_name,
         helper_model=helper_model_name,
         chat=chat_data,
+        chat_path=chat_path,
+        profile_path=profile_path,
+        log_file=log_file,
         system_prompt=system_prompt,
         system_prompt_path=system_prompt_path,
         input_mode=input_mode,
@@ -62,13 +65,8 @@ async def repl_loop(
     if chat_data and system_prompt_path and not chat_data["metadata"].get("system_prompt_path"):
         chat.update_metadata(chat_data, system_prompt_path=system_prompt_path)
 
-    # Create session_dict to pass file paths to CommandHandler
-    session_dict = manager.to_dict()
-    session_dict["profile_path"] = profile_path
-    session_dict["chat_path"] = chat_path
-    session_dict["log_file"] = log_file
-    cmd_handler = CommandHandler(manager, session_dict)
-    orchestrator = ChatOrchestrator(manager, session_dict)
+    cmd_handler = CommandHandler(manager)
+    orchestrator = ChatOrchestrator(manager)
     chat_metadata = manager.chat.get("metadata", {}) if isinstance(manager.chat, dict) else {}
     log_event(
         "session_start",
@@ -201,10 +199,9 @@ async def repl_loop(
                         # Update local chat state from action
                         if action.chat_path is not None:
                             chat_path = action.chat_path
-                            session_dict["chat_path"] = chat_path
+                            manager.chat_path = chat_path
                         if action.chat_data is not None:
                             chat_data = action.chat_data
-                            session_dict["chat"] = chat_data
 
                         # Print message if provided
                         if action.message:

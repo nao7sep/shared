@@ -1,8 +1,7 @@
 """Unified session management for PolyChat.
 
 This module provides a SessionManager class that wraps SessionState and provides
-a clean interface for session management, eliminating the need for manual
-synchronization between SessionState and session_dict.
+a clean interface for session management.
 """
 
 from typing import Any, Optional
@@ -20,7 +19,7 @@ class SessionManager:
     - Encapsulated state transitions (chat switching, mode changes)
     - Automatic hex ID management
     - Provider caching
-    - Backward compatibility via dict-like access (for gradual migration)
+    - Dict-like access helpers for diagnostics and tests
 
     Example:
         manager = SessionManager(
@@ -33,7 +32,7 @@ class SessionManager:
         print(manager.current_ai)
         manager.switch_chat(chat_path, chat_data)
 
-        # Dict-like access (backward compatibility)
+        # Dict-like access
         print(manager["current_ai"])
         manager["input_mode"] = "compose"
     """
@@ -46,6 +45,9 @@ class SessionManager:
         helper_ai: Optional[str] = None,
         helper_model: Optional[str] = None,
         chat: Optional[dict[str, Any]] = None,
+        chat_path: Optional[str] = None,
+        profile_path: Optional[str] = None,
+        log_file: Optional[str] = None,
         system_prompt: Optional[str] = None,
         system_prompt_path: Optional[str] = None,
         input_mode: str = "quick",
@@ -59,6 +61,9 @@ class SessionManager:
             helper_ai: Helper AI provider name (defaults to current_ai)
             helper_model: Helper model name (defaults to current_model)
             chat: Current chat data (optional)
+            chat_path: Current chat file path (optional)
+            profile_path: Active profile file path (optional)
+            log_file: Active log file path (optional)
             system_prompt: System prompt text (optional)
             system_prompt_path: System prompt path (optional)
             input_mode: Input mode ("quick" or "compose")
@@ -74,6 +79,9 @@ class SessionManager:
             helper_model=helper_model,
             profile=profile,
             chat=chat or {},
+            chat_path=chat_path,
+            profile_path=profile_path,
+            log_file=log_file,
             system_prompt=system_prompt,
             system_prompt_path=system_prompt_path,
             input_mode=input_mode,
@@ -152,6 +160,33 @@ class SessionManager:
         self._state.system_prompt_path = value
 
     @property
+    def chat_path(self) -> Optional[str]:
+        """Current chat file path."""
+        return self._state.chat_path
+
+    @chat_path.setter
+    def chat_path(self, value: Optional[str]) -> None:
+        self._state.chat_path = value
+
+    @property
+    def profile_path(self) -> Optional[str]:
+        """Current profile file path."""
+        return self._state.profile_path
+
+    @profile_path.setter
+    def profile_path(self, value: Optional[str]) -> None:
+        self._state.profile_path = value
+
+    @property
+    def log_file(self) -> Optional[str]:
+        """Current log file path."""
+        return self._state.log_file
+
+    @log_file.setter
+    def log_file(self, value: Optional[str]) -> None:
+        self._state.log_file = value
+
+    @property
     def input_mode(self) -> str:
         """Input mode ("quick" or "compose")."""
         return self._state.input_mode
@@ -207,10 +242,9 @@ class SessionManager:
             return default
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary (for backward compatibility).
+        """Convert state to a plain dictionary.
 
-        Returns a dict representation of the session state.
-        Used during gradual migration from session_dict to SessionManager.
+        Useful for diagnostics, snapshots, and tests.
         """
         return {
             "current_ai": self._state.current_ai,
@@ -219,6 +253,9 @@ class SessionManager:
             "helper_model": self._state.helper_model,
             "profile": self._state.profile,
             "chat": self._state.chat,
+            "chat_path": self._state.chat_path,
+            "profile_path": self._state.profile_path,
+            "log_file": self._state.log_file,
             "system_prompt": self._state.system_prompt,
             "system_prompt_path": self._state.system_prompt_path,
             "input_mode": self._state.input_mode,
@@ -246,6 +283,7 @@ class SessionManager:
         """
         # Update chat data
         self._state.chat = chat_data
+        self._state.chat_path = chat_path
 
         # Reinitialize hex IDs for new chat
         initialize_message_hex_ids(self._state)
@@ -256,6 +294,7 @@ class SessionManager:
     def close_chat(self) -> None:
         """Close current chat and clear related state."""
         self._state.chat = {}
+        self._state.chat_path = None
         self._state.message_hex_ids.clear()
         self._state.hex_id_set.clear()
         self._clear_chat_scoped_state()

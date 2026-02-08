@@ -59,15 +59,13 @@ class ChatOrchestrator:
             chat_data = action.chat_data
     """
 
-    def __init__(self, session_manager: SessionManager, session_dict: dict[str, Any]):
+    def __init__(self, session_manager: SessionManager):
         """Initialize orchestrator.
 
         Args:
             session_manager: SessionManager instance for state access
-            session_dict: Legacy dict with REPL-specific paths (chat_path, profile_path, log_file)
         """
         self.manager = session_manager
-        self.session_dict = session_dict
 
     async def handle_command_response(
         self,
@@ -224,6 +222,7 @@ class ChatOrchestrator:
     def _handle_rename_current(self, signal: str) -> OrchestratorAction:
         """Handle __RENAME_CURRENT__ signal."""
         new_chat_path = signal.split(":", 1)[1]
+        self.manager.chat_path = new_chat_path
 
         log_event("chat_rename", chat_file=new_chat_path)
 

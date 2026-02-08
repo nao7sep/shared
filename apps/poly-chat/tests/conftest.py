@@ -106,22 +106,15 @@ def mock_session_manager():
         current_ai="claude",
         current_model="claude-haiku-4-5",
         chat={"metadata": {}, "messages": []},
+        chat_path="/test/chat.json",
+        profile_path="/test/profile.json",
+        log_file="/test/log.txt",
     )
     return manager
 
 
 @pytest.fixture
-def mock_session_dict():
-    """Create a mock session_dict for testing commands."""
-    return {
-        "profile_path": "/test/profile.json",
-        "chat_path": "/test/chat.json",
-        "log_file": "/test/log.txt",
-    }
-
-
-@pytest.fixture
-def command_handler(mock_session_manager, mock_session_dict):
-    """Create a CommandHandler with proper manager and session_dict."""
+def command_handler(mock_session_manager):
+    """Create a CommandHandler with SessionManager state only."""
     from src.poly_chat.commands import CommandHandler
-    return CommandHandler(mock_session_manager, mock_session_dict)
+    return CommandHandler(mock_session_manager)

@@ -323,15 +323,12 @@ class TestChatScopedStateReset:
         )
         session.retry_base_messages = [{"role": "user", "content": "old"}]
 
-        session_dict = {"retry_mode": True}
-
-        reset_chat_scoped_state(session, session_dict)
+        reset_chat_scoped_state(session)
 
         assert session.retry_mode is False
         assert session.retry_base_messages == []
         assert session.retry_current_user_msg is None
         assert session.retry_current_assistant_msg is None
-        assert session_dict["retry_mode"] is False
 
     def test_reset_clears_secret_state(self):
         """Test that reset clears secret mode state."""
@@ -346,13 +343,10 @@ class TestChatScopedStateReset:
         )
         session.secret_base_messages = [{"role": "user", "content": "secret"}]
 
-        session_dict = {"secret_mode": True}
-
-        reset_chat_scoped_state(session, session_dict)
+        reset_chat_scoped_state(session)
 
         assert session.secret_mode is False
         assert session.secret_base_messages == []
-        assert session_dict["secret_mode"] is False
 
     def test_reset_both_modes_simultaneously(self):
         """Test resetting both retry and secret mode together."""
@@ -369,16 +363,12 @@ class TestChatScopedStateReset:
         session.retry_base_messages = [{"role": "user", "content": "retry"}]
         session.secret_base_messages = [{"role": "user", "content": "secret"}]
 
-        session_dict = {"retry_mode": True, "secret_mode": True}
-
-        reset_chat_scoped_state(session, session_dict)
+        reset_chat_scoped_state(session)
 
         assert session.retry_mode is False
         assert session.secret_mode is False
         assert session.retry_base_messages == []
         assert session.secret_base_messages == []
-        assert session_dict["retry_mode"] is False
-        assert session_dict["secret_mode"] is False
 
 
 class TestErrorDetection:

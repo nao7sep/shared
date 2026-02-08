@@ -53,6 +53,9 @@ def mock_session_manager_safe():
         helper_ai="claude",
         helper_model="claude-haiku-4-5",
         chat=chat_data,
+        chat_path="/test/chat.json",
+        profile_path="/test/profile.json",
+        log_file="/test/log.txt",
     )
 
     # Set up hex IDs as the tests expect
@@ -67,19 +70,9 @@ def mock_session_manager_safe():
 
 
 @pytest.fixture
-def mock_session_dict_safe():
-    """Create a mock session_dict for safe tests."""
-    return {
-        "profile_path": "/test/profile.json",
-        "chat_path": "/test/chat.json",
-        "log_file": "/test/log.txt",
-    }
-
-
-@pytest.fixture
-def command_handler_safe(mock_session_manager_safe, mock_session_dict_safe):
+def command_handler_safe(mock_session_manager_safe):
     """Create a CommandHandler for safe tests."""
-    return CommandHandler(mock_session_manager_safe, mock_session_dict_safe)
+    return CommandHandler(mock_session_manager_safe)
 
 
 @pytest.mark.asyncio

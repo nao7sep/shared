@@ -19,19 +19,9 @@ def session_manager():
 
 
 @pytest.fixture
-def session_dict():
-    """Create a test session dict."""
-    return {
-        "profile_path": "/test/profile.json",
-        "chat_path": "/test/chat.json",
-        "log_file": "/test/log.txt",
-    }
-
-
-@pytest.fixture
-def orchestrator(session_manager, session_dict):
+def orchestrator(session_manager):
     """Create a test orchestrator."""
-    return ChatOrchestrator(session_manager, session_dict)
+    return ChatOrchestrator(session_manager)
 
 
 @pytest.fixture

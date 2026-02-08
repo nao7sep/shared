@@ -50,6 +50,9 @@ def mock_session_manager_purge():
         current_ai="claude",
         current_model="claude-haiku-4-5",
         chat=chat_data,
+        chat_path="/tmp/test-chat.json",
+        profile_path="/test/profile.json",
+        log_file="/test/log.txt",
     )
 
     # Set up hex IDs as the tests expect
@@ -65,23 +68,13 @@ def mock_session_manager_purge():
 
 
 @pytest.fixture
-def mock_session_dict_purge():
-    """Create a mock session_dict for purge tests."""
-    return {
-        "profile_path": "/test/profile.json",
-        "chat_path": "/tmp/test-chat.json",
-        "log_file": "/test/log.txt",
-    }
-
-
-@pytest.fixture
-def command_handler_purge(mock_session_manager_purge, mock_session_dict_purge):
+def command_handler_purge(mock_session_manager_purge):
     """Create a CommandHandler for purge tests."""
-    return CommandHandler(mock_session_manager_purge, mock_session_dict_purge)
+    return CommandHandler(mock_session_manager_purge)
 
 
 @pytest.mark.asyncio
-async def test_purge_no_args(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_no_args(command_handler_purge, mock_session_manager_purge):
     """Test /purge without arguments."""
     handler = command_handler_purge
 
@@ -91,7 +84,7 @@ async def test_purge_no_args(command_handler_purge, mock_session_manager_purge, 
 
 
 @pytest.mark.asyncio
-async def test_purge_single_message(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_single_message(command_handler_purge, mock_session_manager_purge):
     """Test purging a single message."""
     handler = command_handler_purge
 
@@ -114,7 +107,7 @@ async def test_purge_single_message(command_handler_purge, mock_session_manager_
 
 
 @pytest.mark.asyncio
-async def test_purge_multiple_messages(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_multiple_messages(command_handler_purge, mock_session_manager_purge):
     """Test purging multiple messages."""
     handler = command_handler_purge
 
@@ -132,7 +125,7 @@ async def test_purge_multiple_messages(command_handler_purge, mock_session_manag
 
 
 @pytest.mark.asyncio
-async def test_purge_invalid_hex_id(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_invalid_hex_id(command_handler_purge, mock_session_manager_purge):
     """Test purging with invalid hex ID."""
     handler = command_handler_purge
 
@@ -146,7 +139,7 @@ async def test_purge_invalid_hex_id(command_handler_purge, mock_session_manager_
 
 
 @pytest.mark.asyncio
-async def test_purge_reassigns_hex_ids(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_reassigns_hex_ids(command_handler_purge, mock_session_manager_purge):
     """Test that purge reassigns hex IDs to remaining messages."""
     handler = command_handler_purge
 
@@ -164,7 +157,7 @@ async def test_purge_reassigns_hex_ids(command_handler_purge, mock_session_manag
 
 
 @pytest.mark.asyncio
-async def test_purge_no_messages(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_no_messages(command_handler_purge, mock_session_manager_purge):
     """Test purge with no messages in chat."""
     mock_session_manager_purge.chat["messages"] = []
 
@@ -176,7 +169,7 @@ async def test_purge_no_messages(command_handler_purge, mock_session_manager_pur
 
 
 @pytest.mark.asyncio
-async def test_purge_updates_hex_id_set(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_updates_hex_id_set(command_handler_purge, mock_session_manager_purge):
     """Test that purge updates the hex_id_set."""
     handler = command_handler_purge
 
@@ -193,7 +186,7 @@ async def test_purge_updates_hex_id_set(command_handler_purge, mock_session_mana
 
 
 @pytest.mark.asyncio
-async def test_purge_saves_chat(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_saves_chat(command_handler_purge, mock_session_manager_purge):
     """Test that purge saves chat after deletion."""
     handler = command_handler_purge
 
@@ -208,7 +201,7 @@ async def test_purge_saves_chat(command_handler_purge, mock_session_manager_purg
 
 
 @pytest.mark.asyncio
-async def test_purge_multiple_messages_order_independent(command_handler_purge, mock_session_manager_purge, mock_session_dict_purge):
+async def test_purge_multiple_messages_order_independent(command_handler_purge, mock_session_manager_purge):
     """Test that purge works regardless of hex ID order."""
     handler = command_handler_purge
 

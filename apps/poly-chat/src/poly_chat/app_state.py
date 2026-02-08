@@ -16,6 +16,9 @@ class SessionState:
     helper_model: str
     profile: dict[str, Any]
     chat: dict[str, Any]
+    chat_path: Optional[str] = None
+    profile_path: Optional[str] = None
+    log_file: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_path: Optional[str] = None
     input_mode: str = "quick"
@@ -57,17 +60,15 @@ def assign_new_message_hex_id(session: SessionState, message_index: int) -> str:
     return new_hex_id
 
 
-def reset_chat_scoped_state(session: SessionState, session_dict: dict[str, Any]) -> None:
+def reset_chat_scoped_state(session: SessionState) -> None:
     """Reset state that should not leak across chat boundaries."""
     session.retry_mode = False
     session.retry_base_messages.clear()
     session.retry_current_user_msg = None
     session.retry_current_assistant_msg = None
-    session_dict["retry_mode"] = False
 
     session.secret_mode = False
     session.secret_base_messages.clear()
-    session_dict["secret_mode"] = False
 
 
 def has_pending_error(chat_data: dict) -> bool:

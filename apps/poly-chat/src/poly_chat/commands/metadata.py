@@ -476,9 +476,9 @@ Keep descriptions brief (one line max). For found items, mention location if che
         """Show current session status and key paths."""
         profile_data = self.manager.profile
 
-        profile_path = self.session_dict.get("profile_path", "(unknown)")
-        chat_path = self.session_dict.get("chat_path")
-        log_file = self.session_dict.get("log_file")
+        profile_path = self.manager.profile_path or "(unknown)"
+        chat_path = self.manager.chat_path
+        log_file = self.manager.log_file
 
         chat_data = self.manager.chat or {}
         messages = chat_data.get("messages", []) if isinstance(chat_data, dict) else []

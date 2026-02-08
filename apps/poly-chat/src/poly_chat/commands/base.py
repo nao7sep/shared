@@ -12,15 +12,13 @@ if TYPE_CHECKING:
 
 
 class CommandHandlerBaseMixin:
-    def __init__(self, manager: "SessionManager", session_dict: dict[str, Any]):
+    def __init__(self, manager: "SessionManager"):
         """Initialize command handler.
 
         Args:
             manager: SessionManager instance for unified state access
-            session_dict: Legacy dict containing repl-specific paths (chat_path, profile_path, log_file)
         """
         self.manager = manager
-        self.session_dict = session_dict
 
     def _require_open_chat(
         self, *, need_messages: bool = False, need_metadata: bool = False
@@ -37,7 +35,7 @@ class CommandHandlerBaseMixin:
 
     async def _save_current_chat_if_open(self) -> None:
         """Persist current chat when a chat file is active."""
-        chat_path = self.session_dict.get("chat_path")
+        chat_path = self.manager.chat_path
         chat_data = self.manager.chat
         if chat_path and isinstance(chat_data, dict):
             from .. import commands as commands_module

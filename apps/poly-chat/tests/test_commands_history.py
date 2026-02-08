@@ -59,6 +59,9 @@ def mock_session_manager_with_messages():
         current_ai="claude",
         current_model="claude-haiku-4-5",
         chat=chat_data,
+        chat_path="/test/chat.json",
+        profile_path="/test/profile.json",
+        log_file="/test/log.txt",
     )
 
     # Set up hex IDs as the tests expect
@@ -76,19 +79,9 @@ def mock_session_manager_with_messages():
 
 
 @pytest.fixture
-def mock_session_dict_with_messages():
-    """Create a mock session_dict."""
-    return {
-        "profile_path": "/test/profile.json",
-        "chat_path": "/test/chat.json",
-        "log_file": "/test/log.txt",
-    }
-
-
-@pytest.fixture
-def command_handler_with_messages(mock_session_manager_with_messages, mock_session_dict_with_messages):
+def command_handler_with_messages(mock_session_manager_with_messages):
     """Create a CommandHandler with messages."""
-    return CommandHandler(mock_session_manager_with_messages, mock_session_dict_with_messages)
+    return CommandHandler(mock_session_manager_with_messages)
 
 
 @pytest.mark.asyncio

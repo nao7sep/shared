@@ -155,13 +155,12 @@ class TestChatSwitchingOrchestration:
             chat={"messages": [{"role": "user", "content": "test"}]},
         )
         initialize_message_hex_ids(session)
-        session_dict = {"retry_mode": False, "secret_mode": False}
 
         # Simulate closing chat
         session.chat = {}
         session.message_hex_ids.clear()
         session.hex_id_set.clear()
-        reset_chat_scoped_state(session, session_dict)
+        reset_chat_scoped_state(session)
 
         assert session.chat == {}
         assert session.message_hex_ids == {}
@@ -181,15 +180,12 @@ class TestChatSwitchingOrchestration:
             retry_mode=True,
             secret_mode=True,
         )
-        session_dict = {"retry_mode": True, "secret_mode": True}
 
         # Simulate chat switch
-        reset_chat_scoped_state(session, session_dict)
+        reset_chat_scoped_state(session)
 
         assert session.retry_mode is False
         assert session.secret_mode is False
-        assert session_dict["retry_mode"] is False
-        assert session_dict["secret_mode"] is False
 
 
 class TestRetryModeOrchestration:

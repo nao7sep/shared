@@ -34,25 +34,18 @@ def mock_session_manager_defaults():
         helper_ai="claude",
         helper_model="claude-haiku-4-5",
         chat=chat_data,
+        chat_path="/test/chat.json",
+        profile_path="/test/profile.json",
+        log_file="/test/log.txt",
     )
 
     return manager
 
 
 @pytest.fixture
-def mock_session_dict_defaults():
-    """Create a mock session_dict for defaults tests."""
-    return {
-        "profile_path": "/test/profile.json",
-        "chat_path": "/test/chat.json",
-        "log_file": "/test/log.txt",
-    }
-
-
-@pytest.fixture
-def command_handler_defaults(mock_session_manager_defaults, mock_session_dict_defaults):
+def command_handler_defaults(mock_session_manager_defaults):
     """Create a CommandHandler for defaults tests."""
-    return CommandHandler(mock_session_manager_defaults, mock_session_dict_defaults)
+    return CommandHandler(mock_session_manager_defaults)
 
 
 @pytest.mark.asyncio
