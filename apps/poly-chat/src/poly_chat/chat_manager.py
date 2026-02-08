@@ -6,7 +6,7 @@ This module handles listing, selecting, creating, renaming, and deleting chat fi
 import json
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any
 
 
@@ -74,8 +74,11 @@ def format_chat_info(chat: dict[str, Any], index: int) -> str:
     # Format updated time
     if chat["updated_at"]:
         try:
-            dt = datetime.fromisoformat(chat["updated_at"])
-            updated = dt.strftime("%Y-%m-%d %H:%M")
+            dt = datetime.fromisoformat(chat["updated_at"].replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                # Internal timestamps are UTC; assume UTC if tz is missing.
+                dt = dt.replace(tzinfo=timezone.utc)
+            updated = dt.astimezone().strftime("%Y-%m-%d %H:%M")
         except Exception:
             updated = "unknown"
     else:

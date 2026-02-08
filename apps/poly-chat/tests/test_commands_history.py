@@ -15,6 +15,7 @@ def mock_session_with_messages():
         "profile": {
             "default_ai": "claude",
             "models": {"claude": "claude-haiku-4-5"},
+            "input_mode": "quick",
             "api_keys": {}
         },
         "chat": {

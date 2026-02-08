@@ -246,6 +246,7 @@ def create_profile(path: str) -> dict[str, Any]:
             "deepseek": "deepseek-chat"
         },
         "timeout": 30,
+        "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "@/chats",
         "log_dir": "@/logs",

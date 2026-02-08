@@ -24,6 +24,7 @@ def sample_profile(temp_dir):
             "gemini": "gemini-3-flash-preview"
         },
         "timeout": 30,
+        "input_mode": "quick",
         "system_prompt": "You are a helpful assistant.",
         "chats_dir": str(temp_dir / "chats"),
         "log_dir": str(temp_dir / "logs"),

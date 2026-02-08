@@ -115,6 +115,7 @@ def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
         "default_ai": default_ai,
         "models": models,
         "timeout": 30,
+        "input_mode": "quick",
         "system_prompt": None,
         "chats_dir": str(temp_dir / "chats"),
         "log_dir": str(temp_dir / "logs"),

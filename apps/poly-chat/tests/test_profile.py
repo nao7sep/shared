@@ -107,6 +107,7 @@ def test_load_profile_valid(tmp_path):
             "openai": "gpt-5-mini"
         },
         "timeout": 30,
+        "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": str(chats_dir),
         "log_dir": str(log_dir),
@@ -137,6 +138,7 @@ def test_load_profile_maps_tilde_paths(tmp_path):
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": 30,
+        "input_mode": "quick",
         "system_prompt": "~/system-prompt.txt",
         "chats_dir": "~/chats",
         "log_dir": "~/logs",
@@ -161,6 +163,7 @@ def test_load_profile_maps_at_paths(tmp_path):
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": 30,
+        "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "@/chats",
         "log_dir": "@/logs",
@@ -186,6 +189,7 @@ def test_load_profile_maps_json_api_key_path(tmp_path):
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": 30,
+        "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "~/chats",
         "log_dir": "~/logs",
@@ -319,6 +323,7 @@ def test_validate_profile_timeout_zero_allowed():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": 0,
+        "input_mode": "quick",
         "chats_dir": "~/chats",
         "log_dir": "~/logs",
         "api_keys": {}
@@ -525,6 +530,7 @@ def test_validate_profile_valid_all_api_key_types():
             "grok": "grok-4-1-fast"
         },
         "timeout": 60,
+        "input_mode": "quick",
         "chats_dir": "~/chats",
         "log_dir": "~/logs",
         "api_keys": {

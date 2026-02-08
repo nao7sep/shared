@@ -15,6 +15,7 @@ def mock_session():
         "helper_model": "claude-haiku-4-5",
         "profile": {
             "default_ai": "claude",
+            "input_mode": "quick",
             "models": {
                 "claude": "claude-haiku-4-5",
             },

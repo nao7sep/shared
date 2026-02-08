@@ -4,6 +4,7 @@ This module handles parsing and executing commands like /model, /gpt, /retry, et
 """
 
 import math
+from datetime import datetime, timezone
 from typing import Optional, Any
 from pathlib import Path
 from . import models, hex_id, profile
@@ -93,6 +94,7 @@ class CommandHandler:
         command_map = {
             "model": self.set_model,
             "helper": self.set_helper,
+            "input": self.set_input_mode,
             "timeout": self.set_timeout,
             "system": self.set_system_prompt,
             "retry": self.retry_mode,
@@ -103,6 +105,7 @@ class CommandHandler:
             "purge": self.purge_messages,
             "history": self.show_history,
             "show": self.show_message,
+            "status": self.show_status,
             "title": self.set_title,
             "ai-title": self.generate_title,
             "summary": self.set_summary,
@@ -317,6 +320,39 @@ class CommandHandler:
 
         except ValueError:
             raise ValueError("Invalid timeout value. Use a number (e.g., /timeout 60) or 0 for no timeout.")
+
+    async def set_input_mode(self, args: str) -> str:
+        """Set or show input mode.
+
+        Modes:
+            quick: Enter sends, Alt/Option+Enter inserts newline
+            compose: Enter inserts newline, Alt/Option+Enter sends
+        """
+        current_mode = self.session.get("input_mode", "quick")
+
+        if not args:
+            if current_mode == "quick":
+                return "Input mode: quick (Enter sends, Alt/Option+Enter inserts newline)"
+            return "Input mode: compose (Enter inserts newline, Alt/Option+Enter sends)"
+
+        value = args.strip().lower()
+
+        if value == "default":
+            profile_mode = self.session["profile"].get("input_mode", "quick")
+            if profile_mode not in ("quick", "compose"):
+                profile_mode = "quick"
+            self.session["input_mode"] = profile_mode
+            if profile_mode == "quick":
+                return "Input mode restored to profile default: quick"
+            return "Input mode restored to profile default: compose"
+
+        if value in ("quick", "compose"):
+            self.session["input_mode"] = value
+            if value == "quick":
+                return "Input mode set to quick (Enter sends)"
+            return "Input mode set to compose (Enter inserts newline)"
+
+        raise ValueError("Invalid input mode. Use /input quick, /input compose, or /input default.")
 
     async def set_system_prompt(self, args: str) -> str:
         """Set or show system prompt path for current chat session.
@@ -1057,9 +1093,10 @@ Keep descriptions brief (one line max). For found items, mention location if che
             if timestamp:
                 try:
                     # Parse ISO format and simplify
-                    from datetime import datetime
                     dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                    time_str = dt.strftime("%Y-%m-%d %H:%M")
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    time_str = dt.astimezone().strftime("%Y-%m-%d %H:%M")
                 except (ValueError, TypeError, AttributeError):
                     time_str = timestamp[:16] if len(timestamp) >= 16 else timestamp
             else:
@@ -1124,9 +1161,10 @@ Keep descriptions brief (one line max). For found items, mention location if che
         # Format timestamp
         if timestamp and timestamp != "unknown":
             try:
-                from datetime import datetime
                 dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                time_str = dt.astimezone().strftime("%Y-%m-%d %H:%M:%S")
             except (ValueError, TypeError, AttributeError):
                 time_str = timestamp
         else:
@@ -1150,6 +1188,72 @@ Keep descriptions brief (one line max). For found items, mention location if che
             f"Message [{args.strip()}] - {role_display} ({time_str})",
             "━" * 60,
             content,
+            "━" * 60,
+        ]
+
+        return "\n".join(output)
+
+    async def show_status(self, args: str) -> str:
+        """Show current session status and key paths."""
+        session = self.session
+        profile_data = session["profile"]
+
+        profile_path = session.get("profile_path", "(unknown)")
+        profile_name = Path(profile_path).name if profile_path and profile_path != "(unknown)" else "(unknown)"
+        chat_path = session.get("chat_path")
+        log_file = session.get("log_file")
+
+        chat_data = session.get("chat") or {}
+        messages = chat_data.get("messages", []) if isinstance(chat_data, dict) else []
+        metadata = chat_data.get("metadata", {}) if isinstance(chat_data, dict) else {}
+
+        timeout = profile_data.get("timeout", 30)
+        if timeout == 0:
+            timeout_display = "0 (wait forever)"
+        else:
+            timeout_display = f"{timeout} seconds"
+
+        chat_title = metadata.get("title") or "(none)"
+        chat_summary = metadata.get("summary") or "(none)"
+
+        updated_local = "(unknown)"
+        updated_at = metadata.get("updated_at")
+        if updated_at:
+            try:
+                dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                updated_local = dt.astimezone().strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                updated_local = "(unknown)"
+
+        output = [
+            "Session Status",
+            "━" * 60,
+            f"Profile File: {profile_path}",
+            f"Chat File:    {chat_path or '(none)'}",
+            f"Log File:     {log_file or '(none)'}",
+            "",
+            "Chat",
+            f"Chat Title:   {chat_title}",
+            f"Chat Summary: {chat_summary}",
+            f"Messages:     {len(messages)}",
+            f"Updated:      {updated_local}",
+            "",
+            "Assistant",
+            f"Assistant:    {session.get('current_ai', '(unknown)')} ({session.get('current_model', '(unknown)')})",
+            f"Helper:       {session.get('helper_ai', '(unknown)')} ({session.get('helper_model', '(unknown)')})",
+            f"System Prompt:{' ' if session.get('system_prompt_path') else ''}{session.get('system_prompt_path') or '(none)'}",
+            f"Timeout:      {timeout_display}",
+            f"Input Mode:   {session.get('input_mode', 'quick')}",
+            "",
+            "Modes",
+            f"Secret Mode:  {'ON' if session.get('secret_mode') else 'OFF'}",
+            f"Retry Mode:   {'ON' if session.get('retry_mode') else 'OFF'}",
+            "",
+            "Paths",
+            f"Chats Dir:    {profile_data.get('chats_dir', '(unknown)')}",
+            f"Log Dir:      {profile_data.get('log_dir', '(unknown)')}",
             "━" * 60,
         ]
 
@@ -1399,6 +1503,10 @@ Model Management:
   /helper default   Restore to profile's default helper AI
 
 Configuration:
+  /input            Show current input mode
+  /input quick      Enter sends, Alt/Option+Enter inserts newline (default)
+  /input compose    Enter inserts newline, Alt/Option+Enter sends
+  /input default    Restore to profile default input mode
   /timeout          Show current timeout setting
   /timeout <secs>   Set timeout in seconds (0 = wait forever)
   /timeout default  Restore to profile's default timeout
@@ -1438,6 +1546,7 @@ History:
   /history all      Show all messages
   /history --errors Show only error messages
   /show <hex_id>    Show full content of specific message
+  /status           Show current profile/chat/session status
 
 Metadata:
   /title            Generate title using AI

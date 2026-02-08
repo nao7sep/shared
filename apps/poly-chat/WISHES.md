@@ -470,3 +470,19 @@ for each chat to run, app needs one chat history file. one chat history file per
 as for log files, let's make it official that only one log file is used for the ENTIRE run of the app (because it is bound to the profile) with an unique file name in the mandatory error log directory IF no error log file path has been specified in command line. when app makes one, the file name pattern should be poly-chat_YYYY-MM-DD_HH-MM-SS with an extension.
 
 should we use a plaintext format and use ".log" or json and ".json"? please analyze how log entries are output. i havent yet read that part of implementation at all. => it's plaintext and ".log" currently. i am ok with that. if i ever need to machine-read the logs, i'll switch to json. until then, plaintext is more human-readable.
+
+---
+
+when app shows a list for user to pick one for commands like open, last updated must be in local time.
+
+app seems to use local time for file name timestamps, which is good behavior. internally, timestamps must be always in utc. when they are displayed as user-facing text, they must be in local time.
+
+let's implement /status to show profile path, chat history path, error log path, main/helper models, etc. all relevant info in a logical order.
+
+---
+
+currently, log messages dont contain contextual information. we wont know which model caused errors. my initial design was to output only errors that needed attention. let's change it to output safe, contextual information like app started, what command was executed, summary of request, summary of response, etc. what would you recommend to log?
+
+---
+
+the design to require opt + enter to send a message has pros and cons. is it possible to dynamically switch the behavior? one mode that doesnt require opt to send a message (and there'll be other ways to insert a line break). another mode is just like the current design. and the one that doesnt require a key combination must be the default behavior. what would you call these modes? what commands would you define to change the behavior? => quick/compose modes, /input command, quick is default, shift + enter for newline in quick mode, still opt + enter to send message in compose mode.

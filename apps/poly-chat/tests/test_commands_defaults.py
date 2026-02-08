@@ -20,6 +20,7 @@ def mock_session():
                 "gemini": "gemini-3-flash-preview",
             },
             "timeout": 30,
+            "input_mode": "quick",
             "api_keys": {}
         },
         "chat": {

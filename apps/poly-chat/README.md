@@ -52,17 +52,20 @@ The app goes straight to the REPL and shows configured AI providers.
 ### 3. Chat
 
 Messages are multiline:
-- **Option+Enter** to send (**Option == Alt on Mac keyboards**)
-- Other setups: **Alt+Enter** to send
-- `Ctrl+Enter` may work in some terminals (if it is sent as `Ctrl+J`)
-- **Enter** inserts a new line
+- Default input mode is **quick**:
+  - **Enter** sends
+  - **Option+Enter** (Alt+Enter) inserts a new line
+- In **compose** mode:
+  - **Enter** inserts a new line
+  - **Option+Enter** (Alt+Enter) sends
+- `Ctrl+Enter` may work in some terminals if it is sent as `Ctrl+J` (send in both modes)
 
-`Enter` does not send the message. Sending requires a key combination so you can draft multi-line context (lines and paragraphs) safely, and so `Enter` remains available for text composition workflows used in some regions/IME setups.
+Use `/input quick` or `/input compose` to switch behavior.
 
 ```
 What are the key considerations for
 expanding into Asian markets?
-[Option+Enter on macOS (Alt+Enter elsewhere) to send]
+[Enter to send in quick mode]
 
 Claude: Here are the main factors to consider:
 
@@ -96,7 +99,9 @@ CLI path flags use the same path mapping rules:
 Use `~/...`, `@/...`, or absolute paths. Plain relative paths are rejected.
 
 If `-l/--log` is omitted, PolyChat creates one log file for the current app run in the profile's `log_dir`:
-- `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
+- `poly-chat_YYYY-MM-DD_HH-MM-SS.jsonl`
+
+Logs are written as JSON Lines (one JSON object per line) and include contextual events such as app/session start and stop, command execution, chat lifecycle actions, and AI request/response/error summaries (with redaction for sensitive token patterns).
 
 ### In-Chat Commands
 
@@ -151,6 +156,7 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/history all` - Show all messages
 - `/history --errors` - Show error messages only
 - `/show <hex_id>` - Show full content of one message
+- `/status` - Show current profile/chat/session status
 
 **Metadata:**
 - `/title` - Generate title using AI
@@ -165,6 +171,10 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/safe <hex_id>` - Check one message for unsafe content
 
 **Configuration:**
+- `/input` - Show current input mode
+- `/input quick` - Enter sends, Option/Alt+Enter inserts newline
+- `/input compose` - Enter inserts newline, Option/Alt+Enter sends
+- `/input default` - Restore profile default input mode
 - `/timeout` - Show current timeout setting
 - `/timeout <secs>` - Set timeout (0 = wait forever)
 - `/timeout default` - Restore profile default timeout
@@ -176,6 +186,8 @@ Delete operations always ask for confirmation and require typing `yes`.
 **Other:**
 - `/help` - Show all commands
 - `/exit` or `/quit` - Exit PolyChat
+
+When commands show chat lists for selection (`/open`, `/switch`, `/rename`, `/delete`), "Last Updated" is shown in your local time.
 
 ## Configuration
 
@@ -190,6 +202,7 @@ Delete operations always ask for confirmation and require typing `yes`.
     "gemini": "gemini-3-flash-preview"
   },
   "timeout": 30,
+  "input_mode": "quick",
   "system_prompt": "@/system-prompts/default.txt",
   "chats_dir": "~/poly-chat-logs",
   "log_dir": "~/poly-chat-logs/logs",
