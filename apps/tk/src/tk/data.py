@@ -141,3 +141,47 @@ def delete_task(data: dict[str, Any], index: int) -> bool:
         data["tasks"].pop(index)
         return True
     return False
+
+
+def group_tasks_for_display(tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    """Group and sort tasks for display layers.
+
+    Returns:
+        {
+            "pending": [tasks sorted by created_at asc],
+            "done": [(date, [tasks sorted by handled_at asc]), ...],
+            "cancelled": [(date, [tasks sorted by handled_at asc]), ...],
+        }
+    """
+    result: dict[str, Any] = {
+        "pending": [],
+        "done": {},
+        "cancelled": {},
+    }
+
+    for task in tasks:
+        status = task["status"]
+
+        if status == "pending":
+            result["pending"].append(task)
+        elif status in ("done", "cancelled"):
+            date = task.get("subjective_date")
+            if date:
+                if date not in result[status]:
+                    result[status][date] = []
+                result[status][date].append(task)
+
+    result["pending"].sort(key=lambda t: t["created_at"])
+
+    for status in ("done", "cancelled"):
+        grouped: dict[str, list[dict[str, Any]]] = result[status]
+        for date in grouped:
+            grouped[date].sort(key=lambda t: t.get("handled_at", ""))
+
+        result[status] = sorted(
+            grouped.items(),
+            key=lambda x: x[0],
+            reverse=True,
+        )
+
+    return result

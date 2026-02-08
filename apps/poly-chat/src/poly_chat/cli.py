@@ -57,7 +57,10 @@ def main() -> None:
             sys.exit(1)
         try:
             mapped_init_profile_path = map_cli_path(args.profile_path, "profile")
-            profile.create_profile(mapped_init_profile_path)
+            _, messages = profile.create_profile(mapped_init_profile_path)
+            # Display status messages returned by create_profile
+            for message in messages:
+                print(message)
             sys.exit(0)
         except Exception as e:
             print(f"Error creating profile: {e}")

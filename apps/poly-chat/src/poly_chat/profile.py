@@ -200,14 +200,14 @@ def validate_profile(profile: dict[str, Any]) -> None:
             raise ValueError(f"API key config for '{provider}' has unknown type '{key_type}'")
 
 
-def create_profile(path: str) -> dict[str, Any]:
+def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
     """Create new profile template with accompanying API keys file.
 
     Args:
         path: Where to save the profile
 
     Returns:
-        Created profile dictionary
+        Tuple of (created profile dictionary, list of status messages for display)
     """
     profile_path = Path(path).expanduser().resolve()
 
@@ -217,8 +217,11 @@ def create_profile(path: str) -> dict[str, Any]:
     # Create API keys file next to profile
     api_keys_path = profile_path.parent / "api-keys.json"
 
-    print(f"Creating template profile: {profile_path}")
-    print(f"Creating template API keys: {api_keys_path}")
+    # Collect messages for caller to display
+    messages = [
+        f"Creating template profile: {profile_path}",
+        f"Creating template API keys: {api_keys_path}",
+    ]
 
     # Create template API keys file
     api_keys_template = {
@@ -301,14 +304,17 @@ def create_profile(path: str) -> dict[str, Any]:
     with open(profile_path, "w", encoding="utf-8") as f:
         json.dump(profile, f, indent=2, ensure_ascii=False)
 
-    print()
-    print("Template files created successfully!")
-    print()
-    print("Next steps:")
-    print(f"  1. Edit {api_keys_path}")
-    print("     Replace placeholder API keys with your actual keys")
-    print()
-    print(f"  2. Start PolyChat:")
-    print(f"     poetry run pc -p {profile_path}")
+    # Add success and next steps messages
+    messages.extend([
+        "",  # Empty line
+        "Template files created successfully!",
+        "",  # Empty line
+        "Next steps:",
+        f"  1. Edit {api_keys_path}",
+        "     Replace placeholder API keys with your actual keys",
+        "",  # Empty line
+        f"  2. Start PolyChat:",
+        f"     poetry run pc -p {profile_path}",
+    ])
 
-    return profile
+    return profile, messages

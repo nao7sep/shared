@@ -6,9 +6,9 @@ from ..chat import load_chat, save_chat
 from ..chat_manager import (
     delete_chat as delete_chat_file,
     generate_chat_filename,
-    prompt_chat_selection,
     rename_chat,
 )
+from ..ui.chat_ui import prompt_chat_selection
 
 
 class ChatFileCommandsMixin:
@@ -210,6 +210,13 @@ class ChatFileCommandsMixin:
             and Path(current_path).resolve() == Path(selected_path).resolve()
         )
 
+        # Confirm deletion
+        print(f"\nWARNING: This will permanently delete: {Path(selected_path).name}")
+        confirm = input("Type 'yes' to confirm deletion: ").strip().lower()
+
+        if confirm != "yes":
+            return "Deletion cancelled"
+
         # Perform deletion
         try:
             delete_chat_file(selected_path)
@@ -220,8 +227,5 @@ class ChatFileCommandsMixin:
             else:
                 return f"Deleted: {Path(selected_path).name}"
 
-        except ValueError as e:
-            # Deletion cancelled
-            return str(e)
         except Exception as e:
             return f"Error deleting chat: {e}"
