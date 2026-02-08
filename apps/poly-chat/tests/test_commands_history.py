@@ -91,6 +91,16 @@ async def test_history_no_messages(command_handler):
 
 
 @pytest.mark.asyncio
+async def test_history_no_open_chat(command_handler_with_messages, mock_session_manager_with_messages):
+    """Test /history when no chat is open."""
+    mock_session_manager_with_messages.close_chat()
+
+    result = await command_handler_with_messages.show_history("")
+
+    assert result == "No chat is currently open"
+
+
+@pytest.mark.asyncio
 async def test_history_default_last_10(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history without arguments shows last 10 messages."""
     handler = command_handler_with_messages
@@ -219,6 +229,16 @@ async def test_show_message_no_arg(command_handler_with_messages, mock_session_m
     result = await handler.show_message("")
 
     assert "Usage: /show <hex_id>" in result
+
+
+@pytest.mark.asyncio
+async def test_show_message_no_open_chat(command_handler_with_messages, mock_session_manager_with_messages):
+    """Test /show when no chat is open."""
+    mock_session_manager_with_messages.close_chat()
+
+    result = await command_handler_with_messages.show_message("a3f")
+
+    assert result == "No chat is currently open"
 
 
 @pytest.mark.asyncio

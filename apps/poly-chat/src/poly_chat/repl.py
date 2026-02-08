@@ -321,9 +321,9 @@ async def repl_loop(
                     if action.assistant_hex_id:
                         prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
                     else:
-                        prefix = f"\n{manager.current_ai.capitalize()} (retry): "
+                        prefix = f"\n{manager.current_ai.capitalize()}: "
                 elif action.mode == "secret":
-                    prefix = f"\n{manager.current_ai.capitalize()} (secret): "
+                    prefix = f"\n{manager.current_ai.capitalize()}: "
                 else:
                     prefix = f"\n{manager.current_ai.capitalize()}: "
 

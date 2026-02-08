@@ -306,39 +306,48 @@ class RuntimeCommandsMixin:
         return "__CANCEL_RETRY__"
 
     async def secret_mode_command(self, args: str) -> str:
-        """Toggle or use secret mode (messages not saved to history).
+        """Show, set, or use secret mode (messages not saved to history).
 
         Args:
-            args: Empty to toggle, 'on'/'off' to set explicitly, or message for one-shot
+            args: Empty to show status, 'on'/'off' to set explicitly, or message for one-shot
 
         Returns:
             Status message or special signal for one-shot mode
         """
-        chat = self.manager.chat
+        chat_data = self.manager.chat
 
         # Check if chat is loaded
-        if not chat or "messages" not in chat:
+        if not chat_data or "messages" not in chat_data:
             return "No chat is currently open"
 
+        normalized = args.strip().lower()
+
         # No args - show current mode
-        if not args:
+        if not normalized:
             return "Secret mode: on" if self.manager.secret_mode else "Secret mode: off"
 
         # Explicit on
-        elif args == "on":
-            self.manager.secret_mode = True
+        if normalized == "on":
+            if self.manager.secret_mode:
+                return "Secret mode already on"
+            secret_context = chat.get_messages_for_ai(chat_data)
+            self.manager.enter_secret_mode(secret_context)
             return "Secret mode enabled"
 
         # Explicit off
-        elif args == "off":
-            self.manager.secret_mode = False
-            # Signal to clear frozen context
-            return "__CLEAR_SECRET_CONTEXT__"
+        if normalized == "off":
+            if self.manager.secret_mode:
+                self.manager.exit_secret_mode()
+                return "Secret mode disabled"
+            return "Secret mode already off"
+
+        # Common typo from help-style notation should not be treated as message.
+        if normalized in {"on/off", "on|off"}:
+            return "Use /secret on or /secret off"
 
         # Otherwise it's a one-shot secret message
-        else:
-            # Signal to REPL loop to handle this as one-shot secret message
-            return f"__SECRET_ONESHOT__:{args}"
+        # Signal to REPL loop to handle this as one-shot secret message
+        return f"__SECRET_ONESHOT__:{args.strip()}"
 
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting message at index and all following.

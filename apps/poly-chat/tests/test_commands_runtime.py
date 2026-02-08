@@ -25,8 +25,16 @@ async def test_secret_on_off_still_work(command_handler, mock_session_manager):
     assert mock_session_manager.secret_mode is True
 
     result_off = await command_handler.secret_mode_command("off")
-    assert result_off == "__CLEAR_SECRET_CONTEXT__"
+    assert result_off == "Secret mode disabled"
     assert mock_session_manager.secret_mode is False
+
+
+@pytest.mark.asyncio
+async def test_secret_on_when_already_on(command_handler, mock_session_manager):
+    mock_session_manager.secret_mode = True
+    result = await command_handler.secret_mode_command("on")
+    assert result == "Secret mode already on"
+    assert mock_session_manager.secret_mode is True
 
 
 @pytest.mark.asyncio
@@ -38,3 +46,15 @@ async def test_system_show_prefers_chat_unmapped_path(command_handler, mock_sess
 
     assert result == "Current system prompt: ~/prompts/custom.txt"
 
+
+@pytest.mark.asyncio
+async def test_secret_off_when_already_off(command_handler, mock_session_manager):
+    result = await command_handler.secret_mode_command("off")
+    assert result == "Secret mode already off"
+    assert mock_session_manager.secret_mode is False
+
+
+@pytest.mark.asyncio
+async def test_secret_on_off_literal_gives_hint(command_handler):
+    result = await command_handler.secret_mode_command("on/off")
+    assert result == "Use /secret on or /secret off"

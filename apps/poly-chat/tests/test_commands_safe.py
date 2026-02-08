@@ -85,6 +85,16 @@ async def test_safe_command_no_messages(command_handler_safe, mock_session_manag
 
 
 @pytest.mark.asyncio
+async def test_safe_command_no_open_chat(command_handler_safe, mock_session_manager_safe):
+    """Test /safe when no chat is open."""
+    mock_session_manager_safe.close_chat()
+
+    result = await command_handler_safe.check_safety("")
+
+    assert result == "No chat is currently open"
+
+
+@pytest.mark.asyncio
 async def test_safe_command_full_chat(command_handler_safe, mock_session_manager_safe):
     """Test /safe command checking entire chat."""
     handler = command_handler_safe

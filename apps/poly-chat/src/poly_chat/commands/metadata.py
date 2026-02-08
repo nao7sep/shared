@@ -74,9 +74,6 @@ class MetadataCommandsMixin:
         if not messages:
             return "No messages in chat to generate title from"
 
-        # Build prompt for title generation
-        system_prompt = "You are a helpful assistant that generates concise, descriptive titles for chat conversations. Generate a title that captures the main topic or theme of the conversation in 3-8 words."
-
         # Take first few messages for context (to keep it efficient)
         context_messages = messages[:10] if len(messages) > 10 else messages
         context_text = "\n".join([
@@ -86,7 +83,15 @@ class MetadataCommandsMixin:
 
         prompt_messages = [{
             "role": "user",
-            "content": f"Generate a short, descriptive title for this conversation:\n\n{context_text}\n\nProvide only the title, nothing else."
+            "content": (
+                "Generate a short, descriptive title for this conversation.\n\n"
+                f"{context_text}\n\n"
+                "Output requirements:\n"
+                "- Use the dominant conversation language.\n"
+                "- One line only.\n"
+                "- Plain text only (no markdown, no bullets, no code fences, no quotes).\n"
+                "- Output only the title."
+            )
         }]
 
         # Invoke helper AI
@@ -96,7 +101,7 @@ class MetadataCommandsMixin:
                 self.manager.helper_model,
                 self.manager.profile,
                 prompt_messages,
-                system_prompt,
+                None,
                 task="title_generation",
             )
 
@@ -163,9 +168,6 @@ class MetadataCommandsMixin:
         if not messages:
             return "No messages in chat to generate summary from"
 
-        # Build prompt for summary generation
-        system_prompt = "You are a helpful assistant that generates concise summaries of chat conversations. Create a brief summary (2-4 sentences) that captures the key topics discussed and main outcomes."
-
         # Take all messages for full context (summarize everything)
         context_text = "\n".join([
             f"{msg['role']}: {msg.get('content', '')}"
@@ -174,7 +176,15 @@ class MetadataCommandsMixin:
 
         prompt_messages = [{
             "role": "user",
-            "content": f"Generate a concise summary (2-4 sentences) of this conversation:\n\n{context_text}"
+            "content": (
+                "Generate a concise summary of this conversation.\n\n"
+                f"{context_text}\n\n"
+                "Output requirements:\n"
+                "- Use the dominant conversation language.\n"
+                "- One paragraph only.\n"
+                "- Plain text only (no markdown, no bullets, no headings, no code fences).\n"
+                "- Output only the summary paragraph."
+            )
         }]
 
         # Invoke helper AI
@@ -184,7 +194,7 @@ class MetadataCommandsMixin:
                 self.manager.helper_model,
                 self.manager.profile,
                 prompt_messages,
-                system_prompt,
+                None,
                 task="summary_generation",
             )
 
@@ -212,8 +222,10 @@ class MetadataCommandsMixin:
         Returns:
             Safety check results with categorized findings
         """
-        chat = self.manager.chat
-        messages = chat["messages"]
+        chat_data = self._require_open_chat(need_messages=True)
+        if chat_data is None:
+            return "No chat is currently open"
+        messages = chat_data["messages"]
 
         if not messages:
             return "No messages to check"
@@ -321,8 +333,10 @@ Keep descriptions brief (one line max). For found items, mention location if che
         Returns:
             Formatted history display
         """
-        chat = self.manager.chat
-        messages = chat["messages"]
+        chat_data = self._require_open_chat(need_messages=True)
+        if chat_data is None:
+            return "No chat is currently open"
+        messages = chat_data["messages"]
 
         if not messages:
             return "No messages in chat history"
@@ -430,8 +444,10 @@ Keep descriptions brief (one line max). For found items, mention location if che
         if not args.strip():
             return "Usage: /show <hex_id>"
 
-        chat = self.manager.chat
-        messages = chat["messages"]
+        chat_data = self._require_open_chat(need_messages=True)
+        if chat_data is None:
+            return "No chat is currently open"
+        messages = chat_data["messages"]
         # Look up message by hex ID
         msg_index = hex_id.get_message_index(args.strip(), messages)
 
@@ -486,6 +502,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
 
         chat_title = metadata.get("title") or "(none)"
         chat_summary = metadata.get("summary") or "(none)"
+        system_prompt_display = metadata.get("system_prompt") or self.manager.system_prompt_path or "(none)"
 
         updated_local = "(unknown)"
         updated_at = metadata.get("updated_at")
@@ -508,7 +525,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
             "Assistant",
             f"Assistant:    {self.manager.current_ai} ({self.manager.current_model})",
             f"Helper:       {self.manager.helper_ai} ({self.manager.helper_model})",
-            f"System Prompt:{' ' if self.manager.system_prompt_path else ''}{self.manager.system_prompt_path or '(none)'}",
+            f"System Prompt:{' ' if system_prompt_display != '(none)' else ''}{system_prompt_display}",
             f"Timeout:      {timeout_display}",
             f"Input Mode:   {self.manager.input_mode}",
             "",
