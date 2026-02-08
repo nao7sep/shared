@@ -39,12 +39,12 @@ def test_load_chat_valid_file(tmp_path):
             "summary": None,
             "system_prompt_path": None,
             "default_model": None,
-            "created_at": "2026-01-01T00:00:00+00:00",
-            "updated_at": "2026-01-01T00:00:00+00:00",
+            "created_at": "2026-02-02T00:00:00+00:00",
+            "updated_at": "2026-02-02T00:00:00+00:00",
         },
         "messages": [
             {
-                "timestamp": "2026-01-01T00:00:00+00:00",
+                "timestamp": "2026-02-02T00:00:00+00:00",
                 "role": "user",
                 "content": ["Hello"]
             }
@@ -123,7 +123,7 @@ async def test_save_chat_basic(tmp_path):
         },
         "messages": [
             {
-                "timestamp": "2026-01-01T00:00:00+00:00",
+                "timestamp": "2026-02-02T00:00:00+00:00",
                 "role": "user",
                 "content": ["Test message"]
             }

@@ -13,18 +13,18 @@ def mock_session_manager_safe():
         "metadata": {},
         "messages": [
             {
-                "timestamp": "2026-01-01T00:00:00+00:00",
+                "timestamp": "2026-02-02T00:00:00+00:00",
                 "role": "user",
                 "content": ["Hello, my name is John Doe"]
             },
             {
-                "timestamp": "2026-01-01T00:00:01+00:00",
+                "timestamp": "2026-02-02T00:00:01+00:00",
                 "role": "assistant",
                 "model": "claude-haiku-4-5",
                 "content": ["Hi John! How can I help you?"]
             },
             {
-                "timestamp": "2026-01-01T00:00:02+00:00",
+                "timestamp": "2026-02-02T00:00:02+00:00",
                 "role": "user",
                 "content": ["My API key is sk-abc123"]
             }

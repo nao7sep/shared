@@ -32,12 +32,12 @@ def test_list_chats_single_valid_file(tmp_path):
             "summary": None,
             "system_prompt_path": None,
             "default_model": None,
-            "created_at": "2026-01-01T00:00:00+00:00",
-            "updated_at": "2026-01-01T12:00:00+00:00",
+            "created_at": "2026-02-02T00:00:00+00:00",
+            "updated_at": "2026-02-02T12:00:00+00:00",
         },
         "messages": [
-            {"timestamp": "2026-01-01T00:00:00+00:00", "role": "user", "content": ["Hello"]},
-            {"timestamp": "2026-01-01T00:00:01+00:00", "role": "assistant", "model": "test-model", "content": ["Hi"]},
+            {"timestamp": "2026-02-02T00:00:00+00:00", "role": "user", "content": ["Hello"]},
+            {"timestamp": "2026-02-02T00:00:01+00:00", "role": "assistant", "model": "test-model", "content": ["Hi"]},
         ]
     }
     chat_file.write_text(json.dumps(chat_data))
@@ -48,16 +48,16 @@ def test_list_chats_single_valid_file(tmp_path):
     assert chats[0]["filename"] == "test-chat.json"
     assert chats[0]["title"] == "Test Chat"
     assert chats[0]["message_count"] == 2
-    assert chats[0]["updated_at"] == "2026-01-01T12:00:00+00:00"
+    assert chats[0]["updated_at"] == "2026-02-02T12:00:00+00:00"
 
 
 def test_list_chats_multiple_files_sorted(tmp_path):
     """Test listing multiple files sorted by updated_at."""
     # Create three chat files with different timestamps
     for i, (name, updated) in enumerate([
-        ("old.json", "2026-01-01T00:00:00+00:00"),
-        ("new.json", "2026-01-03T00:00:00+00:00"),
-        ("middle.json", "2026-01-02T00:00:00+00:00"),
+        ("old.json", "2026-02-02T00:00:00+00:00"),
+        ("new.json", "2026-02-04T00:00:00+00:00"),
+        ("middle.json", "2026-02-03T00:00:00+00:00"),
     ]):
         chat_file = tmp_path / name
         chat_data = {
@@ -137,7 +137,7 @@ def test_format_chat_info_with_title():
         "filename": "test-chat.json",
         "title": "My Important Chat",
         "message_count": 42,
-        "updated_at": "2026-01-15T14:30:00+00:00",
+        "updated_at": "2026-02-08T14:30:00+00:00",
     }
 
     formatted = format_chat_info(chat, 1)
@@ -147,7 +147,7 @@ def test_format_chat_info_with_title():
     assert "My Important Chat" in formatted
     assert "42 msgs" in formatted
     # Check date is present (time will vary by timezone, so just check date part)
-    assert "2026-01-15" in formatted
+    assert "2026-02-08" in formatted
 
 
 def test_format_chat_info_no_title():

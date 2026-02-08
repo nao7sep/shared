@@ -81,7 +81,7 @@ Summary:"""
 ### Current Schema
 ```json
 {
-  "timestamp": "2026-01-01T00:00:00+00:00",
+  "timestamp": "2026-02-02T00:00:00+00:00",
   "role": "user",
   "content": ["Message text here"],
   "model": "claude-haiku-4-5"
@@ -91,7 +91,7 @@ Summary:"""
 ### Extended Schema (Future)
 ```json
 {
-  "timestamp": "2026-01-01T00:00:00+00:00",
+  "timestamp": "2026-02-02T00:00:00+00:00",
   "role": "user",
   "content": ["Message text here"],
   "model": "claude-haiku-4-5",
@@ -99,7 +99,7 @@ Summary:"""
   // Smart Context fields (optional, generated on-demand)
   "summary": "Brief context-aware summary",
   "summary_model": "claude-haiku-4-5",
-  "summary_at": "2026-01-02T00:00:00+00:00"
+  "summary_at": "2026-02-03T00:00:00+00:00"
 }
 ```
 

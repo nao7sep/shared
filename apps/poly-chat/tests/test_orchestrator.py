@@ -40,7 +40,7 @@ def sample_chat_data():
     return {
         "metadata": {
             "title": "Test Chat",
-            "created_at": "2024-01-01T00:00:00Z",
+            "created_at": "2026-02-02T00:00:00Z",
         },
         "messages": [
             {"role": "user", "content": "Hello"},
