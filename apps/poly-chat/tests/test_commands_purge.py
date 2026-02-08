@@ -5,6 +5,12 @@ from poly_chat.commands import CommandHandler
 from src.poly_chat.session_manager import SessionManager
 
 
+@pytest.fixture(autouse=True)
+def auto_confirm_purge(monkeypatch):
+    """Auto-confirm purge prompts unless a test overrides input."""
+    monkeypatch.setattr("builtins.input", lambda _prompt: "yes")
+
+
 @pytest.fixture
 def mock_session_manager_purge():
     """Create a mock SessionManager with sample messages for purge tests."""
@@ -88,10 +94,8 @@ async def test_purge_single_message(command_handler_purge, mock_session_manager_
     result = await handler.purge_messages("b2c")
 
     # Check result
-    assert "⚠️  WARNING" in result
     assert "Purged 1 message" in result
     assert "[b2c]" in result
-    assert "breaks conversation context" in result
 
     # Verify message was deleted
     messages = mock_session_manager_purge.chat["messages"]
@@ -197,3 +201,14 @@ async def test_purge_multiple_messages_order_independent(command_handler_purge, 
     # Verify correct messages remain
     messages = mock_session_manager_purge.chat["messages"]
     assert len(messages) == 2
+
+
+@pytest.mark.asyncio
+async def test_purge_cancelled_on_non_yes(command_handler_purge, mock_session_manager_purge, monkeypatch):
+    """Test purge cancellation when confirmation is not 'yes'."""
+    monkeypatch.setattr("builtins.input", lambda _prompt: "no")
+
+    result = await command_handler_purge.purge_messages("a3f")
+
+    assert result == "Purge cancelled"
+    assert len(mock_session_manager_purge.chat["messages"]) == 4

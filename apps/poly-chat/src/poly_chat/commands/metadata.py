@@ -377,7 +377,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
         output.append("━" * 60)
 
         # Messages
-        for msg_index, msg in display_messages:
+        for i, (msg_index, msg) in enumerate(display_messages):
             role = msg.get("role", "unknown")
             timestamp = msg.get("timestamp", "")
             content_parts = msg.get("content", [])
@@ -411,7 +411,8 @@ Keep descriptions brief (one line max). For found items, mention location if che
 
             output.append(f"[{hex_id}] {role_display} ({time_str})")
             output.append(f"  {content}")
-            output.append("")
+            if i < len(display_messages) - 1:
+                output.append("")
 
         output.append("━" * 60)
 

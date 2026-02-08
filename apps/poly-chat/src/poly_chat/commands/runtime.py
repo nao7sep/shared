@@ -154,9 +154,9 @@ class RuntimeCommandsMixin:
         if chat_data is None:
             return "No chat is currently open"
 
-        # No args - show current system prompt path
+        # No args - show current system prompt path (prefer chat metadata/raw path)
         if not args:
-            current_path = chat_data["metadata"].get("system_prompt")
+            current_path = chat_data["metadata"].get("system_prompt") or self.manager.system_prompt_path
             if current_path:
                 return f"Current system prompt: {current_path}"
             else:
@@ -320,16 +320,9 @@ class RuntimeCommandsMixin:
         if not chat or "messages" not in chat:
             return "No chat is currently open"
 
-        # No args - toggle mode
+        # No args - show current mode
         if not args:
-            current_mode = self.manager.secret_mode
-            self.manager.secret_mode = not current_mode
-
-            if self.manager.secret_mode:
-                return "Secret mode enabled"
-            else:
-                # Signal to clear frozen context
-                return "__CLEAR_SECRET_CONTEXT__"
+            return "Secret mode: on" if self.manager.secret_mode else "Secret mode: off"
 
         # Explicit on
         elif args == "on":
@@ -400,7 +393,7 @@ class RuntimeCommandsMixin:
             args: Space-separated hex IDs of messages to delete
 
         Returns:
-            Confirmation message with warning
+            Confirmation message
         """
         if not args.strip():
             return "Usage: /purge <hex_id> [hex_id2 hex_id3 ...]"
@@ -427,6 +420,13 @@ class RuntimeCommandsMixin:
         # (avoids index shifting issues)
         indices_to_delete.sort(reverse=True)
 
+        # Confirm destructive operation
+        ids_for_prompt = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
+        print(f"WARNING: Purging message(s) breaks conversation context: {ids_for_prompt}")
+        confirm = input("Type 'yes' to confirm purge: ").strip().lower()
+        if confirm != "yes":
+            return "Purge cancelled"
+
         # Delete messages
         deleted_count = 0
         for msg_index, _hid in indices_to_delete:
@@ -437,12 +437,6 @@ class RuntimeCommandsMixin:
 
         await self._mark_chat_dirty_if_open()
 
-        # Build warning message
+        # Build confirmation message
         deleted_ids = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
-        warning = [
-            "⚠️  WARNING: Purging breaks conversation context",
-            f"Purged {deleted_count} message(s): {deleted_ids}",
-            "Remaining message hex IDs were preserved."
-        ]
-
-        return "\n".join(warning)
+        return f"Purged {deleted_count} message(s): {deleted_ids}"

@@ -60,7 +60,7 @@ Chat Control:
   /retry            Enter retry mode (collect candidate responses)
   /apply <hex_id>   Apply one retry candidate and exit retry mode
   /cancel           Abort retry and keep original response
-  /secret           Toggle secret mode (messages not saved)
+  /secret           Show current secret mode state
   /secret on/off    Enable/disable secret mode explicitly
   /secret <msg>     Ask one secret question (doesn't toggle mode)
   /rewind <id>      Rewind chat to message (use hex ID or index)

@@ -323,15 +323,9 @@ async def repl_loop(
                     else:
                         prefix = f"\n{manager.current_ai.capitalize()} (retry): "
                 elif action.mode == "secret":
-                    if action.assistant_hex_id:
-                        prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
-                    else:
-                        prefix = f"\n{manager.current_ai.capitalize()} (secret): "
+                    prefix = f"\n{manager.current_ai.capitalize()} (secret): "
                 else:
-                    if action.assistant_hex_id:
-                        prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
-                    else:
-                        prefix = f"\n{manager.current_ai.capitalize()}: "
+                    prefix = f"\n{manager.current_ai.capitalize()}: "
 
                 # Send message to AI
                 try:

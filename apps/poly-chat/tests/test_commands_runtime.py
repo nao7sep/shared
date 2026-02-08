@@ -1,0 +1,40 @@
+"""Tests for runtime command UX behavior."""
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_secret_no_args_shows_state_off(command_handler, mock_session_manager):
+    result = await command_handler.secret_mode_command("")
+    assert result == "Secret mode: off"
+    assert mock_session_manager.secret_mode is False
+
+
+@pytest.mark.asyncio
+async def test_secret_no_args_shows_state_on(command_handler, mock_session_manager):
+    mock_session_manager.secret_mode = True
+    result = await command_handler.secret_mode_command("")
+    assert result == "Secret mode: on"
+    assert mock_session_manager.secret_mode is True
+
+
+@pytest.mark.asyncio
+async def test_secret_on_off_still_work(command_handler, mock_session_manager):
+    result_on = await command_handler.secret_mode_command("on")
+    assert result_on == "Secret mode enabled"
+    assert mock_session_manager.secret_mode is True
+
+    result_off = await command_handler.secret_mode_command("off")
+    assert result_off == "__CLEAR_SECRET_CONTEXT__"
+    assert mock_session_manager.secret_mode is False
+
+
+@pytest.mark.asyncio
+async def test_system_show_prefers_chat_unmapped_path(command_handler, mock_session_manager):
+    mock_session_manager.chat["metadata"]["system_prompt"] = "~/prompts/custom.txt"
+    mock_session_manager.system_prompt_path = "/mapped/path/custom.txt"
+
+    result = await command_handler.set_system_prompt("")
+
+    assert result == "Current system prompt: ~/prompts/custom.txt"
+

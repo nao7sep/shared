@@ -205,6 +205,13 @@ async def test_history_truncates_long_messages(command_handler_with_messages, mo
 
 
 @pytest.mark.asyncio
+async def test_history_no_extra_blank_line_before_footer(command_handler_with_messages):
+    """History output should not have a blank line right before footer divider."""
+    result = await command_handler_with_messages.show_history("")
+    assert "\n\n" + ("━" * 60) not in result
+
+
+@pytest.mark.asyncio
 async def test_show_message_no_arg(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /show without argument."""
     handler = command_handler_with_messages

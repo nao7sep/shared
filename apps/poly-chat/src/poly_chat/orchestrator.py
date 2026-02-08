@@ -439,7 +439,6 @@ class ChatOrchestrator:
             action="send_secret",
             messages=temp_messages,
             mode="secret",
-            assistant_hex_id=self.manager.reserve_hex_id(),
         )
 
     async def _handle_retry_message(
@@ -487,7 +486,6 @@ class ChatOrchestrator:
             mode="normal",
             chat_path=chat_path,
             chat_data=chat_data,
-            assistant_hex_id=self.manager.reserve_hex_id(),
         )
 
     async def handle_ai_response(

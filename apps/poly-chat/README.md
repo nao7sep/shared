@@ -141,15 +141,15 @@ Logs are written in a structured plaintext block format and include contextual e
 Delete operations always ask for confirmation and require typing `yes`.
 
 **Chat Control:**
-- `/retry` - Replace last response (retry mode)
-- `/apply` - Accept current retry attempt and exit retry mode
+- `/retry` - Enter retry mode and generate candidate responses
+- `/apply <hex_id>` - Apply one retry candidate and exit retry mode
 - `/cancel` - Abort retry and keep original response
-- `/secret` - Toggle secret mode (messages not saved)
+- `/secret` - Show current secret mode state
 - `/secret on|off` - Explicitly enable/disable secret mode
 - `/secret <msg>` - Send one secret message without toggling mode
 - `/rewind <index>` - Rewind chat to message (time travel)
 - `/rewind last` - Rewind to last message
-- `/purge <hex_id> [hex_id2 ...]` - Delete specific messages (breaks context)
+- `/purge <hex_id> [hex_id2 ...]` - Delete specific messages (breaks context; requires confirmation)
 
 **History:**
 - `/history` - Show last 10 messages
