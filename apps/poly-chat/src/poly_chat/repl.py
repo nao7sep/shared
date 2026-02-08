@@ -236,7 +236,27 @@ async def repl_loop(
                                 mode="secret_oneshot",
                                 chat_path=chat_path,
                             )
-                            await display_streaming_response(response_stream, prefix="")
+                            response_text = await display_streaming_response(response_stream, prefix="")
+
+                            # Log successful AI response
+                            latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
+                            usage = metadata.get("usage", {})
+
+                            from .logging_utils import chat_file_label
+                            log_event(
+                                "ai_response",
+                                level=logging.INFO,
+                                mode="secret_oneshot",
+                                provider=manager.current_ai,
+                                model=manager.current_model,
+                                chat_file=chat_file_label(chat_path),
+                                latency_ms=latency_ms,
+                                output_chars=len(response_text),
+                                input_tokens=usage.get("prompt_tokens"),
+                                output_tokens=usage.get("completion_tokens"),
+                                total_tokens=usage.get("total_tokens"),
+                            )
+
                             print()
                             print()
                         except Exception as e:
@@ -318,6 +338,25 @@ async def repl_loop(
                     )
                     response_text = await display_streaming_response(response_stream, prefix="")
 
+                    # Calculate latency and log successful AI response
+                    latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
+                    usage = metadata.get("usage", {})
+
+                    from .logging_utils import chat_file_label
+                    log_event(
+                        "ai_response",
+                        level=logging.INFO,
+                        mode=action.mode,
+                        provider=manager.current_ai,
+                        model=manager.current_model,
+                        chat_file=chat_file_label(chat_path),
+                        latency_ms=latency_ms,
+                        output_chars=len(response_text),
+                        input_tokens=usage.get("prompt_tokens"),
+                        output_tokens=usage.get("completion_tokens"),
+                        total_tokens=usage.get("total_tokens"),
+                    )
+
                     # Handle successful response
                     result = await orchestrator.handle_ai_response(
                         response_text,
@@ -328,8 +367,7 @@ async def repl_loop(
                     )
 
                     # Display token usage for normal mode
-                    if action.mode == "normal" and "usage" in metadata:
-                        usage = metadata["usage"]
+                    if action.mode == "normal" and usage:
                         print(f"\n[Tokens: {usage.get('total_tokens', 'N/A')}]")
 
                     print()

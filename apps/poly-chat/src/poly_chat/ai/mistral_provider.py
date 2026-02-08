@@ -108,8 +108,20 @@ class MistralProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        metadata: dict | None = None,
     ) -> AsyncIterator[str]:
-        """Send message to Mistral and yield response chunks."""
+        """Send message to Mistral and yield response chunks.
+
+        Args:
+            messages: Chat messages in PolyChat format
+            model: Model name
+            system_prompt: Optional system prompt
+            stream: Whether to stream the response
+            metadata: Optional dict to populate with usage info after streaming
+
+        Yields:
+            Response text chunks
+        """
         try:
             formatted_messages = self.format_messages(messages)
 
@@ -127,6 +139,13 @@ class MistralProvider:
                 if not chunk.choices:
                     # Mistral automatically includes usage in final chunk (no need to request it)
                     if hasattr(chunk, "usage") and chunk.usage:
+                        # Populate metadata with usage info if provided
+                        if metadata is not None:
+                            metadata["usage"] = {
+                                "prompt_tokens": chunk.usage.prompt_tokens,
+                                "completion_tokens": chunk.usage.completion_tokens,
+                                "total_tokens": chunk.usage.total_tokens,
+                            }
                         logger.info(
                             f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
                             f"{chunk.usage.completion_tokens} completion = "

@@ -34,7 +34,7 @@ poetry run pc init ~/my-profile.json
 This creates template files:
 - Profile JSON at the path you provide
 
-The generated profile template uses absolute paths and an inline default system prompt (no `@/...` paths), which is safer for Windows and one-file packaging.
+The generated profile template uses home-based paths (`~/poly-chat/...`) and an inline default system prompt (no `@/...` paths), which is safer for Windows and one-file packaging.
 It also includes mixed API-key configuration examples (`env`, `keychain`, `json`, `direct`) so you can pick the style you want.
 Then edit the template values (models, paths, and `api_keys`) before running PolyChat.
 
@@ -208,8 +208,8 @@ When commands show chat lists for selection (`/open`, `/switch`, `/rename`, `/de
     "type": "text",
     "content": "You are a helpful assistant."
   },
-  "chats_dir": "~/poly-chat-logs",
-  "log_dir": "~/poly-chat-logs/logs",
+  "chats_dir": "~/poly-chat/chats",
+  "log_dir": "~/poly-chat/logs",
   "api_keys": {
     "openai": {
       "type": "env",

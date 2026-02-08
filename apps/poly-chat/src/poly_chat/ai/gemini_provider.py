@@ -73,6 +73,7 @@ class GeminiProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Gemini and yield response chunks.
 
@@ -81,6 +82,7 @@ class GeminiProvider:
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
+            metadata: Optional dict to populate with usage info after streaming
 
         Yields:
             Response text chunks
@@ -105,8 +107,11 @@ class GeminiProvider:
                 config=config,
             )
 
-            # Yield chunks
+            # Yield chunks and capture final chunk for usage info
+            final_chunk = None
             async for chunk in response:
+                final_chunk = chunk  # Keep reference to last chunk
+
                 # Check for finish_reason in chunk candidates
                 if chunk.candidates:
                     candidate = chunk.candidates[0]
@@ -126,6 +131,15 @@ class GeminiProvider:
                 # Yield text content
                 if chunk.text:
                     yield chunk.text
+
+            # Populate metadata with usage info from final chunk if available
+            if metadata is not None and final_chunk and hasattr(final_chunk, "usage_metadata"):
+                usage_meta = final_chunk.usage_metadata
+                metadata["usage"] = {
+                    "prompt_tokens": getattr(usage_meta, "prompt_token_count", 0),
+                    "completion_tokens": getattr(usage_meta, "candidates_token_count", 0),
+                    "total_tokens": getattr(usage_meta, "total_token_count", 0),
+                }
 
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues

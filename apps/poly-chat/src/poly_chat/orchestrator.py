@@ -178,7 +178,13 @@ class ChatOrchestrator:
         # Update session manager
         self.manager.switch_chat(new_chat_path, new_chat_data)
 
-        log_event("chat_switch", chat_file=new_chat_path, trigger="new")
+        log_event(
+            "chat_switch",
+            chat_file=new_chat_path,
+            trigger="new",
+            previous_chat_file=current_chat_path,
+            message_count=len(new_chat_data.get("messages", [])),
+        )
 
         return OrchestratorAction(
             action="continue",
@@ -210,7 +216,13 @@ class ChatOrchestrator:
         # Update session manager
         self.manager.switch_chat(new_chat_path, new_chat_data)
 
-        log_event("chat_switch", chat_file=new_chat_path, trigger="open")
+        log_event(
+            "chat_switch",
+            chat_file=new_chat_path,
+            trigger="open",
+            previous_chat_file=current_chat_path,
+            message_count=len(new_chat_data.get("messages", [])),
+        )
 
         return OrchestratorAction(
             action="continue",
@@ -236,7 +248,11 @@ class ChatOrchestrator:
         # Clear chat in session manager
         self.manager.close_chat()
 
-        log_event("chat_close", chat_file=current_chat_path)
+        log_event(
+            "chat_close",
+            chat_file=current_chat_path,
+            message_count=len(current_chat_data.get("messages", [])) if current_chat_data else 0,
+        )
 
         return OrchestratorAction(
             action="continue",
@@ -247,10 +263,15 @@ class ChatOrchestrator:
 
     def _handle_rename_current(self, signal: str) -> OrchestratorAction:
         """Handle __RENAME_CURRENT__ signal."""
+        old_chat_path = self.manager.chat_path
         new_chat_path = signal.split(":", 1)[1]
         self.manager.chat_path = new_chat_path
 
-        log_event("chat_rename", chat_file=new_chat_path)
+        log_event(
+            "chat_rename",
+            old_chat_file=old_chat_path,
+            new_chat_file=new_chat_path,
+        )
 
         return OrchestratorAction(
             action="continue",
@@ -270,7 +291,10 @@ class ChatOrchestrator:
         # Clear chat in session manager
         self.manager.close_chat()
 
-        log_event("chat_delete", chat_file=current_chat_path)
+        log_event(
+            "chat_delete",
+            chat_file=current_chat_path,
+        )
 
         return OrchestratorAction(
             action="continue",

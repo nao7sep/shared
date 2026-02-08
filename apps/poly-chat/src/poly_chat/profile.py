@@ -237,8 +237,8 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             "type": "text",
             "content": "You are a helpful assistant."
         },
-        "chats_dir": str(profile_path.parent / "chats"),
-        "log_dir": str(profile_path.parent / "logs"),
+        "chats_dir": "~/poly-chat/chats",
+        "log_dir": "~/poly-chat/logs",
         "api_keys": {
             "openai": {
                 "type": "env",
@@ -251,7 +251,7 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             },
             "gemini": {
                 "type": "json",
-                "path": "~/.secrets/poly-chat-api-keys.json",
+                "path": "~/.secrets/api-keys.json",
                 "key": "gemini"
             },
             "grok": {

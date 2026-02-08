@@ -209,10 +209,18 @@ class SessionManager:
         """Whether retry mode is active."""
         return self._state.retry_mode
 
+    @retry_mode.setter
+    def retry_mode(self, value: bool) -> None:
+        self._state.retry_mode = bool(value)
+
     @property
     def secret_mode(self) -> bool:
         """Whether secret mode is active."""
         return self._state.secret_mode
+
+    @secret_mode.setter
+    def secret_mode(self, value: bool) -> None:
+        self._state.secret_mode = bool(value)
 
     @property
     def chat_dirty(self) -> bool:

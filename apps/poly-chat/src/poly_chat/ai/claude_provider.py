@@ -115,6 +115,7 @@ class ClaudeProvider:
         system_prompt: str | None = None,
         stream: bool = True,
         max_tokens: int = 4096,
+        metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Claude and yield response chunks.
 
@@ -124,6 +125,7 @@ class ClaudeProvider:
             system_prompt: Optional system prompt
             stream: Whether to stream the response
             max_tokens: Maximum tokens in response (default 4096)
+            metadata: Optional dict to populate with usage info after streaming
 
         Yields:
             Response text chunks
@@ -147,8 +149,18 @@ class ClaudeProvider:
                 async for text in response_stream.text_stream:
                     yield text
 
-                # After stream completes, check stop reason
+                # After stream completes, check stop reason and extract usage
                 final_message = await response_stream.get_final_message()
+
+                # Populate metadata with usage info if provided
+                if metadata is not None:
+                    metadata["usage"] = {
+                        "prompt_tokens": final_message.usage.input_tokens,
+                        "completion_tokens": final_message.usage.output_tokens,
+                        "total_tokens": final_message.usage.input_tokens
+                        + final_message.usage.output_tokens,
+                    }
+
                 if final_message.stop_reason == "max_tokens":
                     logger.warning("Response truncated due to max_tokens limit")
                     yield "\n[Response was truncated due to token limit]"

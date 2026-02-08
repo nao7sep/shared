@@ -101,6 +101,7 @@ class OpenAIProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to OpenAI and yield response chunks.
 
@@ -109,6 +110,7 @@ class OpenAIProvider:
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
+            metadata: Optional dict to populate with usage info after streaming
 
         Yields:
             Response text chunks
@@ -131,6 +133,13 @@ class OpenAIProvider:
                 # Check if this is a usage-only chunk (no choices)
                 if not chunk.choices:
                     if chunk.usage:
+                        # Populate metadata with usage info if provided
+                        if metadata is not None:
+                            metadata["usage"] = {
+                                "prompt_tokens": chunk.usage.prompt_tokens,
+                                "completion_tokens": chunk.usage.completion_tokens,
+                                "total_tokens": chunk.usage.total_tokens,
+                            }
                         logger.info(
                             f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
                             f"{chunk.usage.completion_tokens} completion = "

@@ -17,6 +17,8 @@
 - still write app to zip-archive source code to separate vibe coding from code review
 - release tk
 - release poly-chat
+- review tk and update readme.md
+- review poly-chat and update readme.md
 
 ## History
 

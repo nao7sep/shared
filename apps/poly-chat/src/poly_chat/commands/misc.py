@@ -11,8 +11,7 @@ class MiscCommandsMixin:
         Returns:
             Help text
         """
-        return """
-PolyChat Commands:
+        return """PolyChat Commands:
 
 Provider Shortcuts:
   /gpt              Switch to OpenAI GPT
@@ -93,8 +92,7 @@ Other:
   /help             Show this help
   /exit, /quit      Exit PolyChat
 
-Note: Use '--' to delete/clear values (e.g., /title --, /summary --)
-"""
+Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
 
     async def exit_app(self, args: str) -> str:
         """Exit the application.

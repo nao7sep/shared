@@ -31,35 +31,43 @@ class StructuredTextFormatter(logging.Formatter):
     """Format all log records as human-readable structured blocks."""
 
     EVENT_KEY_ORDER: dict[str, list[str]] = {
+        # Application lifecycle events
         "app_start": [
             "ts",
             "level",
+            "assistant_provider",
+            "assistant_model",
+            "helper_provider",
+            "helper_model",
             "profile_file",
             "chat_file",
             "log_file",
             "chats_dir",
             "log_dir",
-            "assistant_provider",
-            "assistant_model",
-            "helper_provider",
-            "helper_model",
             "input_mode",
             "timeout",
             "system_prompt_path",
         ],
-        "app_stop": ["ts", "level", "reason", "error_type", "error", "uptime_ms"],
+        "app_stop": [
+            "ts",
+            "level",
+            "reason",
+            "uptime_ms",
+            "error_type",
+            "error",
+        ],
         "session_start": [
             "ts",
             "level",
+            "assistant_provider",
+            "assistant_model",
+            "helper_provider",
+            "helper_model",
             "profile_file",
             "chat_file",
             "log_file",
             "chats_dir",
             "log_dir",
-            "assistant_provider",
-            "assistant_model",
-            "helper_provider",
-            "helper_model",
             "input_mode",
             "timeout",
             "system_prompt_path",
@@ -67,35 +75,58 @@ class StructuredTextFormatter(logging.Formatter):
             "chat_summary",
             "message_count",
         ],
-        "session_stop": ["ts", "level", "reason", "chat_file", "message_count"],
+        "session_stop": [
+            "ts",
+            "level",
+            "reason",
+            "chat_file",
+            "message_count",
+        ],
+        # Command execution events
         "command_exec": [
             "ts",
             "level",
             "command",
             "args_summary",
-            "elapsed_ms",
             "chat_file",
+            "elapsed_ms",
         ],
         "command_error": [
             "ts",
             "level",
             "command",
             "args_summary",
+            "chat_file",
             "error_type",
             "error",
-            "chat_file",
         ],
-        "chat_opened": [
+        # Chat management events
+        "chat_switch": [
             "ts",
             "level",
-            "action",
             "chat_file",
+            "trigger",
             "previous_chat_file",
             "message_count",
         ],
-        "chat_closed": ["ts", "level", "reason", "chat_file", "message_count"],
-        "chat_renamed": ["ts", "level", "old_chat_file", "new_chat_file"],
-        "chat_deleted": ["ts", "level", "reason", "chat_file"],
+        "chat_close": [
+            "ts",
+            "level",
+            "chat_file",
+            "message_count",
+        ],
+        "chat_rename": [
+            "ts",
+            "level",
+            "old_chat_file",
+            "new_chat_file",
+        ],
+        "chat_delete": [
+            "ts",
+            "level",
+            "chat_file",
+        ],
+        # AI interaction events
         "ai_request": [
             "ts",
             "level",
@@ -117,6 +148,9 @@ class StructuredTextFormatter(logging.Formatter):
             "chat_file",
             "latency_ms",
             "output_chars",
+            "input_tokens",
+            "output_tokens",
+            "total_tokens",
         ],
         "ai_error": [
             "ts",
@@ -129,6 +163,7 @@ class StructuredTextFormatter(logging.Formatter):
             "error_type",
             "error",
         ],
+        # Helper AI events
         "helper_ai_request": [
             "ts",
             "level",
@@ -147,6 +182,9 @@ class StructuredTextFormatter(logging.Formatter):
             "model",
             "latency_ms",
             "output_chars",
+            "input_tokens",
+            "output_tokens",
+            "total_tokens",
         ],
         "helper_ai_error": [
             "ts",
@@ -158,6 +196,7 @@ class StructuredTextFormatter(logging.Formatter):
             "error_type",
             "error",
         ],
+        # Provider validation events
         "provider_validation_error": [
             "ts",
             "level",
@@ -168,8 +207,19 @@ class StructuredTextFormatter(logging.Formatter):
             "error_type",
             "error",
         ],
-        "log": ["ts", "level", "logger", "message"],
+        # Generic log messages
+        "log": [
+            "ts",
+            "level",
+            "logger",
+            "message",
+        ],
     }
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        # Emit a blank line between entries without adding extra trailing lines.
+        self._first_entry = True
 
     def _format_value(self, value: Any, max_len: int = 400) -> str:
         value_str = sanitize_error_message(str(value))
@@ -217,8 +267,11 @@ class StructuredTextFormatter(logging.Formatter):
             lines.append("traceback:")
             lines.append(self.formatException(record.exc_info))
 
-        lines.append("--- end ---")
-        return "\n".join(lines) + "\n"
+        body = "\n".join(lines)
+        if self._first_entry:
+            self._first_entry = False
+            return body
+        return "\n" + body
 
 
 def _to_log_safe(value: Any) -> Any:

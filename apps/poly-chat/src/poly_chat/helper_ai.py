@@ -109,14 +109,24 @@ async def invoke_helper_ai(
             model=helper_model,
             system_prompt=system_prompt,
         )
-        logger.info(
-            "Helper AI completed (provider=%s, model=%s, task=%s, latency_ms=%.1f, usage=%s)",
-            helper_ai,
-            helper_model,
-            task,
-            round((time.perf_counter() - started) * 1000, 1),
-            metadata.get("usage", {}) if isinstance(metadata, dict) else {},
+
+        # Log successful helper AI response
+        latency_ms = round((time.perf_counter() - started) * 1000, 1)
+        usage = metadata.get("usage", {}) if isinstance(metadata, dict) else {}
+
+        log_event(
+            "helper_ai_response",
+            level=logging.INFO,
+            task=task,
+            provider=helper_ai,
+            model=helper_model,
+            latency_ms=latency_ms,
+            output_chars=len(response_text),
+            input_tokens=usage.get("prompt_tokens"),
+            output_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
         )
+
         return response_text.strip()
 
     except Exception as e:

@@ -94,13 +94,20 @@ async def send_message_to_ai(
 
     started = time.perf_counter()
     try:
-        response_stream = provider_instance.send_message(
-            messages=messages, model=model, system_prompt=system_prompt, stream=True
-        )
+        # Create metadata dict that provider can populate with usage info
         metadata = {"model": model, "started": started}
 
-        # Return stream for caller to display
-        # Note: ai_response logging moved to caller after stream is consumed
+        # Pass metadata to provider so it can populate usage after streaming
+        response_stream = provider_instance.send_message(
+            messages=messages,
+            model=model,
+            system_prompt=system_prompt,
+            stream=True,
+            metadata=metadata,
+        )
+
+        # Return stream for caller to display and log after consumption
+        # Provider will populate metadata["usage"] after streaming completes
         return response_stream, metadata
     except Exception as e:
         log_event(

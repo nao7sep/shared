@@ -614,8 +614,8 @@ def test_create_profile_template_uses_inline_prompt_and_mixed_api_key_examples(t
         "type": "text",
         "content": "You are a helpful assistant."
     }
-    assert created_profile["chats_dir"] == str(profile_path.parent / "chats")
-    assert created_profile["log_dir"] == str(profile_path.parent / "logs")
+    assert created_profile["chats_dir"] == "~/poly-chat/chats"
+    assert created_profile["log_dir"] == "~/poly-chat/logs"
     assert created_profile["api_keys"]["openai"] == {
         "type": "env",
         "key": "OPENAI_API_KEY",
