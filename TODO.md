@@ -11,7 +11,6 @@
 - try deepl/google translation apis
 - try openai/google transcription apis
 - decide what to do with blog/x
-- multi-ai cli chat tool
 - blog + rag + ai consulting on international businesses, ai applications and parenting?
 - vocabulary development infrastructure for my daughter
 - still write app to zip-archive source code to separate vibe coding from code review
@@ -21,6 +20,9 @@
 - review poly-chat and update readme.md
 
 ## History
+
+### 2026-02-08
+- ✅ multi-ai cli chat tool => first version runs. refactored, tested and checked
 
 ### 2026-02-06
 - ✅ refine vibe coding workflow => watched some videos and simplified things
