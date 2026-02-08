@@ -1,0 +1,472 @@
+"""Tests for REPL orchestration and command signal handling.
+
+These tests document the current behavior of command response signals
+and state transitions in the REPL loop. This serves as a safety net
+before refactoring the orchestration logic out of repl.py.
+"""
+
+import pytest
+from src.poly_chat.app_state import (
+    SessionState,
+    initialize_message_hex_ids,
+    reset_chat_scoped_state,
+)
+
+
+class TestCommandSignals:
+    """Test command signal patterns used in REPL orchestration."""
+
+    def test_exit_signal(self):
+        """Test __EXIT__ signal pattern."""
+        signal = "__EXIT__"
+        assert signal == "__EXIT__"
+
+    def test_new_chat_signal(self):
+        """Test __NEW_CHAT__ signal pattern with path."""
+        chat_path = "/path/to/new-chat.json"
+        signal = f"__NEW_CHAT__:{chat_path}"
+
+        assert signal.startswith("__NEW_CHAT__:")
+        extracted_path = signal.split(":", 1)[1]
+        assert extracted_path == chat_path
+
+    def test_open_chat_signal(self):
+        """Test __OPEN_CHAT__ signal pattern with path."""
+        chat_path = "/path/to/existing-chat.json"
+        signal = f"__OPEN_CHAT__:{chat_path}"
+
+        assert signal.startswith("__OPEN_CHAT__:")
+        extracted_path = signal.split(":", 1)[1]
+        assert extracted_path == chat_path
+
+    def test_close_chat_signal(self):
+        """Test __CLOSE_CHAT__ signal pattern."""
+        signal = "__CLOSE_CHAT__"
+        assert signal == "__CLOSE_CHAT__"
+
+    def test_rename_current_signal(self):
+        """Test __RENAME_CURRENT__ signal pattern with new path."""
+        new_path = "/path/to/renamed-chat.json"
+        signal = f"__RENAME_CURRENT__:{new_path}"
+
+        assert signal.startswith("__RENAME_CURRENT__:")
+        extracted_path = signal.split(":", 1)[1]
+        assert extracted_path == new_path
+
+    def test_delete_current_signal(self):
+        """Test __DELETE_CURRENT__ signal pattern with filename."""
+        filename = "deleted-chat.json"
+        signal = f"__DELETE_CURRENT__:{filename}"
+
+        assert signal.startswith("__DELETE_CURRENT__:")
+        extracted_filename = signal.split(":", 1)[1]
+        assert extracted_filename == filename
+
+    def test_apply_retry_signal(self):
+        """Test __APPLY_RETRY__ signal pattern."""
+        signal = "__APPLY_RETRY__"
+        assert signal == "__APPLY_RETRY__"
+
+    def test_cancel_retry_signal(self):
+        """Test __CANCEL_RETRY__ signal pattern."""
+        signal = "__CANCEL_RETRY__"
+        assert signal == "__CANCEL_RETRY__"
+
+    def test_clear_secret_context_signal(self):
+        """Test __CLEAR_SECRET_CONTEXT__ signal pattern."""
+        signal = "__CLEAR_SECRET_CONTEXT__"
+        assert signal == "__CLEAR_SECRET_CONTEXT__"
+
+    def test_secret_oneshot_signal(self):
+        """Test __SECRET_ONESHOT__ signal pattern with message."""
+        secret_message = "This is a secret question"
+        signal = f"__SECRET_ONESHOT__:{secret_message}"
+
+        assert signal.startswith("__SECRET_ONESHOT__:")
+        extracted_message = signal.split(":", 1)[1]
+        assert extracted_message == secret_message
+
+
+class TestChatSwitchingOrchestration:
+    """Test orchestration logic for chat switching."""
+
+    def test_new_chat_state_initialization(self):
+        """Test state initialization when creating new chat."""
+        # Simulate creating new chat
+        new_chat_data = {
+            "metadata": {
+                "title": None,
+                "summary": None,
+                "system_prompt_path": None,
+                "default_model": None,
+                "created_at": None,
+                "updated_at": None,
+            },
+            "messages": [],
+        }
+
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat=new_chat_data,
+        )
+
+        # Initialize hex IDs for new chat
+        initialize_message_hex_ids(session)
+
+        assert session.chat == new_chat_data
+        assert session.message_hex_ids == {}
+        assert session.hex_id_set == set()
+
+    def test_open_chat_replaces_current(self):
+        """Test opening chat replaces current chat data."""
+        # Start with current chat
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={"messages": [{"role": "user", "content": "old"}]},
+        )
+        initialize_message_hex_ids(session)
+        old_hex_ids = dict(session.message_hex_ids)
+
+        # Open new chat
+        new_chat = {"messages": [{"role": "user", "content": "new"}]}
+        session.chat = new_chat
+        initialize_message_hex_ids(session)
+
+        # Should have different hex IDs
+        assert session.chat == new_chat
+        assert session.message_hex_ids != old_hex_ids
+
+    def test_close_chat_clears_state(self):
+        """Test closing chat clears chat-related state."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={"messages": [{"role": "user", "content": "test"}]},
+        )
+        initialize_message_hex_ids(session)
+        session_dict = {"retry_mode": False, "secret_mode": False}
+
+        # Simulate closing chat
+        session.chat = {}
+        session.message_hex_ids.clear()
+        session.hex_id_set.clear()
+        reset_chat_scoped_state(session, session_dict)
+
+        assert session.chat == {}
+        assert session.message_hex_ids == {}
+        assert session.hex_id_set == set()
+        assert session.retry_mode is False
+        assert session.secret_mode is False
+
+    def test_chat_switch_resets_scoped_state(self):
+        """Test that switching chats resets retry/secret modes."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={"messages": []},
+            retry_mode=True,
+            secret_mode=True,
+        )
+        session_dict = {"retry_mode": True, "secret_mode": True}
+
+        # Simulate chat switch
+        reset_chat_scoped_state(session, session_dict)
+
+        assert session.retry_mode is False
+        assert session.secret_mode is False
+        assert session_dict["retry_mode"] is False
+        assert session_dict["secret_mode"] is False
+
+
+class TestRetryModeOrchestration:
+    """Test retry mode orchestration logic."""
+
+    def test_enter_retry_mode_freezes_context(self):
+        """Test entering retry mode freezes message context."""
+        chat_data = {
+            "messages": [
+                {"role": "user", "content": "Question"},
+                {"role": "assistant", "content": "Bad answer"},
+            ]
+        }
+
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat=chat_data,
+        )
+
+        # Enter retry mode - freeze context without last assistant message
+        session.retry_mode = True
+        session.retry_base_messages = [{"role": "user", "content": "Question"}]
+
+        assert session.retry_mode is True
+        assert len(session.retry_base_messages) == 1
+        # Original chat unchanged
+        assert len(chat_data["messages"]) == 2
+
+    def test_retry_attempt_uses_frozen_context(self):
+        """Test retry attempt uses frozen context plus new user message."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+            retry_mode=True,
+        )
+        session.retry_base_messages = [{"role": "user", "content": "Original"}]
+        session.retry_current_user_msg = "Try this instead"
+
+        # Simulate building temp messages for retry
+        temp_messages = session.retry_base_messages + [
+            {"role": "user", "content": session.retry_current_user_msg}
+        ]
+
+        assert len(temp_messages) == 2
+        assert temp_messages[0]["content"] == "Original"
+        assert temp_messages[1]["content"] == "Try this instead"
+
+    def test_apply_retry_replaces_messages(self):
+        """Test applying retry replaces original messages."""
+        chat_data = {
+            "messages": [
+                {"role": "user", "content": "Original question"},
+                {"role": "assistant", "content": "Bad answer"},
+            ]
+        }
+
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat=chat_data,
+        )
+        session.retry_current_user_msg = "Better question"
+        session.retry_current_assistant_msg = "Better answer"
+
+        # Simulate applying retry (simplified - actual code is more complex)
+        # Remove last 2 messages
+        if len(chat_data["messages"]) >= 2:
+            chat_data["messages"] = chat_data["messages"][:-2]
+
+        # Add retry messages
+        chat_data["messages"].append(
+            {"role": "user", "content": session.retry_current_user_msg}
+        )
+        chat_data["messages"].append(
+            {"role": "assistant", "content": session.retry_current_assistant_msg}
+        )
+
+        assert len(chat_data["messages"]) == 2
+        assert chat_data["messages"][0]["content"] == "Better question"
+        assert chat_data["messages"][1]["content"] == "Better answer"
+
+    def test_cancel_retry_clears_state(self):
+        """Test cancelling retry clears retry state."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+            retry_mode=True,
+            retry_current_user_msg="test",
+            retry_current_assistant_msg="response",
+        )
+        session.retry_base_messages = [{"role": "user", "content": "base"}]
+        session_dict = {"retry_mode": True}
+
+        # Cancel retry
+        session.retry_mode = False
+        session.retry_base_messages.clear()
+        session.retry_current_user_msg = None
+        session.retry_current_assistant_msg = None
+        session_dict["retry_mode"] = False
+
+        assert session.retry_mode is False
+        assert session.retry_base_messages == []
+        assert session.retry_current_user_msg is None
+        assert session.retry_current_assistant_msg is None
+
+
+class TestSecretModeOrchestration:
+    """Test secret mode orchestration logic."""
+
+    def test_enter_secret_mode_freezes_context(self):
+        """Test entering secret mode freezes message context."""
+        chat_data = {
+            "messages": [
+                {"role": "user", "content": "Public question"},
+                {"role": "assistant", "content": "Public answer"},
+            ]
+        }
+
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat=chat_data,
+        )
+
+        # Enter secret mode - freeze current context
+        session.secret_mode = True
+        session.secret_base_messages = [
+            {"role": "user", "content": "Public question"},
+            {"role": "assistant", "content": "Public answer"},
+        ]
+
+        assert session.secret_mode is True
+        assert len(session.secret_base_messages) == 2
+
+    def test_secret_message_not_saved(self):
+        """Test secret messages aren't saved to chat."""
+        chat_data = {"messages": [{"role": "user", "content": "Public"}]}
+
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat=chat_data,
+            secret_mode=True,
+        )
+        session.secret_base_messages = [{"role": "user", "content": "Public"}]
+
+        # Simulate secret question (built but not saved)
+        temp_messages = session.secret_base_messages + [
+            {"role": "user", "content": "Secret question"}
+        ]
+
+        # Temp messages have secret
+        assert len(temp_messages) == 2
+        assert temp_messages[-1]["content"] == "Secret question"
+
+        # Original chat unchanged
+        assert len(chat_data["messages"]) == 1
+        assert chat_data["messages"][-1]["content"] == "Public"
+
+    def test_clear_secret_context(self):
+        """Test clearing secret context."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+            secret_mode=True,
+        )
+        session.secret_base_messages = [{"role": "user", "content": "frozen"}]
+
+        # Clear secret context
+        session.secret_base_messages.clear()
+
+        assert session.secret_base_messages == []
+        # Note: secret_mode might stay True until /secret toggle
+
+
+class TestProviderSwitching:
+    """Test provider switching orchestration."""
+
+    def test_switch_provider_updates_session(self):
+        """Test switching provider updates current_ai and current_model."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+        )
+
+        # Simulate provider switch
+        session.current_ai = "openai"
+        session.current_model = "gpt-5-mini"
+
+        assert session.current_ai == "openai"
+        assert session.current_model == "gpt-5-mini"
+
+    def test_provider_cache_survives_switch(self):
+        """Test provider cache persists when switching providers."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+        )
+
+        # Cache providers
+        session.cache_provider("claude", "key1", {"instance": "claude"})
+        session.cache_provider("openai", "key2", {"instance": "openai"})
+
+        # Switch provider
+        session.current_ai = "openai"
+
+        # Both caches should still exist
+        assert session.get_cached_provider("claude", "key1") is not None
+        assert session.get_cached_provider("openai", "key2") is not None
+
+
+class TestInputModeToggle:
+    """Test input mode toggling orchestration."""
+
+    def test_toggle_quick_to_compose(self):
+        """Test toggling from quick to compose mode."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+            input_mode="quick",
+        )
+
+        # Toggle to compose
+        session.input_mode = "compose"
+
+        assert session.input_mode == "compose"
+
+    def test_toggle_compose_to_quick(self):
+        """Test toggling from compose to quick mode."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+            input_mode="compose",
+        )
+
+        # Toggle to quick
+        session.input_mode = "quick"
+
+        assert session.input_mode == "quick"

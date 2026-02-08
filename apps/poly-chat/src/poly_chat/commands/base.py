@@ -2,30 +2,31 @@
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 
 from .. import models, profile
 from ..chat import update_metadata
 
+if TYPE_CHECKING:
+    from ..session_manager import SessionManager
+
 
 class CommandHandlerBaseMixin:
-    def __init__(self, session_state: dict[str, Any]):
+    def __init__(self, manager: "SessionManager", session_dict: dict[str, Any]):
         """Initialize command handler.
 
         Args:
-            session_state: Dictionary containing session state
-                - current_ai: Current AI provider
-                - current_model: Current model
-                - profile: Profile dict
-                - chat: Chat dict
+            manager: SessionManager instance for unified state access
+            session_dict: Legacy dict containing repl-specific paths (chat_path, profile_path, log_file)
         """
-        self.session = session_state
+        self.manager = manager
+        self.session_dict = session_dict
 
     def _require_open_chat(
         self, *, need_messages: bool = False, need_metadata: bool = False
     ) -> Optional[dict[str, Any]]:
         """Return current chat or None when required structure is missing."""
-        chat_data = self.session.get("chat")
+        chat_data = self.manager.chat
         if not isinstance(chat_data, dict) or not chat_data:
             return None
         if need_messages and "messages" not in chat_data:
@@ -36,8 +37,8 @@ class CommandHandlerBaseMixin:
 
     async def _save_current_chat_if_open(self) -> None:
         """Persist current chat when a chat file is active."""
-        chat_path = self.session.get("chat_path")
-        chat_data = self.session.get("chat")
+        chat_path = self.session_dict.get("chat_path")
+        chat_data = self.manager.chat
         if chat_path and isinstance(chat_data, dict):
             from .. import commands as commands_module
 
@@ -113,12 +114,11 @@ class CommandHandlerBaseMixin:
             raise ValueError(f"Unknown provider shortcut: /{shortcut}")
 
         # Get model for this provider from profile
-        model = self.session["profile"]["models"].get(provider)
+        model = self.manager.profile["models"].get(provider)
         if not model:
             raise ValueError(f"No model configured for {provider}")
 
-        self.session["current_ai"] = provider
-        self.session["current_model"] = model
+        self.manager.switch_provider(provider, model)
 
         return f"Switched to {provider} ({model})"
 

@@ -91,9 +91,9 @@ class MetadataCommandsMixin:
         # Invoke helper AI
         try:
             title = await self._invoke_helper_ai(
-                self.session["helper_ai"],
-                self.session["helper_model"],
-                self.session["profile"],
+                self.manager.helper_ai,
+                self.manager.helper_model,
+                self.manager.profile,
                 prompt_messages,
                 system_prompt,
                 task="title_generation",
@@ -110,8 +110,8 @@ class MetadataCommandsMixin:
         except Exception as e:
             logging.error(
                 "Helper AI title generation failed (provider=%s, model=%s): %s",
-                self.session.get("helper_ai"),
-                self.session.get("helper_model"),
+                self.manager.helper_ai,
+                self.manager.helper_model,
                 e,
                 exc_info=True,
             )
@@ -179,9 +179,9 @@ class MetadataCommandsMixin:
         # Invoke helper AI
         try:
             summary = await self._invoke_helper_ai(
-                self.session["helper_ai"],
-                self.session["helper_model"],
-                self.session["profile"],
+                self.manager.helper_ai,
+                self.manager.helper_model,
+                self.manager.profile,
                 prompt_messages,
                 system_prompt,
                 task="summary_generation",
@@ -195,8 +195,8 @@ class MetadataCommandsMixin:
         except Exception as e:
             logging.error(
                 "Helper AI summary generation failed (provider=%s, model=%s): %s",
-                self.session.get("helper_ai"),
-                self.session.get("helper_model"),
+                self.manager.helper_ai,
+                self.manager.helper_model,
                 e,
                 exc_info=True,
             )
@@ -211,7 +211,7 @@ class MetadataCommandsMixin:
         Returns:
             Safety check results with categorized findings
         """
-        chat = self.session["chat"]
+        chat = self.manager.chat
         messages = chat["messages"]
 
         if not messages:
@@ -220,7 +220,7 @@ class MetadataCommandsMixin:
         # Determine what to check
         if args.strip():
             # Check specific message by hex ID
-            hex_map = self.session.get("message_hex_ids", {})
+            hex_map = self.manager.message_hex_ids
             msg_index = hex_id.get_message_index(args.strip(), hex_map)
 
             if msg_index is None:
@@ -257,9 +257,9 @@ Keep descriptions brief (one line max). For found items, mention location if che
         # Invoke helper AI
         try:
             result = await self._invoke_helper_ai(
-                self.session["helper_ai"],
-                self.session["helper_model"],
-                self.session["profile"],
+                self.manager.helper_ai,
+                self.manager.helper_model,
+                self.manager.profile,
                 prompt_messages,
                 system_prompt,
                 task="safety_check",
@@ -278,8 +278,8 @@ Keep descriptions brief (one line max). For found items, mention location if che
         except Exception as e:
             logging.error(
                 "Helper AI safety check failed (provider=%s, model=%s, scope=%s): %s",
-                self.session.get("helper_ai"),
-                self.session.get("helper_model"),
+                self.manager.helper_ai,
+                self.manager.helper_model,
                 scope,
                 e,
                 exc_info=True,
@@ -296,7 +296,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
             Formatted string with message content
         """
         formatted = []
-        hex_map = self.session.get("message_hex_ids", {})
+        hex_map = self.manager.message_hex_ids
 
         for i, msg in enumerate(messages):
             role = msg.get("role", "unknown")
@@ -322,7 +322,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
         Returns:
             Formatted history display
         """
-        chat = self.session["chat"]
+        chat = self.manager.chat
         messages = chat["messages"]
 
         if not messages:
@@ -365,7 +365,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
             return "No messages to display"
 
         # Format output
-        hex_map = self.session.get("message_hex_ids", {})
+        hex_map = self.manager.message_hex_ids
         output = []
 
         # Header
@@ -431,9 +431,9 @@ Keep descriptions brief (one line max). For found items, mention location if che
         if not args.strip():
             return "Usage: /show <hex_id>"
 
-        chat = self.session["chat"]
+        chat = self.manager.chat
         messages = chat["messages"]
-        hex_map = self.session.get("message_hex_ids", {})
+        hex_map = self.manager.message_hex_ids
 
         # Look up message by hex ID
         msg_index = hex_id.get_message_index(args.strip(), hex_map)
@@ -474,14 +474,13 @@ Keep descriptions brief (one line max). For found items, mention location if che
 
     async def show_status(self, args: str) -> str:
         """Show current session status and key paths."""
-        session = self.session
-        profile_data = session["profile"]
+        profile_data = self.manager.profile
 
-        profile_path = session.get("profile_path", "(unknown)")
-        chat_path = session.get("chat_path")
-        log_file = session.get("log_file")
+        profile_path = self.session_dict.get("profile_path", "(unknown)")
+        chat_path = self.session_dict.get("chat_path")
+        log_file = self.session_dict.get("log_file")
 
-        chat_data = session.get("chat") or {}
+        chat_data = self.manager.chat or {}
         messages = chat_data.get("messages", []) if isinstance(chat_data, dict) else []
         metadata = chat_data.get("metadata", {}) if isinstance(chat_data, dict) else {}
 
@@ -513,15 +512,15 @@ Keep descriptions brief (one line max). For found items, mention location if che
             f"Updated:      {updated_local}",
             "",
             "Assistant",
-            f"Assistant:    {session.get('current_ai', '(unknown)')} ({session.get('current_model', '(unknown)')})",
-            f"Helper:       {session.get('helper_ai', '(unknown)')} ({session.get('helper_model', '(unknown)')})",
-            f"System Prompt:{' ' if session.get('system_prompt_path') else ''}{session.get('system_prompt_path') or '(none)'}",
+            f"Assistant:    {self.manager.current_ai} ({self.manager.current_model})",
+            f"Helper:       {self.manager.helper_ai} ({self.manager.helper_model})",
+            f"System Prompt:{' ' if self.manager.system_prompt_path else ''}{self.manager.system_prompt_path or '(none)'}",
             f"Timeout:      {timeout_display}",
-            f"Input Mode:   {session.get('input_mode', 'quick')}",
+            f"Input Mode:   {self.manager.input_mode}",
             "",
             "Modes",
-            f"Secret Mode:  {'ON' if session.get('secret_mode') else 'OFF'}",
-            f"Retry Mode:   {'ON' if session.get('retry_mode') else 'OFF'}",
+            f"Secret Mode:  {'ON' if self.manager.secret_mode else 'OFF'}",
+            f"Retry Mode:   {'ON' if self.manager.retry_mode else 'OFF'}",
             "",
             "Paths",
             f"Chats Dir:    {profile_data.get('chats_dir', '(unknown)')}",

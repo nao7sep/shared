@@ -177,6 +177,7 @@ Generated automatically after each change (if `auto_sync: true`):
 - **Numbers reset:** After any command that changes state, run `list` or `history` again to get fresh numbers
 - **Use shortcuts:** `a`, `l`, `d`, `c`, `e` for speed
 - **Ctrl+C cancels:** Interactive prompts can be cancelled anytime
+- **Unknown handled date:** If a handled task has no subjective date (for example from manual JSON edits), it appears under `unknown` in both `history` output and `TODO.md`
 - **No duplicate checking:** Intentional design choice - just cancel or delete if needed
 - **Delete is rare:** Use `cancel` for tasks you won't do; reserve `delete` for mistakes
 

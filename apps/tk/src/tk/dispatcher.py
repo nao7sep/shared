@@ -86,44 +86,49 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
     if cmd == "done":
         if len(args) != 1:
             raise ValueError("Usage: done <num> [--note <text>] [--date YYYY-MM-DD]")
-        result = commands.cmd_done(session, args[0], kwargs.get("note"), kwargs.get("date"))
+        array_index = session.resolve_array_index(args[0])
+        result = commands.cmd_done(session, array_index, kwargs.get("note"), kwargs.get("date"))
         session.clear_last_list()
         return result
 
     if cmd == "cancel":
         if len(args) != 1:
             raise ValueError("Usage: cancel <num> [--note <text>] [--date YYYY-MM-DD]")
-        result = commands.cmd_cancel(session, args[0], kwargs.get("note"), kwargs.get("date"))
+        array_index = session.resolve_array_index(args[0])
+        result = commands.cmd_cancel(session, array_index, kwargs.get("note"), kwargs.get("date"))
         session.clear_last_list()
         return result
 
     if cmd == "edit":
         if len(args) < 2:
             raise ValueError("Usage: edit <num> <text>")
-        result = commands.cmd_edit(session, args[0], " ".join(str(a) for a in args[1:]))
+        array_index = session.resolve_array_index(args[0])
+        result = commands.cmd_edit(session, array_index, " ".join(str(a) for a in args[1:]))
         session.clear_last_list()
         return result
 
     if cmd == "delete":
         if len(args) != 1:
             raise ValueError("Usage: delete <num>")
-        result = commands.cmd_delete(session, args[0], confirm=bool(kwargs.get("confirm", False)))
-        if result == "Task deleted.":
-            session.clear_last_list()
+        array_index = session.resolve_array_index(args[0])
+        result = commands.cmd_delete(session, array_index, confirm=bool(kwargs.get("confirm", False)))
+        session.clear_last_list()
         return result
 
     if cmd == "note":
         if len(args) < 1:
             raise ValueError("Usage: note <num> [<text>]")
+        array_index = session.resolve_array_index(args[0])
         note_text = " ".join(str(a) for a in args[1:]) if len(args) > 1 else None
-        result = commands.cmd_note(session, args[0], note_text)
+        result = commands.cmd_note(session, array_index, note_text)
         session.clear_last_list()
         return result
 
     if cmd == "date":
         if len(args) != 2:
             raise ValueError("Usage: date <num> <YYYY-MM-DD>")
-        result = commands.cmd_date(session, args[0], args[1])
+        array_index = session.resolve_array_index(args[0])
+        result = commands.cmd_date(session, array_index, args[1])
         session.clear_last_list()
         return result
 

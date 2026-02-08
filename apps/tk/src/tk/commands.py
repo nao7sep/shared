@@ -103,21 +103,12 @@ def list_history_data(
             if t.get("subjective_date") == specific_date
         ]
 
-    grouped: dict[str, list[tuple[int, dict[str, Any]]]] = defaultdict(list)
-    for array_index, task in handled_with_indices:
-        date_str = task.get("subjective_date", "unknown")
-        grouped[date_str].append((array_index, task))
-
-    for date_str in grouped:
-        grouped[date_str].sort(key=lambda x: x[1].get("handled_at", ""))
-
-    sorted_dates = sorted(grouped.keys(), reverse=True)
-
     groups = []
     display_num = 1
-    for date_str in sorted_dates:
+    grouped = data.group_handled_tasks(handled_with_indices, include_unknown=True)
+    for date_str, date_items in grouped:
         items = []
-        for array_index, task in grouped[date_str]:
+        for array_index, task in date_items:
             items.append({
                 "display_num": display_num,
                 "array_index": array_index,
@@ -185,14 +176,12 @@ def cmd_add(session: Session, text: str) -> str:
 
 def _handle_task(
     session: Session,
-    num: int,
+    array_index: int,
     status: str,
     note: str | None,
     date_str: str | None,
 ) -> str:
     """Mark a task as handled."""
-    array_index = session.resolve_array_index(num)
-
     subj_date = date_str if date_str else get_default_subjective_date(session)
     validate_date_format(subj_date)
 
@@ -219,30 +208,29 @@ def _handle_task(
 
 def cmd_done(
     session: Session,
-    num: int,
+    array_index: int,
     note: str | None = None,
     date_str: str | None = None,
 ) -> str:
     """Mark a task as done."""
-    return _handle_task(session, num, "done", note, date_str)
+    return _handle_task(session, array_index, "done", note, date_str)
 
 
 def cmd_cancel(
     session: Session,
-    num: int,
+    array_index: int,
     note: str | None = None,
     date_str: str | None = None,
 ) -> str:
     """Mark a task as cancelled."""
-    return _handle_task(session, num, "cancelled", note, date_str)
+    return _handle_task(session, array_index, "cancelled", note, date_str)
 
 
-def cmd_edit(session: Session, num: int, text: str) -> str:
+def cmd_edit(session: Session, array_index: int, text: str) -> str:
     """Edit task text."""
     if not text.strip():
         raise ValueError("Task text cannot be empty")
 
-    array_index = session.resolve_array_index(num)
     tasks_data = session.require_tasks()
     prof = session.require_profile()
 
@@ -255,9 +243,8 @@ def cmd_edit(session: Session, num: int, text: str) -> str:
     return "Task updated."
 
 
-def cmd_delete(session: Session, num: int, confirm: bool = False) -> str:
+def cmd_delete(session: Session, array_index: int, confirm: bool = False) -> str:
     """Delete task permanently."""
-    array_index = session.resolve_array_index(num)
     tasks_data = session.require_tasks()
     prof = session.require_profile()
 
@@ -276,9 +263,8 @@ def cmd_delete(session: Session, num: int, confirm: bool = False) -> str:
     return "Task deleted."
 
 
-def cmd_note(session: Session, num: int, note: str | None = None) -> str:
+def cmd_note(session: Session, array_index: int, note: str | None = None) -> str:
     """Set, update, or remove note on a task."""
-    array_index = session.resolve_array_index(num)
     tasks_data = session.require_tasks()
     prof = session.require_profile()
 
@@ -291,11 +277,10 @@ def cmd_note(session: Session, num: int, note: str | None = None) -> str:
     return "Note updated." if note else "Note removed."
 
 
-def cmd_date(session: Session, num: int, date_str: str) -> str:
+def cmd_date(session: Session, array_index: int, date_str: str) -> str:
     """Change subjective handling date on a handled task."""
     validate_date_format(date_str)
 
-    array_index = session.resolve_array_index(num)
     tasks_data = session.require_tasks()
     prof = session.require_profile()
 

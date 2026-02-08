@@ -12,7 +12,6 @@ from .logging_utils import (
     log_event,
     sanitize_error_message,
 )
-from .streaming import display_streaming_response
 
 from .ai.openai_provider import OpenAIProvider
 from .ai.claude_provider import ClaudeProvider
@@ -73,8 +72,13 @@ async def send_message_to_ai(
     provider_name: Optional[str] = None,
     mode: str = "normal",
     chat_path: Optional[str] = None,
-) -> tuple[str, dict]:
-    """Send message to AI and get response."""
+) -> tuple:
+    """Send message to AI and get streaming response.
+
+    Returns:
+        Tuple of (response_stream, metadata) where response_stream is an async
+        generator that yields response chunks.
+    """
     provider_label = provider_name or provider_instance.__class__.__name__
     log_event(
         "ai_request",
@@ -93,21 +97,11 @@ async def send_message_to_ai(
         response_stream = provider_instance.send_message(
             messages=messages, model=model, system_prompt=system_prompt, stream=True
         )
-        response_text = await display_streaming_response(response_stream, prefix="")
-        metadata = {"model": model}
+        metadata = {"model": model, "started": started}
 
-        log_event(
-            "ai_response",
-            level=logging.INFO,
-            mode=mode,
-            provider=provider_label,
-            model=model,
-            chat_file=chat_file_label(chat_path),
-            latency_ms=round((time.perf_counter() - started) * 1000, 1),
-            output_chars=len(response_text),
-        )
-
-        return response_text, metadata
+        # Return stream for caller to display
+        # Note: ai_response logging moved to caller after stream is consumed
+        return response_stream, metadata
     except Exception as e:
         log_event(
             "ai_error",

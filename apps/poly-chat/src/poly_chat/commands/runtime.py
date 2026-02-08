@@ -18,7 +18,7 @@ class RuntimeCommandsMixin:
         """
         if not args:
             # Show available models for current provider
-            provider = self.session["current_ai"]
+            provider = self.manager.current_ai
             available_models = models.get_models_for_provider(provider)
             return f"Available models for {provider}:\n" + "\n".join(
                 f"  - {m}" for m in available_models
@@ -26,24 +26,24 @@ class RuntimeCommandsMixin:
 
         # Handle "default" - revert to profile's default
         if args == "default":
-            profile = self.session["profile"]
+            profile = self.manager.profile
             default_ai = profile["default_ai"]
             default_model = profile["models"][default_ai]
 
-            self.session["current_ai"] = default_ai
-            self.session["current_model"] = default_model
+            self.manager.current_ai = default_ai
+            self.manager.current_model = default_model
 
             return f"Reverted to profile default: {default_ai} ({default_model})"
 
         # Check if model exists and switch provider if needed
         provider = models.get_provider_for_model(args)
         if provider:
-            self.session["current_ai"] = provider
-            self.session["current_model"] = args
+            self.manager.current_ai = provider
+            self.manager.current_model = args
             return f"Switched to {provider} ({args})"
         else:
             # Model not in registry, but allow it anyway (might be new)
-            self.session["current_model"] = args
+            self.manager.current_model = args
             return f"Set model to {args} (provider: {self.session['current_ai']})"
 
     async def set_helper(self, args: str) -> str:
@@ -57,30 +57,30 @@ class RuntimeCommandsMixin:
         """
         if not args:
             # Show current helper
-            helper_ai = self.session.get("helper_ai", "not set")
-            helper_model = self.session.get("helper_model", "not set")
+            helper_ai = self.manager.helper_ai
+            helper_model = self.manager.helper_model
             return f"Current helper AI: {helper_ai} ({helper_model})"
 
         # 'default' - revert to profile default
         if args == "default":
-            profile_data = self.session["profile"]
+            profile_data = self.manager.profile
             helper_ai_name = profile_data.get("default_helper_ai", profile_data["default_ai"])
             helper_model_name = profile_data["models"][helper_ai_name]
 
-            self.session["helper_ai"] = helper_ai_name
-            self.session["helper_model"] = helper_model_name
+            self.manager.helper_ai = helper_ai_name
+            self.manager.helper_model = helper_model_name
 
             return f"Helper AI restored to profile default: {helper_ai_name} ({helper_model_name})"
 
         # Otherwise, it's a model name - check if it exists
         provider = models.get_provider_for_model(args)
         if provider:
-            self.session["helper_ai"] = provider
-            self.session["helper_model"] = args
+            self.manager.helper_ai = provider
+            self.manager.helper_model = args
             return f"Helper AI set to {provider} ({args})"
         else:
             # Model not in registry, but allow it anyway (might be new)
-            self.session["helper_model"] = args
+            self.manager.helper_model = args
             return f"Helper model set to {args} (provider: {self.session.get('helper_ai', 'unknown')})"
 
     async def set_timeout(self, args: str) -> str:
@@ -94,7 +94,7 @@ class RuntimeCommandsMixin:
         """
         if not args:
             # Show current timeout
-            timeout = self.session["profile"].get("timeout", 30)
+            timeout = self.manager.profile.get("timeout", 30)
             if timeout == 0:
                 return "Current timeout: 0 (wait forever)"
             else:
@@ -105,17 +105,16 @@ class RuntimeCommandsMixin:
             # The profile dict is loaded fresh, so we need to reload to get original
             # For now, just use the current profile value or 30
             # Note: This assumes profile hasn't been saved over
-            default_timeout = self.session["profile"].get("timeout", 30)
-            self.session["profile"]["timeout"] = default_timeout
+            default_timeout = self.manager.profile.get("timeout", 30)
+            self.manager.profile["timeout"] = default_timeout
 
-            # Clear provider cache since timeout changed
-            if "_provider_cache" in self.session:
-                self.session["_provider_cache"].clear()
+            # TODO: Clear provider cache since timeout changed
+            # (SessionManager doesn't expose cache clearing yet)
 
             if default_timeout == 0:
-                return "Reverted to profile default: 0 (wait forever). Provider cache cleared."
+                return "Reverted to profile default: 0 (wait forever)"
             else:
-                return f"Reverted to profile default: {default_timeout} seconds. Provider cache cleared."
+                return f"Reverted to profile default: {default_timeout} seconds"
 
         # Parse and set timeout
         try:
@@ -123,16 +122,15 @@ class RuntimeCommandsMixin:
             if not math.isfinite(timeout) or timeout < 0:
                 raise ValueError("Timeout must be a non-negative finite number")
 
-            self.session["profile"]["timeout"] = timeout
+            self.manager.profile["timeout"] = timeout
 
-            # Clear provider cache since timeout changed
-            if "_provider_cache" in self.session:
-                self.session["_provider_cache"].clear()
+            # TODO: Clear provider cache since timeout changed
+            # (SessionManager doesn't expose cache clearing yet)
 
             if timeout == 0:
-                return "Timeout set to 0 (wait forever). Provider cache cleared."
+                return "Timeout set to 0 (wait forever)"
             else:
-                return f"Timeout set to {timeout} seconds. Provider cache cleared."
+                return f"Timeout set to {timeout} seconds"
 
         except ValueError:
             raise ValueError("Invalid timeout value. Use a number (e.g., /timeout 60) or 0 for no timeout.")
@@ -144,7 +142,7 @@ class RuntimeCommandsMixin:
             quick: Enter sends, Alt/Option+Enter inserts newline
             compose: Enter inserts newline, Alt/Option+Enter sends
         """
-        current_mode = self.session.get("input_mode", "quick")
+        current_mode = self.manager.input_mode
 
         if not args:
             if current_mode == "quick":
@@ -154,16 +152,16 @@ class RuntimeCommandsMixin:
         value = args.strip().lower()
 
         if value == "default":
-            profile_mode = self.session["profile"].get("input_mode", "quick")
+            profile_mode = self.manager.profile.get("input_mode", "quick")
             if profile_mode not in ("quick", "compose"):
                 profile_mode = "quick"
-            self.session["input_mode"] = profile_mode
+            self.manager.input_mode = profile_mode
             if profile_mode == "quick":
                 return "Input mode restored to profile default: quick"
             return "Input mode restored to profile default: compose"
 
         if value in ("quick", "compose"):
-            self.session["input_mode"] = value
+            self.manager.input_mode = value
             if value == "quick":
                 return "Input mode set to quick (Enter sends)"
             return "Input mode set to compose (Enter inserts newline)"
@@ -195,8 +193,8 @@ class RuntimeCommandsMixin:
         if args == "--":
             update_metadata(chat_data, system_prompt_path=None)
             # Also update session state
-            self.session["system_prompt"] = None
-            self.session["system_prompt_path"] = None
+            self.manager.system_prompt = None
+            self.manager.system_prompt_path = None
 
             await self._save_current_chat_if_open()
 
@@ -204,7 +202,7 @@ class RuntimeCommandsMixin:
 
         # 'default' - restore profile default
         if args == "default":
-            profile_data = self.session["profile"]
+            profile_data = self.manager.profile
             default_system_prompt = profile_data.get("system_prompt")
 
             if not default_system_prompt:
@@ -236,8 +234,8 @@ class RuntimeCommandsMixin:
             update_metadata(chat_data, system_prompt_path=system_prompt_path)
 
             # Update session state
-            self.session["system_prompt"] = system_prompt_content
-            self.session["system_prompt_path"] = system_prompt_path
+            self.manager.system_prompt = system_prompt_content
+            self.manager.system_prompt_path = system_prompt_path
 
             await self._save_current_chat_if_open()
 
@@ -261,8 +259,8 @@ class RuntimeCommandsMixin:
             update_metadata(chat_data, system_prompt_path=args)
 
             # Update session state
-            self.session["system_prompt"] = system_prompt_content
-            self.session["system_prompt_path"] = args
+            self.manager.system_prompt = system_prompt_content
+            self.manager.system_prompt_path = args
 
             await self._save_current_chat_if_open()
 
@@ -281,7 +279,7 @@ class RuntimeCommandsMixin:
         Returns:
             Info message
         """
-        chat = self.session["chat"]
+        chat = self.manager.chat
 
         # Check if chat is loaded
         if not chat or "messages" not in chat:
@@ -302,7 +300,7 @@ class RuntimeCommandsMixin:
             return "Last message is not an assistant response or error. Nothing to retry."
 
         # Set retry mode flag - the REPL loop will handle the actual replacement
-        self.session["retry_mode"] = True
+        self.manager.retry_mode = True
         return f"Retry mode enabled. Your next message will replace the last {message_type}."
 
     async def apply_retry(self, args: str) -> str:
@@ -315,7 +313,7 @@ class RuntimeCommandsMixin:
             Special signal for REPL loop to handle
         """
         # Check if in retry mode
-        if not self.session.get("retry_mode", False):
+        if not self.manager.retry_mode:
             return "Not in retry mode"
 
         # Signal to REPL loop to apply retry
@@ -331,7 +329,7 @@ class RuntimeCommandsMixin:
             Special signal for REPL loop to handle
         """
         # Check if in retry mode
-        if not self.session.get("retry_mode", False):
+        if not self.manager.retry_mode:
             return "Not in retry mode"
 
         # Signal to REPL loop to cancel retry
@@ -346,7 +344,7 @@ class RuntimeCommandsMixin:
         Returns:
             Status message or special signal for one-shot mode
         """
-        chat = self.session["chat"]
+        chat = self.manager.chat
 
         # Check if chat is loaded
         if not chat or "messages" not in chat:
@@ -354,10 +352,10 @@ class RuntimeCommandsMixin:
 
         # No args - toggle mode
         if not args:
-            current_mode = self.session.get("secret_mode", False)
-            self.session["secret_mode"] = not current_mode
+            current_mode = self.manager.secret_mode
+            self.manager.secret_mode = not current_mode
 
-            if self.session["secret_mode"]:
+            if self.manager.secret_mode:
                 return "Secret mode enabled. Messages will not be saved to history."
             else:
                 # Signal to clear frozen context
@@ -365,12 +363,12 @@ class RuntimeCommandsMixin:
 
         # Explicit on
         elif args == "on":
-            self.session["secret_mode"] = True
+            self.manager.secret_mode = True
             return "Secret mode enabled. Messages will not be saved to history."
 
         # Explicit off
         elif args == "off":
-            self.session["secret_mode"] = False
+            self.manager.secret_mode = False
             # Signal to clear frozen context
             return "__CLEAR_SECRET_CONTEXT__"
 
@@ -388,7 +386,7 @@ class RuntimeCommandsMixin:
         Returns:
             Confirmation message
         """
-        chat = self.session["chat"]
+        chat = self.manager.chat
 
         # Check if chat is loaded
         if not chat or "messages" not in chat:
@@ -403,7 +401,7 @@ class RuntimeCommandsMixin:
             index = len(messages) - 1
         elif hex_id.is_hex_id(args):
             # Look up hex ID
-            hex_map = self.session.get("message_hex_ids", {})
+            hex_map = self.manager.message_hex_ids
             index = hex_id.get_message_index(args, hex_map)
             if index is None:
                 raise ValueError(f"Hex ID '{args}' not found")
@@ -415,7 +413,7 @@ class RuntimeCommandsMixin:
 
         try:
             # Get hex ID for display (if available)
-            hex_map = self.session.get("message_hex_ids", {})
+            hex_map = self.manager.message_hex_ids
             hex_display = hex_id.get_hex_id(index, hex_map)
             hex_str = f" [{hex_display}]" if hex_display else ""
 
@@ -428,7 +426,7 @@ class RuntimeCommandsMixin:
                 for idx in indices_to_remove:
                     if idx in hex_map:
                         removed_hex = hex_map.pop(idx)
-                        hex_id_set = self.session.get("hex_id_set", set())
+                        hex_id_set = self.manager.hex_id_set
                         hex_id_set.discard(removed_hex)
 
             await self._save_current_chat_if_open()
@@ -450,7 +448,7 @@ class RuntimeCommandsMixin:
         if not args.strip():
             return "Usage: /purge <hex_id> [hex_id2 hex_id3 ...]"
 
-        chat = self.session["chat"]
+        chat = self.manager.chat
         messages = chat["messages"]
 
         if not messages:
@@ -460,7 +458,7 @@ class RuntimeCommandsMixin:
         hex_ids_to_purge = args.strip().split()
 
         # Validate all hex IDs and get indices
-        hex_map = self.session.get("message_hex_ids", {})
+        hex_map = self.manager.message_hex_ids
         indices_to_delete = []
 
         for hid in hex_ids_to_purge:
@@ -482,7 +480,7 @@ class RuntimeCommandsMixin:
             # Remove from hex ID tracking
             if msg_index in hex_map:
                 removed_hex = hex_map.pop(msg_index)
-                hex_id_set = self.session.get("hex_id_set", set())
+                hex_id_set = self.manager.hex_id_set
                 hex_id_set.discard(removed_hex)
 
             deleted_count += 1
@@ -491,7 +489,7 @@ class RuntimeCommandsMixin:
         # Actually, let's just reassign hex IDs since order changed
         # Clear old mappings and regenerate
         hex_map.clear()
-        hex_id_set = self.session.get("hex_id_set", set())
+        hex_id_set = self.manager.hex_id_set
         hex_id_set.clear()
 
         # Reassign hex IDs to remaining messages

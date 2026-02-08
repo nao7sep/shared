@@ -21,7 +21,7 @@ class ChatFileCommandsMixin:
         Returns:
             Confirmation message or special __NEW_CHAT__ signal
         """
-        chats_dir = self.session["profile"]["chats_dir"]
+        chats_dir = self.manager.profile["chats_dir"]
 
         # Generate filename
         name = args.strip() if args else None
@@ -46,7 +46,7 @@ class ChatFileCommandsMixin:
         Returns:
             Special __OPEN_CHAT__ signal or error message
         """
-        chats_dir = self.session["profile"]["chats_dir"]
+        chats_dir = self.manager.profile["chats_dir"]
 
         if args.strip():
             # Path provided as argument
@@ -92,7 +92,7 @@ class ChatFileCommandsMixin:
         Returns:
             Special __CLOSE_CHAT__ signal
         """
-        if not self.session.get("chat_path"):
+        if not self.session_dict.get("chat_path"):
             return "No chat is currently open"
 
         # Signal to REPL to close chat
@@ -107,7 +107,7 @@ class ChatFileCommandsMixin:
         Returns:
             Confirmation message or special __RENAME_CURRENT__ signal
         """
-        chats_dir = self.session["profile"]["chats_dir"]
+        chats_dir = self.manager.profile["chats_dir"]
 
         # Parse args
         parts = args.strip().split(None, 1)
@@ -130,7 +130,7 @@ class ChatFileCommandsMixin:
                 new_path = rename_chat(selected_path, new_name, chats_dir)
 
                 # Check if this was the current chat
-                current_path = self.session.get("chat_path")
+                current_path = self.session_dict.get("chat_path")
                 if current_path and Path(current_path).resolve() == Path(selected_path).resolve():
                     # Signal to update current chat path
                     return f"__RENAME_CURRENT__:{new_path}"
@@ -148,7 +148,7 @@ class ChatFileCommandsMixin:
             return "Usage: /rename <chat_name|path|current> <new_name>"
 
         if target == "current":
-            current_path = self.session.get("chat_path")
+            current_path = self.session_dict.get("chat_path")
             if not current_path:
                 return "No chat is currently open"
             old_path = Path(current_path).resolve()
@@ -162,7 +162,7 @@ class ChatFileCommandsMixin:
             new_path = rename_chat(str(old_path), new_name, chats_dir)
 
             # Check if this was the current chat
-            current_path = self.session.get("chat_path")
+            current_path = self.session_dict.get("chat_path")
             if current_path and Path(current_path).resolve() == old_path.resolve():
                 return f"__RENAME_CURRENT__:{new_path}"
             return f"Renamed: {old_path.name} → {Path(new_path).name}"
@@ -179,7 +179,7 @@ class ChatFileCommandsMixin:
         Returns:
             Confirmation message or special __DELETE_CURRENT__ signal
         """
-        chats_dir = self.session["profile"]["chats_dir"]
+        chats_dir = self.manager.profile["chats_dir"]
 
         if not args.strip():
             # Interactive selection
@@ -193,7 +193,7 @@ class ChatFileCommandsMixin:
             # Parse argument
             name = args.strip()
             if name == "current":
-                current_path = self.session.get("chat_path")
+                current_path = self.session_dict.get("chat_path")
                 if not current_path:
                     return "No chat is currently open"
                 selected_path = current_path
@@ -204,7 +204,7 @@ class ChatFileCommandsMixin:
                     return str(e)
 
         # Check if this is the current chat
-        current_path = self.session.get("chat_path")
+        current_path = self.session_dict.get("chat_path")
         is_current = (
             current_path
             and Path(current_path).resolve() == Path(selected_path).resolve()
