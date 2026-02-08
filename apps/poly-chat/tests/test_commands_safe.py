@@ -3,17 +3,36 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 from poly_chat.commands import CommandHandler
+from src.poly_chat.session_manager import SessionManager
 
 
 @pytest.fixture
-def mock_session():
-    """Create a mock session state."""
-    return {
-        "current_ai": "claude",
-        "current_model": "claude-haiku-4-5",
-        "helper_ai": "claude",
-        "helper_model": "claude-haiku-4-5",
-        "profile": {
+def mock_session_manager_safe():
+    """Create a mock SessionManager for safe tests."""
+    chat_data = {
+        "metadata": {},
+        "messages": [
+            {
+                "timestamp": "2026-01-01T00:00:00+00:00",
+                "role": "user",
+                "content": ["Hello, my name is John Doe"]
+            },
+            {
+                "timestamp": "2026-01-01T00:00:01+00:00",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": ["Hi John! How can I help you?"]
+            },
+            {
+                "timestamp": "2026-01-01T00:00:02+00:00",
+                "role": "user",
+                "content": ["My API key is sk-abc123"]
+            }
+        ]
+    }
+
+    manager = SessionManager(
+        profile={
             "default_ai": "claude",
             "input_mode": "quick",
             "models": {
@@ -24,43 +43,50 @@ def mock_session():
                     "type": "direct",
                     "value": "test-key"
                 }
-            }
+            },
+            "chats_dir": "/test/chats",
+            "log_dir": "/test/logs",
+            "timeout": 30,
         },
-        "chat": {
-            "metadata": {},
-            "messages": [
-                {
-                    "timestamp": "2026-01-01T00:00:00+00:00",
-                    "role": "user",
-                    "content": ["Hello, my name is John Doe"]
-                },
-                {
-                    "timestamp": "2026-01-01T00:00:01+00:00",
-                    "role": "assistant",
-                    "model": "claude-haiku-4-5",
-                    "content": ["Hi John! How can I help you?"]
-                },
-                {
-                    "timestamp": "2026-01-01T00:00:02+00:00",
-                    "role": "user",
-                    "content": ["My API key is sk-abc123"]
-                }
-            ]
-        },
-        "message_hex_ids": {
-            0: "a3f",
-            1: "b2c",
-            2: "c1d"
-        },
-        "hex_id_set": {"a3f", "b2c", "c1d"}
+        current_ai="claude",
+        current_model="claude-haiku-4-5",
+        helper_ai="claude",
+        helper_model="claude-haiku-4-5",
+        chat=chat_data,
+    )
+
+    # Set up hex IDs as the tests expect
+    manager._state.message_hex_ids = {
+        0: "a3f",
+        1: "b2c",
+        2: "c1d"
+    }
+    manager._state.hex_id_set = {"a3f", "b2c", "c1d"}
+
+    return manager
+
+
+@pytest.fixture
+def mock_session_dict_safe():
+    """Create a mock session_dict for safe tests."""
+    return {
+        "profile_path": "/test/profile.json",
+        "chat_path": "/test/chat.json",
+        "log_file": "/test/log.txt",
     }
 
 
+@pytest.fixture
+def command_handler_safe(mock_session_manager_safe, mock_session_dict_safe):
+    """Create a CommandHandler for safe tests."""
+    return CommandHandler(mock_session_manager_safe, mock_session_dict_safe)
+
+
 @pytest.mark.asyncio
-async def test_safe_command_no_messages(mock_session):
+async def test_safe_command_no_messages(command_handler_safe, mock_session_manager_safe):
     """Test /safe command with no messages."""
-    mock_session["chat"]["messages"] = []
-    handler = CommandHandler(mock_session)
+    mock_session_manager_safe.chat["messages"] = []
+    handler = command_handler_safe
 
     result = await handler.check_safety("")
 
@@ -68,9 +94,9 @@ async def test_safe_command_no_messages(mock_session):
 
 
 @pytest.mark.asyncio
-async def test_safe_command_full_chat(mock_session):
+async def test_safe_command_full_chat(command_handler_safe, mock_session_manager_safe):
     """Test /safe command checking entire chat."""
-    handler = CommandHandler(mock_session)
+    handler = command_handler_safe
 
     # Mock the invoke_helper_ai function
     with patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
@@ -94,9 +120,9 @@ OFFENSIVE: ✓ None"""
 
 
 @pytest.mark.asyncio
-async def test_safe_command_specific_message(mock_session):
+async def test_safe_command_specific_message(command_handler_safe, mock_session_manager_safe):
     """Test /safe command checking specific message by hex ID."""
-    handler = CommandHandler(mock_session)
+    handler = command_handler_safe
 
     with patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_helper.return_value = """PII: ⚠ Found: name "John Doe"
@@ -115,9 +141,9 @@ OFFENSIVE: ✓ None"""
 
 
 @pytest.mark.asyncio
-async def test_safe_command_invalid_hex_id(mock_session):
+async def test_safe_command_invalid_hex_id(command_handler_safe, mock_session_manager_safe):
     """Test /safe command with invalid hex ID."""
-    handler = CommandHandler(mock_session)
+    handler = command_handler_safe
 
     result = await handler.check_safety("zzz")
 
@@ -125,9 +151,9 @@ async def test_safe_command_invalid_hex_id(mock_session):
 
 
 @pytest.mark.asyncio
-async def test_safe_command_error_handling(mock_session):
+async def test_safe_command_error_handling(command_handler_safe, mock_session_manager_safe):
     """Test /safe command error handling."""
-    handler = CommandHandler(mock_session)
+    handler = command_handler_safe
 
     with patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_helper.side_effect = Exception("API error")
@@ -138,9 +164,9 @@ async def test_safe_command_error_handling(mock_session):
 
 
 @pytest.mark.asyncio
-async def test_format_message_for_safety_check(mock_session):
+async def test_format_message_for_safety_check(command_handler_safe, mock_session_manager_safe):
     """Test message formatting for safety check."""
-    handler = CommandHandler(mock_session)
+    handler = command_handler_safe
 
     messages = [
         {"role": "user", "content": ["Test message 1"]},
@@ -154,12 +180,12 @@ async def test_format_message_for_safety_check(mock_session):
 
 
 @pytest.mark.asyncio
-async def test_format_message_with_hex_ids(mock_session):
+async def test_format_message_with_hex_ids(command_handler_safe, mock_session_manager_safe):
     """Test message formatting includes hex IDs."""
-    handler = CommandHandler(mock_session)
+    handler = command_handler_safe
 
     # Use messages with hex IDs from session
-    messages = mock_session["chat"]["messages"][:1]
+    messages = mock_session_manager_safe.chat["messages"][:1]
 
     formatted = handler._format_message_for_safety_check(messages)
 

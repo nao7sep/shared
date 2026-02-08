@@ -1,4 +1,15 @@
-"""REPL loop and input handling for PolyChat."""
+"""REPL loop and input handling for PolyChat.
+
+This module provides the main interactive loop that:
+- Manages user input via prompt_toolkit
+- Delegates command execution to CommandHandler
+- Delegates orchestration logic to ChatOrchestrator
+- Handles AI streaming responses via display_streaming_response
+- Maintains SessionManager as single source of truth for state
+
+The REPL is intentionally kept thin, with business logic extracted to
+ChatOrchestrator for better separation of concerns and testability.
+"""
 
 import logging
 import time
@@ -13,6 +24,7 @@ from . import chat
 from .ai_runtime import send_message_to_ai, validate_and_get_provider
 from .app_state import has_pending_error
 from .session_manager import SessionManager
+from .orchestrator import ChatOrchestrator
 from .commands import CommandHandler
 from .logging_utils import log_event, sanitize_error_message, summarize_command_args
 from .streaming import display_streaming_response
@@ -50,13 +62,13 @@ async def repl_loop(
     if chat_data and system_prompt_path and not chat_data["metadata"].get("system_prompt_path"):
         chat.update_metadata(chat_data, system_prompt_path=system_prompt_path)
 
-    # Create session_dict for backward compatibility with CommandHandler
-    # TODO: Update CommandHandler to accept SessionManager directly (Task #6)
+    # Create session_dict to pass file paths to CommandHandler
     session_dict = manager.to_dict()
     session_dict["profile_path"] = profile_path
     session_dict["chat_path"] = chat_path
     session_dict["log_file"] = log_file
     cmd_handler = CommandHandler(manager, session_dict)
+    orchestrator = ChatOrchestrator(manager, session_dict)
     chat_metadata = manager.chat.get("metadata", {}) if isinstance(manager.chat, dict) else {}
     log_event(
         "session_start",
@@ -168,7 +180,13 @@ async def repl_loop(
                         chat_file=chat_path,
                     )
 
-                    if response == "__EXIT__":
+                    # Handle command response through orchestrator
+                    action = await orchestrator.handle_command_response(
+                        response, chat_path, chat_data
+                    )
+
+                    # Process orchestrator action
+                    if action.action == "break":
                         log_event(
                             "session_stop",
                             level=logging.INFO,
@@ -179,161 +197,27 @@ async def repl_loop(
                         print("\nGoodbye!")
                         break
 
-                    elif response.startswith("__NEW_CHAT__:"):
-                        new_path = response.split(":", 1)[1]
-                        previous_chat = chat_path
-                        chat_path = new_path
-                        chat_data = chat.load_chat(chat_path)
+                    elif action.action == "continue":
+                        # Update local chat state from action
+                        if action.chat_path is not None:
+                            chat_path = action.chat_path
+                            session_dict["chat_path"] = chat_path
+                        if action.chat_data is not None:
+                            chat_data = action.chat_data
+                            session_dict["chat"] = chat_data
 
-                        if system_prompt_path:
-                            chat.update_metadata(chat_data, system_prompt_path=system_prompt_path)
+                        # Print message if provided
+                        if action.message:
+                            print(action.message)
+                            print()
 
-                        # Use SessionManager to handle chat switching
-                        manager.switch_chat(chat_path, chat_data)
-                        session_dict["chat"] = manager.chat
-                        session_dict["chat_path"] = chat_path
+                    elif action.action == "print":
+                        if action.message:
+                            print(action.message)
+                            print()
 
-                        log_event(
-                            "chat_opened",
-                            level=logging.INFO,
-                            action="new",
-                            chat_file=chat_path,
-                            previous_chat_file=previous_chat,
-                            message_count=len(chat_data.get("messages", [])),
-                        )
-
-                        print(f"Created new chat: {Path(chat_path).name}")
-                        print()
-
-                    elif response.startswith("__OPEN_CHAT__:"):
-                        new_path = response.split(":", 1)[1]
-                        previous_chat = chat_path
-
-                        if chat_path and chat_data:
-                            await chat.save_chat(chat_path, chat_data)
-
-                        chat_path = new_path
-                        chat_data = chat.load_chat(chat_path)
-
-                        # Use SessionManager to handle chat switching
-                        manager.switch_chat(chat_path, chat_data)
-                        session_dict["chat"] = manager.chat
-                        session_dict["chat_path"] = chat_path
-
-                        log_event(
-                            "chat_opened",
-                            level=logging.INFO,
-                            action="open",
-                            chat_file=chat_path,
-                            previous_chat_file=previous_chat,
-                            message_count=len(chat_data.get("messages", [])),
-                        )
-
-                        print(f"Opened chat: {Path(chat_path).name}")
-                        print()
-
-                    elif response == "__CLOSE_CHAT__":
-                        closed_chat = chat_path
-                        closed_count = len(chat_data.get("messages", [])) if chat_data else 0
-                        if chat_path and chat_data:
-                            await chat.save_chat(chat_path, chat_data)
-
-                        chat_path = None
-                        chat_data = None
-
-                        # Use SessionManager to handle chat closing
-                        manager.close_chat()
-                        session_dict["chat"] = {}
-                        session_dict["chat_path"] = None
-
-                        log_event(
-                            "chat_closed",
-                            level=logging.INFO,
-                            reason="close_command",
-                            chat_file=closed_chat,
-                            message_count=closed_count,
-                        )
-
-                        print("Chat closed")
-                        print()
-
-                    elif response.startswith("__RENAME_CURRENT__:"):
-                        new_path = response.split(":", 1)[1]
-                        old_path = chat_path
-                        chat_path = new_path
-                        session_dict["chat_path"] = chat_path
-                        log_event(
-                            "chat_renamed",
-                            level=logging.INFO,
-                            old_chat_file=old_path,
-                            new_chat_file=chat_path,
-                        )
-
-                        print(f"Chat renamed to: {Path(chat_path).name}")
-                        print()
-
-                    elif response.startswith("__DELETE_CURRENT__:"):
-                        filename = response.split(":", 1)[1]
-                        deleted_chat = chat_path
-                        chat_path = None
-                        chat_data = None
-
-                        # Use SessionManager to handle chat closing
-                        manager.close_chat()
-                        session_dict["chat"] = {}
-                        session_dict["chat_path"] = None
-
-                        log_event(
-                            "chat_deleted",
-                            level=logging.INFO,
-                            reason="delete_current",
-                            chat_file=deleted_chat or filename,
-                        )
-
-                        print(f"Deleted and closed chat: {filename}")
-                        print()
-
-                    elif response == "__APPLY_RETRY__":
-                        retry_user_msg, retry_assistant_msg = manager.get_retry_attempt()
-                        if retry_user_msg and retry_assistant_msg:
-                            if len(chat_data["messages"]) >= 2:
-                                for _ in range(2):
-                                    last_index = len(chat_data["messages"]) - 1
-                                    chat_data["messages"].pop()
-                                    manager.remove_message_hex_id(last_index)
-
-                            chat.add_user_message(chat_data, retry_user_msg)
-                            new_msg_index = len(chat_data["messages"]) - 1
-                            manager.assign_message_hex_id(new_msg_index)
-
-                            chat.add_assistant_message(
-                                chat_data, retry_assistant_msg, manager.current_model
-                            )
-                            new_msg_index = len(chat_data["messages"]) - 1
-                            manager.assign_message_hex_id(new_msg_index)
-
-                            await chat.save_chat(chat_path, chat_data)
-
-                        manager.exit_retry_mode()
-                        session_dict["retry_mode"] = False
-
-                        print("Retry applied. Original message replaced.")
-                        print()
-
-                    elif response == "__CANCEL_RETRY__":
-                        manager.exit_retry_mode()
-                        session_dict["retry_mode"] = False
-
-                        print("Retry cancelled. Original message kept.")
-                        print()
-
-                    elif response == "__CLEAR_SECRET_CONTEXT__":
-                        manager.exit_secret_mode()
-                        print("Secret mode disabled. Messages will be saved normally.")
-                        print()
-
-                    elif response.startswith("__SECRET_ONESHOT__:"):
-                        secret_message = response.split(":", 1)[1]
+                    elif action.action == "secret_oneshot":
+                        secret_message = action.message
 
                         provider_instance, error = validate_and_get_provider(manager)
                         if error:
@@ -364,19 +248,6 @@ async def repl_loop(
 
                         continue
 
-                    elif response:
-                        print(response)
-                        print()
-
-                    # Sync session_dict changes back to manager
-                    # TODO: Remove this once commands use SessionManager directly (Task #6)
-                    manager.current_ai = session_dict["current_ai"]
-                    manager.current_model = session_dict["current_model"]
-                    manager.helper_ai = session_dict.get("helper_ai", manager.helper_ai)
-                    manager.helper_model = session_dict.get("helper_model", manager.helper_model)
-                    manager.input_mode = session_dict.get("input_mode", manager.input_mode)
-                    # Note: retry_mode and secret_mode are read-only in commands for now
-
                 except ValueError as e:
                     command_name, command_args = cmd_handler.parse_command(user_input)
                     log_event(
@@ -392,150 +263,72 @@ async def repl_loop(
                     print()
                 continue
 
-            if not chat_path:
-                print("\nNo chat is currently open.")
-                print("Use /new to create a new chat or /open to open an existing one.")
+            # Handle user message through orchestrator
+            action = await orchestrator.handle_user_message(user_input, chat_path, chat_data)
+
+            # Handle orchestrator action
+            if action.action == "print":
+                print(action.message)
                 print()
                 continue
 
-            if has_pending_error(chat_data):
-                print("\n⚠️  Cannot continue - last interaction resulted in an error.")
-                print("Use /retry to retry the last message, /secret to ask without saving,")
-                print("or /rewind to remove the error and continue from an earlier point.")
-                print()
-                continue
+            if action.action in ("send_normal", "send_retry", "send_secret"):
+                # Validate provider
+                provider_instance, error = validate_and_get_provider(manager, chat_path=chat_path)
+                if error:
+                    print(f"Error: {error}")
+                    print()
+                    continue
 
-            provider_instance, error = validate_and_get_provider(manager, chat_path=chat_path)
-            if error:
-                print(f"Error: {error}")
-                print()
-                continue
+                # Determine display prefix
+                if action.mode == "retry":
+                    prefix = f"\n{manager.current_ai.capitalize()} (retry): "
+                elif action.mode == "secret":
+                    prefix = f"\n{manager.current_ai.capitalize()} (secret): "
+                else:
+                    prefix = f"\n{manager.current_ai.capitalize()}: "
 
-            if manager.secret_mode:
-                # Enter secret mode if not already (frozen context)
+                # Send message to AI
                 try:
-                    secret_context = manager.get_secret_context()
-                except ValueError:
-                    # Not in secret mode yet, freeze context
-                    manager.enter_secret_mode(chat.get_messages_for_ai(chat_data))
-                    secret_context = manager.get_secret_context()
-
-                temp_messages = secret_context + [{"role": "user", "content": user_input}]
-
-                try:
-                    print(f"\n{manager.current_ai.capitalize()} (secret): ", end="", flush=True)
+                    print(prefix, end="", flush=True)
                     response_stream, metadata = await send_message_to_ai(
                         provider_instance,
-                        temp_messages,
+                        action.messages,
                         manager.current_model,
                         manager.system_prompt,
                         provider_name=manager.current_ai,
-                        mode="secret",
-                        chat_path=chat_path,
-                    )
-                    await display_streaming_response(response_stream, prefix="")
-                    print()
-                    print()
-                except Exception as e:
-                    print(f"\nError: {e}")
-                    print()
-
-                continue
-
-            if manager.retry_mode:
-                # Enter retry mode if not already (frozen context)
-                try:
-                    retry_context = manager.get_retry_context()
-                except ValueError:
-                    # Not in retry mode yet, freeze context
-                    all_messages = chat.get_messages_for_ai(chat_data)
-                    if all_messages and all_messages[-1]["role"] == "assistant":
-                        manager.enter_retry_mode(all_messages[:-1])
-                    else:
-                        manager.enter_retry_mode(all_messages)
-                    retry_context = manager.get_retry_context()
-
-                temp_messages = retry_context + [{"role": "user", "content": user_input}]
-
-                try:
-                    print(f"\n{manager.current_ai.capitalize()} (retry): ", end="", flush=True)
-                    response_stream, metadata = await send_message_to_ai(
-                        provider_instance,
-                        temp_messages,
-                        manager.current_model,
-                        manager.system_prompt,
-                        provider_name=manager.current_ai,
-                        mode="retry",
+                        mode=action.mode,
                         chat_path=chat_path,
                     )
                     response_text = await display_streaming_response(response_stream, prefix="")
-                    manager.set_retry_attempt(user_input, response_text)
+
+                    # Handle successful response
+                    result = await orchestrator.handle_ai_response(
+                        response_text,
+                        chat_path,
+                        chat_data,
+                        action.mode,
+                        user_input=action.message,  # For retry mode
+                    )
+
+                    # Display token usage for normal mode
+                    if action.mode == "normal" and "usage" in metadata:
+                        usage = metadata["usage"]
+                        print(f"\n[Tokens: {usage.get('total_tokens', 'N/A')}]")
+
                     print()
+
+                except KeyboardInterrupt:
+                    cancel_result = await orchestrator.handle_user_cancel(chat_data, action.mode)
+                    print(cancel_result.message)
                     print()
+                    continue
+
                 except Exception as e:
-                    print(f"\nError: {e}")
+                    error_result = await orchestrator.handle_ai_error(e, chat_path, chat_data, action.mode)
+                    print(error_result.message)
                     print()
-
-                continue
-
-            chat.add_user_message(chat_data, user_input)
-            new_msg_index = len(chat_data["messages"]) - 1
-            manager.assign_message_hex_id(new_msg_index)
-
-            messages = chat.get_messages_for_ai(chat_data)
-
-            try:
-                print(f"\n{manager.current_ai.capitalize()}: ", end="", flush=True)
-                response_stream, metadata = await send_message_to_ai(
-                    provider_instance,
-                    messages,
-                    manager.current_model,
-                    manager.system_prompt,
-                    provider_name=manager.current_ai,
-                    mode="normal",
-                    chat_path=chat_path,
-                )
-                response_text = await display_streaming_response(response_stream, prefix="")
-
-                actual_model = metadata.get("model", manager.current_model)
-                chat.add_assistant_message(chat_data, response_text, actual_model)
-                new_msg_index = len(chat_data["messages"]) - 1
-                manager.assign_message_hex_id(new_msg_index)
-                await chat.save_chat(chat_path, chat_data)
-
-                if "usage" in metadata:
-                    usage = metadata["usage"]
-                    print(f"\n[Tokens: {usage.get('total_tokens', 'N/A')}]")
-
-                print()
-
-            except KeyboardInterrupt:
-                print("\n[Message cancelled]")
-                if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
-                    last_index = len(chat_data["messages"]) - 1
-                    chat_data["messages"].pop()
-                    manager.remove_message_hex_id(last_index)
-                print()
-                continue
-
-            except Exception as e:
-                print(f"\nError: {e}")
-
-                if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
-                    last_index = len(chat_data["messages"]) - 1
-                    chat_data["messages"].pop()
-                    manager.remove_message_hex_id(last_index)
-
-                sanitized_error = sanitize_error_message(str(e))
-                chat.add_error_message(
-                    chat_data,
-                    sanitized_error,
-                    {"provider": manager.current_ai, "model": manager.current_model},
-                )
-                new_msg_index = len(chat_data["messages"]) - 1
-                manager.assign_message_hex_id(new_msg_index)
-                await chat.save_chat(chat_path, chat_data)
-                print()
+                    continue
 
         except (EOFError, KeyboardInterrupt):
             log_event(

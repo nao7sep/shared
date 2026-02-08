@@ -86,3 +86,42 @@ def mock_api_key(monkeypatch):
     """Mock API key environment variable."""
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key-1234567890abcdef1234567890abcdef")
     monkeypatch.setenv("CLAUDE_API_KEY", "sk-ant-test-key-1234567890abcdef1234567890abcdef")
+
+
+@pytest.fixture
+def mock_session_manager():
+    """Create a mock SessionManager for testing commands."""
+    from src.poly_chat.session_manager import SessionManager
+
+    manager = SessionManager(
+        profile={
+            "default_ai": "claude",
+            "input_mode": "quick",
+            "models": {"claude": "claude-haiku-4-5", "openai": "gpt-5-mini"},
+            "api_keys": {},
+            "chats_dir": "/test/chats",
+            "log_dir": "/test/logs",
+            "timeout": 30,
+        },
+        current_ai="claude",
+        current_model="claude-haiku-4-5",
+        chat={"metadata": {}, "messages": []},
+    )
+    return manager
+
+
+@pytest.fixture
+def mock_session_dict():
+    """Create a mock session_dict for testing commands."""
+    return {
+        "profile_path": "/test/profile.json",
+        "chat_path": "/test/chat.json",
+        "log_file": "/test/log.txt",
+    }
+
+
+@pytest.fixture
+def command_handler(mock_session_manager, mock_session_dict):
+    """Create a CommandHandler with proper manager and session_dict."""
+    from src.poly_chat.commands import CommandHandler
+    return CommandHandler(mock_session_manager, mock_session_dict)

@@ -2,90 +2,107 @@
 
 import pytest
 from poly_chat.commands import CommandHandler
+from src.poly_chat.session_manager import SessionManager
 
 
 @pytest.fixture
-def mock_session_with_messages():
-    """Create a mock session with sample messages."""
-    return {
-        "current_ai": "claude",
-        "current_model": "claude-haiku-4-5",
-        "helper_ai": "claude",
-        "helper_model": "claude-haiku-4-5",
-        "profile": {
+def mock_session_manager_with_messages():
+    """Create a mock SessionManager with sample messages."""
+    chat_data = {
+        "metadata": {},
+        "messages": [
+            {
+                "timestamp": "2026-01-01T10:00:00+00:00",
+                "role": "user",
+                "content": ["Hello, how are you?"]
+            },
+            {
+                "timestamp": "2026-01-01T10:00:01+00:00",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": ["I'm doing well, thank you!"]
+            },
+            {
+                "timestamp": "2026-01-01T10:00:02+00:00",
+                "role": "user",
+                "content": ["What's the weather?"]
+            },
+            {
+                "timestamp": "2026-01-01T10:00:03+00:00",
+                "role": "error",
+                "content": ["API timeout after 30 seconds"]
+            },
+            {
+                "timestamp": "2026-01-01T10:00:04+00:00",
+                "role": "user",
+                "content": ["Try again"]
+            },
+            {
+                "timestamp": "2026-01-01T10:00:05+00:00",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": ["The weather is sunny today!"]
+            },
+        ]
+    }
+
+    manager = SessionManager(
+        profile={
             "default_ai": "claude",
             "models": {"claude": "claude-haiku-4-5"},
             "input_mode": "quick",
-            "api_keys": {}
+            "api_keys": {},
+            "chats_dir": "/test/chats",
+            "log_dir": "/test/logs",
+            "timeout": 30,
         },
-        "chat": {
-            "metadata": {},
-            "messages": [
-                {
-                    "timestamp": "2026-01-01T10:00:00+00:00",
-                    "role": "user",
-                    "content": ["Hello, how are you?"]
-                },
-                {
-                    "timestamp": "2026-01-01T10:00:01+00:00",
-                    "role": "assistant",
-                    "model": "claude-haiku-4-5",
-                    "content": ["I'm doing well, thank you!"]
-                },
-                {
-                    "timestamp": "2026-01-01T10:00:02+00:00",
-                    "role": "user",
-                    "content": ["What's the weather?"]
-                },
-                {
-                    "timestamp": "2026-01-01T10:00:03+00:00",
-                    "role": "error",
-                    "content": ["API timeout after 30 seconds"]
-                },
-                {
-                    "timestamp": "2026-01-01T10:00:04+00:00",
-                    "role": "user",
-                    "content": ["Try again"]
-                },
-                {
-                    "timestamp": "2026-01-01T10:00:05+00:00",
-                    "role": "assistant",
-                    "model": "claude-haiku-4-5",
-                    "content": ["The weather is sunny today!"]
-                },
-            ]
-        },
-        "message_hex_ids": {
-            0: "a3f",
-            1: "b2c",
-            2: "c1d",
-            3: "d4e",
-            4: "e5f",
-            5: "f6a"
-        },
-        "hex_id_set": {"a3f", "b2c", "c1d", "d4e", "e5f", "f6a"}
+        current_ai="claude",
+        current_model="claude-haiku-4-5",
+        chat=chat_data,
+    )
+
+    # Set up hex IDs as the tests expect
+    manager._state.message_hex_ids = {
+        0: "a3f",
+        1: "b2c",
+        2: "c1d",
+        3: "d4e",
+        4: "e5f",
+        5: "f6a"
     }
+    manager._state.hex_id_set = {"a3f", "b2c", "c1d", "d4e", "e5f", "f6a"}
+
+    return manager
+
+
+@pytest.fixture
+def mock_session_dict_with_messages():
+    """Create a mock session_dict."""
+    return {
+        "profile_path": "/test/profile.json",
+        "chat_path": "/test/chat.json",
+        "log_file": "/test/log.txt",
+    }
+
+
+@pytest.fixture
+def command_handler_with_messages(mock_session_manager_with_messages, mock_session_dict_with_messages):
+    """Create a CommandHandler with messages."""
+    return CommandHandler(mock_session_manager_with_messages, mock_session_dict_with_messages)
 
 
 @pytest.mark.asyncio
-async def test_history_no_messages():
+async def test_history_no_messages(command_handler):
     """Test /history with no messages."""
-    session = {
-        "chat": {"metadata": {}, "messages": []},
-        "message_hex_ids": {},
-        "hex_id_set": set()
-    }
-    handler = CommandHandler(session)
-
-    result = await handler.show_history("")
+    result = await command_handler.show_history("")
 
     assert "No messages in chat history" in result
 
 
 @pytest.mark.asyncio
-async def test_history_default_last_10(mock_session_with_messages):
+async def test_history_default_last_10(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history without arguments shows last 10 messages."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("")
 
@@ -99,9 +116,9 @@ async def test_history_default_last_10(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_history_with_limit(mock_session_with_messages):
+async def test_history_with_limit(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history <n> shows last n messages."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("3")
 
@@ -114,9 +131,9 @@ async def test_history_with_limit(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_history_all(mock_session_with_messages):
+async def test_history_all(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history all shows all messages."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("all")
 
@@ -126,9 +143,9 @@ async def test_history_all(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_history_errors_only(mock_session_with_messages):
+async def test_history_errors_only(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history --errors shows only error messages."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("--errors")
 
@@ -142,15 +159,15 @@ async def test_history_errors_only(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_history_no_errors(mock_session_with_messages):
+async def test_history_no_errors(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history --errors when no errors exist."""
     # Remove error message
-    mock_session_with_messages["chat"]["messages"] = [
-        msg for msg in mock_session_with_messages["chat"]["messages"]
+    mock_session_manager_with_messages.chat["messages"] = [
+        msg for msg in mock_session_manager_with_messages.chat["messages"]
         if msg.get("role") != "error"
     ]
 
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("--errors")
 
@@ -158,9 +175,9 @@ async def test_history_no_errors(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_history_invalid_number(mock_session_with_messages):
+async def test_history_invalid_number(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history with invalid number."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("abc")
 
@@ -168,9 +185,9 @@ async def test_history_invalid_number(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_history_zero_or_negative(mock_session_with_messages):
+async def test_history_zero_or_negative(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history with zero or negative number."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("0")
     assert "Invalid number" in result
@@ -180,13 +197,13 @@ async def test_history_zero_or_negative(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_history_truncates_long_messages(mock_session_with_messages):
+async def test_history_truncates_long_messages(command_handler_with_messages, mock_session_manager_with_messages):
     """Test that /history truncates long messages."""
     # Add a very long message
     long_content = "x" * 200
-    mock_session_with_messages["chat"]["messages"][0]["content"] = [long_content]
+    mock_session_manager_with_messages.chat["messages"][0]["content"] = [long_content]
 
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_history("")
 
@@ -197,9 +214,9 @@ async def test_history_truncates_long_messages(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_show_message_no_arg(mock_session_with_messages):
+async def test_show_message_no_arg(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /show without argument."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_message("")
 
@@ -207,9 +224,9 @@ async def test_show_message_no_arg(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_show_message_valid_hex_id(mock_session_with_messages):
+async def test_show_message_valid_hex_id(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /show with valid hex ID."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_message("a3f")
 
@@ -220,9 +237,9 @@ async def test_show_message_valid_hex_id(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_show_message_invalid_hex_id(mock_session_with_messages):
+async def test_show_message_invalid_hex_id(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /show with invalid hex ID."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_message("zzz")
 
@@ -230,9 +247,9 @@ async def test_show_message_invalid_hex_id(mock_session_with_messages):
 
 
 @pytest.mark.asyncio
-async def test_show_assistant_message_includes_model(mock_session_with_messages):
+async def test_show_assistant_message_includes_model(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /show for assistant message includes model info."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_message("b2c")
 
@@ -241,9 +258,9 @@ async def test_show_assistant_message_includes_model(mock_session_with_messages)
 
 
 @pytest.mark.asyncio
-async def test_show_error_message(mock_session_with_messages):
+async def test_show_error_message(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /show for error message."""
-    handler = CommandHandler(mock_session_with_messages)
+    handler = command_handler_with_messages
 
     result = await handler.show_message("d4e")
 
