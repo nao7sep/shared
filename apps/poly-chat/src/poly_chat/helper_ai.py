@@ -34,7 +34,7 @@ async def invoke_helper_ai(
     """
     # Import here to avoid circular dependency
     from .keys.loader import load_api_key
-    from .cli import get_provider_instance
+    from .ai_runtime import get_provider_instance
 
     from .logging_utils import (
         log_event,
