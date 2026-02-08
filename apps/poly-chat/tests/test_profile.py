@@ -231,6 +231,7 @@ def test_load_profile_sets_default_timeout(tmp_path):
     profile = load_profile(str(profile_path))
 
     assert profile["timeout"] == 30
+    assert profile["system_prompt_strict"] is False
 
 
 def test_validate_profile_missing_required_fields():
@@ -358,6 +359,20 @@ def test_validate_profile_input_mode_invalid_type():
         "api_keys": {}
     }
     with pytest.raises(ValueError, match="'input_mode' must be a string"):
+        validate_profile(profile)
+
+
+def test_validate_profile_system_prompt_strict_invalid_type():
+    """Test validate_profile rejects non-boolean system_prompt_strict values."""
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "system_prompt_strict": "yes",
+        "chats_dir": "~/chats",
+        "log_dir": "~/logs",
+        "api_keys": {}
+    }
+    with pytest.raises(ValueError, match="'system_prompt_strict' must be a boolean"):
         validate_profile(profile)
 
 

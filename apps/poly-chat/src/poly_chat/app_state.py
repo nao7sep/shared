@@ -21,6 +21,7 @@ class SessionState:
     log_file: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_path: Optional[str] = None
+    strict_system_prompt: bool = False
     input_mode: str = "quick"
     retry_mode: bool = False
     retry_base_messages: list = field(default_factory=list)
@@ -39,6 +40,10 @@ class SessionState:
     def cache_provider(self, provider_name: str, api_key: str, instance: Any) -> None:
         """Cache a provider instance."""
         self._provider_cache[(provider_name, api_key)] = instance
+
+    def clear_provider_cache(self) -> None:
+        """Clear all cached provider instances."""
+        self._provider_cache.clear()
 
 
 def initialize_message_hex_ids(session: SessionState) -> None:

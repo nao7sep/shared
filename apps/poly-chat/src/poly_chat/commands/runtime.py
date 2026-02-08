@@ -1,7 +1,5 @@
 """Runtime and conversation command mixin."""
 
-import math
-
 from .. import hex_id, models, profile
 from ..chat import delete_message_and_following, update_metadata
 
@@ -95,42 +93,17 @@ class RuntimeCommandsMixin:
         if not args:
             # Show current timeout
             timeout = self.manager.profile.get("timeout", 30)
-            if timeout == 0:
-                return "Current timeout: 0 (wait forever)"
-            else:
-                return f"Current timeout: {timeout} seconds"
+            return f"Current timeout: {self.manager.format_timeout(timeout)}"
 
         # Handle "default" - revert to profile's original timeout
         if args == "default":
-            # The profile dict is loaded fresh, so we need to reload to get original
-            # For now, just use the current profile value or 30
-            # Note: This assumes profile hasn't been saved over
-            default_timeout = self.manager.profile.get("timeout", 30)
-            self.manager.profile["timeout"] = default_timeout
-
-            # TODO: Clear provider cache since timeout changed
-            # (SessionManager doesn't expose cache clearing yet)
-
-            if default_timeout == 0:
-                return "Reverted to profile default: 0 (wait forever)"
-            else:
-                return f"Reverted to profile default: {default_timeout} seconds"
+            default_timeout = self.manager.reset_timeout_to_default()
+            return f"Reverted to profile default: {self.manager.format_timeout(default_timeout)}"
 
         # Parse and set timeout
         try:
-            timeout = float(args)
-            if not math.isfinite(timeout) or timeout < 0:
-                raise ValueError("Timeout must be a non-negative finite number")
-
-            self.manager.profile["timeout"] = timeout
-
-            # TODO: Clear provider cache since timeout changed
-            # (SessionManager doesn't expose cache clearing yet)
-
-            if timeout == 0:
-                return "Timeout set to 0 (wait forever)"
-            else:
-                return f"Timeout set to {timeout} seconds"
+            timeout = self.manager.set_timeout(float(args))
+            return f"Timeout set to {self.manager.format_timeout(timeout)}"
 
         except ValueError:
             raise ValueError("Invalid timeout value. Use a number (e.g., /timeout 60) or 0 for no timeout.")

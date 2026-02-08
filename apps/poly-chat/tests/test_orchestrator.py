@@ -460,3 +460,37 @@ class TestSessionManagerIntegration:
 
             # Session manager chat should be empty
             assert orchestrator.manager.chat == {}
+
+
+class TestCancelHandling:
+    @pytest.mark.asyncio
+    async def test_handle_user_cancel_normal_mode_saves_consistent_chat(self, orchestrator):
+        chat_data = {
+            "metadata": {"title": "Cancel Test"},
+            "messages": [{"role": "user", "content": "pending"}],
+        }
+
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+            action = await orchestrator.handle_user_cancel(
+                chat_data,
+                "normal",
+                chat_path="/test/chat.json",
+            )
+
+            assert action.action == "print"
+            assert chat_data["messages"] == []
+            mock_save.assert_awaited_once_with(
+                force=True,
+                chat_path="/test/chat.json",
+                chat_data=chat_data,
+            )
+
+    @pytest.mark.asyncio
+    async def test_handle_user_cancel_retry_mode_does_not_save(self, orchestrator):
+        chat_data = {"metadata": {}, "messages": []}
+
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+            action = await orchestrator.handle_user_cancel(chat_data, "retry")
+
+            assert action.action == "print"
+            mock_save.assert_not_called()

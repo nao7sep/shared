@@ -60,6 +60,27 @@ class TestSessionManagerCreation:
         assert len(manager.message_hex_ids) == 2
         assert len(manager.hex_id_set) == 2
 
+    def test_create_tracks_default_timeout_and_strict_prompt_policy(self):
+        manager = SessionManager(
+            profile={"timeout": 45, "system_prompt_strict": True},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+        )
+
+        assert manager.default_timeout == 45
+        assert manager.profile["timeout"] == 45
+        assert manager.strict_system_prompt is True
+
+    def test_create_allows_strict_prompt_override(self):
+        manager = SessionManager(
+            profile={"timeout": 45, "system_prompt_strict": False},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            strict_system_prompt=True,
+        )
+
+        assert manager.strict_system_prompt is True
+
 
 class TestSystemPromptLoading:
     """Test SessionManager system prompt loading."""
@@ -169,6 +190,35 @@ class TestPropertyAccess:
 
         with pytest.raises(ValueError, match="Invalid input mode"):
             manager.input_mode = "invalid"
+
+
+class TestTimeoutManagement:
+    def test_set_timeout_normalizes_and_clears_cache(self):
+        manager = SessionManager(
+            profile={"timeout": 30},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+        )
+        manager.cache_provider("claude", "k", object())
+
+        timeout = manager.set_timeout(60.0)
+
+        assert timeout == 60
+        assert manager.profile["timeout"] == 60
+        assert manager.get_cached_provider("claude", "k") is None
+
+    def test_reset_timeout_to_default_uses_startup_value(self):
+        manager = SessionManager(
+            profile={"timeout": 30},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+        )
+        manager.profile["timeout"] = 90
+
+        timeout = manager.reset_timeout_to_default()
+
+        assert timeout == 30
+        assert manager.profile["timeout"] == 30
 
 
 class TestDictLikeAccess:

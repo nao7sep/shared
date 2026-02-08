@@ -480,10 +480,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
         metadata = chat_data.get("metadata", {}) if isinstance(chat_data, dict) else {}
 
         timeout = profile_data.get("timeout", 30)
-        if timeout == 0:
-            timeout_display = "0 (wait forever)"
-        else:
-            timeout_display = f"{timeout} seconds"
+        timeout_display = self.manager.format_timeout(timeout)
 
         chat_title = metadata.get("title") or "(none)"
         chat_summary = metadata.get("summary") or "(none)"
@@ -510,6 +507,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
             f"Assistant:    {self.manager.current_ai} ({self.manager.current_model})",
             f"Helper:       {self.manager.helper_ai} ({self.manager.helper_model})",
             f"System Prompt:{' ' if self.manager.system_prompt_path else ''}{self.manager.system_prompt_path or '(none)'}",
+            f"Prompt Strict: {'ON' if self.manager.strict_system_prompt else 'OFF'}",
             f"Timeout:      {timeout_display}",
             f"Input Mode:   {self.manager.input_mode}",
             "",

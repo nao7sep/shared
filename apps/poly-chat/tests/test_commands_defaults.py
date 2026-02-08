@@ -71,16 +71,15 @@ async def test_timeout_default_command(command_handler_defaults, mock_session_ma
 
     result = await command_handler_defaults.set_timeout("default")
 
-    # Should keep the profile timeout (which is 60 now)
-    # Note: The current implementation has a limitation - it uses current profile value
-    assert "Reverted to profile default" in result
-    assert mock_session_manager_defaults.profile["timeout"] == 60
+    # Should revert to startup profile default
+    assert result == "Reverted to profile default: 30 seconds"
+    assert mock_session_manager_defaults.profile["timeout"] == 30
 
 
 @pytest.mark.asyncio
 async def test_timeout_default_with_zero(command_handler_defaults, mock_session_manager_defaults):
     """Test /timeout default when profile has zero timeout."""
-    mock_session_manager_defaults.profile["timeout"] = 0
+    mock_session_manager_defaults._default_timeout = 0
 
     result = await command_handler_defaults.set_timeout("default")
 
@@ -124,8 +123,17 @@ async def test_timeout_default_clears_provider_cache(command_handler_defaults, m
 
     result = await command_handler_defaults.set_timeout("default")
 
-    # Cache clearing is not yet implemented for timeout default
-    # This test documents current behavior
     assert "Reverted to profile default" in result
-    # Cache should still exist (timeout default doesn't clear cache in current implementation)
-    assert hasattr(mock_session_manager_defaults._state, "_provider_cache")
+    assert mock_session_manager_defaults._state._provider_cache == {}
+
+
+@pytest.mark.asyncio
+async def test_timeout_set_clears_provider_cache(command_handler_defaults, mock_session_manager_defaults):
+    """Setting timeout should clear provider cache so new timeout takes effect."""
+    mock_session_manager_defaults._state._provider_cache = {("openai", "key1"): "mock_provider"}
+
+    result = await command_handler_defaults.set_timeout("45")
+
+    assert result == "Timeout set to 45 seconds"
+    assert mock_session_manager_defaults.profile["timeout"] == 45
+    assert mock_session_manager_defaults._state._provider_cache == {}

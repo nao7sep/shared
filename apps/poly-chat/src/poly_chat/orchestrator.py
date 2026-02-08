@@ -555,6 +555,7 @@ class ChatOrchestrator:
         self,
         chat_data: dict,
         mode: str,
+        chat_path: Optional[str] = None,
     ) -> OrchestratorAction:
         """Handle user cancellation (KeyboardInterrupt during AI response).
 
@@ -569,6 +570,11 @@ class ChatOrchestrator:
             # Remove the user message that was added
             if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
                 self.manager.pop_message(-1, chat_data)
+            await self.manager.save_current_chat(
+                force=True,
+                chat_path=chat_path,
+                chat_data=chat_data,
+            )
 
         # For retry and secret modes, nothing to clean up
         return OrchestratorAction(action="print", message="\n[Message cancelled]")

@@ -5,6 +5,7 @@ a clean interface for session management.
 """
 
 import json
+import math
 from typing import Any, Optional
 
 from .app_state import SessionState, initialize_message_hex_ids, assign_new_message_hex_id
@@ -52,6 +53,7 @@ class SessionManager:
         log_file: Optional[str] = None,
         system_prompt: Optional[str] = None,
         system_prompt_path: Optional[str] = None,
+        strict_system_prompt: Optional[bool] = None,
         input_mode: str = "quick",
     ):
         """Initialize session manager.
@@ -74,6 +76,15 @@ class SessionManager:
         helper_ai = helper_ai or current_ai
         helper_model = helper_model or current_model
 
+        default_timeout = self._normalize_timeout(profile.get("timeout", 30))
+        profile["timeout"] = default_timeout
+        self._default_timeout = default_timeout
+
+        if strict_system_prompt is None:
+            strict_prompt_policy = bool(profile.get("system_prompt_strict", False))
+        else:
+            strict_prompt_policy = bool(strict_system_prompt)
+
         self._state = SessionState(
             current_ai=current_ai,
             current_model=current_model,
@@ -86,6 +97,7 @@ class SessionManager:
             log_file=log_file,
             system_prompt=system_prompt,
             system_prompt_path=system_prompt_path,
+            strict_system_prompt=strict_prompt_policy,
             input_mode=input_mode,
         )
 
@@ -210,6 +222,11 @@ class SessionManager:
         return self._state.secret_mode
 
     @property
+    def strict_system_prompt(self) -> bool:
+        """Whether missing system prompt files should fail fast."""
+        return self._state.strict_system_prompt
+
+    @property
     def chat_dirty(self) -> bool:
         """Whether current chat has unsaved command-driven changes."""
         return self._state.chat_dirty
@@ -266,6 +283,7 @@ class SessionManager:
             "log_file": self._state.log_file,
             "system_prompt": self._state.system_prompt,
             "system_prompt_path": self._state.system_prompt_path,
+            "strict_system_prompt": self._state.strict_system_prompt,
             "input_mode": self._state.input_mode,
             "retry_mode": self._state.retry_mode,
             "secret_mode": self._state.secret_mode,
@@ -343,6 +361,45 @@ class SessionManager:
     def clear_chat_dirty(self) -> None:
         """Mark current chat as persisted."""
         self._state.chat_dirty = False
+
+    @staticmethod
+    def _normalize_timeout(value: Any) -> int | float:
+        """Normalize timeout to int/float and reject invalid values."""
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError("Timeout must be a non-negative finite number")
+        numeric = float(value)
+        if not math.isfinite(numeric) or numeric < 0:
+            raise ValueError("Timeout must be a non-negative finite number")
+        if numeric.is_integer():
+            return int(numeric)
+        return numeric
+
+    @staticmethod
+    def format_timeout(timeout: int | float) -> str:
+        """Format timeout value for user-facing messages."""
+        if timeout == 0:
+            return "0 (wait forever)"
+        return f"{timeout} seconds"
+
+    @property
+    def default_timeout(self) -> int | float:
+        """Initial timeout loaded from profile at session start."""
+        return self._default_timeout
+
+    def set_timeout(self, timeout: Any) -> int | float:
+        """Update active timeout and invalidate provider cache."""
+        normalized = self._normalize_timeout(timeout)
+        self._state.profile["timeout"] = normalized
+        self.clear_provider_cache()
+        return normalized
+
+    def reset_timeout_to_default(self) -> int | float:
+        """Reset active timeout back to the session's profile default."""
+        return self.set_timeout(self._default_timeout)
+
+    def clear_provider_cache(self) -> None:
+        """Clear all cached provider instances."""
+        self._state.clear_provider_cache()
 
     async def save_current_chat(
         self,

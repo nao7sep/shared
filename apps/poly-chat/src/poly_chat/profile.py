@@ -100,6 +100,8 @@ def load_profile(path: str) -> dict[str, Any]:
     # Set default timeout if not present
     if "timeout" not in profile:
         profile["timeout"] = 30
+    if "system_prompt_strict" not in profile:
+        profile["system_prompt_strict"] = False
 
     # Map all path fields
     profile["chats_dir"] = map_path(profile["chats_dir"])
@@ -164,6 +166,9 @@ def validate_profile(profile: dict[str, Any]) -> None:
             raise ValueError("'input_mode' must be a string")
         if input_mode not in ("quick", "compose"):
             raise ValueError("'input_mode' must be 'quick' or 'compose'")
+
+    if "system_prompt_strict" in profile and not isinstance(profile["system_prompt_strict"], bool):
+        raise ValueError("'system_prompt_strict' must be a boolean")
 
     # Validate api_keys structure
     if not isinstance(profile.get("api_keys"), dict):
@@ -257,6 +262,7 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             "deepseek": "deepseek-chat"
         },
         "timeout": 30,
+        "system_prompt_strict": False,
         "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "@/chats",
