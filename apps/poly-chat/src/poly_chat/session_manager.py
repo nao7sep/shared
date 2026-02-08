@@ -564,6 +564,35 @@ class SessionManager:
         if isinstance(hex_to_remove, str):
             self._state.hex_id_set.discard(hex_to_remove)
 
+    def pop_message(
+        self,
+        message_index: int = -1,
+        chat_data: Optional[dict[str, Any]] = None,
+    ) -> Optional[dict[str, Any]]:
+        """Pop a message and atomically clean up its runtime hex ID.
+
+        Args:
+            message_index: Index to pop (default: -1 for last message)
+            chat_data: Optional chat object override (defaults to current session chat)
+
+        Returns:
+            Popped message dict, or None when the chat has no messages.
+        """
+        target_chat = chat_data if chat_data is not None else self._state.chat
+        if not isinstance(target_chat, dict):
+            return None
+
+        messages = target_chat.get("messages")
+        if not isinstance(messages, list) or not messages:
+            return None
+
+        popped = messages.pop(message_index)
+        if isinstance(popped, dict):
+            hex_to_remove = popped.pop("hex_id", None)
+            if isinstance(hex_to_remove, str):
+                self._state.hex_id_set.discard(hex_to_remove)
+        return popped if isinstance(popped, dict) else None
+
     # ===================================================================
     # Provider Caching
     # ===================================================================

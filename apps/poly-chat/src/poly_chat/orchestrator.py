@@ -301,11 +301,8 @@ class ChatOrchestrator:
 
         # Remove last 2 messages (original user + assistant)
         if len(messages) >= 2:
-            last_index = len(messages) - 1
-            self.manager.remove_message_hex_id(last_index)
-            last_index = len(messages) - 2
-            self.manager.remove_message_hex_id(last_index)
-            messages[:] = messages[:-2]
+            self.manager.pop_message(-1, current_chat_data)
+            self.manager.pop_message(-1, current_chat_data)
 
         # Add retry messages
         chat.add_user_message(current_chat_data, user_msg)
@@ -534,9 +531,7 @@ class ChatOrchestrator:
         if mode == "normal":
             # Remove the user message that was added
             if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
-                last_index = len(chat_data["messages"]) - 1
-                chat_data["messages"].pop()
-                self.manager.remove_message_hex_id(last_index)
+                self.manager.pop_message(-1, chat_data)
 
             # Add error message
             sanitized_error = sanitize_error_message(str(error))
@@ -573,9 +568,7 @@ class ChatOrchestrator:
         if mode == "normal":
             # Remove the user message that was added
             if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
-                last_index = len(chat_data["messages"]) - 1
-                chat_data["messages"].pop()
-                self.manager.remove_message_hex_id(last_index)
+                self.manager.pop_message(-1, chat_data)
 
         # For retry and secret modes, nothing to clean up
         return OrchestratorAction(action="print", message="\n[Message cancelled]")

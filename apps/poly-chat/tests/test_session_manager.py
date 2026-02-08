@@ -517,6 +517,47 @@ class TestHexIdManagement:
         assert hex_id not in manager.hex_id_set
         assert manager.get_message_hex_id(0) is None
 
+    def test_pop_message_removes_hex_id_from_set(self):
+        """Popping a message should atomically clean up its hex_id tracking."""
+        manager = SessionManager(
+            profile={},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            chat={
+                "messages": [
+                    {"role": "user", "content": "Hello"},
+                    {"role": "assistant", "content": "Hi"},
+                ]
+            },
+        )
+        popped_hex = manager.get_message_hex_id(1)
+        assert popped_hex in manager.hex_id_set
+
+        popped = manager.pop_message()
+
+        assert popped is not None
+        assert popped_hex not in manager.hex_id_set
+        assert len(manager.chat["messages"]) == 1
+
+    def test_pop_message_with_explicit_chat_data(self):
+        """pop_message should support explicit chat objects used by orchestrator."""
+        manager = SessionManager(
+            profile={},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+        )
+        chat_data = {
+            "messages": [
+                {"role": "user", "content": "Hello", "hex_id": "abc"},
+            ]
+        }
+        manager._state.hex_id_set.add("abc")
+
+        popped = manager.pop_message(-1, chat_data)
+
+        assert popped is not None
+        assert manager.hex_id_set == set()
+
 
 class TestProviderCaching:
     """Test provider instance caching."""
