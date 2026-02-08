@@ -147,9 +147,10 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/secret` - Show current secret mode state
 - `/secret on|off` - Explicitly enable/disable secret mode
 - `/secret <msg>` - Send one secret message without toggling mode
-- `/rewind <index>` - Rewind chat to message (time travel)
-- `/rewind last` - Rewind to last message
-- `/purge <hex_id> [hex_id2 ...]` - Delete specific messages (breaks context; requires confirmation)
+- `/rewind <hex_id>` - Delete that message and all following messages
+- `/rewind turn` - Delete the last full interaction (user+assistant/error)
+- `/rewind last` - Delete only the last message
+- `/purge <hex_id> [hex_id2 ...]` - Delete specific messages (breaks context)
 
 **History:**
 - `/history` - Show last 10 messages

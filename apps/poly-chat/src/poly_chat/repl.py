@@ -258,7 +258,6 @@ async def repl_loop(
                             )
 
                             print()
-                            print()
                         except Exception as e:
                             print(f"\nError: {e}")
                             print()

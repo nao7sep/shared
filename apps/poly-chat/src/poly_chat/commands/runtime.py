@@ -350,10 +350,10 @@ class RuntimeCommandsMixin:
         return f"__SECRET_ONESHOT__:{args.strip()}"
 
     async def rewind_messages(self, args: str) -> str:
-        """Rewind chat history by deleting message at index and all following.
+        """Rewind chat history by deleting a target message and all following.
 
         Args:
-            args: Message index (0-based), hex ID, or "last" to rewind to last message
+            args: Message hex ID, "last", or "turn" (last user+assistant/error pair)
 
         Returns:
             Confirmation message
@@ -369,31 +369,52 @@ class RuntimeCommandsMixin:
         if not messages:
             return "No messages to delete"
 
-        if args == "last":
+        target = args.strip().lower()
+        if not target:
+            raise ValueError("Usage: /rewind <hex_id|last|turn>")
+
+        if target == "last":
             index = len(messages) - 1
-        elif hex_id.is_hex_id(args):
-            index = hex_id.get_message_index(args, messages)
+        elif target == "turn":
+            if len(messages) < 2:
+                raise ValueError("No complete turn to delete")
+            tail = messages[-1]
+            prev = messages[-2]
+            if tail.get("role") not in ("assistant", "error") or prev.get("role") != "user":
+                raise ValueError("Last interaction is not a complete user+assistant/error turn")
+            index = len(messages) - 2
+        elif hex_id.is_hex_id(target):
+            index = hex_id.get_message_index(target, messages)
             if index is None:
-                raise ValueError(f"Hex ID '{args}' not found")
+                raise ValueError(f"Hex ID '{target}' not found")
         else:
-            try:
-                index = int(args)
-            except ValueError:
-                raise ValueError("Invalid message index. Use a number, hex ID, or 'last'")
+            raise ValueError("Invalid target. Use a hex ID, 'last', or 'turn'")
 
         try:
             # Get hex ID for display (if available)
             hex_display = hex_id.get_hex_id(index, messages)
-            hex_str = f" [{hex_display}]" if hex_display else ""
+            if hex_display:
+                target_label = f"[{hex_display}]"
+            elif target == "last":
+                target_label = "last message"
+            elif target == "turn":
+                target_label = "last turn"
+            else:
+                target_label = "selected target"
+
+            print(f"WARNING: Rewind will delete from {target_label} onwards")
+            confirm = input("Type 'yes' to confirm rewind: ").strip().lower()
+            if confirm != "yes":
+                return "Rewind cancelled"
 
             count = delete_message_and_following(chat, index)
 
             await self._mark_chat_dirty_if_open()
-            return f"Deleted {count} message(s) from index {index}{hex_str} onwards"
+            if hex_display:
+                return f"Deleted {count} message(s) from [{hex_display}] onwards"
+            return f"Deleted {count} message(s)"
         except IndexError:
-            raise ValueError(
-                f"Message index {index} out of range (0-{len(messages)-1})"
-            )
+            raise ValueError("Message target is out of range")
 
     async def purge_messages(self, args: str) -> str:
         """Delete specific messages by hex ID (breaks conversation context).

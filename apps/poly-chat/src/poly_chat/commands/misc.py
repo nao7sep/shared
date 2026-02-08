@@ -63,7 +63,8 @@ Chat Control:
   /secret           Show current secret mode state
   /secret on/off    Enable/disable secret mode explicitly
   /secret <msg>     Ask one secret question (doesn't toggle mode)
-  /rewind <id>      Rewind chat to message (use hex ID or index)
+  /rewind <hex_id>  Delete that message and all following messages
+  /rewind turn      Delete the last full interaction (user+assistant/error)
   /rewind last      Rewind to last message
   /purge <hex_id>   Delete specific message(s) (breaks context!)
   /purge <id> <id>  Delete multiple messages
