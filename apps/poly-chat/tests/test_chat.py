@@ -231,6 +231,39 @@ async def test_save_chat_json_format(tmp_path):
     json.loads(content)
 
 
+@pytest.mark.asyncio
+async def test_save_chat_does_not_persist_hex_id(tmp_path):
+    """Runtime-only message hex IDs should not be written to disk."""
+    chat_path = tmp_path / "no-hex-id.json"
+    chat_data = {
+        "metadata": {
+            "title": "Hex Test",
+            "summary": None,
+            "system_prompt_path": None,
+            "default_model": None,
+            "created_at": None,
+            "updated_at": None,
+        },
+        "messages": [
+            {
+                "timestamp": "2026-02-02T00:00:00+00:00",
+                "role": "user",
+                "content": ["Hello"],
+                "hex_id": "a3f",
+            }
+        ],
+    }
+
+    await save_chat(str(chat_path), chat_data)
+
+    with open(chat_path, "r", encoding="utf-8") as f:
+        saved_data = json.load(f)
+
+    assert "hex_id" not in saved_data["messages"][0]
+    # In-memory object keeps runtime field for session UX.
+    assert chat_data["messages"][0]["hex_id"] == "a3f"
+
+
 def test_add_user_message(sample_chat):
     """Test adding user message."""
     add_user_message(sample_chat, "New message")

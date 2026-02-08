@@ -212,6 +212,7 @@ class RuntimeCommandsMixin:
             ) = self.manager.load_system_prompt(
                 self.manager.profile,
                 self.manager.profile_path,
+                strict=True,
             )
             if warning:
                 raise ValueError(warning)
@@ -386,9 +387,7 @@ class RuntimeCommandsMixin:
         if args == "last":
             index = len(messages) - 1
         elif hex_id.is_hex_id(args):
-            # Look up hex ID
-            hex_map = self.manager.message_hex_ids
-            index = hex_id.get_message_index(args, hex_map)
+            index = hex_id.get_message_index(args, messages)
             if index is None:
                 raise ValueError(f"Hex ID '{args}' not found")
         else:
@@ -399,21 +398,10 @@ class RuntimeCommandsMixin:
 
         try:
             # Get hex ID for display (if available)
-            hex_map = self.manager.message_hex_ids
-            hex_display = hex_id.get_hex_id(index, hex_map)
+            hex_display = hex_id.get_hex_id(index, messages)
             hex_str = f" [{hex_display}]" if hex_display else ""
 
             count = delete_message_and_following(chat, index)
-
-            # Update hex ID tracking - remove deleted messages
-            if hex_map:
-                # Get the list of indices to remove
-                indices_to_remove = list(range(index, index + count))
-                for idx in indices_to_remove:
-                    if idx in hex_map:
-                        removed_hex = hex_map.pop(idx)
-                        hex_id_set = self.manager.hex_id_set
-                        hex_id_set.discard(removed_hex)
 
             await self._save_current_chat_if_open()
             return f"Deleted {count} message(s) from index {index}{hex_str} onwards"
@@ -444,11 +432,10 @@ class RuntimeCommandsMixin:
         hex_ids_to_purge = args.strip().split()
 
         # Validate all hex IDs and get indices
-        hex_map = self.manager.message_hex_ids
         indices_to_delete = []
 
         for hid in hex_ids_to_purge:
-            msg_index = hex_id.get_message_index(hid, hex_map)
+            msg_index = hex_id.get_message_index(hid, messages)
             if msg_index is None:
                 return f"Invalid hex ID: {hid}"
             indices_to_delete.append((msg_index, hid))
@@ -459,30 +446,11 @@ class RuntimeCommandsMixin:
 
         # Delete messages
         deleted_count = 0
-        for msg_index, hid in indices_to_delete:
+        for msg_index, _hid in indices_to_delete:
             # Delete the message
             del messages[msg_index]
 
-            # Remove from hex ID tracking
-            if msg_index in hex_map:
-                removed_hex = hex_map.pop(msg_index)
-                hex_id_set = self.manager.hex_id_set
-                hex_id_set.discard(removed_hex)
-
             deleted_count += 1
-
-        # Rebuild hex_map with updated indices (all messages after deleted ones shift down)
-        # Actually, let's just reassign hex IDs since order changed
-        # Clear old mappings and regenerate
-        hex_map.clear()
-        hex_id_set = self.manager.hex_id_set
-        hex_id_set.clear()
-
-        # Reassign hex IDs to remaining messages
-        from .. import hex_id as hex_id_module
-        for i in range(len(messages)):
-            new_hex = hex_id_module.generate_hex_id(hex_id_set)
-            hex_map[i] = new_hex
 
         await self._save_current_chat_if_open()
 
@@ -491,7 +459,7 @@ class RuntimeCommandsMixin:
         warning = [
             "⚠️  WARNING: Purging breaks conversation context",
             f"Purged {deleted_count} message(s): {deleted_ids}",
-            "Hex IDs have been reassigned to remaining messages."
+            "Remaining message hex IDs were preserved."
         ]
 
         return "\n".join(warning)

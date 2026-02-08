@@ -65,14 +65,12 @@ def mock_session_manager_with_messages():
     )
 
     # Set up hex IDs as the tests expect
-    manager._state.message_hex_ids = {
-        0: "a3f",
-        1: "b2c",
-        2: "c1d",
-        3: "d4e",
-        4: "e5f",
-        5: "f6a"
-    }
+    manager.chat["messages"][0]["hex_id"] = "a3f"
+    manager.chat["messages"][1]["hex_id"] = "b2c"
+    manager.chat["messages"][2]["hex_id"] = "c1d"
+    manager.chat["messages"][3]["hex_id"] = "d4e"
+    manager.chat["messages"][4]["hex_id"] = "e5f"
+    manager.chat["messages"][5]["hex_id"] = "f6a"
     manager._state.hex_id_set = {"a3f", "b2c", "c1d", "d4e", "e5f", "f6a"}
 
     return manager

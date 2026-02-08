@@ -138,8 +138,19 @@ class ChatOrchestrator:
                 message=response.split(":", 1)[1]
             )
 
-        # Not a signal - print as regular message
+        # Not a signal - persist command-driven chat mutations through orchestrator.
+        await self._save_chat_if_dirty(current_chat_path, current_chat_data)
         return OrchestratorAction(action="print", message=response)
+
+    async def _save_chat_if_dirty(
+        self,
+        chat_path: Optional[str],
+        chat_data: Optional[dict],
+    ) -> None:
+        """Persist chat only when command handlers marked state as dirty."""
+        if self.manager.chat_dirty and chat_path and chat_data:
+            await chat.save_chat(chat_path, chat_data)
+            self.manager.clear_chat_dirty()
 
     async def _handle_new_chat(
         self,
@@ -153,9 +164,11 @@ class ChatOrchestrator:
         # Save current chat before switching
         if current_chat_path and current_chat_data:
             await chat.save_chat(current_chat_path, current_chat_data)
+            self.manager.clear_chat_dirty()
 
         # Load new chat
         new_chat_data = chat.load_chat(new_chat_path)
+        await chat.save_chat(new_chat_path, new_chat_data)
 
         # Update session manager
         self.manager.switch_chat(new_chat_path, new_chat_data)
@@ -181,6 +194,7 @@ class ChatOrchestrator:
         # Save current chat before switching
         if current_chat_path and current_chat_data:
             await chat.save_chat(current_chat_path, current_chat_data)
+            self.manager.clear_chat_dirty()
 
         # Load selected chat
         new_chat_data = chat.load_chat(new_chat_path)
@@ -206,6 +220,7 @@ class ChatOrchestrator:
         # Save current chat before closing
         if current_chat_path and current_chat_data:
             await chat.save_chat(current_chat_path, current_chat_data)
+            self.manager.clear_chat_dirty()
 
         # Clear chat in session manager
         self.manager.close_chat()
@@ -283,18 +298,21 @@ class ChatOrchestrator:
 
         # Add retry messages
         chat.add_user_message(current_chat_data, user_msg)
-        new_msg_index = len(messages) - 1
-        self.manager.assign_message_hex_id(new_msg_index)
+        if messages:
+            new_msg_index = len(messages) - 1
+            self.manager.assign_message_hex_id(new_msg_index)
 
         chat.add_assistant_message(
             current_chat_data, assistant_msg, self.manager.current_model
         )
-        new_msg_index = len(messages) - 1
-        self.manager.assign_message_hex_id(new_msg_index)
+        if messages:
+            new_msg_index = len(messages) - 1
+            self.manager.assign_message_hex_id(new_msg_index)
 
         # Save chat and exit retry mode
         if current_chat_path:
             await chat.save_chat(current_chat_path, current_chat_data)
+            self.manager.clear_chat_dirty()
 
         self.manager.exit_retry_mode()
 
@@ -471,6 +489,7 @@ class ChatOrchestrator:
             new_msg_index = len(chat_data["messages"]) - 1
             self.manager.assign_message_hex_id(new_msg_index)
             await chat.save_chat(chat_path, chat_data)
+            self.manager.clear_chat_dirty()
             return OrchestratorAction(action="continue")
 
         return OrchestratorAction(action="continue")
@@ -512,6 +531,7 @@ class ChatOrchestrator:
             new_msg_index = len(chat_data["messages"]) - 1
             self.manager.assign_message_hex_id(new_msg_index)
             await chat.save_chat(chat_path, chat_data)
+            self.manager.clear_chat_dirty()
 
         # For retry and secret modes, just show error (don't save)
         return OrchestratorAction(action="print", message=f"\nError: {error}")

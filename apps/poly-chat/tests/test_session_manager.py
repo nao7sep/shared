@@ -93,6 +93,12 @@ class TestSystemPromptLoading:
         assert prompt_path == "/tmp/nonexistent-prompt-file.txt"
         assert warning is not None
 
+    def test_load_system_prompt_strict_raises_on_missing_file(self):
+        profile_data = {"system_prompt": "/tmp/nonexistent-prompt-file.txt"}
+
+        with pytest.raises(ValueError, match="Could not load system prompt"):
+            SessionManager.load_system_prompt(profile_data, strict=True)
+
     def test_load_system_prompt_uses_raw_profile_path_when_available(self, tmp_path):
         prompt_file = tmp_path / "prompt.txt"
         prompt_file.write_text("Raw profile path prompt", encoding="utf-8")
@@ -264,6 +270,22 @@ class TestChatManagement:
 
         # Retry mode should be cleared
         assert manager.retry_mode is False
+
+    def test_switch_chat_backfills_missing_system_prompt_metadata(self):
+        """Switching to old chats should backfill missing system prompt metadata."""
+        manager = SessionManager(
+            profile={},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            system_prompt_path="@/system-prompts/default.txt",
+        )
+
+        new_chat = {
+            "metadata": {"title": "Legacy", "system_prompt_path": None},
+            "messages": [],
+        }
+        manager.switch_chat("/path/to/new.json", new_chat)
+        assert manager.chat["metadata"]["system_prompt_path"] == "@/system-prompts/default.txt"
 
     def test_close_chat(self):
         """Test closing current chat."""
@@ -449,6 +471,9 @@ class TestHexIdManagement:
 
         # Should have 1 hex ID from initialization
         assert len(manager.message_hex_ids) == 1
+
+        # Add a second message, then assign ID
+        manager.chat["messages"].append({"role": "assistant", "content": "Hi"})
 
         # Assign new hex ID for second message
         hex_id = manager.assign_message_hex_id(1)

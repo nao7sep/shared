@@ -50,7 +50,6 @@ class TestSessionStateCreation:
         assert session.retry_current_assistant_msg is None
         assert session.secret_mode is False
         assert session.secret_base_messages == []
-        assert session.message_hex_ids == {}
         assert session.hex_id_set == set()
         assert session._provider_cache == {}
 
@@ -103,7 +102,6 @@ class TestSessionDictDuality:
             "input_mode": session.input_mode,
             "retry_mode": session.retry_mode,
             "secret_mode": session.secret_mode,
-            "message_hex_ids": session.message_hex_ids,
             "hex_id_set": session.hex_id_set,
         }
 
@@ -224,7 +222,7 @@ class TestHexIdManagement:
 
         initialize_message_hex_ids(session)
 
-        assert session.message_hex_ids == {}
+        assert session.chat["messages"] == []
         assert session.hex_id_set == set()
 
     def test_initialize_hex_ids_with_messages(self):
@@ -247,11 +245,11 @@ class TestHexIdManagement:
         initialize_message_hex_ids(session)
 
         # Should have 3 hex IDs
-        assert len(session.message_hex_ids) == 3
+        assert len(session.chat["messages"]) == 3
         assert len(session.hex_id_set) == 3
 
         # All hex IDs should be unique
-        hex_ids = list(session.message_hex_ids.values())
+        hex_ids = [m["hex_id"] for m in session.chat["messages"]]
         assert len(hex_ids) == len(set(hex_ids))
 
     def test_assign_new_message_hex_id(self):
@@ -269,15 +267,18 @@ class TestHexIdManagement:
         initialize_message_hex_ids(session)
         initial_count = len(session.hex_id_set)
 
+        # Add a second message
+        session.chat["messages"].append({"role": "assistant", "content": "Hi"})
+
         # Assign new hex ID
         new_hex_id = assign_new_message_hex_id(session, 1)
 
         # Should have one more hex ID
-        assert len(session.message_hex_ids) == initial_count + 1
+        assert len(session.chat["messages"]) == initial_count + 1
         assert len(session.hex_id_set) == initial_count + 1
 
         # New hex ID should be in both structures
-        assert session.message_hex_ids[1] == new_hex_id
+        assert session.chat["messages"][1]["hex_id"] == new_hex_id
         assert new_hex_id in session.hex_id_set
 
     def test_hex_ids_persist_across_reinitialization(self):
@@ -293,11 +294,11 @@ class TestHexIdManagement:
 
         # First initialization
         initialize_message_hex_ids(session)
-        first_hex_ids = dict(session.message_hex_ids)
+        first_hex_ids = [m["hex_id"] for m in session.chat["messages"]]
 
         # Second initialization (e.g., after loading new chat)
         initialize_message_hex_ids(session)
-        second_hex_ids = dict(session.message_hex_ids)
+        second_hex_ids = [m["hex_id"] for m in session.chat["messages"]]
 
         # Should have regenerated (likely different IDs)
         # Both should have same count

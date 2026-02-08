@@ -210,9 +210,15 @@ class SessionManager:
         return self._state.secret_mode
 
     @property
+    def chat_dirty(self) -> bool:
+        """Whether current chat has unsaved command-driven changes."""
+        return self._state.chat_dirty
+
+    @property
     def message_hex_ids(self) -> dict[int, str]:
         """Message hex IDs (index → hex_id)."""
-        return self._state.message_hex_ids
+        messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
+        return hex_id.build_hex_map(messages)
 
     @property
     def hex_id_set(self) -> set[str]:
@@ -263,7 +269,8 @@ class SessionManager:
             "input_mode": self._state.input_mode,
             "retry_mode": self._state.retry_mode,
             "secret_mode": self._state.secret_mode,
-            "message_hex_ids": self._state.message_hex_ids,
+            "chat_dirty": self._state.chat_dirty,
+            "message_hex_ids": self.message_hex_ids,
             "hex_id_set": self._state.hex_id_set,
         }
 
@@ -286,6 +293,18 @@ class SessionManager:
         # Update chat data
         self._state.chat = chat_data
         self._state.chat_path = chat_path
+        self._state.chat_dirty = False
+
+        # Keep older chats aligned with active session system prompt metadata.
+        metadata = chat_data.get("metadata") if isinstance(chat_data, dict) else None
+        if (
+            isinstance(metadata, dict)
+            and self._state.system_prompt_path
+            and not metadata.get("system_prompt_path")
+        ):
+            from .chat import update_metadata
+
+            update_metadata(chat_data, system_prompt_path=self._state.system_prompt_path)
 
         # Reinitialize hex IDs for new chat
         initialize_message_hex_ids(self._state)
@@ -297,7 +316,7 @@ class SessionManager:
         """Close current chat and clear related state."""
         self._state.chat = {}
         self._state.chat_path = None
-        self._state.message_hex_ids.clear()
+        self._state.chat_dirty = False
         self._state.hex_id_set.clear()
         self._clear_chat_scoped_state()
 
@@ -317,12 +336,26 @@ class SessionManager:
         """Public wrapper to clear retry/secret state."""
         self._clear_chat_scoped_state()
 
+    def mark_chat_dirty(self) -> None:
+        """Mark current chat as needing persistence."""
+        self._state.chat_dirty = True
+
+    def clear_chat_dirty(self) -> None:
+        """Mark current chat as persisted."""
+        self._state.chat_dirty = False
+
     @staticmethod
     def load_system_prompt(
         profile_data: dict[str, Any],
         profile_path: Optional[str] = None,
+        strict: bool = False,
     ) -> tuple[Optional[str], Optional[str], Optional[str]]:
         """Resolve and load system prompt content from profile data.
+
+        Args:
+            profile_data: Loaded profile dictionary
+            profile_path: Optional raw profile path for preserving original system_prompt text
+            strict: If True, raise ValueError when path-based prompt loading fails
 
         Returns:
             Tuple of (system_prompt_text, system_prompt_path, warning_message)
@@ -351,6 +384,8 @@ class SessionManager:
                 with open(mapped_path, "r", encoding="utf-8") as f:
                     system_prompt = f.read().strip()
             except Exception as e:
+                if strict:
+                    raise ValueError(f"Could not load system prompt: {e}") from e
                 warning = f"Could not load system prompt: {e}"
 
         elif isinstance(prompt_config, dict):
@@ -478,7 +513,11 @@ class SessionManager:
         Returns:
             Hex ID or None if not assigned
         """
-        return self._state.message_hex_ids.get(message_index)
+        messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
+        if message_index < 0 or message_index >= len(messages):
+            return None
+        hid = messages[message_index].get("hex_id")
+        return hid if isinstance(hid, str) else None
 
     def remove_message_hex_id(self, message_index: int) -> None:
         """Remove hex ID for a message.
@@ -486,8 +525,11 @@ class SessionManager:
         Args:
             message_index: Index of the message
         """
-        if message_index in self._state.message_hex_ids:
-            hex_to_remove = self._state.message_hex_ids.pop(message_index)
+        messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
+        if message_index < 0 or message_index >= len(messages):
+            return
+        hex_to_remove = messages[message_index].pop("hex_id", None)
+        if isinstance(hex_to_remove, str):
             self._state.hex_id_set.discard(hex_to_remove)
 
     # ===================================================================

@@ -105,10 +105,10 @@ class TestNewChatSignal:
                 current_chat_data=sample_chat_data,
             )
 
-            # Should save old chat
-            mock_chat.save_chat.assert_called_once_with(
-                "/test/old-chat.json", sample_chat_data
-            )
+            # Should save old chat then persist new chat file
+            assert mock_chat.save_chat.await_count == 2
+            mock_chat.save_chat.assert_any_await("/test/old-chat.json", sample_chat_data)
+            mock_chat.save_chat.assert_any_await("/test/new-chat.json", {"messages": []})
 
             # Should load new chat
             mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
@@ -132,8 +132,8 @@ class TestNewChatSignal:
                 current_chat_data=None,
             )
 
-            # Should not try to save (no current chat)
-            mock_chat.save_chat.assert_not_called()
+            # Should persist newly created chat file
+            mock_chat.save_chat.assert_called_once_with("/test/new-chat.json", {"messages": []})
 
             # Should load new chat
             mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
@@ -396,6 +396,39 @@ class TestRegularMessages:
 
         assert action.action == "print"
         assert action.message == ""
+
+    @pytest.mark.asyncio
+    async def test_regular_message_saves_when_chat_dirty(self, orchestrator, sample_chat_data):
+        """Regular command responses should flush dirty chat changes."""
+        orchestrator.manager.mark_chat_dirty()
+
+        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
+            mock_chat.save_chat = AsyncMock()
+
+            action = await orchestrator.handle_command_response(
+                "Updated title",
+                current_chat_path="/test/chat.json",
+                current_chat_data=sample_chat_data,
+            )
+
+            assert action.action == "print"
+            assert action.message == "Updated title"
+            mock_chat.save_chat.assert_called_once_with("/test/chat.json", sample_chat_data)
+            assert orchestrator.manager.chat_dirty is False
+
+    @pytest.mark.asyncio
+    async def test_regular_message_skips_save_when_not_dirty(self, orchestrator, sample_chat_data):
+        """Regular command responses should not save unless dirty."""
+        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
+            mock_chat.save_chat = AsyncMock()
+
+            await orchestrator.handle_command_response(
+                "No state mutation",
+                current_chat_path="/test/chat.json",
+                current_chat_data=sample_chat_data,
+            )
+
+            mock_chat.save_chat.assert_not_called()
 
 
 class TestSessionManagerIntegration:

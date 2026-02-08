@@ -40,6 +40,12 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--strict-system-prompt",
+        action="store_true",
+        help="Fail startup if configured system prompt cannot be loaded",
+    )
+
+    parser.add_argument(
         "command", nargs="?", help="Command to run (e.g., 'init' to create profile)"
     )
 
@@ -89,7 +95,9 @@ def main() -> None:
             chat_data = chat.load_chat(chat_path)
 
         system_prompt, system_prompt_path, system_prompt_warning = SessionManager.load_system_prompt(
-            profile_data, mapped_profile_path
+            profile_data,
+            mapped_profile_path,
+            strict=args.strict_system_prompt,
         )
         if system_prompt_warning:
             print(f"Warning: {system_prompt_warning}")

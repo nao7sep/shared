@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ..chat import load_chat, save_chat
+from ..chat import load_chat
 from ..chat_manager import (
     delete_chat as delete_chat_file,
     generate_chat_filename,
@@ -29,9 +29,6 @@ class ChatFileCommandsMixin:
 
         # Create new chat structure
         new_chat_data = load_chat(new_path)  # Returns empty structure
-
-        # Save empty chat immediately so it appears in /open list
-        await save_chat(new_path, new_chat_data)
 
         # Signal to REPL to switch to new chat
         # Format: __NEW_CHAT__:path

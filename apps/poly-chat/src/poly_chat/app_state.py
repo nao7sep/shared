@@ -28,7 +28,7 @@ class SessionState:
     retry_current_assistant_msg: Optional[str] = None
     secret_mode: bool = False
     secret_base_messages: list = field(default_factory=list)
-    message_hex_ids: dict[int, str] = field(default_factory=dict)
+    chat_dirty: bool = False
     hex_id_set: set[str] = field(default_factory=set)
     _provider_cache: dict[tuple[str, str], Any] = field(default_factory=dict)
 
@@ -43,20 +43,21 @@ class SessionState:
 
 def initialize_message_hex_ids(session: SessionState) -> None:
     """Initialize hex IDs for all messages in the current chat."""
-    session.message_hex_ids.clear()
     session.hex_id_set.clear()
 
     if session.chat and "messages" in session.chat:
-        message_count = len(session.chat["messages"])
-        session.message_hex_ids = hex_id.assign_hex_ids(
-            message_count, session.hex_id_set
-        )
+        for message in session.chat["messages"]:
+            message["hex_id"] = hex_id.generate_hex_id(session.hex_id_set)
 
 
 def assign_new_message_hex_id(session: SessionState, message_index: int) -> str:
     """Assign hex ID to a newly added message."""
+    messages = session.chat.get("messages", []) if isinstance(session.chat, dict) else []
+    if message_index < 0 or message_index >= len(messages):
+        raise IndexError(f"Message index {message_index} out of range")
+
     new_hex_id = hex_id.generate_hex_id(session.hex_id_set)
-    session.message_hex_ids[message_index] = new_hex_id
+    messages[message_index]["hex_id"] = new_hex_id
     return new_hex_id
 
 

@@ -34,13 +34,11 @@ class CommandHandlerBaseMixin:
         return chat_data
 
     async def _save_current_chat_if_open(self) -> None:
-        """Persist current chat when a chat file is active."""
+        """Mark current chat as dirty when a chat file is active."""
         chat_path = self.manager.chat_path
         chat_data = self.manager.chat
         if chat_path and isinstance(chat_data, dict):
-            from .. import commands as commands_module
-
-            await commands_module.save_chat(chat_path, chat_data)
+            self.manager.mark_chat_dirty()
 
     async def _update_metadata_and_save(self, **metadata_updates: Any) -> None:
         """Update current chat metadata and persist the chat."""

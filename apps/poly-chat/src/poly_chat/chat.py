@@ -5,6 +5,7 @@ including messages and metadata.
 """
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
@@ -49,6 +50,11 @@ def load_chat(path: str) -> dict[str, Any]:
         if "metadata" not in data or "messages" not in data:
             raise ValueError("Invalid chat history file structure")
 
+        # Runtime-only fields are not persisted in canonical chat files.
+        for message in data.get("messages", []):
+            if isinstance(message, dict):
+                message.pop("hex_id", None)
+
         return data
 
     except json.JSONDecodeError as e:
@@ -78,8 +84,13 @@ async def save_chat(path: str, data: dict[str, Any]) -> None:
 
     # Write async
     async with aiofiles.open(chat_path, "w", encoding="utf-8") as f:
+        persistable_data = deepcopy(data)
+        for message in persistable_data.get("messages", []):
+            if isinstance(message, dict):
+                message.pop("hex_id", None)
+
         # Use json.dumps first (it's not async), then write
-        json_str = json.dumps(data, indent=2, ensure_ascii=False)
+        json_str = json.dumps(persistable_data, indent=2, ensure_ascii=False)
         await f.write(json_str)
 
 

@@ -296,16 +296,14 @@ Keep descriptions brief (one line max). For found items, mention location if che
             Formatted string with message content
         """
         formatted = []
-        hex_map = self.manager.message_hex_ids
 
-        for i, msg in enumerate(messages):
+        for msg in messages:
             role = msg.get("role", "unknown")
             content_parts = msg.get("content", [])
 
             # Get hex ID if available
-            hex_label = ""
-            if i in hex_map:
-                hex_label = f"[{hex_map[i]}] "
+            hid = msg.get("hex_id")
+            hex_label = f"[{hid}] " if isinstance(hid, str) else ""
 
             content = self._message_content_to_text(content_parts)
 
@@ -365,7 +363,6 @@ Keep descriptions brief (one line max). For found items, mention location if che
             return "No messages to display"
 
         # Format output
-        hex_map = self.manager.message_hex_ids
         output = []
 
         # Header
@@ -385,7 +382,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
             content_parts = msg.get("content", [])
 
             # Get hex ID
-            hex_id = hex_map.get(msg_index, "???")
+            hex_id = msg.get("hex_id", "???")
 
             if timestamp:
                 time_str = self._to_local_time(timestamp, "%Y-%m-%d %H:%M")
@@ -433,10 +430,8 @@ Keep descriptions brief (one line max). For found items, mention location if che
 
         chat = self.manager.chat
         messages = chat["messages"]
-        hex_map = self.manager.message_hex_ids
-
         # Look up message by hex ID
-        msg_index = hex_id.get_message_index(args.strip(), hex_map)
+        msg_index = hex_id.get_message_index(args.strip(), messages)
 
         if msg_index is None:
             return f"Invalid hex ID: {args.strip()}"

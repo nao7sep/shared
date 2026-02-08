@@ -117,7 +117,7 @@ class TestChatSwitchingOrchestration:
         initialize_message_hex_ids(session)
 
         assert session.chat == new_chat_data
-        assert session.message_hex_ids == {}
+        assert session.chat["messages"] == []
         assert session.hex_id_set == set()
 
     def test_open_chat_replaces_current(self):
@@ -132,7 +132,7 @@ class TestChatSwitchingOrchestration:
             chat={"messages": [{"role": "user", "content": "old"}]},
         )
         initialize_message_hex_ids(session)
-        old_hex_ids = dict(session.message_hex_ids)
+        old_hex_ids = [m["hex_id"] for m in session.chat["messages"]]
 
         # Open new chat
         new_chat = {"messages": [{"role": "user", "content": "new"}]}
@@ -141,7 +141,7 @@ class TestChatSwitchingOrchestration:
 
         # Should have different hex IDs
         assert session.chat == new_chat
-        assert session.message_hex_ids != old_hex_ids
+        assert [m["hex_id"] for m in session.chat["messages"]] != old_hex_ids
 
     def test_close_chat_clears_state(self):
         """Test closing chat clears chat-related state."""
@@ -157,7 +157,6 @@ class TestChatSwitchingOrchestration:
 
         # Simulate closing chat
         session.chat = {}
-        session.message_hex_ids.clear()
         session.hex_id_set.clear()
         session.retry_mode = False
         session.retry_base_messages.clear()
@@ -167,7 +166,7 @@ class TestChatSwitchingOrchestration:
         session.secret_base_messages.clear()
 
         assert session.chat == {}
-        assert session.message_hex_ids == {}
+        assert session.chat == {}
         assert session.hex_id_set == set()
         assert session.retry_mode is False
         assert session.secret_mode is False
