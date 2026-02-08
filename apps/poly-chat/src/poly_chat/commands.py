@@ -110,6 +110,7 @@ class CommandHandler:
             "safe": self.check_safety,
             "new": self.new_chat,
             "open": self.open_chat,
+            "switch": self.switch_chat,
             "close": self.close_chat,
             "rename": self.rename_chat_file,
             "delete": self.delete_chat_command,
@@ -145,6 +146,47 @@ class CommandHandler:
         self.session["current_model"] = model
 
         return f"Switched to {provider} ({model})"
+
+    def _resolve_chat_path_arg(self, raw_path: str, chats_dir: str) -> str:
+        """Resolve chat path argument to an absolute file path.
+
+        Supports:
+        - mapped paths (`~/...`, `@/...`, absolute), resolved via profile.map_path
+        - bare names/relative paths resolved under chats_dir (with traversal protection)
+        """
+        path = raw_path.strip()
+        chats_dir_resolved = Path(chats_dir).resolve()
+
+        # Use shared path mapping for mapped/absolute forms.
+        if path.startswith("~/") or path.startswith("@/") or Path(path).is_absolute():
+            try:
+                mapped = profile.map_path(path)
+            except ValueError as e:
+                raise ValueError(f"Invalid path: {path} ({e})")
+
+            mapped_path = Path(mapped)
+            if mapped_path.exists():
+                return str(mapped_path)
+            raise ValueError(f"Chat not found: {path}")
+
+        # Relative name/path under chats_dir with traversal protection.
+        candidate = (Path(chats_dir) / path).resolve()
+        try:
+            candidate.relative_to(chats_dir_resolved)
+        except ValueError:
+            raise ValueError(f"Invalid path: {path} (outside chats directory)")
+
+        if not candidate.exists() and not path.endswith(".json"):
+            candidate = (Path(chats_dir) / f"{path}.json").resolve()
+            try:
+                candidate.relative_to(chats_dir_resolved)
+            except ValueError:
+                raise ValueError(f"Invalid path: {path} (outside chats directory)")
+
+        if candidate.exists():
+            return str(candidate)
+
+        raise ValueError(f"Chat not found: {path}")
 
     async def set_model(self, args: str) -> str:
         """Set the current model.
@@ -1151,38 +1193,10 @@ Keep descriptions brief (one line max). For found items, mention location if che
 
         if args.strip():
             # Path provided as argument
-            path = args.strip()
-
-            # Try to resolve path
-            if not path.startswith("/") and not path.startswith("~"):
-                # Relative to chats_dir - must validate to prevent path traversal
-                candidate = (Path(chats_dir) / path).resolve()
-
-                # Security check: Ensure resolved path is within chats_dir
-                chats_dir_resolved = Path(chats_dir).resolve()
-                try:
-                    candidate.relative_to(chats_dir_resolved)
-                except ValueError:
-                    return f"Invalid path: {path} (outside chats directory)"
-
-                if not candidate.exists() and not path.endswith(".json"):
-                    candidate = (Path(chats_dir) / f"{path}.json").resolve()
-                    try:
-                        candidate.relative_to(chats_dir_resolved)
-                    except ValueError:
-                        return f"Invalid path: {path} (outside chats directory)"
-
-                if candidate.exists():
-                    path = str(candidate)
-                else:
-                    return f"Chat not found: {path}"
-            else:
-                # Absolute or ~ path
-                path = str(Path(path).expanduser())
-                if not Path(path).exists():
-                    return f"Chat not found: {path}"
-
-            selected_path = path
+            try:
+                selected_path = self._resolve_chat_path_arg(args.strip(), chats_dir)
+            except ValueError as e:
+                return str(e)
         else:
             # Interactive selection
             selected_path = prompt_chat_selection(chats_dir, action="open", allow_cancel=True)
@@ -1199,6 +1213,18 @@ Keep descriptions brief (one line max). For found items, mention location if che
         # Signal to REPL to switch chat
         # Format: __OPEN_CHAT__:path
         return f"__OPEN_CHAT__:{selected_path}"
+
+    async def switch_chat(self, args: str) -> str:
+        """Switch to another chat file.
+
+        Args:
+            args: Optional filename or path (shows selection if empty)
+
+        Returns:
+            Special __OPEN_CHAT__ signal or error message
+        """
+        # Reuse /open behavior. The REPL loop saves current chat and opens selected one.
+        return await self.open_chat(args)
 
     async def close_chat(self, args: str) -> str:
         """Close current chat.
@@ -1219,7 +1245,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
         """Rename a chat file.
 
         Args:
-            args: New name (if current chat) or "old_name new_name"
+            args: "<target> <new_name>", where target is "current" or a chat name/path
 
         Returns:
             Confirmation message or special __RENAME_CURRENT__ signal
@@ -1257,52 +1283,41 @@ Keep descriptions brief (one line max). For found items, mention location if che
             except Exception as e:
                 return f"Error renaming chat: {e}"
 
-        elif len(parts) == 1:
-            # One arg - rename current chat
+        if len(parts) < 2:
+            return "Usage: /rename <chat_name|path|current> <new_name>"
+
+        target, new_name = parts[0], parts[1].strip()
+        if not new_name:
+            return "Usage: /rename <chat_name|path|current> <new_name>"
+
+        if target == "current":
             current_path = self.session.get("chat_path")
             if not current_path:
                 return "No chat is currently open"
-
-            new_name = parts[0]
-
-            try:
-                new_path = rename_chat(current_path, new_name, chats_dir)
-                # Signal to update current chat path
-                return f"__RENAME_CURRENT__:{new_path}"
-
-            except Exception as e:
-                return f"Error renaming chat: {e}"
-
+            old_path = Path(current_path).resolve()
         else:
-            # Two args - old and new names
-            old_name, new_name = parts[0], parts[1]
-
-            # Find old file
-            old_path = Path(chats_dir) / old_name
-            if not old_path.exists() and not old_name.endswith(".json"):
-                old_path = Path(chats_dir) / f"{old_name}.json"
-
-            if not old_path.exists():
-                return f"Chat not found: {old_name}"
-
             try:
-                new_path = rename_chat(str(old_path), new_name, chats_dir)
+                old_path = Path(self._resolve_chat_path_arg(target, chats_dir)).resolve()
+            except ValueError as e:
+                return str(e)
 
-                # Check if this was the current chat
-                current_path = self.session.get("chat_path")
-                if current_path and Path(current_path).resolve() == old_path.resolve():
-                    return f"__RENAME_CURRENT__:{new_path}"
-                else:
-                    return f"Renamed: {old_path.name} → {Path(new_path).name}"
+        try:
+            new_path = rename_chat(str(old_path), new_name, chats_dir)
 
-            except Exception as e:
-                return f"Error renaming chat: {e}"
+            # Check if this was the current chat
+            current_path = self.session.get("chat_path")
+            if current_path and Path(current_path).resolve() == old_path.resolve():
+                return f"__RENAME_CURRENT__:{new_path}"
+            return f"Renamed: {old_path.name} → {Path(new_path).name}"
+
+        except Exception as e:
+            return f"Error renaming chat: {e}"
 
     async def delete_chat_command(self, args: str) -> str:
         """Delete a chat file.
 
         Args:
-            args: Chat name or path
+            args: Chat name/path, or "current"
 
         Returns:
             Confirmation message or special __DELETE_CURRENT__ signal
@@ -1320,23 +1335,16 @@ Keep descriptions brief (one line max). For found items, mention location if che
         else:
             # Parse argument
             name = args.strip()
-
-            # Try to resolve path
-            if not name.startswith("/") and not name.startswith("~"):
-                # Relative to chats_dir
-                candidate = Path(chats_dir) / name
-                if not candidate.exists() and not name.endswith(".json"):
-                    candidate = Path(chats_dir) / f"{name}.json"
-                if candidate.exists():
-                    selected_path = str(candidate)
-                else:
-                    return f"Chat not found: {name}"
+            if name == "current":
+                current_path = self.session.get("chat_path")
+                if not current_path:
+                    return "No chat is currently open"
+                selected_path = current_path
             else:
-                # Absolute or ~ path
-                path = Path(name).expanduser()
-                if not path.exists():
-                    return f"Chat not found: {name}"
-                selected_path = str(path)
+                try:
+                    selected_path = self._resolve_chat_path_arg(name, chats_dir)
+                except ValueError as e:
+                    return str(e)
 
         # Check if this is the current chat
         current_path = self.session.get("chat_path")
@@ -1402,8 +1410,14 @@ Configuration:
 Chat File Management:
   /new [name]       Create new chat file
   /open [name]      Open existing chat file (shows list if no name)
+  /switch [name]    Switch chat (save current, then open selected chat)
   /close            Close current chat
-  /rename [name]    Rename current chat or select from list
+  /rename           Select a chat and rename it
+  /rename current <new_name>
+                    Rename the current chat
+  /rename <chat> <new_name>
+                    Rename a specific chat by name/path
+  /delete current   Delete the current chat (with confirmation)
   /delete [name]    Delete a chat file (shows list if no name)
 
 Chat Control:

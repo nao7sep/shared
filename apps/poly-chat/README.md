@@ -31,11 +31,11 @@ poetry install
 poetry run pc init ~/my-profile.json
 ```
 
-This interactive wizard will guide you through:
-- Selecting default AI provider
-- Configuring API keys (environment variables, Keychain, or JSON file)
-- Setting chat history and error log directories
-- Choosing a default system prompt
+This creates template files:
+- Profile JSON at the path you provide
+- `api-keys.json` in the same directory
+
+Then edit the template values (models, paths, and API keys) before running PolyChat.
 
 ### 2. Start PolyChat
 
@@ -51,12 +51,18 @@ The app goes straight to the REPL and shows configured AI providers.
 
 ### 3. Chat
 
-Messages are multiline - press **Alt+Enter** (or **Ctrl+Enter**) to send, **Enter** for new line:
+Messages are multiline:
+- **Option+Enter** to send (**Option == Alt on Mac keyboards**)
+- Other setups: **Alt+Enter** to send
+- `Ctrl+Enter` may work in some terminals (if it is sent as `Ctrl+J`)
+- **Enter** inserts a new line
+
+`Enter` does not send the message. Sending requires a key combination so you can draft multi-line context (lines and paragraphs) safely, and so `Enter` remains available for text composition workflows used in some regions/IME setups.
 
 ```
 What are the key considerations for
 expanding into Asian markets?
-[Alt+Enter to send]
+[Option+Enter on macOS (Alt+Enter elsewhere) to send]
 
 Claude: Here are the main factors to consider:
 
@@ -82,6 +88,16 @@ pc -p <profile-path> -c <chat-path>
 pc -p <profile-path> -l debug.log
 ```
 
+CLI path flags use the same path mapping rules:
+- `-p/--profile` (profile path)
+- `-c/--chat` (chat history path)
+- `-l/--log` (error log path)
+
+Use `~/...`, `@/...`, or absolute paths. Plain relative paths are rejected.
+
+If `-l/--log` is omitted, PolyChat creates one log file for the current app run in the profile's `log_dir`:
+- `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
+
 ### In-Chat Commands
 
 **Provider Shortcuts:**
@@ -96,25 +112,66 @@ pc -p <profile-path> -l debug.log
 **Model Management:**
 - `/model` - Show available models for current provider
 - `/model <name>` - Switch to specified model
+- `/model default` - Restore profile default AI and model
+- `/helper` - Show current helper AI model
+- `/helper <model>` - Set helper AI model
+- `/helper default` - Restore helper AI from profile default
 
 **Chat File Management:**
-- `/new [name]` - Create new chat (timestamped filename if no name)
+- `/new` - Create new chat with timestamped filename
+- `/new <name>` - Create new chat with the provided name
 - `/open` - Select from list of chats
 - `/open <path>` - Open specific chat file
+- `/switch` - Switch chats (save current, then select chat to open)
+- `/switch <path>` - Switch to specific chat file
 - `/close` - Close current chat
 - `/rename` - Select chat to rename
-- `/rename <new-name>` - Rename current chat
+- `/rename current <new-name>` - Rename current chat
+- `/rename <chat> <new-name>` - Rename specific chat by name/path
 - `/delete` - Select chat to delete
+- `/delete current` - Delete current chat
 - `/delete <path>` - Delete specific chat file
+
+Delete operations always ask for confirmation and require typing `yes`.
 
 **Chat Control:**
 - `/retry` - Replace last response (retry mode)
+- `/apply` - Accept current retry attempt and exit retry mode
+- `/cancel` - Abort retry and keep original response
+- `/secret` - Toggle secret mode (messages not saved)
+- `/secret on|off` - Explicitly enable/disable secret mode
+- `/secret <msg>` - Send one secret message without toggling mode
 - `/rewind <index>` - Rewind chat to message (time travel)
 - `/rewind last` - Rewind to last message
+- `/purge <hex_id> [hex_id2 ...]` - Delete specific messages (breaks context)
+
+**History:**
+- `/history` - Show last 10 messages
+- `/history <n>` - Show last n messages
+- `/history all` - Show all messages
+- `/history --errors` - Show error messages only
+- `/show <hex_id>` - Show full content of one message
 
 **Metadata:**
+- `/title` - Generate title using AI
 - `/title <text>` - Set chat title
+- `/title --` - Clear title
+- `/summary` - Generate summary using AI
 - `/summary <text>` - Set chat summary
+- `/summary --` - Clear summary
+
+**Safety:**
+- `/safe` - Check entire chat for unsafe content
+- `/safe <hex_id>` - Check one message for unsafe content
+
+**Configuration:**
+- `/timeout` - Show current timeout setting
+- `/timeout <secs>` - Set timeout (0 = wait forever)
+- `/timeout default` - Restore profile default timeout
+- `/system` - Show current system prompt
+- `/system <path>` - Set system prompt path
+- `/system --` - Remove system prompt from chat
+- `/system default` - Restore profile default system prompt
 
 **Other:**
 - `/help` - Show all commands
@@ -214,7 +271,7 @@ Chat history files are stored as JSON with git-friendly formatting:
   "metadata": {
     "title": "Business Strategy 2026",
     "summary": "Long-term planning discussion",
-    "system_prompt_key": "@/system-prompts/default.txt",
+    "system_prompt_path": "@/system-prompts/default.txt",
     "created_at": "2026-02-02T10:00:00.123456Z",
     "updated_at": "2026-02-02T15:30:45.789012Z"
   },

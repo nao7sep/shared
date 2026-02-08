@@ -6,6 +6,7 @@ import asyncio
 import argparse
 import logging
 import re
+from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -52,6 +53,20 @@ PROVIDER_CLASSES: dict[str, type] = {
 }
 
 
+def _map_cli_path(path_value: Optional[str], arg_name: str) -> Optional[str]:
+    """Map a CLI path argument using profile path mapping rules.
+
+    Supports `~/...`, `@/...`, and absolute paths. Rejects plain relative paths.
+    """
+    if path_value is None:
+        return None
+
+    try:
+        return profile.map_path(path_value)
+    except ValueError as e:
+        raise ValueError(f"Invalid {arg_name} path: {e}")
+
+
 def sanitize_error_message(error_msg: str) -> str:
     """Sanitize error messages to remove sensitive information.
 
@@ -74,6 +89,23 @@ def sanitize_error_message(error_msg: str) -> str:
     sanitized = re.sub(r'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[REDACTED_JWT]', sanitized)
 
     return sanitized
+
+
+def _build_run_log_path(log_dir: str) -> str:
+    """Build a unique run log path in the configured log directory."""
+    log_dir_path = Path(log_dir)
+    log_dir_path.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    base_name = f"poly-chat_{timestamp}"
+    candidate = log_dir_path / f"{base_name}.log"
+
+    suffix = 1
+    while candidate.exists():
+        candidate = log_dir_path / f"{base_name}_{suffix}.log"
+        suffix += 1
+
+    return str(candidate)
 
 
 @dataclass
@@ -176,8 +208,11 @@ def setup_logging(log_file: Optional[str] = None) -> None:
         log_file: Path to log file, or None to disable logging
     """
     if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+
         logging.basicConfig(
-            filename=log_file,
+            filename=str(log_path),
             level=logging.ERROR,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
@@ -858,7 +893,8 @@ def main() -> None:
             print("Usage: pc init <profile-path>")
             sys.exit(1)
         try:
-            profile.create_profile(args.profile_path)
+            mapped_init_profile_path = _map_cli_path(args.profile_path, "profile")
+            profile.create_profile(mapped_init_profile_path)
             sys.exit(0)
         except Exception as e:
             print(f"Error creating profile: {e}")
@@ -870,20 +906,26 @@ def main() -> None:
         print("Usage: pc -p <profile-path> [-c <chat-path>] [-l <log-path>]")
         sys.exit(1)
 
-    # Set up logging
-    setup_logging(args.log)
-
     try:
+        # Map CLI paths using shared path mapping rules
+        mapped_profile_path = _map_cli_path(args.profile, "profile")
+        mapped_chat_path = _map_cli_path(args.chat, "chat")
+        mapped_log_path = _map_cli_path(args.log, "log")
+
         # Load profile
-        profile_data = profile.load_profile(args.profile)
+        profile_data = profile.load_profile(mapped_profile_path)
+
+        # Set up logging. If no CLI log path was provided, create a run log in profile log_dir.
+        effective_log_path = mapped_log_path or _build_run_log_path(profile_data["log_dir"])
+        setup_logging(effective_log_path)
 
         # Get chat history file path (optional)
         chat_path = None
         chat_data = None
 
-        if args.chat:
+        if mapped_chat_path:
             # Map the path and load chat
-            chat_path = profile.map_path(args.chat)
+            chat_path = mapped_chat_path
             chat_data = chat.load_chat(chat_path)
 
         # Load system prompt if configured
@@ -893,7 +935,7 @@ def main() -> None:
             # Read original profile to get unmapped path for system_prompt_path
             # (profile_data has already mapped paths, but we want to preserve original format)
             try:
-                with open(Path(args.profile).expanduser(), "r", encoding="utf-8") as f:
+                with open(mapped_profile_path, "r", encoding="utf-8") as f:
                     original_profile = json.load(f)
                     system_prompt_path = original_profile.get("system_prompt")
             except Exception:

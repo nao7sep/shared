@@ -456,3 +456,17 @@ error messages too can be in the chat history. that is a safety feature. if the 
 i think i will change the "--" thing a little. it should have a space before it. so, it'll be like "/system --". it makes more sense. "--" represents None or just "not set" and we are setting the meaning of "--" rather than decrementing something. "-" alone is an option as well, but "--" is more explicit.
 
 please make sure current directory is never used in the app.
+
+---
+
+we need to validate state management. this is more of an implementation check work, but it also contains behavior information. so, i will leave the prompt here.
+
+in commandline, profile path is mandatory, chat history path is optional and error log path is optional. these are all mapped.
+
+in profile, which is always available if the app has successfully started, chat history directory path and error log directory path are mandatory. i might have made one or both of them optional initially. now let's make it official and these are both mandatory, which is simple design.
+
+for each chat to run, app needs one chat history file. one chat history file per one chat. if chat history file is specified in command line, it is opened automatically and user should see a message. in repl mode, app can make many chats and switch among them (by closing and opening another; we probably should implement "switch" command that does both). parameter-less commands like "/open" are user-friendly and show list of chats in the mandatory chat history directory. with a path parameter, these commands map and validate the provided path.
+
+as for log files, let's make it official that only one log file is used for the ENTIRE run of the app (because it is bound to the profile) with an unique file name in the mandatory error log directory IF no error log file path has been specified in command line. when app makes one, the file name pattern should be poly-chat_YYYY-MM-DD_HH-MM-SS with an extension.
+
+should we use a plaintext format and use ".log" or json and ".json"? please analyze how log entries are output. i havent yet read that part of implementation at all. => it's plaintext and ".log" currently. i am ok with that. if i ever need to machine-read the logs, i'll switch to json. until then, plaintext is more human-readable.
