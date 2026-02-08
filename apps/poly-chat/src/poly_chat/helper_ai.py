@@ -36,8 +36,11 @@ async def invoke_helper_ai(
     from .keys.loader import load_api_key
     from .cli import get_provider_instance
 
-    # Import here to avoid circular dependency
-    from .cli import log_event, sanitize_error_message, _estimate_message_chars
+    from .logging_utils import (
+        log_event,
+        sanitize_error_message,
+        estimate_message_chars,
+    )
 
     # Get API key for helper AI
     key_config = profile["api_keys"].get(helper_ai)
@@ -94,7 +97,7 @@ async def invoke_helper_ai(
         provider=helper_ai,
         model=helper_model,
         message_count=len(messages),
-        input_chars=_estimate_message_chars(messages),
+        input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
     )
     try:
