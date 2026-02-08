@@ -10,7 +10,7 @@ def mock_session_manager_defaults():
     """Create a mock SessionManager for defaults tests."""
     chat_data = {
         "metadata": {
-            "system_prompt_path": None,
+            "system_prompt": None,
         },
         "messages": []
     }

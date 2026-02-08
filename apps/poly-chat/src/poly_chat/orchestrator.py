@@ -6,11 +6,13 @@ command responses (signals) and user messages, returning actions for the REPL to
 """
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Optional, Any
 
 from .session_manager import SessionManager
 from . import chat
 from .logging_utils import log_event
+from .message_formatter import text_to_lines
 
 
 @dataclass
@@ -33,6 +35,7 @@ class OrchestratorAction:
     error: Optional[str] = None
     messages: Optional[list] = None
     mode: Optional[str] = None
+    assistant_hex_id: Optional[str] = None
 
 
 class ChatOrchestrator:
@@ -120,8 +123,9 @@ class ChatOrchestrator:
             return await self._handle_delete_current(response, current_chat_path, current_chat_data)
 
         # Handle APPLY_RETRY signal
-        if response == "__APPLY_RETRY__":
-            return await self._handle_apply_retry(current_chat_path, current_chat_data)
+        if response.startswith("__APPLY_RETRY__:"):
+            retry_hex_id = response.split(":", 1)[1].strip().lower()
+            return await self._handle_apply_retry(current_chat_path, current_chat_data, retry_hex_id)
 
         # Handle CANCEL_RETRY signal
         if response == "__CANCEL_RETRY__":
@@ -306,7 +310,8 @@ class ChatOrchestrator:
     async def _handle_apply_retry(
         self,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict]
+        current_chat_data: Optional[dict],
+        retry_hex_id: str,
     ) -> OrchestratorAction:
         """Handle __APPLY_RETRY__ signal."""
         if not self.manager.retry_mode:
@@ -315,31 +320,25 @@ class ChatOrchestrator:
         if not current_chat_data:
             return OrchestratorAction(action="print", message="No chat open")
 
-        # Get retry attempt messages
-        user_msg, assistant_msg = self.manager.get_retry_attempt()
-
-        if not user_msg or not assistant_msg:
-            return OrchestratorAction(action="print", message="No retry attempt to apply")
+        retry_attempt = self.manager.get_retry_attempt(retry_hex_id)
+        if not retry_attempt:
+            return OrchestratorAction(action="print", message=f"Retry ID not found: {retry_hex_id}")
 
         messages = current_chat_data.get("messages", [])
+        target_index = self.manager.get_retry_target_index()
+        if target_index is None or target_index < 0 or target_index >= len(messages):
+            return OrchestratorAction(action="print", message="Retry target is no longer valid")
 
-        # Remove last 2 messages (original user + assistant)
-        if len(messages) >= 2:
-            self.manager.pop_message(-1, current_chat_data)
-            self.manager.pop_message(-1, current_chat_data)
-
-        # Add retry messages
-        chat.add_user_message(current_chat_data, user_msg)
-        if messages:
-            new_msg_index = len(messages) - 1
-            self.manager.assign_message_hex_id(new_msg_index)
-
-        chat.add_assistant_message(
-            current_chat_data, assistant_msg, self.manager.current_model
-        )
-        if messages:
-            new_msg_index = len(messages) - 1
-            self.manager.assign_message_hex_id(new_msg_index)
+        existing_hex_id = messages[target_index].get("hex_id")
+        replaced_message = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "role": "assistant",
+            "model": self.manager.current_model,
+            "content": text_to_lines(retry_attempt["assistant_msg"]),
+        }
+        if isinstance(existing_hex_id, str):
+            replaced_message["hex_id"] = existing_hex_id
+        messages[target_index] = replaced_message
 
         # Save chat and exit retry mode
         if current_chat_path:
@@ -351,7 +350,7 @@ class ChatOrchestrator:
 
         self.manager.exit_retry_mode()
 
-        return OrchestratorAction(action="print", message="Applied retry - messages updated")
+        return OrchestratorAction(action="print", message=f"Applied retry [{retry_hex_id}]")
 
     def _handle_cancel_retry(self) -> OrchestratorAction:
         """Handle __CANCEL_RETRY__ signal."""
@@ -403,7 +402,7 @@ class ChatOrchestrator:
 
         # Check for pending error
         from .app_state import has_pending_error
-        if has_pending_error(chat_data):
+        if has_pending_error(chat_data) and not self.manager.retry_mode and not self.manager.secret_mode:
             return OrchestratorAction(
                 action="print",
                 message="\n⚠️  Cannot continue - last interaction resulted in an error.\nUse /retry to retry the last message, /secret to ask without saving,\nor /rewind to remove the error and continue from an earlier point."
@@ -440,6 +439,7 @@ class ChatOrchestrator:
             action="send_secret",
             messages=temp_messages,
             mode="secret",
+            assistant_hex_id=self.manager.reserve_hex_id(),
         )
 
     async def _handle_retry_message(
@@ -466,6 +466,7 @@ class ChatOrchestrator:
             messages=temp_messages,
             mode="retry",
             message=user_input,  # Store for set_retry_attempt
+            assistant_hex_id=self.manager.reserve_hex_id(),
         )
 
     async def _handle_normal_message(
@@ -486,6 +487,7 @@ class ChatOrchestrator:
             mode="normal",
             chat_path=chat_path,
             chat_data=chat_data,
+            assistant_hex_id=self.manager.reserve_hex_id(),
         )
 
     async def handle_ai_response(
@@ -495,6 +497,7 @@ class ChatOrchestrator:
         chat_data: dict,
         mode: str,
         user_input: Optional[str] = None,
+        assistant_hex_id: Optional[str] = None,
     ) -> OrchestratorAction:
         """Handle successful AI response.
 
@@ -509,20 +512,30 @@ class ChatOrchestrator:
             OrchestratorAction for next step
         """
         if mode == "retry":
-            # Store retry attempt
-            if user_input:
-                self.manager.set_retry_attempt(user_input, response_text)
+            # Store retry attempt and expose runtime hex ID so user can /apply <id>.
+            if user_input and assistant_hex_id:
+                self.manager.add_retry_attempt(
+                    user_input,
+                    response_text,
+                    retry_hex_id=assistant_hex_id,
+                )
             return OrchestratorAction(action="continue")
 
         elif mode == "secret":
             # Secret messages not saved
+            if assistant_hex_id:
+                self.manager.release_hex_id(assistant_hex_id)
             return OrchestratorAction(action="continue")
 
         elif mode == "normal":
             # Add assistant message and save
             chat.add_assistant_message(chat_data, response_text, self.manager.current_model)
-            new_msg_index = len(chat_data["messages"]) - 1
-            self.manager.assign_message_hex_id(new_msg_index)
+            if chat_data.get("messages"):
+                if assistant_hex_id:
+                    chat_data["messages"][-1]["hex_id"] = assistant_hex_id
+                else:
+                    new_msg_index = len(chat_data["messages"]) - 1
+                    self.manager.assign_message_hex_id(new_msg_index)
             await self.manager.save_current_chat(
                 force=True,
                 chat_path=chat_path,
@@ -538,6 +551,7 @@ class ChatOrchestrator:
         chat_path: str,
         chat_data: dict,
         mode: str,
+        assistant_hex_id: Optional[str] = None,
     ) -> OrchestratorAction:
         """Handle AI error.
 
@@ -553,6 +567,8 @@ class ChatOrchestrator:
         from .logging_utils import sanitize_error_message
 
         if mode == "normal":
+            if assistant_hex_id:
+                self.manager.release_hex_id(assistant_hex_id)
             # Remove the user message that was added
             if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
                 self.manager.pop_message(-1, chat_data)
@@ -573,6 +589,8 @@ class ChatOrchestrator:
             )
 
         # For retry and secret modes, just show error (don't save)
+        if assistant_hex_id:
+            self.manager.release_hex_id(assistant_hex_id)
         return OrchestratorAction(action="print", message=f"\nError: {error}")
 
     async def handle_user_cancel(
@@ -580,6 +598,7 @@ class ChatOrchestrator:
         chat_data: dict,
         mode: str,
         chat_path: Optional[str] = None,
+        assistant_hex_id: Optional[str] = None,
     ) -> OrchestratorAction:
         """Handle user cancellation (KeyboardInterrupt during AI response).
 
@@ -591,6 +610,8 @@ class ChatOrchestrator:
             OrchestratorAction for next step
         """
         if mode == "normal":
+            if assistant_hex_id:
+                self.manager.release_hex_id(assistant_hex_id)
             # Remove the user message that was added
             if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
                 self.manager.pop_message(-1, chat_data)
@@ -601,4 +622,6 @@ class ChatOrchestrator:
             )
 
         # For retry and secret modes, nothing to clean up
+        if mode in ("retry", "secret") and assistant_hex_id:
+            self.manager.release_hex_id(assistant_hex_id)
         return OrchestratorAction(action="print", message="\n[Message cancelled]")

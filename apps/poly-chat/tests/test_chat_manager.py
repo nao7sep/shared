@@ -30,8 +30,7 @@ def test_list_chats_single_valid_file(tmp_path):
         "metadata": {
             "title": "Test Chat",
             "summary": None,
-            "system_prompt_path": None,
-            "default_model": None,
+            "system_prompt": None,
             "created_at": "2026-02-02T00:00:00+00:00",
             "updated_at": "2026-02-02T12:00:00+00:00",
         },
@@ -64,8 +63,7 @@ def test_list_chats_multiple_files_sorted(tmp_path):
             "metadata": {
                 "title": f"Chat {i}",
                 "summary": None,
-                "system_prompt_path": None,
-                "default_model": None,
+                "system_prompt": None,
                 "created_at": updated,
                 "updated_at": updated,
             },

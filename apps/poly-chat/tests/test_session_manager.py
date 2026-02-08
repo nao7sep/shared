@@ -320,11 +320,11 @@ class TestChatManagement:
         )
 
         new_chat = {
-            "metadata": {"title": "Legacy", "system_prompt_path": None},
+            "metadata": {"title": "Legacy", "system_prompt": None},
             "messages": [],
         }
         manager.switch_chat("/path/to/new.json", new_chat)
-        assert manager.chat["metadata"]["system_prompt_path"] == "@/system-prompts/default.txt"
+        assert manager.chat["metadata"]["system_prompt"] == "@/system-prompts/default.txt"
 
     def test_close_chat(self):
         """Test closing current chat."""
@@ -382,8 +382,8 @@ class TestRetryModeManagement:
         with pytest.raises(ValueError, match="Cannot enter retry mode while in secret mode"):
             manager.enter_retry_mode([])
 
-    def test_set_and_get_retry_attempt(self):
-        """Test storing and retrieving retry attempt."""
+    def test_add_and_get_retry_attempt(self):
+        """Test storing and retrieving retry attempts by hex ID."""
         manager = SessionManager(
             profile={},
             current_ai="claude",
@@ -391,14 +391,15 @@ class TestRetryModeManagement:
         )
 
         manager.enter_retry_mode([{"role": "user", "content": "base"}])
-        manager.set_retry_attempt("new question", "new answer")
+        retry_hex_id = manager.add_retry_attempt("new question", "new answer")
 
-        user_msg, assistant_msg = manager.get_retry_attempt()
-        assert user_msg == "new question"
-        assert assistant_msg == "new answer"
+        attempt = manager.get_retry_attempt(retry_hex_id)
+        assert attempt is not None
+        assert attempt["user_msg"] == "new question"
+        assert attempt["assistant_msg"] == "new answer"
 
-    def test_set_retry_attempt_without_mode_raises_error(self):
-        """Test that setting retry attempt outside retry mode raises error."""
+    def test_add_retry_attempt_without_mode_raises_error(self):
+        """Test that adding retry attempt outside retry mode raises error."""
         manager = SessionManager(
             profile={},
             current_ai="claude",
@@ -406,7 +407,7 @@ class TestRetryModeManagement:
         )
 
         with pytest.raises(ValueError, match="Not in retry mode"):
-            manager.set_retry_attempt("test", "test")
+            manager.add_retry_attempt("test", "test")
 
     def test_get_retry_context_without_mode_raises_error(self):
         """Test that getting retry context outside retry mode raises error."""
@@ -428,14 +429,14 @@ class TestRetryModeManagement:
         )
 
         manager.enter_retry_mode([{"role": "user", "content": "base"}])
-        manager.set_retry_attempt("question", "answer")
+        retry_hex_id = manager.add_retry_attempt("question", "answer")
+        assert retry_hex_id in manager.hex_id_set
 
         manager.exit_retry_mode()
 
         assert manager.retry_mode is False
-        user_msg, assistant_msg = manager.get_retry_attempt()
-        assert user_msg is None
-        assert assistant_msg is None
+        assert manager.get_retry_attempt(retry_hex_id) is None
+        assert retry_hex_id not in manager.hex_id_set
 
 
 class TestSecretModeManagement:

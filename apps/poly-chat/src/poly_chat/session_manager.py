@@ -313,11 +313,11 @@ class SessionManager:
         if (
             isinstance(metadata, dict)
             and self._state.system_prompt_path
-            and not metadata.get("system_prompt_path")
+            and not metadata.get("system_prompt")
         ):
             from .chat import update_metadata
 
-            update_metadata(chat_data, system_prompt_path=self._state.system_prompt_path)
+            update_metadata(chat_data, system_prompt=self._state.system_prompt_path)
 
         # Reinitialize hex IDs for new chat
         initialize_message_hex_ids(self._state)
@@ -338,8 +338,10 @@ class SessionManager:
         # Clear retry mode
         self._state.retry_mode = False
         self._state.retry_base_messages.clear()
-        self._state.retry_current_user_msg = None
-        self._state.retry_current_assistant_msg = None
+        self._state.retry_target_index = None
+        for hid in list(self._state.retry_attempts.keys()):
+            self._state.hex_id_set.discard(hid)
+        self._state.retry_attempts.clear()
 
         # Clear secret mode
         self._state.secret_mode = False
@@ -477,30 +479,22 @@ class SessionManager:
     # Retry Mode Management
     # ===================================================================
 
-    def enter_retry_mode(self, base_messages: list[dict]) -> None:
+    def enter_retry_mode(self, base_messages: list[dict], target_index: int | None = None) -> None:
         """Enter retry mode with frozen message context.
 
         Args:
             base_messages: Frozen message context (all messages except last assistant)
+            target_index: Index of the message that /apply should replace
         """
         if self._state.secret_mode:
             raise ValueError("Cannot enter retry mode while in secret mode")
 
         self._state.retry_mode = True
         self._state.retry_base_messages = base_messages.copy()
-
-    def set_retry_attempt(self, user_msg: str, assistant_msg: str) -> None:
-        """Store current retry attempt.
-
-        Args:
-            user_msg: User message for retry attempt
-            assistant_msg: Assistant response for retry attempt
-        """
-        if not self._state.retry_mode:
-            raise ValueError("Not in retry mode")
-
-        self._state.retry_current_user_msg = user_msg
-        self._state.retry_current_assistant_msg = assistant_msg
+        self._state.retry_target_index = target_index
+        for hid in list(self._state.retry_attempts.keys()):
+            self._state.hex_id_set.discard(hid)
+        self._state.retry_attempts.clear()
 
     def get_retry_context(self) -> list[dict]:
         """Get frozen retry context.
@@ -516,23 +510,50 @@ class SessionManager:
 
         return self._state.retry_base_messages
 
-    def get_retry_attempt(self) -> tuple[Optional[str], Optional[str]]:
-        """Get current retry attempt messages.
+    def add_retry_attempt(
+        self,
+        user_msg: str,
+        assistant_msg: str,
+        retry_hex_id: Optional[str] = None,
+    ) -> str:
+        """Store a retry attempt and return its runtime hex ID."""
+        if not self._state.retry_mode:
+            raise ValueError("Not in retry mode")
 
-        Returns:
-            Tuple of (user_msg, assistant_msg)
-        """
-        return (
-            self._state.retry_current_user_msg,
-            self._state.retry_current_assistant_msg,
-        )
+        if retry_hex_id is None:
+            retry_hex_id = hex_id.generate_hex_id(self._state.hex_id_set)
+        else:
+            self._state.hex_id_set.add(retry_hex_id)
+        self._state.retry_attempts[retry_hex_id] = {
+            "user_msg": user_msg,
+            "assistant_msg": assistant_msg,
+        }
+        return retry_hex_id
+
+    def get_retry_attempt(self, retry_hex_id: str) -> Optional[dict[str, str]]:
+        """Get one retry attempt by runtime hex ID."""
+        return self._state.retry_attempts.get(retry_hex_id)
+
+    def get_retry_target_index(self) -> Optional[int]:
+        """Get the chat message index that /apply should replace."""
+        return self._state.retry_target_index
+
+    def reserve_hex_id(self) -> str:
+        """Reserve a runtime hex ID for an in-flight assistant response."""
+        return hex_id.generate_hex_id(self._state.hex_id_set)
+
+    def release_hex_id(self, message_hex_id: str) -> None:
+        """Release a runtime hex ID that was reserved but not persisted."""
+        self._state.hex_id_set.discard(message_hex_id)
 
     def exit_retry_mode(self) -> None:
         """Exit retry mode and clear retry state."""
         self._state.retry_mode = False
         self._state.retry_base_messages.clear()
-        self._state.retry_current_user_msg = None
-        self._state.retry_current_assistant_msg = None
+        self._state.retry_target_index = None
+        for hid in list(self._state.retry_attempts.keys()):
+            self._state.hex_id_set.discard(hid)
+        self._state.retry_attempts.clear()
 
     # ===================================================================
     # Secret Mode Management

@@ -46,8 +46,8 @@ class TestSessionStateCreation:
         assert session.input_mode == "quick"
         assert session.retry_mode is False
         assert session.retry_base_messages == []
-        assert session.retry_current_user_msg is None
-        assert session.retry_current_assistant_msg is None
+        assert session.retry_target_index is None
+        assert session.retry_attempts == {}
         assert session.secret_mode is False
         assert session.secret_base_messages == []
         assert session.hex_id_set == set()
@@ -318,20 +318,20 @@ class TestChatScopedState:
             profile={},
             chat={},
             retry_mode=True,
-            retry_current_user_msg="test message",
-            retry_current_assistant_msg="test response",
         )
         session.retry_base_messages = [{"role": "user", "content": "old"}]
+        session.retry_target_index = 3
+        session.retry_attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
 
         session.retry_mode = False
         session.retry_base_messages.clear()
-        session.retry_current_user_msg = None
-        session.retry_current_assistant_msg = None
+        session.retry_target_index = None
+        session.retry_attempts.clear()
 
         assert session.retry_mode is False
         assert session.retry_base_messages == []
-        assert session.retry_current_user_msg is None
-        assert session.retry_current_assistant_msg is None
+        assert session.retry_target_index is None
+        assert session.retry_attempts == {}
 
     def test_reset_clears_secret_state(self):
         """Test that reset clears secret mode state."""

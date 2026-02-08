@@ -24,8 +24,8 @@ class SessionState:
     input_mode: str = "quick"
     retry_mode: bool = False
     retry_base_messages: list = field(default_factory=list)
-    retry_current_user_msg: Optional[str] = None
-    retry_current_assistant_msg: Optional[str] = None
+    retry_target_index: Optional[int] = None
+    retry_attempts: dict[str, dict[str, str]] = field(default_factory=dict)
     secret_mode: bool = False
     secret_base_messages: list = field(default_factory=list)
     chat_dirty: bool = False

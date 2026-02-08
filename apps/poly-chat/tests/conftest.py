@@ -50,8 +50,7 @@ def sample_chat():
         "metadata": {
             "title": "Test Chat",
             "summary": None,
-            "system_prompt_path": None,
-            "default_model": "claude-haiku-4-5",
+            "system_prompt": None,
             "created_at": "2026-02-02T10:00:00.000000Z",
             "updated_at": "2026-02-02T10:00:00.000000Z"
         },

@@ -62,8 +62,8 @@ async def repl_loop(
         input_mode=input_mode,
     )
 
-    if chat_data and system_prompt_path and not chat_data["metadata"].get("system_prompt_path"):
-        chat.update_metadata(chat_data, system_prompt_path=system_prompt_path)
+    if chat_data and system_prompt_path and not chat_data["metadata"].get("system_prompt"):
+        chat.update_metadata(chat_data, system_prompt=system_prompt_path)
 
     cmd_handler = CommandHandler(manager)
     orchestrator = ChatOrchestrator(manager)
@@ -318,11 +318,20 @@ async def repl_loop(
 
                 # Determine display prefix
                 if action.mode == "retry":
-                    prefix = f"\n{manager.current_ai.capitalize()} (retry): "
+                    if action.assistant_hex_id:
+                        prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
+                    else:
+                        prefix = f"\n{manager.current_ai.capitalize()} (retry): "
                 elif action.mode == "secret":
-                    prefix = f"\n{manager.current_ai.capitalize()} (secret): "
+                    if action.assistant_hex_id:
+                        prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
+                    else:
+                        prefix = f"\n{manager.current_ai.capitalize()} (secret): "
                 else:
-                    prefix = f"\n{manager.current_ai.capitalize()}: "
+                    if action.assistant_hex_id:
+                        prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
+                    else:
+                        prefix = f"\n{manager.current_ai.capitalize()}: "
 
                 # Send message to AI
                 try:
@@ -364,12 +373,11 @@ async def repl_loop(
                         chat_data,
                         action.mode,
                         user_input=action.message,  # For retry mode
+                        assistant_hex_id=action.assistant_hex_id,
                     )
 
-                    # Display token usage for normal mode
-                    if action.mode == "normal" and usage:
-                        print(f"\n[Tokens: {usage.get('total_tokens', 'N/A')}]")
-
+                    if result.action == "print" and result.message:
+                        print(result.message)
                     print()
 
                 except KeyboardInterrupt:
@@ -377,13 +385,20 @@ async def repl_loop(
                         chat_data,
                         action.mode,
                         chat_path=chat_path,
+                        assistant_hex_id=action.assistant_hex_id,
                     )
                     print(cancel_result.message)
                     print()
                     continue
 
                 except Exception as e:
-                    error_result = await orchestrator.handle_ai_error(e, chat_path, chat_data, action.mode)
+                    error_result = await orchestrator.handle_ai_error(
+                        e,
+                        chat_path,
+                        chat_data,
+                        action.mode,
+                        assistant_hex_id=action.assistant_hex_id,
+                    )
                     print(error_result.message)
                     print()
                     continue

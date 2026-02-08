@@ -63,8 +63,9 @@ class TestCommandSignals:
 
     def test_apply_retry_signal(self):
         """Test __APPLY_RETRY__ signal pattern."""
-        signal = "__APPLY_RETRY__"
-        assert signal == "__APPLY_RETRY__"
+        signal = "__APPLY_RETRY__:abc"
+        assert signal.startswith("__APPLY_RETRY__:")
+        assert signal.split(":", 1)[1] == "abc"
 
     def test_cancel_retry_signal(self):
         """Test __CANCEL_RETRY__ signal pattern."""
@@ -96,8 +97,7 @@ class TestChatSwitchingOrchestration:
             "metadata": {
                 "title": None,
                 "summary": None,
-                "system_prompt_path": None,
-                "default_model": None,
+                "system_prompt": None,
                 "created_at": None,
                 "updated_at": None,
             },
@@ -160,8 +160,8 @@ class TestChatSwitchingOrchestration:
         session.hex_id_set.clear()
         session.retry_mode = False
         session.retry_base_messages.clear()
-        session.retry_current_user_msg = None
-        session.retry_current_assistant_msg = None
+        session.retry_target_index = None
+        session.retry_attempts.clear()
         session.secret_mode = False
         session.secret_base_messages.clear()
 
@@ -187,8 +187,8 @@ class TestChatSwitchingOrchestration:
         # Simulate chat switch
         session.retry_mode = False
         session.retry_base_messages.clear()
-        session.retry_current_user_msg = None
-        session.retry_current_assistant_msg = None
+        session.retry_target_index = None
+        session.retry_attempts.clear()
         session.secret_mode = False
         session.secret_base_messages.clear()
 
@@ -238,11 +238,11 @@ class TestRetryModeOrchestration:
             retry_mode=True,
         )
         session.retry_base_messages = [{"role": "user", "content": "Original"}]
-        session.retry_current_user_msg = "Try this instead"
+        retry_user_msg = "Try this instead"
 
         # Simulate building temp messages for retry
         temp_messages = session.retry_base_messages + [
-            {"role": "user", "content": session.retry_current_user_msg}
+            {"role": "user", "content": retry_user_msg}
         ]
 
         assert len(temp_messages) == 2
@@ -266,24 +266,12 @@ class TestRetryModeOrchestration:
             profile={},
             chat=chat_data,
         )
-        session.retry_current_user_msg = "Better question"
-        session.retry_current_assistant_msg = "Better answer"
+        selected_assistant_msg = "Better answer"
 
-        # Simulate applying retry (simplified - actual code is more complex)
-        # Remove last 2 messages
-        if len(chat_data["messages"]) >= 2:
-            chat_data["messages"] = chat_data["messages"][:-2]
-
-        # Add retry messages
-        chat_data["messages"].append(
-            {"role": "user", "content": session.retry_current_user_msg}
-        )
-        chat_data["messages"].append(
-            {"role": "assistant", "content": session.retry_current_assistant_msg}
-        )
-
+        # Simulate applying retry by replacing only the target message.
+        chat_data["messages"][-1] = {"role": "assistant", "content": selected_assistant_msg}
         assert len(chat_data["messages"]) == 2
-        assert chat_data["messages"][0]["content"] == "Better question"
+        assert chat_data["messages"][0]["content"] == "Original question"
         assert chat_data["messages"][1]["content"] == "Better answer"
 
     def test_cancel_retry_clears_state(self):
@@ -296,23 +284,23 @@ class TestRetryModeOrchestration:
             profile={},
             chat={},
             retry_mode=True,
-            retry_current_user_msg="test",
-            retry_current_assistant_msg="response",
         )
         session.retry_base_messages = [{"role": "user", "content": "base"}]
+        session.retry_target_index = 1
+        session.retry_attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
         session_dict = {"retry_mode": True}
 
         # Cancel retry
         session.retry_mode = False
         session.retry_base_messages.clear()
-        session.retry_current_user_msg = None
-        session.retry_current_assistant_msg = None
+        session.retry_target_index = None
+        session.retry_attempts.clear()
         session_dict["retry_mode"] = False
 
         assert session.retry_mode is False
         assert session.retry_base_messages == []
-        assert session.retry_current_user_msg is None
-        assert session.retry_current_assistant_msg is None
+        assert session.retry_target_index is None
+        assert session.retry_attempts == {}
 
 
 class TestSecretModeOrchestration:

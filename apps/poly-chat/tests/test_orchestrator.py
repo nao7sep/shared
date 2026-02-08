@@ -248,34 +248,42 @@ class TestRetryModeSignals:
     async def test_apply_retry_signal(self, orchestrator, sample_chat_data):
         """Test applying retry."""
         # Enter retry mode first
-        orchestrator.manager.enter_retry_mode([{"role": "user", "content": "Original"}])
-        orchestrator.manager.set_retry_attempt("Retry question", "Retry answer")
+        orchestrator.manager.switch_chat("/test/chat.json", sample_chat_data)
+        orchestrator.manager.enter_retry_mode(
+            [{"role": "user", "content": "Original"}],
+            target_index=1,
+        )
+        retry_hex_id = orchestrator.manager.add_retry_attempt("Retry question", "Retry answer")
+        original_hex_id = sample_chat_data["messages"][1].get("hex_id")
 
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.add_user_message = MagicMock()
-            mock_chat.add_assistant_message = MagicMock()
-            with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
-                action = await orchestrator.handle_command_response(
-                    "__APPLY_RETRY__",
-                    current_chat_path="/test/chat.json",
-                    current_chat_data=sample_chat_data,
-                )
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+            action = await orchestrator.handle_command_response(
+                f"__APPLY_RETRY__:{retry_hex_id}",
+                current_chat_path="/test/chat.json",
+                current_chat_data=sample_chat_data,
+            )
 
-                # Should save chat
-                mock_save.assert_called_once()
+            # Should save chat
+            mock_save.assert_called_once()
 
-            # Should return print action
-            assert action.action == "print"
-            assert "Applied retry" in action.message
+        # Should return print action
+        assert action.action == "print"
+        assert f"Applied retry [{retry_hex_id}]" == action.message
 
-            # Should exit retry mode
-            assert orchestrator.manager.retry_mode is False
+        # Should replace only the target message, preserving its hex_id
+        updated = sample_chat_data["messages"][1]
+        assert updated["role"] == "assistant"
+        assert updated["content"] == ["Retry answer"]
+        assert updated.get("hex_id") == original_hex_id
+
+        # Should exit retry mode
+        assert orchestrator.manager.retry_mode is False
 
     @pytest.mark.asyncio
     async def test_apply_retry_when_not_in_retry_mode(self, orchestrator):
         """Test applying retry when not in retry mode."""
         action = await orchestrator.handle_command_response(
-            "__APPLY_RETRY__",
+            "__APPLY_RETRY__:abc",
             current_chat_path="/test/chat.json",
             current_chat_data={},
         )
@@ -424,8 +432,7 @@ class TestSessionManagerIntegration:
                     "metadata": {
                         "title": None,
                         "summary": None,
-                        "system_prompt_path": None,
-                        "default_model": None,
+                        "system_prompt": None,
                         "created_at": None,
                         "updated_at": None,
                     },

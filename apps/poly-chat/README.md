@@ -308,7 +308,7 @@ Chat history files are stored as JSON with git-friendly formatting:
   "metadata": {
     "title": "Business Strategy 2026",
     "summary": "Long-term planning discussion",
-    "system_prompt_path": "@/system-prompts/default.txt",
+    "system_prompt": "@/system-prompts/default.txt",
     "created_at": "2026-02-02T10:00:00.123456Z",
     "updated_at": "2026-02-02T15:30:45.789012Z"
   },
@@ -336,6 +336,8 @@ Chat history files are stored as JSON with git-friendly formatting:
   ]
 }
 ```
+
+Note: `system_prompt` is used in both profile and chat history metadata.
 
 Messages are stored as line arrays for better git diffs and readability.
 

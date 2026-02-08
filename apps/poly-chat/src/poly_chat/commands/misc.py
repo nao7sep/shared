@@ -57,8 +57,8 @@ Chat File Management:
   /delete [name]    Delete a chat file (shows list if no name)
 
 Chat Control:
-  /retry            Enter retry mode (try different responses)
-  /apply            Accept current retry attempt and exit retry mode
+  /retry            Enter retry mode (collect candidate responses)
+  /apply <hex_id>   Apply one retry candidate and exit retry mode
   /cancel           Abort retry and keep original response
   /secret           Toggle secret mode (messages not saved)
   /secret on/off    Enable/disable secret mode explicitly

@@ -1,6 +1,6 @@
 """Runtime and conversation command mixin."""
 
-from .. import hex_id, models, profile
+from .. import chat, hex_id, models, profile
 from ..chat import delete_message_and_following, update_metadata
 
 
@@ -156,7 +156,7 @@ class RuntimeCommandsMixin:
 
         # No args - show current system prompt path
         if not args:
-            current_path = chat_data["metadata"].get("system_prompt_path")
+            current_path = chat_data["metadata"].get("system_prompt")
             if current_path:
                 return f"Current system prompt: {current_path}"
             else:
@@ -164,7 +164,7 @@ class RuntimeCommandsMixin:
 
         # '--' - remove system prompt
         if args == "--":
-            update_metadata(chat_data, system_prompt_path=None)
+            update_metadata(chat_data, system_prompt=None)
             # Also update session state
             self.manager.system_prompt = None
             self.manager.system_prompt_path = None
@@ -191,7 +191,7 @@ class RuntimeCommandsMixin:
                 raise ValueError(warning)
 
             # Update chat metadata
-            update_metadata(chat_data, system_prompt_path=system_prompt_path)
+            update_metadata(chat_data, system_prompt=system_prompt_path)
 
             # Update session state
             self.manager.system_prompt = system_prompt_content
@@ -216,7 +216,7 @@ class RuntimeCommandsMixin:
                 raise ValueError(f"Could not read system prompt file: {e}")
 
             # Update chat metadata with ORIGINAL path (not mapped)
-            update_metadata(chat_data, system_prompt_path=args)
+            update_metadata(chat_data, system_prompt=args)
 
             # Update session state
             self.manager.system_prompt = system_prompt_content
@@ -239,35 +239,39 @@ class RuntimeCommandsMixin:
         Returns:
             Info message
         """
-        chat = self.manager.chat
+        chat_data = self.manager.chat
 
         # Check if chat is loaded
-        if not chat or "messages" not in chat:
+        if not chat_data or "messages" not in chat_data:
             return "No chat is currently open"
 
-        messages = chat["messages"]
+        messages = chat_data["messages"]
 
         # Check if there's an assistant message or error to retry
         if not messages:
             return "No messages to retry"
 
         last_msg = messages[-1]
-        if last_msg["role"] == "assistant":
-            message_type = "assistant response"
-        elif last_msg["role"] == "error":
-            message_type = "error"
-        else:
+        if last_msg["role"] not in ("assistant", "error"):
             return "Last message is not an assistant response or error. Nothing to retry."
 
-        # Set retry mode flag - the REPL loop will handle the actual replacement
-        self.manager.retry_mode = True
-        return f"Retry mode enabled. Your next message will replace the last {message_type}."
+        # Freeze context and target so /apply <hex_id> can replace the original message.
+        ai_messages = chat.get_messages_for_ai(chat_data)
+        if last_msg["role"] == "assistant":
+            retry_context = ai_messages[:-1]
+        else:
+            retry_context = ai_messages
+        self.manager.enter_retry_mode(
+            retry_context,
+            target_index=len(messages) - 1,
+        )
+        return "Retry mode enabled"
 
     async def apply_retry(self, args: str) -> str:
         """Apply current retry attempt and exit retry mode.
 
         Args:
-            args: Not used
+            args: Retry candidate hex ID
 
         Returns:
             Special signal for REPL loop to handle
@@ -276,8 +280,14 @@ class RuntimeCommandsMixin:
         if not self.manager.retry_mode:
             return "Not in retry mode"
 
-        # Signal to REPL loop to apply retry
-        return "__APPLY_RETRY__"
+        retry_hex_id = args.strip().lower()
+        if not retry_hex_id:
+            return "Usage: /apply <hex_id>"
+        if not hex_id.is_hex_id(retry_hex_id):
+            return f"Invalid hex ID: {args.strip()}"
+
+        # Signal to REPL loop to apply selected retry response
+        return f"__APPLY_RETRY__:{retry_hex_id}"
 
     async def cancel_retry(self, args: str) -> str:
         """Cancel retry mode and keep original messages.
@@ -316,7 +326,7 @@ class RuntimeCommandsMixin:
             self.manager.secret_mode = not current_mode
 
             if self.manager.secret_mode:
-                return "Secret mode enabled. Messages will not be saved to history."
+                return "Secret mode enabled"
             else:
                 # Signal to clear frozen context
                 return "__CLEAR_SECRET_CONTEXT__"
@@ -324,7 +334,7 @@ class RuntimeCommandsMixin:
         # Explicit on
         elif args == "on":
             self.manager.secret_mode = True
-            return "Secret mode enabled. Messages will not be saved to history."
+            return "Secret mode enabled"
 
         # Explicit off
         elif args == "off":
