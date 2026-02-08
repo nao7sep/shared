@@ -5,6 +5,7 @@ title generation, summary generation, and safety checks.
 """
 
 import logging
+import time
 from typing import Optional, Any
 
 
@@ -14,6 +15,7 @@ async def invoke_helper_ai(
     profile: dict[str, Any],
     messages: list[dict],
     system_prompt: Optional[str] = None,
+    task: str = "helper_task",
 ) -> str:
     """Invoke helper AI for background tasks (non-streaming).
 
@@ -34,20 +36,67 @@ async def invoke_helper_ai(
     from .keys.loader import load_api_key
     from .cli import get_provider_instance
 
+    # Import here to avoid circular dependency
+    from .cli import log_event, sanitize_error_message, _estimate_message_chars
+
     # Get API key for helper AI
     key_config = profile["api_keys"].get(helper_ai)
     if not key_config:
+        log_event(
+            "helper_ai_error",
+            level=logging.ERROR,
+            task=task,
+            provider=helper_ai,
+            model=helper_model,
+            latency_ms=0.0,
+            error_type="ValueError",
+            error=f"No API key configured for helper AI: {helper_ai}",
+        )
+        logging.error(
+            "Helper AI invocation failed: no API key configured (provider=%s, model=%s)",
+            helper_ai,
+            helper_model,
+        )
         raise ValueError(f"No API key configured for helper AI: {helper_ai}")
 
     try:
         api_key = load_api_key(helper_ai, key_config)
     except Exception as e:
+        sanitized = sanitize_error_message(str(e))
+        log_event(
+            "helper_ai_error",
+            level=logging.ERROR,
+            task=task,
+            provider=helper_ai,
+            model=helper_model,
+            latency_ms=0.0,
+            error_type=type(e).__name__,
+            error=sanitized,
+        )
+        logging.error(
+            "Helper AI API key loading failed (provider=%s, model=%s): %s",
+            helper_ai,
+            helper_model,
+            e,
+            exc_info=True,
+        )
         raise ValueError(f"Error loading helper AI API key: {e}")
 
     # Get provider instance
     provider_instance = get_provider_instance(helper_ai, api_key, session=None)
 
     # Send request (non-streaming for simplicity)
+    started = time.perf_counter()
+    log_event(
+        "helper_ai_request",
+        level=logging.INFO,
+        task=task,
+        provider=helper_ai,
+        model=helper_model,
+        message_count=len(messages),
+        input_chars=_estimate_message_chars(messages),
+        has_system_prompt=bool(system_prompt),
+    )
     try:
         response_stream = provider_instance.send_message(
             messages=messages,
@@ -61,8 +110,34 @@ async def invoke_helper_ai(
         async for chunk in response_stream:
             response_text += chunk
 
+        log_event(
+            "helper_ai_response",
+            level=logging.INFO,
+            task=task,
+            provider=helper_ai,
+            model=helper_model,
+            latency_ms=round((time.perf_counter() - started) * 1000, 1),
+            output_chars=len(response_text),
+        )
         return response_text.strip()
 
     except Exception as e:
-        logging.error(f"Error invoking helper AI: {e}", exc_info=True)
+        sanitized = sanitize_error_message(str(e))
+        log_event(
+            "helper_ai_error",
+            level=logging.ERROR,
+            task=task,
+            provider=helper_ai,
+            model=helper_model,
+            latency_ms=round((time.perf_counter() - started) * 1000, 1),
+            error_type=type(e).__name__,
+            error=sanitized,
+        )
+        logging.error(
+            "Error invoking helper AI (provider=%s, model=%s): %s",
+            helper_ai,
+            helper_model,
+            e,
+            exc_info=True,
+        )
         raise

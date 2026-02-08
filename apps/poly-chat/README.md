@@ -99,9 +99,9 @@ CLI path flags use the same path mapping rules:
 Use `~/...`, `@/...`, or absolute paths. Plain relative paths are rejected.
 
 If `-l/--log` is omitted, PolyChat creates one log file for the current app run in the profile's `log_dir`:
-- `poly-chat_YYYY-MM-DD_HH-MM-SS.jsonl`
+- `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
 
-Logs are written as JSON Lines (one JSON object per line) and include contextual events such as app/session start and stop, command execution, chat lifecycle actions, and AI request/response/error summaries (with redaction for sensitive token patterns).
+Logs are written in a structured plaintext block format and include contextual events such as app/session start and stop, command execution, chat lifecycle actions, and AI request/response/error details (with redaction for sensitive token patterns).
 
 ### In-Chat Commands
 

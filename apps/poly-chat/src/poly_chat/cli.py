@@ -54,8 +54,75 @@ PROVIDER_CLASSES: dict[str, type] = {
 }
 
 
-class JsonLineFormatter(logging.Formatter):
-    """Format all log records as one JSON object per line."""
+class StructuredTextFormatter(logging.Formatter):
+    """Format all log records as human-readable structured blocks."""
+
+    EVENT_KEY_ORDER: dict[str, list[str]] = {
+        "app_start": [
+            "ts", "level", "profile_file", "chat_file", "log_file",
+            "chats_dir", "log_dir",
+            "assistant_provider", "assistant_model",
+            "helper_provider", "helper_model",
+            "input_mode", "timeout", "system_prompt_path",
+        ],
+        "app_stop": ["ts", "level", "reason", "error_type", "error", "uptime_ms"],
+        "session_start": [
+            "ts", "level", "profile_file", "chat_file", "log_file",
+            "chats_dir", "log_dir",
+            "assistant_provider", "assistant_model",
+            "helper_provider", "helper_model",
+            "input_mode", "timeout", "system_prompt_path",
+            "chat_title", "chat_summary", "message_count",
+        ],
+        "session_stop": ["ts", "level", "reason", "chat_file", "message_count"],
+        "command_exec": ["ts", "level", "command", "args_summary", "elapsed_ms", "chat_file"],
+        "command_error": ["ts", "level", "command", "args_summary", "error_type", "error", "chat_file"],
+        "chat_opened": ["ts", "level", "action", "chat_file", "previous_chat_file", "message_count"],
+        "chat_closed": ["ts", "level", "reason", "chat_file", "message_count"],
+        "chat_renamed": ["ts", "level", "old_chat_file", "new_chat_file"],
+        "chat_deleted": ["ts", "level", "reason", "chat_file"],
+        "ai_request": [
+            "ts", "level", "mode", "provider", "model", "chat_file",
+            "message_count", "input_chars", "has_system_prompt", "system_prompt_path",
+        ],
+        "ai_response": [
+            "ts", "level", "mode", "provider", "model", "chat_file",
+            "latency_ms", "output_chars",
+        ],
+        "ai_error": [
+            "ts", "level", "mode", "provider", "model", "chat_file",
+            "latency_ms", "error_type", "error",
+        ],
+        "helper_ai_request": [
+            "ts", "level", "task", "provider", "model",
+            "message_count", "input_chars", "has_system_prompt",
+        ],
+        "helper_ai_response": [
+            "ts", "level", "task", "provider", "model",
+            "latency_ms", "output_chars",
+        ],
+        "helper_ai_error": [
+            "ts", "level", "task", "provider", "model",
+            "latency_ms", "error_type", "error",
+        ],
+        "provider_validation_error": [
+            "ts", "level", "provider", "model", "phase",
+            "chat_file", "error_type", "error",
+        ],
+        "log": ["ts", "level", "logger", "message"],
+    }
+
+    def _format_value(self, value: Any, max_len: int = 400) -> str:
+        value_str = sanitize_error_message(str(value))
+        if len(value_str) > max_len:
+            value_str = value_str[: max_len - 3] + "..."
+        return value_str.replace("\n", "\\n")
+
+    def _ordered_keys(self, event_name: str, data: dict[str, Any]) -> list[str]:
+        preferred = self.EVENT_KEY_ORDER.get(event_name, ["ts", "level", "logger"])
+        preferred_present = [k for k in preferred if k in data and data[k] is not None]
+        remaining = sorted(k for k in data.keys() if k not in preferred and data[k] is not None)
+        return preferred_present + remaining
 
     def format(self, record: logging.LogRecord) -> str:
         base = {
@@ -78,10 +145,19 @@ class JsonLineFormatter(logging.Formatter):
             base["event"] = "log"
             base["message"] = sanitize_error_message(message)
 
-        if record.exc_info:
-            base["traceback"] = self.formatException(record.exc_info)
+        event_name = str(base.pop("event", "log"))
+        lines = [f"=== {event_name} ==="]
 
-        return json.dumps(base, ensure_ascii=False, separators=(",", ":"))
+        ordered_keys = self._ordered_keys(event_name, base)
+        for key in ordered_keys:
+            lines.append(f"{key}: {self._format_value(base[key])}")
+
+        if record.exc_info:
+            lines.append("traceback:")
+            lines.append(self.formatException(record.exc_info))
+
+        lines.append("--- end ---")
+        return "\n".join(lines) + "\n"
 
 
 def _to_log_safe(value: Any) -> Any:
@@ -108,6 +184,20 @@ def _summarize_text(text: Any, max_len: int = 160) -> str:
     return redacted[: max_len - 3] + "..."
 
 
+def _summarize_command_args(command: str, args: str) -> str:
+    """Summarize command args while avoiding sensitive/free-form text leakage."""
+    safe_preview_commands = {
+        "open", "switch", "close", "new", "rename", "delete",
+        "model", "helper", "timeout", "system", "history", "show", "safe",
+        "input", "status", "title", "summary",
+    }
+    if not args.strip():
+        return ""
+    if command in safe_preview_commands:
+        return _summarize_text(args, max_len=100)
+    return "[redacted]"
+
+
 def _estimate_message_chars(messages: list[dict]) -> int:
     """Estimate total character length across chat messages."""
     total = 0
@@ -120,16 +210,11 @@ def _estimate_message_chars(messages: list[dict]) -> int:
     return total
 
 
-def _extract_last_user_preview(messages: list[dict]) -> str:
-    """Extract a short summary of the most recent user message."""
-    for msg in reversed(messages):
-        if msg.get("role") != "user":
-            continue
-        content = msg.get("content", "")
-        if isinstance(content, list):
-            content = " ".join(str(part) for part in content)
-        return _summarize_text(content, max_len=120)
-    return ""
+def _chat_file_label(chat_path: Optional[str]) -> Optional[str]:
+    """Return a compact chat file label for logs."""
+    if not chat_path:
+        return None
+    return Path(chat_path).name
 
 
 def log_event(event: str, level: int = logging.INFO, **fields: Any) -> None:
@@ -188,11 +273,11 @@ def _build_run_log_path(log_dir: str) -> str:
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_name = f"poly-chat_{timestamp}"
-    candidate = log_dir_path / f"{base_name}.jsonl"
+    candidate = log_dir_path / f"{base_name}.log"
 
     suffix = 1
     while candidate.exists():
-        candidate = log_dir_path / f"{base_name}_{suffix}.jsonl"
+        candidate = log_dir_path / f"{base_name}_{suffix}.log"
         suffix += 1
 
     return str(candidate)
@@ -315,7 +400,7 @@ def setup_logging(log_file: Optional[str] = None) -> None:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handler = logging.FileHandler(str(log_path), encoding="utf-8")
-        handler.setFormatter(JsonLineFormatter())
+        handler.setFormatter(StructuredTextFormatter())
         logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
     else:
         # Disable logging
@@ -387,10 +472,9 @@ async def send_message_to_ai(
         mode=mode,
         provider=provider_label,
         model=model,
-        chat_file=chat_path,
+        chat_file=_chat_file_label(chat_path),
         message_count=len(messages),
         input_chars=_estimate_message_chars(messages),
-        request_summary=_extract_last_user_preview(messages),
         has_system_prompt=bool(system_prompt),
     )
 
@@ -414,10 +498,9 @@ async def send_message_to_ai(
             mode=mode,
             provider=provider_label,
             model=model,
-            chat_file=chat_path,
+            chat_file=_chat_file_label(chat_path),
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             output_chars=len(response_text),
-            response_summary=_summarize_text(response_text, max_len=120),
         )
 
         return response_text, metadata
@@ -429,7 +512,7 @@ async def send_message_to_ai(
             mode=mode,
             provider=provider_label,
             model=model,
-            chat_file=chat_path,
+            chat_file=_chat_file_label(chat_path),
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
             error=sanitize_error_message(str(e)),
@@ -443,6 +526,7 @@ async def send_message_to_ai(
 
 def validate_and_get_provider(
     session: SessionState,
+    chat_path: Optional[str] = None,
 ) -> tuple[Optional[ProviderInstance], Optional[str]]:
     """Validate API key and get provider instance.
 
@@ -458,20 +542,62 @@ def validate_and_get_provider(
     key_config = session.profile["api_keys"].get(provider_name)
 
     if not key_config:
+        log_event(
+            "provider_validation_error",
+            level=logging.ERROR,
+            provider=provider_name,
+            model=session.current_model,
+            phase="key_config_missing",
+            chat_file=_chat_file_label(chat_path),
+            error_type="ValueError",
+            error=f"No API key configured for {provider_name}",
+        )
         return None, f"No API key configured for {provider_name}"
 
     try:
         api_key = load_api_key(provider_name, key_config)
     except Exception as e:
+        sanitized = sanitize_error_message(str(e))
+        log_event(
+            "provider_validation_error",
+            level=logging.ERROR,
+            provider=provider_name,
+            model=session.current_model,
+            phase="key_load_failed",
+            chat_file=_chat_file_label(chat_path),
+            error_type=type(e).__name__,
+            error=sanitized,
+        )
         logging.error(f"API key loading error: {e}", exc_info=True)
         return None, f"Error loading API key: {e}"
 
     if not validate_api_key(api_key, provider_name):
+        log_event(
+            "provider_validation_error",
+            level=logging.ERROR,
+            provider=provider_name,
+            model=session.current_model,
+            phase="key_validation_failed",
+            chat_file=_chat_file_label(chat_path),
+            error_type="ValueError",
+            error=f"Invalid API key for {provider_name}",
+        )
         return None, f"Invalid API key for {provider_name}"
 
     try:
         provider_instance = get_provider_instance(provider_name, api_key, session)
     except Exception as e:
+        sanitized = sanitize_error_message(str(e))
+        log_event(
+            "provider_validation_error",
+            level=logging.ERROR,
+            provider=provider_name,
+            model=session.current_model,
+            phase="provider_init_failed",
+            chat_file=_chat_file_label(chat_path),
+            error_type=type(e).__name__,
+            error=sanitized,
+        )
         logging.error(f"Provider initialization error: {e}", exc_info=True)
         return None, f"Error initializing provider: {e}"
 
@@ -548,17 +674,25 @@ async def repl_loop(
         "hex_id_set": session.hex_id_set,
     }
     cmd_handler = CommandHandler(session_dict)
+    chat_metadata = session.chat.get("metadata", {}) if isinstance(session.chat, dict) else {}
     log_event(
         "session_start",
         level=logging.INFO,
         profile_file=profile_path,
         chat_file=chat_path,
         log_file=log_file,
+        chats_dir=session.profile.get("chats_dir"),
+        log_dir=session.profile.get("log_dir"),
         assistant_provider=session.current_ai,
         assistant_model=session.current_model,
         helper_provider=session.helper_ai,
         helper_model=session.helper_model,
+        input_mode=session.input_mode,
         timeout=session.profile.get("timeout", 30),
+        system_prompt_path=session.system_prompt_path,
+        chat_title=chat_metadata.get("title"),
+        chat_summary=chat_metadata.get("summary"),
+        message_count=len(session.chat.get("messages", [])) if isinstance(session.chat, dict) else 0,
     )
 
     # Set up key bindings for message submission
@@ -569,7 +703,15 @@ async def repl_loop(
         """Handle Enter based on input mode."""
         mode = session_dict.get("input_mode", "quick")
         if mode == "quick":
-            event.current_buffer.validate_and_handle()
+            # In quick mode, Enter submits unless buffer is empty/whitespace
+            buffer_text = event.current_buffer.text
+            if buffer_text and buffer_text.strip():
+                # Has non-whitespace content, submit normally
+                event.current_buffer.validate_and_handle()
+            elif buffer_text and not buffer_text.strip():
+                # Has only whitespace, clear buffer and ignore
+                event.current_buffer.reset()
+            # else: empty buffer, do nothing (ignore the Enter press)
         else:
             event.current_buffer.insert_text("\n")
 
@@ -654,20 +796,27 @@ async def repl_loop(
                         "command_exec",
                         level=logging.INFO,
                         command=command_name,
-                        args_summary=_summarize_text(command_args, max_len=100),
+                        args_summary=_summarize_command_args(command_name, command_args),
                         elapsed_ms=round((time.perf_counter() - command_started) * 1000, 1),
-                        result_summary=_summarize_text(response, max_len=100) if response else "",
+                        chat_file=chat_path,
                     )
 
                     # Handle special command signals
                     if response == "__EXIT__":
-                        log_event("session_stop", level=logging.INFO, reason="exit_command")
+                        log_event(
+                            "session_stop",
+                            level=logging.INFO,
+                            reason="exit_command",
+                            chat_file=chat_path,
+                            message_count=len(chat_data.get("messages", [])) if chat_data else 0,
+                        )
                         print("\nGoodbye!")
                         break
 
                     elif response.startswith("__NEW_CHAT__:"):
                         # Create new chat
                         new_path = response.split(":", 1)[1]
+                        previous_chat = chat_path
                         chat_path = new_path
                         chat_data = chat.load_chat(chat_path)
 
@@ -683,7 +832,14 @@ async def repl_loop(
                         # Initialize hex IDs
                         initialize_message_hex_ids(session)
                         reset_chat_scoped_state(session, session_dict)
-                        log_event("chat_opened", level=logging.INFO, action="new", chat_file=chat_path)
+                        log_event(
+                            "chat_opened",
+                            level=logging.INFO,
+                            action="new",
+                            chat_file=chat_path,
+                            previous_chat_file=previous_chat,
+                            message_count=len(chat_data.get("messages", [])),
+                        )
 
                         print(f"Created new chat: {Path(chat_path).name}")
                         print()
@@ -691,6 +847,7 @@ async def repl_loop(
                     elif response.startswith("__OPEN_CHAT__:"):
                         # Open existing chat
                         new_path = response.split(":", 1)[1]
+                        previous_chat = chat_path
 
                         # Save current chat if any
                         if chat_path and chat_data:
@@ -708,13 +865,22 @@ async def repl_loop(
                         # Initialize hex IDs
                         initialize_message_hex_ids(session)
                         reset_chat_scoped_state(session, session_dict)
-                        log_event("chat_opened", level=logging.INFO, action="open", chat_file=chat_path)
+                        log_event(
+                            "chat_opened",
+                            level=logging.INFO,
+                            action="open",
+                            chat_file=chat_path,
+                            previous_chat_file=previous_chat,
+                            message_count=len(chat_data.get("messages", [])),
+                        )
 
                         print(f"Opened chat: {Path(chat_path).name}")
                         print()
 
                     elif response == "__CLOSE_CHAT__":
                         # Save and close current chat
+                        closed_chat = chat_path
+                        closed_count = len(chat_data.get("messages", [])) if chat_data else 0
                         if chat_path and chat_data:
                             await chat.save_chat(chat_path, chat_data)
 
@@ -730,7 +896,13 @@ async def repl_loop(
                         session.message_hex_ids.clear()
                         session.hex_id_set.clear()
                         reset_chat_scoped_state(session, session_dict)
-                        log_event("chat_closed", level=logging.INFO, reason="close_command")
+                        log_event(
+                            "chat_closed",
+                            level=logging.INFO,
+                            reason="close_command",
+                            chat_file=closed_chat,
+                            message_count=closed_count,
+                        )
 
                         print("Chat closed")
                         print()
@@ -738,9 +910,15 @@ async def repl_loop(
                     elif response.startswith("__RENAME_CURRENT__:"):
                         # Update current chat path
                         new_path = response.split(":", 1)[1]
+                        old_path = chat_path
                         chat_path = new_path
                         session_dict["chat_path"] = chat_path
-                        log_event("chat_renamed", level=logging.INFO, chat_file=chat_path)
+                        log_event(
+                            "chat_renamed",
+                            level=logging.INFO,
+                            old_chat_file=old_path,
+                            new_chat_file=chat_path,
+                        )
 
                         print(f"Chat renamed to: {Path(chat_path).name}")
                         print()
@@ -748,6 +926,7 @@ async def repl_loop(
                     elif response.startswith("__DELETE_CURRENT__:"):
                         # Close current chat after deletion
                         filename = response.split(":", 1)[1]
+                        deleted_chat = chat_path
                         chat_path = None
                         chat_data = None
 
@@ -760,7 +939,12 @@ async def repl_loop(
                         session.message_hex_ids.clear()
                         session.hex_id_set.clear()
                         reset_chat_scoped_state(session, session_dict)
-                        log_event("chat_deleted", level=logging.INFO, reason="delete_current")
+                        log_event(
+                            "chat_deleted",
+                            level=logging.INFO,
+                            reason="delete_current",
+                            chat_file=deleted_chat or filename,
+                        )
 
                         print(f"Deleted and closed chat: {filename}")
                         print()
@@ -856,7 +1040,6 @@ async def repl_loop(
                             print()
                         except Exception as e:
                             print(f"\nError: {e}")
-                            logging.error(f"Secret mode AI response error: {e}", exc_info=True)
                             print()
 
                         continue
@@ -880,9 +1063,10 @@ async def repl_loop(
                         "command_error",
                         level=logging.ERROR,
                         command=command_name,
-                        args_summary=_summarize_text(command_args, max_len=100),
+                        args_summary=_summarize_command_args(command_name, command_args),
                         error_type=type(e).__name__,
                         error=sanitize_error_message(str(e)),
+                        chat_file=chat_path,
                     )
                     print(f"Error: {e}")
                     print()
@@ -904,7 +1088,7 @@ async def repl_loop(
                 continue
 
             # Validate provider BEFORE adding user message
-            provider_instance, error = validate_and_get_provider(session)
+            provider_instance, error = validate_and_get_provider(session, chat_path=chat_path)
             if error:
                 print(f"Error: {error}")
                 print()
@@ -938,7 +1122,6 @@ async def repl_loop(
                     print()
                 except Exception as e:
                     print(f"\nError: {e}")
-                    logging.error(f"Secret mode AI response error: {e}", exc_info=True)
                     print()
 
                 continue
@@ -983,7 +1166,6 @@ async def repl_loop(
                     print()
                 except Exception as e:
                     print(f"\nError: {e}")
-                    logging.error(f"Retry mode AI response error: {e}", exc_info=True)
                     print()
 
                 continue
@@ -1049,7 +1231,6 @@ async def repl_loop(
 
             except Exception as e:
                 print(f"\nError: {e}")
-                logging.error(f"AI response error: {e}", exc_info=True)
 
                 # Remove user message and add error instead
                 if (
@@ -1082,7 +1263,13 @@ async def repl_loop(
 
         except (EOFError, KeyboardInterrupt):
             # Ctrl-D or Ctrl-C at prompt
-            log_event("session_stop", level=logging.INFO, reason="keyboard_interrupt_or_eof")
+            log_event(
+                "session_stop",
+                level=logging.INFO,
+                reason="keyboard_interrupt_or_eof",
+                chat_file=chat_path,
+                message_count=len(chat_data.get("messages", [])) if chat_data else 0,
+            )
             print("\nGoodbye!")
             break
 
@@ -1117,6 +1304,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+    app_started = time.perf_counter()
 
     # Handle 'init' command for profile creation
     if args.command == "init":
@@ -1150,13 +1338,6 @@ def main() -> None:
         # Set up logging. If no CLI log path was provided, create a run log in profile log_dir.
         effective_log_path = mapped_log_path or _build_run_log_path(profile_data["log_dir"])
         setup_logging(effective_log_path)
-        log_event(
-            "app_start",
-            level=logging.INFO,
-            profile_file=mapped_profile_path,
-            chat_file=mapped_chat_path,
-            log_file=effective_log_path,
-        )
 
         # Get chat history file path (optional)
         chat_path = None
@@ -1192,6 +1373,26 @@ def main() -> None:
             # It's inline text
             system_prompt = profile_data["system_prompt"].get("content")
 
+        log_event(
+            "app_start",
+            level=logging.INFO,
+            profile_file=mapped_profile_path,
+            chat_file=mapped_chat_path,
+            log_file=effective_log_path,
+            chats_dir=profile_data.get("chats_dir"),
+            log_dir=profile_data.get("log_dir"),
+            assistant_provider=profile_data.get("default_ai"),
+            assistant_model=profile_data.get("models", {}).get(profile_data.get("default_ai", ""), "(unknown)"),
+            helper_provider=profile_data.get("default_helper_ai", profile_data.get("default_ai")),
+            helper_model=profile_data.get("models", {}).get(
+                profile_data.get("default_helper_ai", profile_data.get("default_ai", "")),
+                "(unknown)",
+            ),
+            input_mode=profile_data.get("input_mode", "quick"),
+            timeout=profile_data.get("timeout", 30),
+            system_prompt_path=system_prompt_path,
+        )
+
         # Run REPL loop
         asyncio.run(
             repl_loop(
@@ -1204,10 +1405,20 @@ def main() -> None:
                 effective_log_path,
             )
         )
-        log_event("app_stop", level=logging.INFO, reason="normal")
+        log_event(
+            "app_stop",
+            level=logging.INFO,
+            reason="normal",
+            uptime_ms=round((time.perf_counter() - app_started) * 1000, 1),
+        )
 
     except KeyboardInterrupt:
-        log_event("app_stop", level=logging.INFO, reason="keyboard_interrupt")
+        log_event(
+            "app_stop",
+            level=logging.INFO,
+            reason="keyboard_interrupt",
+            uptime_ms=round((time.perf_counter() - app_started) * 1000, 1),
+        )
         print("\nInterrupted")
         sys.exit(0)
     except Exception as e:
@@ -1218,6 +1429,7 @@ def main() -> None:
             reason="fatal_error",
             error_type=type(e).__name__,
             error=sanitize_error_message(str(e)),
+            uptime_ms=round((time.perf_counter() - app_started) * 1000, 1),
         )
         logging.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)

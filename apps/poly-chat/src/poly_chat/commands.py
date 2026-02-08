@@ -4,6 +4,7 @@ This module handles parsing and executing commands like /model, /gpt, /retry, et
 """
 
 import math
+import logging
 from datetime import datetime, timezone
 from typing import Optional, Any
 from pathlib import Path
@@ -794,7 +795,8 @@ class CommandHandler:
                 self.session["helper_model"],
                 self.session["profile"],
                 prompt_messages,
-                system_prompt
+                system_prompt,
+                task="title_generation",
             )
 
             # Clean up title (remove quotes if present)
@@ -811,6 +813,13 @@ class CommandHandler:
             return f"Title generated: {title}"
 
         except Exception as e:
+            logging.error(
+                "Helper AI title generation failed (provider=%s, model=%s): %s",
+                self.session.get("helper_ai"),
+                self.session.get("helper_model"),
+                e,
+                exc_info=True,
+            )
             return f"Error generating title: {e}"
 
     async def set_summary(self, args: str) -> str:
@@ -893,7 +902,8 @@ class CommandHandler:
                 self.session["helper_model"],
                 self.session["profile"],
                 prompt_messages,
-                system_prompt
+                system_prompt,
+                task="summary_generation",
             )
 
             # Update chat metadata
@@ -907,6 +917,13 @@ class CommandHandler:
             return f"Summary generated:\n{summary}"
 
         except Exception as e:
+            logging.error(
+                "Helper AI summary generation failed (provider=%s, model=%s): %s",
+                self.session.get("helper_ai"),
+                self.session.get("helper_model"),
+                e,
+                exc_info=True,
+            )
             return f"Error generating summary: {e}"
 
     async def check_safety(self, args: str) -> str:
@@ -968,7 +985,8 @@ Keep descriptions brief (one line max). For found items, mention location if che
                 self.session["helper_model"],
                 self.session["profile"],
                 prompt_messages,
-                system_prompt
+                system_prompt,
+                task="safety_check",
             )
 
             # Format output
@@ -982,6 +1000,14 @@ Keep descriptions brief (one line max). For found items, mention location if che
             return "\n".join(output)
 
         except Exception as e:
+            logging.error(
+                "Helper AI safety check failed (provider=%s, model=%s, scope=%s): %s",
+                self.session.get("helper_ai"),
+                self.session.get("helper_model"),
+                scope,
+                e,
+                exc_info=True,
+            )
             return f"Error performing safety check: {e}"
 
     def _format_message_for_safety_check(self, messages: list[dict]) -> str:
