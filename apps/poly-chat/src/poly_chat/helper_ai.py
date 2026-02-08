@@ -8,6 +8,8 @@ import logging
 import time
 from typing import Optional, Any
 
+logger = logging.getLogger(__name__)
+
 
 async def invoke_helper_ai(
     helper_ai: str,
@@ -16,6 +18,7 @@ async def invoke_helper_ai(
     messages: list[dict],
     system_prompt: Optional[str] = None,
     task: str = "helper_task",
+    session: Optional[Any] = None,
 ) -> str:
     """Invoke helper AI for background tasks (non-streaming).
 
@@ -85,8 +88,8 @@ async def invoke_helper_ai(
         )
         raise ValueError(f"Error loading helper AI API key: {e}")
 
-    # Get provider instance
-    provider_instance = get_provider_instance(helper_ai, api_key, session=None)
+    # Get provider instance (cached when a session manager/state is provided)
+    provider_instance = get_provider_instance(helper_ai, api_key, session=session)
 
     # Send request (non-streaming for simplicity)
     started = time.perf_counter()
@@ -101,26 +104,18 @@ async def invoke_helper_ai(
         has_system_prompt=bool(system_prompt),
     )
     try:
-        response_stream = provider_instance.send_message(
+        response_text, metadata = await provider_instance.get_full_response(
             messages=messages,
             model=helper_model,
             system_prompt=system_prompt,
-            stream=False
         )
-
-        # For non-streaming, the response should be immediate
-        response_text = ""
-        async for chunk in response_stream:
-            response_text += chunk
-
-        log_event(
-            "helper_ai_response",
-            level=logging.INFO,
-            task=task,
-            provider=helper_ai,
-            model=helper_model,
-            latency_ms=round((time.perf_counter() - started) * 1000, 1),
-            output_chars=len(response_text),
+        logger.info(
+            "Helper AI completed (provider=%s, model=%s, task=%s, latency_ms=%.1f, usage=%s)",
+            helper_ai,
+            helper_model,
+            task,
+            round((time.perf_counter() - started) * 1000, 1),
+            metadata.get("usage", {}) if isinstance(metadata, dict) else {},
         )
         return response_text.strip()
 

@@ -26,6 +26,7 @@ class MetadataCommandsMixin:
             messages,
             system_prompt,
             task=task,
+            session=self.manager,
         )
 
     async def set_title(self, args: str) -> str:

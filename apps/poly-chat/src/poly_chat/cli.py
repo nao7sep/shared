@@ -18,6 +18,16 @@ from .repl import repl_loop
 from .session_manager import SessionManager
 
 
+def resolve_strict_system_prompt(
+    profile_data: dict,
+    cli_override: bool | None,
+) -> bool:
+    """Resolve strict-system-prompt policy from profile and CLI override."""
+    if cli_override is None:
+        return bool(profile_data.get("system_prompt_strict", False))
+    return bool(cli_override)
+
+
 def main() -> None:
     """Main entry point for PolyChat CLI."""
     parser = argparse.ArgumentParser(
@@ -39,10 +49,21 @@ def main() -> None:
         "-l", "--log", help="Path to log file for error logging (optional)"
     )
 
-    parser.add_argument(
+    strict_group = parser.add_mutually_exclusive_group()
+    strict_group.add_argument(
         "--strict-system-prompt",
-        action="store_true",
+        dest="strict_system_prompt",
+        action="store_const",
+        const=True,
+        default=None,
         help="Fail startup if configured system prompt cannot be loaded",
+    )
+    strict_group.add_argument(
+        "--no-strict-system-prompt",
+        dest="strict_system_prompt",
+        action="store_const",
+        const=False,
+        help="Allow startup to continue if configured system prompt cannot be loaded",
     )
 
     parser.add_argument(
@@ -83,8 +104,9 @@ def main() -> None:
         mapped_log_path = map_cli_path(args.log, "log")
 
         profile_data = profile.load_profile(mapped_profile_path)
-        strict_system_prompt = bool(
-            profile_data.get("system_prompt_strict", False) or args.strict_system_prompt
+        strict_system_prompt = resolve_strict_system_prompt(
+            profile_data,
+            args.strict_system_prompt,
         )
         profile_data["system_prompt_strict"] = strict_system_prompt
 

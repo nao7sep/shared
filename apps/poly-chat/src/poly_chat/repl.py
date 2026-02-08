@@ -260,6 +260,25 @@ async def repl_loop(
                     )
                     print(f"Error: {e}")
                     print()
+                except Exception as e:
+                    command_name, command_args = cmd_handler.parse_command(user_input)
+                    log_event(
+                        "command_error",
+                        level=logging.ERROR,
+                        command=command_name,
+                        args_summary=summarize_command_args(command_name, command_args),
+                        error_type=type(e).__name__,
+                        error=sanitize_error_message(str(e)),
+                        chat_file=chat_path,
+                    )
+                    logging.error(
+                        "Unexpected command error (command=%s): %s",
+                        command_name,
+                        e,
+                        exc_info=True,
+                    )
+                    print(f"Error: {e}")
+                    print()
                 continue
 
             # Handle user message through orchestrator
