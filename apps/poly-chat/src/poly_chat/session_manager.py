@@ -344,6 +344,38 @@ class SessionManager:
         """Mark current chat as persisted."""
         self._state.chat_dirty = False
 
+    async def save_current_chat(
+        self,
+        *,
+        force: bool = False,
+        chat_path: Optional[str] = None,
+        chat_data: Optional[dict[str, Any]] = None,
+    ) -> bool:
+        """Persist current chat state.
+
+        Args:
+            force: Persist even when chat_dirty is False.
+            chat_path: Optional explicit path override.
+            chat_data: Optional explicit chat data override.
+
+        Returns:
+            True when a save was performed, False when skipped.
+        """
+        path = chat_path if chat_path is not None else self._state.chat_path
+        data = chat_data if chat_data is not None else self._state.chat
+
+        if not path or not isinstance(data, dict):
+            return False
+
+        if not force and not self._state.chat_dirty:
+            return False
+
+        from . import chat as chat_module
+
+        await chat_module.save_chat(path, data)
+        self._state.chat_dirty = False
+        return True
+
     @staticmethod
     def load_system_prompt(
         profile_data: dict[str, Any],

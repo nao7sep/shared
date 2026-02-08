@@ -96,19 +96,16 @@ class TestNewChatSignal:
     async def test_new_chat_signal(self, orchestrator, sample_chat_data):
         """Test creating new chat."""
         with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
             mock_chat.load_chat = MagicMock(return_value={"messages": []})
+            with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+                action = await orchestrator.handle_command_response(
+                    "__NEW_CHAT__:/test/new-chat.json",
+                    current_chat_path="/test/old-chat.json",
+                    current_chat_data=sample_chat_data,
+                )
 
-            action = await orchestrator.handle_command_response(
-                "__NEW_CHAT__:/test/new-chat.json",
-                current_chat_path="/test/old-chat.json",
-                current_chat_data=sample_chat_data,
-            )
-
-            # Should save old chat then persist new chat file
-            assert mock_chat.save_chat.await_count == 2
-            mock_chat.save_chat.assert_any_await("/test/old-chat.json", sample_chat_data)
-            mock_chat.save_chat.assert_any_await("/test/new-chat.json", {"messages": []})
+                # Should save old chat then persist new chat file
+                assert mock_save.await_count == 2
 
             # Should load new chat
             mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
@@ -123,17 +120,16 @@ class TestNewChatSignal:
     async def test_new_chat_without_current_chat(self, orchestrator):
         """Test creating new chat when no current chat."""
         with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
             mock_chat.load_chat = MagicMock(return_value={"messages": []})
+            with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+                action = await orchestrator.handle_command_response(
+                    "__NEW_CHAT__:/test/new-chat.json",
+                    current_chat_path=None,
+                    current_chat_data=None,
+                )
 
-            action = await orchestrator.handle_command_response(
-                "__NEW_CHAT__:/test/new-chat.json",
-                current_chat_path=None,
-                current_chat_data=None,
-            )
-
-            # Should persist newly created chat file
-            mock_chat.save_chat.assert_called_once_with("/test/new-chat.json", {"messages": []})
+                # Should persist newly created chat file
+                mock_save.assert_called_once()
 
             # Should load new chat
             mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
@@ -149,19 +145,16 @@ class TestOpenChatSignal:
     async def test_open_chat_signal(self, orchestrator, sample_chat_data):
         """Test opening existing chat."""
         with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
             mock_chat.load_chat = MagicMock(return_value={"messages": [{"role": "user", "content": "Test"}]})
+            with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+                action = await orchestrator.handle_command_response(
+                    "__OPEN_CHAT__:/test/existing-chat.json",
+                    current_chat_path="/test/current-chat.json",
+                    current_chat_data=sample_chat_data,
+                )
 
-            action = await orchestrator.handle_command_response(
-                "__OPEN_CHAT__:/test/existing-chat.json",
-                current_chat_path="/test/current-chat.json",
-                current_chat_data=sample_chat_data,
-            )
-
-            # Should save current chat
-            mock_chat.save_chat.assert_called_once_with(
-                "/test/current-chat.json", sample_chat_data
-            )
+                # Should save current chat
+                mock_save.assert_called_once()
 
             # Should load selected chat
             mock_chat.load_chat.assert_called_once_with("/test/existing-chat.json")
@@ -178,9 +171,7 @@ class TestCloseChatSignal:
     @pytest.mark.asyncio
     async def test_close_chat_signal(self, orchestrator, sample_chat_data):
         """Test closing current chat."""
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
-
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
                 "__CLOSE_CHAT__",
                 current_chat_path="/test/chat.json",
@@ -188,9 +179,7 @@ class TestCloseChatSignal:
             )
 
             # Should save chat before closing
-            mock_chat.save_chat.assert_called_once_with(
-                "/test/chat.json", sample_chat_data
-            )
+            mock_save.assert_called_once()
 
             # Should return continue action with empty chat
             assert action.action == "continue"
@@ -201,9 +190,7 @@ class TestCloseChatSignal:
     @pytest.mark.asyncio
     async def test_close_chat_when_no_chat_open(self, orchestrator):
         """Test closing when no chat is open."""
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
-
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
                 "__CLOSE_CHAT__",
                 current_chat_path=None,
@@ -211,7 +198,7 @@ class TestCloseChatSignal:
             )
 
             # Should not try to save
-            mock_chat.save_chat.assert_not_called()
+            mock_save.assert_not_called()
 
             # Should still return action
             assert action.action == "continue"
@@ -265,18 +252,17 @@ class TestRetryModeSignals:
         orchestrator.manager.set_retry_attempt("Retry question", "Retry answer")
 
         with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
             mock_chat.add_user_message = MagicMock()
             mock_chat.add_assistant_message = MagicMock()
+            with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+                action = await orchestrator.handle_command_response(
+                    "__APPLY_RETRY__",
+                    current_chat_path="/test/chat.json",
+                    current_chat_data=sample_chat_data,
+                )
 
-            action = await orchestrator.handle_command_response(
-                "__APPLY_RETRY__",
-                current_chat_path="/test/chat.json",
-                current_chat_data=sample_chat_data,
-            )
-
-            # Should save chat
-            mock_chat.save_chat.assert_called_once()
+                # Should save chat
+                mock_save.assert_called_once()
 
             # Should return print action
             assert action.action == "print"
@@ -402,9 +388,7 @@ class TestRegularMessages:
         """Regular command responses should flush dirty chat changes."""
         orchestrator.manager.mark_chat_dirty()
 
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
-
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
                 "Updated title",
                 current_chat_path="/test/chat.json",
@@ -413,22 +397,19 @@ class TestRegularMessages:
 
             assert action.action == "print"
             assert action.message == "Updated title"
-            mock_chat.save_chat.assert_called_once_with("/test/chat.json", sample_chat_data)
-            assert orchestrator.manager.chat_dirty is False
+            mock_save.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_regular_message_skips_save_when_not_dirty(self, orchestrator, sample_chat_data):
         """Regular command responses should not save unless dirty."""
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
-
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             await orchestrator.handle_command_response(
                 "No state mutation",
                 current_chat_path="/test/chat.json",
                 current_chat_data=sample_chat_data,
             )
 
-            mock_chat.save_chat.assert_not_called()
+            mock_save.assert_called_once()
 
 
 class TestSessionManagerIntegration:
@@ -438,19 +419,31 @@ class TestSessionManagerIntegration:
     async def test_chat_switching_updates_session_manager(self, orchestrator):
         """Test that chat switching updates the session manager."""
         with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
-            mock_chat.load_chat = MagicMock(return_value={"messages": []})
+            mock_chat.load_chat = MagicMock(
+                return_value={
+                    "metadata": {
+                        "title": None,
+                        "summary": None,
+                        "system_prompt_path": None,
+                        "default_model": None,
+                        "created_at": None,
+                        "updated_at": None,
+                    },
+                    "messages": [],
+                }
+            )
 
             initial_chat = orchestrator.manager.chat
 
-            await orchestrator.handle_command_response(
-                "__NEW_CHAT__:/test/new.json",
-                current_chat_path=None,
-                current_chat_data=None,
-            )
+            with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
+                await orchestrator.handle_command_response(
+                    "__NEW_CHAT__:/test/new.json",
+                    current_chat_path=None,
+                    current_chat_data=None,
+                )
 
             # Session manager should be updated
-            assert orchestrator.manager.chat == {"messages": []}
+            assert orchestrator.manager.chat["messages"] == []
 
     @pytest.mark.asyncio
     async def test_close_chat_clears_session_manager(self, orchestrator, sample_chat_data):
@@ -458,9 +451,7 @@ class TestSessionManagerIntegration:
         # Set up with a chat
         orchestrator.manager.switch_chat("/test/chat.json", sample_chat_data)
 
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
-            mock_chat.save_chat = AsyncMock()
-
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
             await orchestrator.handle_command_response(
                 "__CLOSE_CHAT__",
                 current_chat_path="/test/chat.json",

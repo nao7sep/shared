@@ -148,9 +148,7 @@ class ChatOrchestrator:
         chat_data: Optional[dict],
     ) -> None:
         """Persist chat only when command handlers marked state as dirty."""
-        if self.manager.chat_dirty and chat_path and chat_data:
-            await chat.save_chat(chat_path, chat_data)
-            self.manager.clear_chat_dirty()
+        await self.manager.save_current_chat(chat_path=chat_path, chat_data=chat_data)
 
     async def _handle_new_chat(
         self,
@@ -163,12 +161,19 @@ class ChatOrchestrator:
 
         # Save current chat before switching
         if current_chat_path and current_chat_data:
-            await chat.save_chat(current_chat_path, current_chat_data)
-            self.manager.clear_chat_dirty()
+            await self.manager.save_current_chat(
+                force=True,
+                chat_path=current_chat_path,
+                chat_data=current_chat_data,
+            )
 
         # Load new chat
         new_chat_data = chat.load_chat(new_chat_path)
-        await chat.save_chat(new_chat_path, new_chat_data)
+        await self.manager.save_current_chat(
+            force=True,
+            chat_path=new_chat_path,
+            chat_data=new_chat_data,
+        )
 
         # Update session manager
         self.manager.switch_chat(new_chat_path, new_chat_data)
@@ -193,8 +198,11 @@ class ChatOrchestrator:
 
         # Save current chat before switching
         if current_chat_path and current_chat_data:
-            await chat.save_chat(current_chat_path, current_chat_data)
-            self.manager.clear_chat_dirty()
+            await self.manager.save_current_chat(
+                force=True,
+                chat_path=current_chat_path,
+                chat_data=current_chat_data,
+            )
 
         # Load selected chat
         new_chat_data = chat.load_chat(new_chat_path)
@@ -219,8 +227,11 @@ class ChatOrchestrator:
         """Handle __CLOSE_CHAT__ signal."""
         # Save current chat before closing
         if current_chat_path and current_chat_data:
-            await chat.save_chat(current_chat_path, current_chat_data)
-            self.manager.clear_chat_dirty()
+            await self.manager.save_current_chat(
+                force=True,
+                chat_path=current_chat_path,
+                chat_data=current_chat_data,
+            )
 
         # Clear chat in session manager
         self.manager.close_chat()
@@ -311,8 +322,11 @@ class ChatOrchestrator:
 
         # Save chat and exit retry mode
         if current_chat_path:
-            await chat.save_chat(current_chat_path, current_chat_data)
-            self.manager.clear_chat_dirty()
+            await self.manager.save_current_chat(
+                force=True,
+                chat_path=current_chat_path,
+                chat_data=current_chat_data,
+            )
 
         self.manager.exit_retry_mode()
 
@@ -488,8 +502,11 @@ class ChatOrchestrator:
             chat.add_assistant_message(chat_data, response_text, self.manager.current_model)
             new_msg_index = len(chat_data["messages"]) - 1
             self.manager.assign_message_hex_id(new_msg_index)
-            await chat.save_chat(chat_path, chat_data)
-            self.manager.clear_chat_dirty()
+            await self.manager.save_current_chat(
+                force=True,
+                chat_path=chat_path,
+                chat_data=chat_data,
+            )
             return OrchestratorAction(action="continue")
 
         return OrchestratorAction(action="continue")
@@ -530,8 +547,11 @@ class ChatOrchestrator:
             )
             new_msg_index = len(chat_data["messages"]) - 1
             self.manager.assign_message_hex_id(new_msg_index)
-            await chat.save_chat(chat_path, chat_data)
-            self.manager.clear_chat_dirty()
+            await self.manager.save_current_chat(
+                force=True,
+                chat_path=chat_path,
+                chat_data=chat_data,
+            )
 
         # For retry and secret modes, just show error (don't save)
         return OrchestratorAction(action="print", message=f"\nError: {error}")
