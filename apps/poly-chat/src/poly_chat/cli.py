@@ -564,7 +564,7 @@ async def repl_loop(
     # Set up key bindings for message submission
     kb = KeyBindings()
 
-    @kb.add('enter')
+    @kb.add('enter', eager=True)
     def _(event):
         """Handle Enter based on input mode."""
         mode = session_dict.get("input_mode", "quick")
@@ -573,7 +573,7 @@ async def repl_loop(
         else:
             event.current_buffer.insert_text("\n")
 
-    @kb.add('escape', 'enter')  # Alt/Option+Enter (Meta+Enter)
+    @kb.add('escape', 'enter', eager=True)  # Alt/Option+Enter (Meta+Enter)
     def _(event):
         """Handle Alt/Option+Enter based on input mode."""
         mode = session_dict.get("input_mode", "quick")
@@ -582,7 +582,7 @@ async def repl_loop(
         else:
             event.current_buffer.validate_and_handle()
 
-    @kb.add('c-j')  # Ctrl+J (sent by Ctrl+Enter in many terminals)
+    @kb.add('c-j', eager=True)  # Ctrl+J (sent by Ctrl+Enter in many terminals)
     def _(event):
         """Submit message on Ctrl+J in any mode."""
         event.current_buffer.validate_and_handle()

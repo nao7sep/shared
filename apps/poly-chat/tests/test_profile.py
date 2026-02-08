@@ -317,6 +317,50 @@ def test_validate_profile_timeout_negative():
         validate_profile(profile)
 
 
+def test_validate_profile_input_mode_valid():
+    """Test validate_profile accepts valid input_mode values."""
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "input_mode": "quick",
+        "chats_dir": "~/chats",
+        "log_dir": "~/logs",
+        "api_keys": {}
+    }
+    validate_profile(profile)
+
+    profile["input_mode"] = "compose"
+    validate_profile(profile)
+
+
+def test_validate_profile_input_mode_invalid_value():
+    """Test validate_profile rejects unknown input_mode values."""
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "input_mode": "invalid-mode",
+        "chats_dir": "~/chats",
+        "log_dir": "~/logs",
+        "api_keys": {}
+    }
+    with pytest.raises(ValueError, match="'input_mode' must be 'quick' or 'compose'"):
+        validate_profile(profile)
+
+
+def test_validate_profile_input_mode_invalid_type():
+    """Test validate_profile rejects non-string input_mode values."""
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "input_mode": 123,
+        "chats_dir": "~/chats",
+        "log_dir": "~/logs",
+        "api_keys": {}
+    }
+    with pytest.raises(ValueError, match="'input_mode' must be a string"):
+        validate_profile(profile)
+
+
 def test_validate_profile_timeout_zero_allowed():
     """Test validation allows timeout of zero."""
     profile = {

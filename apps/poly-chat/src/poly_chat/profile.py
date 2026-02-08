@@ -157,6 +157,14 @@ def validate_profile(profile: dict[str, Any]) -> None:
         if timeout < 0:
             raise ValueError("'timeout' cannot be negative")
 
+    # Validate input_mode if present
+    if "input_mode" in profile:
+        input_mode = profile["input_mode"]
+        if not isinstance(input_mode, str):
+            raise ValueError("'input_mode' must be a string")
+        if input_mode not in ("quick", "compose"):
+            raise ValueError("'input_mode' must be 'quick' or 'compose'")
+
     # Validate api_keys structure
     if not isinstance(profile.get("api_keys"), dict):
         raise ValueError("'api_keys' must be a dictionary")
