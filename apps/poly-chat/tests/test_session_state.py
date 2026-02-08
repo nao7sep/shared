@@ -43,7 +43,6 @@ class TestSessionStateCreation:
 
         assert session.system_prompt is None
         assert session.system_prompt_path is None
-        assert session.strict_system_prompt is False
         assert session.input_mode == "quick"
         assert session.retry_mode is False
         assert session.retry_base_messages == []

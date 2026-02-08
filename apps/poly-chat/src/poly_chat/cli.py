@@ -18,16 +18,6 @@ from .repl import repl_loop
 from .session_manager import SessionManager
 
 
-def resolve_strict_system_prompt(
-    profile_data: dict,
-    cli_override: bool | None,
-) -> bool:
-    """Resolve strict-system-prompt policy from profile and CLI override."""
-    if cli_override is None:
-        return bool(profile_data.get("system_prompt_strict", False))
-    return bool(cli_override)
-
-
 def main() -> None:
     """Main entry point for PolyChat CLI."""
     parser = argparse.ArgumentParser(
@@ -47,23 +37,6 @@ def main() -> None:
 
     parser.add_argument(
         "-l", "--log", help="Path to log file for error logging (optional)"
-    )
-
-    strict_group = parser.add_mutually_exclusive_group()
-    strict_group.add_argument(
-        "--strict-system-prompt",
-        dest="strict_system_prompt",
-        action="store_const",
-        const=True,
-        default=None,
-        help="Fail startup if configured system prompt cannot be loaded",
-    )
-    strict_group.add_argument(
-        "--no-strict-system-prompt",
-        dest="strict_system_prompt",
-        action="store_const",
-        const=False,
-        help="Allow startup to continue if configured system prompt cannot be loaded",
     )
 
     parser.add_argument(
@@ -104,12 +77,6 @@ def main() -> None:
         mapped_log_path = map_cli_path(args.log, "log")
 
         profile_data = profile.load_profile(mapped_profile_path)
-        strict_system_prompt = resolve_strict_system_prompt(
-            profile_data,
-            args.strict_system_prompt,
-        )
-        profile_data["system_prompt_strict"] = strict_system_prompt
-
         effective_log_path = mapped_log_path or build_run_log_path(profile_data["log_dir"])
         setup_logging(effective_log_path)
 
@@ -123,7 +90,6 @@ def main() -> None:
         system_prompt, system_prompt_path, system_prompt_warning = SessionManager.load_system_prompt(
             profile_data,
             mapped_profile_path,
-            strict=strict_system_prompt,
         )
         if system_prompt_warning:
             print(f"Warning: {system_prompt_warning}")
@@ -146,7 +112,6 @@ def main() -> None:
             input_mode=profile_data.get("input_mode", "quick"),
             timeout=profile_data.get("timeout", 30),
             system_prompt_path=system_prompt_path,
-            strict_system_prompt=strict_system_prompt,
         )
 
         asyncio.run(
@@ -158,7 +123,6 @@ def main() -> None:
                 system_prompt_path,
                 mapped_profile_path,
                 effective_log_path,
-                strict_system_prompt,
             )
         )
         log_event(

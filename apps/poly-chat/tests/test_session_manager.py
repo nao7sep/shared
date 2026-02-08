@@ -60,26 +60,15 @@ class TestSessionManagerCreation:
         assert len(manager.message_hex_ids) == 2
         assert len(manager.hex_id_set) == 2
 
-    def test_create_tracks_default_timeout_and_strict_prompt_policy(self):
+    def test_create_tracks_default_timeout(self):
         manager = SessionManager(
-            profile={"timeout": 45, "system_prompt_strict": True},
+            profile={"timeout": 45},
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
 
         assert manager.default_timeout == 45
         assert manager.profile["timeout"] == 45
-        assert manager.strict_system_prompt is True
-
-    def test_create_allows_strict_prompt_override(self):
-        manager = SessionManager(
-            profile={"timeout": 45, "system_prompt_strict": False},
-            current_ai="claude",
-            current_model="claude-haiku-4-5",
-            strict_system_prompt=True,
-        )
-
-        assert manager.strict_system_prompt is True
 
 
 class TestSystemPromptLoading:

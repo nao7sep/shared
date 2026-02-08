@@ -100,8 +100,6 @@ def load_profile(path: str) -> dict[str, Any]:
     # Set default timeout if not present
     if "timeout" not in profile:
         profile["timeout"] = 30
-    if "system_prompt_strict" not in profile:
-        profile["system_prompt_strict"] = False
 
     # Map all path fields
     profile["chats_dir"] = map_path(profile["chats_dir"])
@@ -167,9 +165,6 @@ def validate_profile(profile: dict[str, Any]) -> None:
         if input_mode not in ("quick", "compose"):
             raise ValueError("'input_mode' must be 'quick' or 'compose'")
 
-    if "system_prompt_strict" in profile and not isinstance(profile["system_prompt_strict"], bool):
-        raise ValueError("'system_prompt_strict' must be a boolean")
-
     # Validate api_keys structure
     if not isinstance(profile.get("api_keys"), dict):
         raise ValueError("'api_keys' must be a dictionary")
@@ -206,7 +201,7 @@ def validate_profile(profile: dict[str, Any]) -> None:
 
 
 def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
-    """Create new profile template with accompanying API keys file.
+    """Create new profile template.
 
     Args:
         path: Where to save the profile
@@ -219,35 +214,10 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
     # Create directory if needed
     profile_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Create API keys file next to profile
-    api_keys_path = profile_path.parent / "api-keys.json"
-
     # Collect messages for caller to display
     messages = [
         f"Creating template profile: {profile_path}",
-        f"Creating template API keys: {api_keys_path}",
     ]
-
-    # Create template API keys file
-    api_keys_template = {
-        "openai": "sk-YOUR-OPENAI-API-KEY-HERE",
-        "claude": "sk-ant-YOUR-CLAUDE-API-KEY-HERE",
-        "gemini": "YOUR-GEMINI-API-KEY-HERE",
-        "grok": "xai-YOUR-GROK-API-KEY-HERE",
-        "perplexity": "pplx-YOUR-PERPLEXITY-API-KEY-HERE",
-        "mistral": "YOUR-MISTRAL-API-KEY-HERE",
-        "deepseek": "sk-YOUR-DEEPSEEK-API-KEY-HERE"
-    }
-
-    with open(api_keys_path, "w", encoding="utf-8") as f:
-        json.dump(api_keys_template, f, indent=2, ensure_ascii=False)
-
-    # Determine relative path from profile to API keys file
-    # Use @ prefix if both are in same directory, otherwise use absolute path
-    if api_keys_path.parent == profile_path.parent:
-        api_keys_ref = f"@/{api_keys_path.name}"
-    else:
-        api_keys_ref = str(api_keys_path)
 
     # Create profile structure
     profile = {
@@ -262,48 +232,45 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             "deepseek": "deepseek-chat"
         },
         "timeout": 30,
-        "system_prompt_strict": False,
         "input_mode": "quick",
-        "system_prompt": "@/system-prompts/default.txt",
-        "chats_dir": "@/chats",
-        "log_dir": "@/logs",
+        "system_prompt": {
+            "type": "text",
+            "content": "You are a helpful assistant."
+        },
+        "chats_dir": str(profile_path.parent / "chats"),
+        "log_dir": str(profile_path.parent / "logs"),
         "api_keys": {
             "openai": {
-                "type": "json",
-                "path": api_keys_ref,
-                "key": "openai"
+                "type": "env",
+                "key": "OPENAI_API_KEY"
             },
             "claude": {
-                "type": "json",
-                "path": api_keys_ref,
-                "key": "claude"
+                "type": "keychain",
+                "service": "poly-chat",
+                "account": "claude-api-key"
             },
             "gemini": {
                 "type": "json",
-                "path": api_keys_ref,
+                "path": "~/.secrets/poly-chat-api-keys.json",
                 "key": "gemini"
             },
             "grok": {
-                "type": "json",
-                "path": api_keys_ref,
-                "key": "grok"
+                "type": "direct",
+                "value": "xai-YOUR-GROK-API-KEY-HERE"
             },
             "perplexity": {
-                "type": "json",
-                "path": api_keys_ref,
-                "key": "perplexity"
+                "type": "env",
+                "key": "PERPLEXITY_API_KEY"
             },
             "mistral": {
-                "type": "json",
-                "path": api_keys_ref,
-                "key": "mistral"
+                "type": "env",
+                "key": "MISTRAL_API_KEY"
             },
             "deepseek": {
-                "type": "json",
-                "path": api_keys_ref,
-                "key": "deepseek"
+                "type": "env",
+                "key": "DEEPSEEK_API_KEY"
             }
-        }
+        },
     }
 
     # Save profile
@@ -313,11 +280,11 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
     # Add success and next steps messages
     messages.extend([
         "",  # Empty line
-        "Template files created successfully!",
+        "Template profile created successfully!",
         "",  # Empty line
         "Next steps:",
-        f"  1. Edit {api_keys_path}",
-        "     Replace placeholder API keys with your actual keys",
+        f"  1. Edit {profile_path}",
+        "     Update model names, paths, and API key placeholders",
         "",  # Empty line
         f"  2. Start PolyChat:",
         f"     poetry run pc -p {profile_path}",

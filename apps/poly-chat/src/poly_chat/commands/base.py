@@ -33,7 +33,7 @@ class CommandHandlerBaseMixin:
             return None
         return chat_data
 
-    async def _save_current_chat_if_open(self) -> None:
+    async def _mark_chat_dirty_if_open(self) -> None:
         """Mark current chat as dirty when a chat file is active."""
         chat_path = self.manager.chat_path
         chat_data = self.manager.chat
@@ -46,7 +46,7 @@ class CommandHandlerBaseMixin:
         if chat_data is None:
             return
         update_metadata(chat_data, **metadata_updates)
-        await self._save_current_chat_if_open()
+        await self._mark_chat_dirty_if_open()
 
     @staticmethod
     def _to_local_time(timestamp: str, format_str: str) -> str:

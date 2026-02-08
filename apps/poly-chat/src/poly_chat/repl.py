@@ -38,7 +38,6 @@ async def repl_loop(
     system_prompt_path: Optional[str] = None,
     profile_path: Optional[str] = None,
     log_file: Optional[str] = None,
-    strict_system_prompt: Optional[bool] = None,
 ) -> None:
     """Run the REPL loop."""
     helper_ai_name = profile_data.get("default_helper_ai", profile_data["default_ai"])
@@ -60,7 +59,6 @@ async def repl_loop(
         log_file=log_file,
         system_prompt=system_prompt,
         system_prompt_path=system_prompt_path,
-        strict_system_prompt=strict_system_prompt,
         input_mode=input_mode,
     )
 

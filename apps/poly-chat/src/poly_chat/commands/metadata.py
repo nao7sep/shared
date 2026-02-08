@@ -508,7 +508,6 @@ Keep descriptions brief (one line max). For found items, mention location if che
             f"Assistant:    {self.manager.current_ai} ({self.manager.current_model})",
             f"Helper:       {self.manager.helper_ai} ({self.manager.helper_model})",
             f"System Prompt:{' ' if self.manager.system_prompt_path else ''}{self.manager.system_prompt_path or '(none)'}",
-            f"Prompt Strict: {'ON' if self.manager.strict_system_prompt else 'OFF'}",
             f"Timeout:      {timeout_display}",
             f"Input Mode:   {self.manager.input_mode}",
             "",

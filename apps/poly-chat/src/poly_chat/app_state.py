@@ -21,7 +21,6 @@ class SessionState:
     log_file: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_path: Optional[str] = None
-    strict_system_prompt: bool = False
     input_mode: str = "quick"
     retry_mode: bool = False
     retry_base_messages: list = field(default_factory=list)

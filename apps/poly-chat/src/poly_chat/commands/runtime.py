@@ -169,7 +169,7 @@ class RuntimeCommandsMixin:
             self.manager.system_prompt = None
             self.manager.system_prompt_path = None
 
-            await self._save_current_chat_if_open()
+            await self._mark_chat_dirty_if_open()
 
             return "System prompt removed from chat"
 
@@ -197,7 +197,7 @@ class RuntimeCommandsMixin:
             self.manager.system_prompt = system_prompt_content
             self.manager.system_prompt_path = system_prompt_path
 
-            await self._save_current_chat_if_open()
+            await self._mark_chat_dirty_if_open()
 
             return f"System prompt restored to profile default"
 
@@ -222,7 +222,7 @@ class RuntimeCommandsMixin:
             self.manager.system_prompt = system_prompt_content
             self.manager.system_prompt_path = args
 
-            await self._save_current_chat_if_open()
+            await self._mark_chat_dirty_if_open()
 
             return f"System prompt set to: {args}"
 
@@ -376,7 +376,7 @@ class RuntimeCommandsMixin:
 
             count = delete_message_and_following(chat, index)
 
-            await self._save_current_chat_if_open()
+            await self._mark_chat_dirty_if_open()
             return f"Deleted {count} message(s) from index {index}{hex_str} onwards"
         except IndexError:
             raise ValueError(
@@ -425,7 +425,7 @@ class RuntimeCommandsMixin:
 
             deleted_count += 1
 
-        await self._save_current_chat_if_open()
+        await self._mark_chat_dirty_if_open()
 
         # Build warning message
         deleted_ids = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))

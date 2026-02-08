@@ -53,7 +53,6 @@ class SessionManager:
         log_file: Optional[str] = None,
         system_prompt: Optional[str] = None,
         system_prompt_path: Optional[str] = None,
-        strict_system_prompt: Optional[bool] = None,
         input_mode: str = "quick",
     ):
         """Initialize session manager.
@@ -80,11 +79,6 @@ class SessionManager:
         profile["timeout"] = default_timeout
         self._default_timeout = default_timeout
 
-        if strict_system_prompt is None:
-            strict_prompt_policy = bool(profile.get("system_prompt_strict", False))
-        else:
-            strict_prompt_policy = bool(strict_system_prompt)
-
         self._state = SessionState(
             current_ai=current_ai,
             current_model=current_model,
@@ -97,7 +91,6 @@ class SessionManager:
             log_file=log_file,
             system_prompt=system_prompt,
             system_prompt_path=system_prompt_path,
-            strict_system_prompt=strict_prompt_policy,
             input_mode=input_mode,
         )
 
@@ -222,11 +215,6 @@ class SessionManager:
         return self._state.secret_mode
 
     @property
-    def strict_system_prompt(self) -> bool:
-        """Whether missing system prompt files should fail fast."""
-        return self._state.strict_system_prompt
-
-    @property
     def chat_dirty(self) -> bool:
         """Whether current chat has unsaved command-driven changes."""
         return self._state.chat_dirty
@@ -283,7 +271,6 @@ class SessionManager:
             "log_file": self._state.log_file,
             "system_prompt": self._state.system_prompt,
             "system_prompt_path": self._state.system_prompt_path,
-            "strict_system_prompt": self._state.strict_system_prompt,
             "input_mode": self._state.input_mode,
             "retry_mode": self._state.retry_mode,
             "secret_mode": self._state.secret_mode,
@@ -357,10 +344,6 @@ class SessionManager:
     def mark_chat_dirty(self) -> None:
         """Mark current chat as needing persistence."""
         self._state.chat_dirty = True
-
-    def clear_chat_dirty(self) -> None:
-        """Mark current chat as persisted."""
-        self._state.chat_dirty = False
 
     @staticmethod
     def _normalize_timeout(value: Any) -> int | float:

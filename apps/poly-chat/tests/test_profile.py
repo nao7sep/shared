@@ -7,6 +7,7 @@ from poly_chat.profile import (
     map_path,
     load_profile,
     validate_profile,
+    create_profile,
 )
 
 
@@ -231,7 +232,6 @@ def test_load_profile_sets_default_timeout(tmp_path):
     profile = load_profile(str(profile_path))
 
     assert profile["timeout"] == 30
-    assert profile["system_prompt_strict"] is False
 
 
 def test_validate_profile_missing_required_fields():
@@ -359,20 +359,6 @@ def test_validate_profile_input_mode_invalid_type():
         "api_keys": {}
     }
     with pytest.raises(ValueError, match="'input_mode' must be a string"):
-        validate_profile(profile)
-
-
-def test_validate_profile_system_prompt_strict_invalid_type():
-    """Test validate_profile rejects non-boolean system_prompt_strict values."""
-    profile = {
-        "default_ai": "claude",
-        "models": {"claude": "claude-haiku-4-5"},
-        "system_prompt_strict": "yes",
-        "chats_dir": "~/chats",
-        "log_dir": "~/logs",
-        "api_keys": {}
-    }
-    with pytest.raises(ValueError, match="'system_prompt_strict' must be a boolean"):
         validate_profile(profile)
 
 
@@ -616,3 +602,29 @@ def test_validate_profile_valid_all_api_key_types():
 
     # Should not raise
     validate_profile(profile)
+
+
+def test_create_profile_template_uses_inline_prompt_and_mixed_api_key_examples(tmp_path):
+    """Generated template should be directly useful and avoid companion API-key files."""
+    profile_path = tmp_path / "poly-chat-profile.json"
+
+    created_profile, _messages = create_profile(str(profile_path))
+
+    assert created_profile["system_prompt"] == {
+        "type": "text",
+        "content": "You are a helpful assistant."
+    }
+    assert created_profile["chats_dir"] == str(profile_path.parent / "chats")
+    assert created_profile["log_dir"] == str(profile_path.parent / "logs")
+    assert created_profile["api_keys"]["openai"] == {
+        "type": "env",
+        "key": "OPENAI_API_KEY",
+    }
+    assert created_profile["api_keys"]["claude"] == {
+        "type": "keychain",
+        "service": "poly-chat",
+        "account": "claude-api-key",
+    }
+    assert created_profile["api_keys"]["gemini"]["type"] == "json"
+    assert created_profile["api_keys"]["grok"]["type"] == "direct"
+    assert not (profile_path.parent / "api-keys.json").exists()
