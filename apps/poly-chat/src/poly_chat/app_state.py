@@ -1,4 +1,4 @@
-"""Session state and chat-scoped state helpers for PolyChat."""
+"""Session state container and shared state utilities for PolyChat."""
 
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -58,17 +58,6 @@ def assign_new_message_hex_id(session: SessionState, message_index: int) -> str:
     new_hex_id = hex_id.generate_hex_id(session.hex_id_set)
     session.message_hex_ids[message_index] = new_hex_id
     return new_hex_id
-
-
-def reset_chat_scoped_state(session: SessionState) -> None:
-    """Reset state that should not leak across chat boundaries."""
-    session.retry_mode = False
-    session.retry_base_messages.clear()
-    session.retry_current_user_msg = None
-    session.retry_current_assistant_msg = None
-
-    session.secret_mode = False
-    session.secret_base_messages.clear()
 
 
 def has_pending_error(chat_data: dict) -> bool:

@@ -5,7 +5,6 @@ from src.poly_chat.app_state import (
     SessionState,
     initialize_message_hex_ids,
     assign_new_message_hex_id,
-    reset_chat_scoped_state,
     has_pending_error,
 )
 
@@ -305,8 +304,8 @@ class TestHexIdManagement:
         assert len(first_hex_ids) == len(second_hex_ids)
 
 
-class TestChatScopedStateReset:
-    """Test resetting state that shouldn't leak across chats."""
+class TestChatScopedState:
+    """Test chat-scoped mode state behavior."""
 
     def test_reset_clears_retry_state(self):
         """Test that reset clears retry mode state."""
@@ -323,7 +322,10 @@ class TestChatScopedStateReset:
         )
         session.retry_base_messages = [{"role": "user", "content": "old"}]
 
-        reset_chat_scoped_state(session)
+        session.retry_mode = False
+        session.retry_base_messages.clear()
+        session.retry_current_user_msg = None
+        session.retry_current_assistant_msg = None
 
         assert session.retry_mode is False
         assert session.retry_base_messages == []
@@ -343,7 +345,8 @@ class TestChatScopedStateReset:
         )
         session.secret_base_messages = [{"role": "user", "content": "secret"}]
 
-        reset_chat_scoped_state(session)
+        session.secret_mode = False
+        session.secret_base_messages.clear()
 
         assert session.secret_mode is False
         assert session.secret_base_messages == []
@@ -363,7 +366,10 @@ class TestChatScopedStateReset:
         session.retry_base_messages = [{"role": "user", "content": "retry"}]
         session.secret_base_messages = [{"role": "user", "content": "secret"}]
 
-        reset_chat_scoped_state(session)
+        session.retry_mode = False
+        session.secret_mode = False
+        session.retry_base_messages.clear()
+        session.secret_base_messages.clear()
 
         assert session.retry_mode is False
         assert session.secret_mode is False

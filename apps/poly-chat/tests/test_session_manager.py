@@ -1,5 +1,7 @@
 """Tests for SessionManager - unified session state management."""
 
+import json
+
 import pytest
 from src.poly_chat.session_manager import SessionManager
 
@@ -57,6 +59,58 @@ class TestSessionManagerCreation:
         # Hex IDs should be initialized
         assert len(manager.message_hex_ids) == 2
         assert len(manager.hex_id_set) == 2
+
+
+class TestSystemPromptLoading:
+    """Test SessionManager system prompt loading."""
+
+    def test_load_system_prompt_from_inline_content(self):
+        profile_data = {"system_prompt": {"type": "text", "content": "Inline prompt"}}
+
+        prompt, prompt_path, warning = SessionManager.load_system_prompt(profile_data)
+
+        assert prompt == "Inline prompt"
+        assert prompt_path is None
+        assert warning is None
+
+    def test_load_system_prompt_from_file(self, tmp_path):
+        prompt_file = tmp_path / "prompt.txt"
+        prompt_file.write_text("Prompt from file\n", encoding="utf-8")
+        profile_data = {"system_prompt": str(prompt_file)}
+
+        prompt, prompt_path, warning = SessionManager.load_system_prompt(profile_data)
+
+        assert prompt == "Prompt from file"
+        assert prompt_path == str(prompt_file)
+        assert warning is None
+
+    def test_load_system_prompt_returns_warning_on_missing_file(self):
+        profile_data = {"system_prompt": "/tmp/nonexistent-prompt-file.txt"}
+
+        prompt, prompt_path, warning = SessionManager.load_system_prompt(profile_data)
+
+        assert prompt is None
+        assert prompt_path == "/tmp/nonexistent-prompt-file.txt"
+        assert warning is not None
+
+    def test_load_system_prompt_uses_raw_profile_path_when_available(self, tmp_path):
+        prompt_file = tmp_path / "prompt.txt"
+        prompt_file.write_text("Raw profile path prompt", encoding="utf-8")
+        profile_file = tmp_path / "profile.json"
+        profile_file.write_text(
+            json.dumps({"system_prompt": str(prompt_file)}), encoding="utf-8"
+        )
+        # Simulate load_profile-mapped value while preserving a raw profile source.
+        profile_data = {"system_prompt": str(prompt_file.resolve())}
+
+        prompt, prompt_path, warning = SessionManager.load_system_prompt(
+            profile_data,
+            str(profile_file),
+        )
+
+        assert prompt == "Raw profile path prompt"
+        assert prompt_path == str(prompt_file)
+        assert warning is None
 
 
 class TestPropertyAccess:

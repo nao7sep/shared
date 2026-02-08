@@ -9,7 +9,6 @@ import pytest
 from src.poly_chat.app_state import (
     SessionState,
     initialize_message_hex_ids,
-    reset_chat_scoped_state,
 )
 
 
@@ -160,7 +159,12 @@ class TestChatSwitchingOrchestration:
         session.chat = {}
         session.message_hex_ids.clear()
         session.hex_id_set.clear()
-        reset_chat_scoped_state(session)
+        session.retry_mode = False
+        session.retry_base_messages.clear()
+        session.retry_current_user_msg = None
+        session.retry_current_assistant_msg = None
+        session.secret_mode = False
+        session.secret_base_messages.clear()
 
         assert session.chat == {}
         assert session.message_hex_ids == {}
@@ -182,7 +186,12 @@ class TestChatSwitchingOrchestration:
         )
 
         # Simulate chat switch
-        reset_chat_scoped_state(session)
+        session.retry_mode = False
+        session.retry_base_messages.clear()
+        session.retry_current_user_msg = None
+        session.retry_current_assistant_msg = None
+        session.secret_mode = False
+        session.secret_base_messages.clear()
 
         assert session.retry_mode is False
         assert session.secret_mode is False

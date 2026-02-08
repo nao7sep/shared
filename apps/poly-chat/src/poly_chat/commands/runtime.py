@@ -202,33 +202,19 @@ class RuntimeCommandsMixin:
 
         # 'default' - restore profile default
         if args == "default":
-            profile_data = self.manager.profile
-            default_system_prompt = profile_data.get("system_prompt")
-
-            if not default_system_prompt:
+            if not self.manager.profile.get("system_prompt"):
                 return "No default system prompt configured in profile"
 
-            # Get original unmapped path from profile
-            # We need to read the original profile file to get the unmapped path
-            # For now, we'll use the profile data's system_prompt if it's a string
-            if isinstance(default_system_prompt, str):
-                # This is already the mapped path - we need the original
-                # For simplicity, we'll just use it as-is (it's already absolute)
-                system_prompt_path = default_system_prompt
-
-                # Load the prompt content
-                try:
-                    system_prompt_mapped_path = profile.map_system_prompt_path(system_prompt_path)
-                    with open(system_prompt_mapped_path, "r", encoding="utf-8") as f:
-                        system_prompt_content = f.read().strip()
-                except Exception as e:
-                    raise ValueError(f"Could not load default system prompt: {e}")
-            elif isinstance(default_system_prompt, dict):
-                # Inline text
-                system_prompt_path = None
-                system_prompt_content = default_system_prompt.get("content")
-            else:
-                return "Invalid default system prompt in profile"
+            (
+                system_prompt_content,
+                system_prompt_path,
+                warning,
+            ) = self.manager.load_system_prompt(
+                self.manager.profile,
+                self.manager.profile_path,
+            )
+            if warning:
+                raise ValueError(warning)
 
             # Update chat metadata
             update_metadata(chat_data, system_prompt_path=system_prompt_path)

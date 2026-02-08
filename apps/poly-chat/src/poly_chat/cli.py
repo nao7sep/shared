@@ -2,7 +2,6 @@
 
 import argparse
 import asyncio
-import json
 import logging
 import sys
 import time
@@ -16,6 +15,7 @@ from .logging_utils import (
     setup_logging,
 )
 from .repl import repl_loop
+from .session_manager import SessionManager
 
 
 def main() -> None:
@@ -88,24 +88,11 @@ def main() -> None:
             chat_path = mapped_chat_path
             chat_data = chat.load_chat(chat_path)
 
-        system_prompt = None
-        system_prompt_path = None
-        if isinstance(profile_data.get("system_prompt"), str):
-            try:
-                with open(mapped_profile_path, "r", encoding="utf-8") as f:
-                    original_profile = json.load(f)
-                    system_prompt_path = original_profile.get("system_prompt")
-            except Exception:
-                system_prompt_path = profile_data["system_prompt"]
-
-            try:
-                system_prompt_mapped_path = profile.map_system_prompt_path(system_prompt_path)
-                with open(system_prompt_mapped_path, "r", encoding="utf-8") as f:
-                    system_prompt = f.read().strip()
-            except Exception as e:
-                print(f"Warning: Could not load system prompt: {e}")
-        elif isinstance(profile_data.get("system_prompt"), dict):
-            system_prompt = profile_data["system_prompt"].get("content")
+        system_prompt, system_prompt_path, system_prompt_warning = SessionManager.load_system_prompt(
+            profile_data, mapped_profile_path
+        )
+        if system_prompt_warning:
+            print(f"Warning: {system_prompt_warning}")
 
         log_event(
             "app_start",

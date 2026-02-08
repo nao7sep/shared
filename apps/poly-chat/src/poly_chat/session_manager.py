@@ -4,10 +4,12 @@ This module provides a SessionManager class that wraps SessionState and provides
 a clean interface for session management.
 """
 
+import json
 from typing import Any, Optional
 
 from .app_state import SessionState, initialize_message_hex_ids, assign_new_message_hex_id
 from . import hex_id
+from . import profile
 
 
 class SessionManager:
@@ -310,6 +312,51 @@ class SessionManager:
         # Clear secret mode
         self._state.secret_mode = False
         self._state.secret_base_messages.clear()
+
+    def clear_chat_scoped_state(self) -> None:
+        """Public wrapper to clear retry/secret state."""
+        self._clear_chat_scoped_state()
+
+    @staticmethod
+    def load_system_prompt(
+        profile_data: dict[str, Any],
+        profile_path: Optional[str] = None,
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        """Resolve and load system prompt content from profile data.
+
+        Returns:
+            Tuple of (system_prompt_text, system_prompt_path, warning_message)
+        """
+        system_prompt = None
+        system_prompt_path = None
+        warning = None
+
+        prompt_config = profile_data.get("system_prompt")
+        if isinstance(prompt_config, str):
+            system_prompt_path = prompt_config
+
+            if profile_path:
+                try:
+                    with open(profile_path, "r", encoding="utf-8") as f:
+                        original_profile = json.load(f)
+                    raw_path = original_profile.get("system_prompt")
+                    if isinstance(raw_path, str):
+                        system_prompt_path = raw_path
+                except Exception:
+                    # Fall back to mapped path already loaded into profile_data.
+                    pass
+
+            try:
+                mapped_path = profile.map_system_prompt_path(system_prompt_path)
+                with open(mapped_path, "r", encoding="utf-8") as f:
+                    system_prompt = f.read().strip()
+            except Exception as e:
+                warning = f"Could not load system prompt: {e}"
+
+        elif isinstance(prompt_config, dict):
+            system_prompt = prompt_config.get("content")
+
+        return system_prompt, system_prompt_path, warning
 
     # ===================================================================
     # Retry Mode Management
