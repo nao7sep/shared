@@ -163,6 +163,7 @@ def repl(session: Session) -> None:
         except ValueError as e:
             # Expected business logic errors (user errors, validation failures)
             print(f"Error: {e}")
+            print()
 
         except Exception as e:
             # Unexpected errors - provide more detail in debug mode
@@ -170,6 +171,7 @@ def repl(session: Session) -> None:
             if os.getenv("TK_DEBUG"):
                 print("\nDebug traceback:")
                 traceback.print_exc()
+            print()
 
     profile_data = session.profile
     tasks_data = session.tasks
