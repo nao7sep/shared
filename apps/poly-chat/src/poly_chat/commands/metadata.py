@@ -531,6 +531,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
             "",
             "Modes",
             f"Secret Mode:  {'ON' if self.manager.secret_mode else 'OFF'}",
+            f"Search Mode:  {'ON' if self.manager.search_mode else 'OFF'}",
             f"Retry Mode:   {'ON' if self.manager.retry_mode else 'OFF'}",
             "",
             "Paths",

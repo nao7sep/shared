@@ -9,6 +9,7 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 ## Features
 
 - **Multiple AI Providers**: Switch seamlessly between OpenAI GPT, Claude, Gemini, and more
+- **Web Search**: Enable AI-powered web search with inline citations (OpenAI, Claude, Gemini, Grok, Perplexity)
 - **Git-Friendly Logs**: Chat history stored as formatted JSON with messages as line arrays
 - **Retry & Time Travel**: Re-ask questions without deleting history, or delete messages to "go back in time"
 - **Secure API Keys**: Support for environment variables, macOS Keychain, and JSON files
@@ -147,6 +148,9 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/secret` - Show current secret mode state
 - `/secret on|off` - Explicitly enable/disable secret mode
 - `/secret <msg>` - Send one secret message without toggling mode
+- `/search` - Show current search mode state and supported providers
+- `/search on|off` - Enable/disable web search with inline citations
+- `/search <msg>` - Send one search-enabled message without toggling mode
 - `/rewind <hex_id>` - Delete that message and all following messages
 - `/rewind turn` - Delete the last full interaction (user+assistant/error)
 - `/rewind last` - Delete only the last message
@@ -190,6 +194,43 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/exit` or `/quit` - Exit PolyChat
 
 When commands show chat lists for selection (`/open`, `/switch`, `/rename`, `/delete`), "Last Updated" is shown in your local time.
+
+### Web Search
+
+PolyChat supports AI-powered web search with inline citations for select providers. When search mode is enabled, the AI can access current information from the web and provide citations for its responses.
+
+**Supported Providers:**
+- OpenAI (GPT models)
+- Claude (Anthropic)
+- Gemini (Google)
+- Grok (xAI)
+- Perplexity (Sonar models)
+
+**Not Supported:**
+- Mistral (requires different Agents API)
+- DeepSeek (no search API available)
+
+**Usage:**
+```bash
+# Enable persistent search mode
+/search on
+
+# Send messages with web search enabled
+What are the latest developments in AI?
+Where can I find current stock prices for AAPL?
+
+# Disable search mode
+/search off
+
+# One-shot search (doesn't change mode)
+/search What's happening in tech news today?
+
+# Check current mode
+/search
+```
+
+**Citations:**
+When search is enabled, AI responses will include a "Sources:" section at the end listing the URLs and titles of web pages used to generate the response.
 
 ## Configuration
 

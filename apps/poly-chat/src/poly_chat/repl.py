@@ -264,6 +264,78 @@ async def repl_loop(
 
                         continue
 
+                    elif action.action == "search_oneshot":
+                        search_message = action.message
+
+                        provider_instance, error = validate_and_get_provider(manager)
+                        if error:
+                            print(f"Error: {error}")
+                            print()
+                            continue
+
+                        # Check provider support
+                        from .models import provider_supports_search, SEARCH_SUPPORTED_PROVIDERS
+                        if not provider_supports_search(manager.current_ai):
+                            providers = ", ".join(sorted(SEARCH_SUPPORTED_PROVIDERS))
+                            print(f"Error: Search not supported for {manager.current_ai}.")
+                            print(f"Supported providers: {providers}")
+                            print()
+                            continue
+
+                        messages = chat.get_messages_for_ai(chat_data)
+                        messages.append({"role": "user", "content": search_message})
+                        chat.add_user_message(chat_data, search_message)
+
+                        try:
+                            print(f"\n{manager.current_ai.capitalize()} (search): ", end="", flush=True)
+                            response_stream, metadata = await send_message_to_ai(
+                                provider_instance,
+                                messages,
+                                manager.current_model,
+                                manager.system_prompt,
+                                provider_name=manager.current_ai,
+                                mode="search_oneshot",
+                                chat_path=chat_path,
+                                search=True,
+                            )
+                            response_text = await display_streaming_response(response_stream, prefix="")
+
+                            # Display citations
+                            from .streaming import display_citations
+                            citations = metadata.get("citations")
+                            if citations:
+                                display_citations(citations)
+
+                            # Save AI response
+                            chat.add_ai_message(chat_data, response_text)
+                            manager.save_chat()
+
+                            # Log response
+                            latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
+                            usage = metadata.get("usage", {})
+                            from .logging_utils import chat_file_label
+                            log_event(
+                                "ai_response",
+                                level=logging.INFO,
+                                mode="search_oneshot",
+                                provider=manager.current_ai,
+                                model=manager.current_model,
+                                chat_file=chat_file_label(chat_path),
+                                latency_ms=latency_ms,
+                                output_chars=len(response_text),
+                                input_tokens=usage.get("prompt_tokens"),
+                                output_tokens=usage.get("completion_tokens"),
+                                total_tokens=usage.get("total_tokens"),
+                                citations=len(citations) if citations else 0,
+                            )
+
+                            print()
+                        except Exception as e:
+                            print(f"\nError: {e}")
+                            print()
+
+                        continue
+
                 except ValueError as e:
                     command_name, command_args = cmd_handler.parse_command(user_input)
                     log_event(
@@ -329,6 +401,7 @@ async def repl_loop(
                 # Send message to AI
                 try:
                     print(prefix, end="", flush=True)
+                    use_search = manager.search_mode
                     response_stream, metadata = await send_message_to_ai(
                         provider_instance,
                         action.messages,
@@ -337,8 +410,15 @@ async def repl_loop(
                         provider_name=manager.current_ai,
                         mode=action.mode,
                         chat_path=chat_path,
+                        search=use_search,
                     )
                     response_text = await display_streaming_response(response_stream, prefix="")
+
+                    # Display citations if present
+                    from .streaming import display_citations
+                    citations = metadata.get("citations")
+                    if citations:
+                        display_citations(citations)
 
                     # Calculate latency and log successful AI response
                     latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
@@ -357,6 +437,7 @@ async def repl_loop(
                         input_tokens=usage.get("prompt_tokens"),
                         output_tokens=usage.get("completion_tokens"),
                         total_tokens=usage.get("total_tokens"),
+                        citations=len(citations) if citations else None,
                     )
 
                     # Handle successful response

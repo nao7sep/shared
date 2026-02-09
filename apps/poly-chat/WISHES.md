@@ -496,3 +496,10 @@ please refer to openai-responses-api-guide.md.
 for more information, be sure to refer to https://platform.openai.com/docs/guides/text as well. if you encounter 403 error and cant load the page, please tell me.
 
 openai provider should be caller-agnostic type. if we carefully update the code and the corresponding tests, poly-chat should work with absolutely no modifications. if not, please suggest a refactoring plan.
+
+---
+
+please read the following documents and implement web search:
+
+- web-search-implementation-plan.md
+- web-search-implementation-context.md

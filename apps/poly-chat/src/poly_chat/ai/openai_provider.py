@@ -81,21 +81,24 @@ class OpenAIProvider:
         stop=stop_after_attempt(4),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_response(self, model: str, input_items: list[dict], stream: bool):
+    async def _create_response(self, model: str, input_items: list[dict], stream: bool, search: bool = False):
         """Create response using Responses API with retry logic.
 
         Args:
             model: Model name
             input_items: Formatted input items (messages in Responses API format)
             stream: Whether to stream
+            search: Whether to enable web search
 
         Returns:
             API response
         """
+        tools = [{"type": "web_search_preview"}] if search else None
         return await self.client.responses.create(
             model=model,
             input=input_items,
             stream=stream,
+            tools=tools,
         )
 
     async def send_message(
@@ -104,6 +107,7 @@ class OpenAIProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        search: bool = False,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to OpenAI and yield response chunks.
@@ -113,6 +117,7 @@ class OpenAIProvider:
             model: Model name
             system_prompt: Optional system prompt (uses 'developer' role)
             stream: Whether to stream the response
+            search: Whether to enable web search
             metadata: Optional dict to populate with usage info after streaming
 
         Yields:
@@ -128,7 +133,7 @@ class OpenAIProvider:
 
             # Create streaming request with retry logic
             response = await self._create_response(
-                model=model, input_items=formatted_messages, stream=stream
+                model=model, input_items=formatted_messages, stream=stream, search=search
             )
 
             # Yield chunks from streaming events
@@ -138,7 +143,11 @@ class OpenAIProvider:
                     if event.delta:
                         yield event.delta
 
-                # Handle completion event (contains usage stats)
+                # Handle web search events
+                elif event.type == "response.web_search_call.searching":
+                    logger.info("Web search initiated")
+
+                # Handle completion event (contains usage stats and citations)
                 elif event.type == "response.completed":
                     if event.response and event.response.usage:
                         usage = event.response.usage
@@ -155,6 +164,21 @@ class OpenAIProvider:
                             f"{usage.output_tokens} completion = "
                             f"{usage.total_tokens} total tokens"
                         )
+
+                    # Extract citations from response.output items
+                    if search and event.response and metadata is not None:
+                        citations = []
+                        for item in event.response.output:
+                            if item.type == "message":
+                                for content in item.content:
+                                    for annotation in getattr(content, "annotations", []):
+                                        if annotation.type == "url_citation":
+                                            citations.append({
+                                                "url": annotation.url,
+                                                "title": getattr(annotation, "title", None)
+                                            })
+                        if citations:
+                            metadata["citations"] = citations
 
                 # Handle output item completion (check for special finish reasons)
                 elif event.type == "response.output_item.done":
@@ -185,7 +209,7 @@ class OpenAIProvider:
             raise
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False
     ) -> tuple[str, dict]:
         """Get full response from OpenAI.
 
@@ -193,6 +217,7 @@ class OpenAIProvider:
             messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt (uses 'developer' role)
+            search: Whether to enable web search
 
         Returns:
             Tuple of (response_text, metadata)
@@ -207,7 +232,7 @@ class OpenAIProvider:
 
             # Create non-streaming request with retry logic
             response = await self._create_response(
-                model=model, input_items=formatted_messages, stream=False
+                model=model, input_items=formatted_messages, stream=False, search=search
             )
 
             # Extract response text using convenience property
@@ -253,6 +278,21 @@ class OpenAIProvider:
                     metadata["usage"]["reasoning_tokens"] = (
                         response.usage.output_tokens_details.reasoning_tokens
                     )
+
+            # Extract citations if search was enabled
+            if search:
+                citations = []
+                for item in response.output:
+                    if item.type == "message":
+                        for content in item.content:
+                            for annotation in getattr(content, "annotations", []):
+                                if annotation.type == "url_citation":
+                                    citations.append({
+                                        "url": annotation.url,
+                                        "title": getattr(annotation, "title", None)
+                                    })
+                if citations:
+                    metadata["citations"] = citations
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

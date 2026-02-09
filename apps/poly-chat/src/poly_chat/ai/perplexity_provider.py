@@ -137,6 +137,7 @@ class PerplexityProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        search: bool = False,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Perplexity and yield response chunks.
@@ -146,6 +147,7 @@ class PerplexityProvider:
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
+            search: Whether to enable web search (Perplexity has search always on for Sonar models)
             metadata: Optional dict to populate with usage info after streaming
 
         Yields:
@@ -179,6 +181,10 @@ class PerplexityProvider:
                             f"{chunk.usage.completion_tokens} completion = "
                             f"{chunk.usage.total_tokens} total tokens"
                         )
+                    # Extract citations if available (final chunk)
+                    citations = getattr(chunk, "citations", None)
+                    if citations and metadata is not None:
+                        metadata["citations"] = [{"url": c, "title": None} for c in citations]
                     continue
 
                 # Check for content
@@ -219,7 +225,7 @@ class PerplexityProvider:
             raise
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False
     ) -> tuple[str, dict]:
         """Get full response from Perplexity."""
         try:
@@ -263,7 +269,8 @@ class PerplexityProvider:
 
             # Add citations if available (Perplexity provides source URLs)
             if citations:
-                metadata["citations"] = citations
+                # Normalize to standard format
+                metadata["citations"] = [{"url": c, "title": None} for c in citations]
                 logger.info(f"Response included {len(citations)} citations")
 
             logger.info(

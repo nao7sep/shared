@@ -81,23 +81,26 @@ class GrokProvider:
         stop=stop_after_attempt(4),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):
+    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool, search: bool = False):
         """Create chat completion with retry logic.
 
         Args:
             model: Model name
             messages: Formatted messages
             stream: Whether to stream
+            search: Whether to enable web search
 
         Returns:
             API response
         """
         stream_options = {"include_usage": True} if stream else None
+        tools = [{"type": "web_search"}] if search else None
         return await self.client.chat.completions.create(
             model=model,
             messages=messages,
             stream=stream,
             stream_options=stream_options,
+            tools=tools,
         )
 
     async def send_message(
@@ -106,6 +109,7 @@ class GrokProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        search: bool = False,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Grok and yield response chunks.
@@ -115,6 +119,7 @@ class GrokProvider:
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
+            search: Whether to enable web search
             metadata: Optional dict to populate with usage info after streaming
 
         Yields:
@@ -128,7 +133,7 @@ class GrokProvider:
 
             # Create streaming request with retry logic
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=stream
+                model=model, messages=formatted_messages, stream=stream, search=search
             )
 
             # Yield chunks
@@ -153,6 +158,15 @@ class GrokProvider:
                             details = chunk.usage.completion_tokens_details
                             if hasattr(details, "reasoning_tokens"):
                                 logger.info(f"Reasoning tokens: {details.reasoning_tokens}")
+                    # Extract citations if available (final chunk)
+                    citations = getattr(chunk, "citations", None)
+                    if citations and metadata is not None:
+                        # Normalize to standard format
+                        metadata["citations"] = [
+                            {"url": c.get("url", c), "title": c.get("title")}
+                            if isinstance(c, dict) else {"url": c, "title": None}
+                            for c in citations
+                        ]
                     continue
 
                 # Check for content
@@ -189,7 +203,7 @@ class GrokProvider:
             raise
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False
     ) -> tuple[str, dict]:
         """Get full response from Grok."""
         try:
@@ -200,7 +214,7 @@ class GrokProvider:
 
             # Create non-streaming request with retry logic
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=False
+                model=model, messages=formatted_messages, stream=False, search=search
             )
 
             # Extract response
@@ -242,6 +256,16 @@ class GrokProvider:
                         response.usage.completion_tokens_details.reasoning_tokens
                     )
                     logger.info(f"Reasoning tokens used: {metadata['usage']['reasoning_tokens']}")
+
+            # Extract citations if available
+            citations = getattr(response, "citations", None)
+            if citations:
+                # Normalize to standard format
+                metadata["citations"] = [
+                    {"url": c.get("url", c), "title": c.get("title")}
+                    if isinstance(c, dict) else {"url": c, "title": None}
+                    for c in citations
+                ]
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

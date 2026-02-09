@@ -73,6 +73,7 @@ class GeminiProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        search: bool = False,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Gemini and yield response chunks.
@@ -82,6 +83,7 @@ class GeminiProvider:
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
+            search: Whether to enable web search
             metadata: Optional dict to populate with usage info after streaming
 
         Yields:
@@ -95,9 +97,11 @@ class GeminiProvider:
             if not formatted_messages:
                 return
 
-            # Build config with system instruction if provided
+            # Build config with system instruction and tools if provided
+            tools = [types.Tool(google_search=types.GoogleSearch())] if search else None
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt if system_prompt else None,
+                tools=tools,
             )
 
             # Timeout and retry are configured in the Client via http_options
@@ -141,6 +145,18 @@ class GeminiProvider:
                     "total_tokens": getattr(usage_meta, "total_token_count", 0),
                 }
 
+            # Extract citations from grounding_metadata if search was enabled
+            if search and metadata is not None and final_chunk and final_chunk.candidates:
+                candidate = final_chunk.candidates[0]
+                if hasattr(candidate, "grounding_metadata"):
+                    chunks = candidate.grounding_metadata.grounding_chunks
+                    citations = [
+                        {"url": chunk.web.uri, "title": chunk.web.title}
+                        for chunk in chunks if hasattr(chunk, "web")
+                    ]
+                    if citations:
+                        metadata["citations"] = citations
+
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
             status_code = getattr(e, "status_code", "unknown")
@@ -162,7 +178,7 @@ class GeminiProvider:
             raise
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None
+        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False
     ) -> tuple[str, dict]:
         """Get full response from Gemini.
 
@@ -170,6 +186,7 @@ class GeminiProvider:
             messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
+            search: Whether to enable web search
 
         Returns:
             Tuple of (response_text, metadata)
@@ -182,9 +199,11 @@ class GeminiProvider:
             if not formatted_messages:
                 return "", {"model": model, "usage": {}}
 
-            # Build config with system instruction if provided
+            # Build config with system instruction and tools if provided
+            tools = [types.Tool(google_search=types.GoogleSearch())] if search else None
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt if system_prompt else None,
+                tools=tools,
             )
 
             # Timeout and retry are configured in the Client via http_options
@@ -238,6 +257,18 @@ class GeminiProvider:
                     ),
                 },
             }
+
+            # Extract citations from grounding_metadata if search was enabled
+            if search and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, "grounding_metadata"):
+                    chunks = candidate.grounding_metadata.grounding_chunks
+                    citations = [
+                        {"url": chunk.web.uri, "title": chunk.web.title}
+                        for chunk in chunks if hasattr(chunk, "web")
+                    ]
+                    if citations:
+                        metadata["citations"] = citations
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

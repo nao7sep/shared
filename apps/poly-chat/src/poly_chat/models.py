@@ -81,6 +81,11 @@ MODEL_REGISTRY: Dict[str, List[str]] = {
     ],
 }
 
+# Search support registry
+SEARCH_SUPPORTED_PROVIDERS: set[str] = {
+    "openai", "claude", "gemini", "grok", "perplexity",
+}
+
 # Reverse mapping: model -> provider
 MODEL_TO_PROVIDER: Dict[str, str] = {}
 for provider, models in MODEL_REGISTRY.items():
@@ -155,3 +160,15 @@ def get_provider_shortcut(provider: str) -> Optional[str]:
         if prov == provider:
             return shortcut
     return None
+
+
+def provider_supports_search(provider: str) -> bool:
+    """Check if provider supports web search.
+
+    Args:
+        provider: Provider name
+
+    Returns:
+        True if provider supports web search, False otherwise
+    """
+    return provider in SEARCH_SUPPORTED_PROVIDERS

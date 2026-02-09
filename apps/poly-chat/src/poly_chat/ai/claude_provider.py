@@ -114,6 +114,7 @@ class ClaudeProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        search: bool = False,
         max_tokens: int = 4096,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
@@ -124,7 +125,8 @@ class ClaudeProvider:
             model: Model name
             system_prompt: Optional system prompt
             stream: Whether to stream the response
-            max_tokens: Maximum tokens in response (default 4096)
+            search: Whether to enable web search
+            max_tokens: Maximum tokens in response (default 4096, increased to 8192 for search)
             metadata: Optional dict to populate with usage info after streaming
 
         Yields:
@@ -138,11 +140,14 @@ class ClaudeProvider:
             kwargs = {
                 "model": model,
                 "messages": formatted_messages,
-                "max_tokens": max_tokens,
+                "max_tokens": 8192 if search else max_tokens,
             }
 
             if system_prompt:
                 kwargs["system"] = system_prompt
+
+            if search:
+                kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
 
             # Create streaming request with retry logic
             async with await self._create_message_stream(**kwargs) as response_stream:
@@ -161,9 +166,25 @@ class ClaudeProvider:
                         + final_message.usage.output_tokens,
                     }
 
+                # Extract citations from final_message if search was enabled
+                if search and metadata is not None:
+                    citations = []
+                    for block in final_message.content:
+                        if hasattr(block, "citations"):
+                            for citation in (block.citations or []):
+                                citations.append({
+                                    "url": citation.url,
+                                    "title": getattr(citation, "title", None)
+                                })
+                    if citations:
+                        metadata["citations"] = citations
+
                 if final_message.stop_reason == "max_tokens":
                     logger.warning("Response truncated due to max_tokens limit")
                     yield "\n[Response was truncated due to token limit]"
+                elif final_message.stop_reason in ("end_turn", "pause_turn"):
+                    # Normal completion or search pause
+                    pass
 
         except APIStatusError as e:
             # Check for 529 - System overloaded (critical error)
@@ -204,6 +225,7 @@ class ClaudeProvider:
         messages: list[dict],
         model: str,
         system_prompt: str | None = None,
+        search: bool = False,
         max_tokens: int = 4096,
     ) -> tuple[str, dict]:
         """Get full response from Claude.
@@ -212,7 +234,8 @@ class ClaudeProvider:
             messages: Chat messages in PolyChat format
             model: Model name
             system_prompt: Optional system prompt
-            max_tokens: Maximum tokens in response (default 4096)
+            search: Whether to enable web search
+            max_tokens: Maximum tokens in response (default 4096, increased to 8192 for search)
 
         Returns:
             Tuple of (response_text, metadata)
@@ -225,8 +248,11 @@ class ClaudeProvider:
             kwargs = {
                 "model": model,
                 "messages": formatted_messages,
-                "max_tokens": max_tokens,
+                "max_tokens": 8192 if search else max_tokens,
             }
+
+            if search:
+                kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
 
             if system_prompt:
                 kwargs["system"] = system_prompt
@@ -257,6 +283,19 @@ class ClaudeProvider:
                     + response.usage.output_tokens,
                 },
             }
+
+            # Extract citations if search was enabled
+            if search:
+                citations = []
+                for block in response.content:
+                    if hasattr(block, "citations"):
+                        for citation in (block.citations or []):
+                            citations.append({
+                                "url": citation.url,
+                                "title": getattr(citation, "title", None)
+                            })
+                if citations:
+                    metadata["citations"] = citations
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

@@ -63,6 +63,9 @@ Chat Control:
   /secret           Show current secret mode state
   /secret on/off    Enable/disable secret mode explicitly
   /secret <msg>     Ask one secret question (doesn't toggle mode)
+  /search           Show current search mode state
+  /search on/off    Enable/disable web search
+  /search <msg>     Send one search-enabled message
   /rewind <hex_id>  Delete that message and all following messages
   /rewind turn      Delete the last full interaction (user+assistant/error)
   /rewind last      Delete only the last message

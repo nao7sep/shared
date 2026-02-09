@@ -349,6 +349,54 @@ class RuntimeCommandsMixin:
         # Signal to REPL loop to handle this as one-shot secret message
         return f"__SECRET_ONESHOT__:{args.strip()}"
 
+    async def search_mode_command(self, args: str) -> str:
+        """Show, set, or use search mode (web search enabled).
+
+        Args:
+            args: Empty to show status, 'on'/'off' to toggle, or message for one-shot
+
+        Returns:
+            Status message or special signal for one-shot mode
+        """
+        from ..models import provider_supports_search, SEARCH_SUPPORTED_PROVIDERS
+
+        chat_data = self.manager.chat
+
+        if not chat_data or "messages" not in chat_data:
+            return "No chat is currently open"
+
+        normalized = args.strip().lower()
+
+        # No args - show current mode + supported providers
+        if not normalized:
+            status = "on" if self.manager.search_mode else "off"
+            providers = ", ".join(sorted(SEARCH_SUPPORTED_PROVIDERS))
+            return f"Search mode: {status}\nSupported providers: {providers}"
+
+        # Explicit on
+        if normalized == "on":
+            if not provider_supports_search(self.manager.current_ai):
+                providers = ", ".join(sorted(SEARCH_SUPPORTED_PROVIDERS))
+                return f"Search not supported for {self.manager.current_ai}. Supported: {providers}"
+            if self.manager.search_mode:
+                return "Search mode already on"
+            self.manager.search_mode = True
+            return "Search mode enabled"
+
+        # Explicit off
+        if normalized == "off":
+            if self.manager.search_mode:
+                self.manager.search_mode = False
+                return "Search mode disabled"
+            return "Search mode already off"
+
+        # Typo hint
+        if normalized in {"on/off", "on|off"}:
+            return "Use /search on or /search off"
+
+        # One-shot search message
+        return f"__SEARCH_ONESHOT__:{args.strip()}"
+
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting a target message and all following.
 

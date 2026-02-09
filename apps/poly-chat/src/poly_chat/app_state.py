@@ -28,6 +28,7 @@ class SessionState:
     retry_attempts: dict[str, dict[str, str]] = field(default_factory=dict)
     secret_mode: bool = False
     secret_base_messages: list = field(default_factory=list)
+    search_mode: bool = False
     chat_dirty: bool = False
     hex_id_set: set[str] = field(default_factory=set)
     _provider_cache: dict[tuple[str, str], Any] = field(default_factory=dict)

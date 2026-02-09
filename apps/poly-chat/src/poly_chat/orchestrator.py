@@ -89,6 +89,7 @@ class ChatOrchestrator:
         - __CANCEL_RETRY__: Cancel retry mode
         - __CLEAR_SECRET_CONTEXT__: Clear secret mode context
         - __SECRET_ONESHOT__:<message>: Handle one-shot secret question
+        - __SEARCH_ONESHOT__:<message>: Handle one-shot search query
 
         Args:
             response: Command response (may be signal or regular message)
@@ -139,6 +140,13 @@ class ChatOrchestrator:
         if response.startswith("__SECRET_ONESHOT__:"):
             return OrchestratorAction(
                 action="secret_oneshot",
+                message=response.split(":", 1)[1]
+            )
+
+        # Handle SEARCH_ONESHOT signal
+        if response.startswith("__SEARCH_ONESHOT__:"):
+            return OrchestratorAction(
+                action="search_oneshot",
                 message=response.split(":", 1)[1]
             )
 

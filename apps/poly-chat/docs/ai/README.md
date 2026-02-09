@@ -43,6 +43,20 @@ there must be much more that these ais can do if we use their official packages,
 - https://github.com/perplexityai/perplexity-py
 - none seemingly available for deepseek as of 2026-02
 
+## web search
+
+- poly-chat-providers-copilot-analysis.md (2026-02-10)
+- claude-ai-provider-search-features-2026.md (2026-02-10)
+- poly-chat-provider-search-codex-2026-02-09.md (2026-02-10)
+- ai-providers-search-gemini.md (2026-02-10)
+
+initial notes regarding 7 ais' web search support. i used copilot (claude sonnet 4.5), claude (the same), codex (gpt-5.3-codex medium) and gemini (gemini 3 pro or flash).
+
+based on these, claude opus 4.6 generated:
+
+- plans/web-search-implementation-plan.md (2026-02-10)
+- plans/web-search-implementation-context.md (2026-02-10)
+
 ## legacy
 
 - provider-guide.md (2026-02)
