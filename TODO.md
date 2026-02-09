@@ -3,7 +3,6 @@
 - check all existing tasks to draw a bigger picture. currently work is in bits
 - check all remaining tasks in paper notebook
 - read the claude code book on mcp, parallel development, sub-agents
-- try developing 2 projects in parallel
 - hello world python gui apps using different packages
 - try mail/sms apis
 - write web app that just sends todo mail
@@ -23,6 +22,7 @@
 
 ### 2026-02-08
 - ✅ multi-ai cli chat tool => first version runs. refactored, tested and checked
+- ✅ try developing 2 projects in parallel => poly-chat and tk. it worked
 
 ### 2026-02-06
 - ✅ refine vibe coding workflow => watched some videos and simplified things
