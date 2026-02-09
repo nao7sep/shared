@@ -16,6 +16,7 @@
 - release tk
 - release poly-chat
 - review poly-chat and update readme.md
+- tk: shouldnt be able to set note to pending task
 
 ## History
 

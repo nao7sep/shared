@@ -268,6 +268,12 @@ def cmd_note(session: Session, array_index: int, note: str | None = None) -> str
     tasks_data = session.require_tasks()
     prof = session.require_profile()
 
+    task = data.get_task_by_index(tasks_data, array_index)
+    if not task:
+        raise ValueError("Task not found")
+    if task["status"] == "pending":
+        raise ValueError("Cannot set note on pending task. Mark it done or cancelled first.")
+
     if not data.update_task(tasks_data, array_index, note=note):
         raise ValueError("Task not found")
 

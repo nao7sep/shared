@@ -270,9 +270,10 @@ class TestCmdNote:
 
     def test_cmd_note_sets_note(self, sample_session):
         """Test that cmd_note sets note."""
-        commands.cmd_note(sample_session, 0, "New note")
+        # Task at index 1 is done
+        commands.cmd_note(sample_session, 1, "New note")
 
-        task = sample_session.tasks["tasks"][0]
+        task = sample_session.tasks["tasks"][1]
         assert task["note"] == "New note"
 
     def test_cmd_note_removes_note(self, sample_session):
@@ -291,6 +292,12 @@ class TestCmdNote:
         """Test that invalid index raises ValueError."""
         with pytest.raises(ValueError, match="Task not found"):
             commands.cmd_note(sample_session, 999, "Note")
+
+    def test_cmd_note_pending_task_error(self, sample_session):
+        """Test that setting note on pending task raises ValueError."""
+        # Task at index 0 is pending
+        with pytest.raises(ValueError, match="Cannot set note on pending task"):
+            commands.cmd_note(sample_session, 0, "Note")
 
 
 class TestCmdDate:

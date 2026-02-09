@@ -1,4 +1,8 @@
-"""OpenAI provider implementation for PolyChat."""
+"""OpenAI provider implementation for PolyChat.
+
+This provider uses the OpenAI Responses API (recommended for all new projects).
+See: https://platform.openai.com/docs/guides/text
+"""
 
 import logging
 from typing import AsyncIterator
@@ -26,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider:
-    """OpenAI (GPT) provider implementation."""
+    """OpenAI (GPT) provider implementation using the Responses API."""
 
     def __init__(self, api_key: str, timeout: float = 30.0):
         """Initialize OpenAI provider.
@@ -36,6 +40,7 @@ class OpenAIProvider:
             timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
         # Configure granular timeouts for better error handling
+        # Reasoning models (o3, GPT-5) can have longer TTFT
         if timeout > 0:
             timeout_config = httpx.Timeout(
                 connect=5.0,  # Fast fail on connection issues
@@ -54,13 +59,13 @@ class OpenAIProvider:
         self.timeout = timeout
 
     def format_messages(self, chat_messages: list[dict]) -> list[dict]:
-        """Convert Chat format to OpenAI format.
+        """Convert Chat format to OpenAI Responses API input format.
 
         Args:
             chat_messages: Messages in PolyChat format
 
         Returns:
-            Messages in OpenAI format
+            Messages in OpenAI Responses API input format
         """
         formatted = []
         for msg in chat_messages:
@@ -76,23 +81,21 @@ class OpenAIProvider:
         stop=stop_after_attempt(4),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):
-        """Create chat completion with retry logic.
+    async def _create_response(self, model: str, input_items: list[dict], stream: bool):
+        """Create response using Responses API with retry logic.
 
         Args:
             model: Model name
-            messages: Formatted messages
+            input_items: Formatted input items (messages in Responses API format)
             stream: Whether to stream
 
         Returns:
             API response
         """
-        stream_options = {"include_usage": True} if stream else None
-        return await self.client.chat.completions.create(
+        return await self.client.responses.create(
             model=model,
-            messages=messages,
+            input=input_items,
             stream=stream,
-            stream_options=stream_options,
         )
 
     async def send_message(
@@ -108,7 +111,7 @@ class OpenAIProvider:
         Args:
             messages: Chat messages in PolyChat format
             model: Model name
-            system_prompt: Optional system prompt
+            system_prompt: Optional system prompt (uses 'developer' role)
             stream: Whether to stream the response
             metadata: Optional dict to populate with usage info after streaming
 
@@ -119,47 +122,48 @@ class OpenAIProvider:
             # Format messages
             formatted_messages = self.format_messages(messages)
 
-            # Add system prompt if provided
+            # Add system prompt if provided (using 'developer' role for Responses API)
             if system_prompt:
-                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+                formatted_messages.insert(0, {"role": "developer", "content": system_prompt})
 
             # Create streaming request with retry logic
-            response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=stream
+            response = await self._create_response(
+                model=model, input_items=formatted_messages, stream=stream
             )
 
-            # Yield chunks
-            async for chunk in response:
-                # Check if this is a usage-only chunk (no choices)
-                if not chunk.choices:
-                    if chunk.usage:
+            # Yield chunks from streaming events
+            async for event in response:
+                # Handle text delta events
+                if event.type == "response.output_text.delta":
+                    if event.delta:
+                        yield event.delta
+
+                # Handle completion event (contains usage stats)
+                elif event.type == "response.completed":
+                    if event.response and event.response.usage:
+                        usage = event.response.usage
                         # Populate metadata with usage info if provided
+                        # Note: Responses API uses input_tokens/output_tokens
                         if metadata is not None:
                             metadata["usage"] = {
-                                "prompt_tokens": chunk.usage.prompt_tokens,
-                                "completion_tokens": chunk.usage.completion_tokens,
-                                "total_tokens": chunk.usage.total_tokens,
+                                "prompt_tokens": usage.input_tokens,
+                                "completion_tokens": usage.output_tokens,
+                                "total_tokens": usage.total_tokens,
                             }
                         logger.info(
-                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
-                            f"{chunk.usage.completion_tokens} completion = "
-                            f"{chunk.usage.total_tokens} total tokens"
+                            f"Stream usage: {usage.input_tokens} prompt + "
+                            f"{usage.output_tokens} completion = "
+                            f"{usage.total_tokens} total tokens"
                         )
-                    continue
 
-                # Check for content
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    yield delta.content
-
-                # Check finish reason for edge cases
-                if chunk.choices[0].finish_reason:
-                    finish_reason = chunk.choices[0].finish_reason
-                    if finish_reason == "length":
-                        logger.warning("Response truncated due to max_tokens limit")
-                    elif finish_reason == "content_filter":
-                        logger.warning("Response filtered due to content policy")
-                        yield "\n[Response was filtered due to content policy]"
+                # Handle output item completion (check for special finish reasons)
+                elif event.type == "response.output_item.done":
+                    if hasattr(event, 'item') and hasattr(event.item, 'status'):
+                        status = event.item.status
+                        if status == "incomplete":
+                            logger.warning("Response incomplete (may be truncated)")
+                        elif status == "failed":
+                            logger.warning("Response generation failed")
 
         except AuthenticationError as e:
             logger.error(f"Authentication failed: {e}")
@@ -188,7 +192,7 @@ class OpenAIProvider:
         Args:
             messages: Chat messages in PolyChat format
             model: Model name
-            system_prompt: Optional system prompt
+            system_prompt: Optional system prompt (uses 'developer' role)
 
         Returns:
             Tuple of (response_text, metadata)
@@ -197,57 +201,62 @@ class OpenAIProvider:
             # Format messages
             formatted_messages = self.format_messages(messages)
 
-            # Add system prompt if provided
+            # Add system prompt if provided (using 'developer' role for Responses API)
             if system_prompt:
-                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+                formatted_messages.insert(0, {"role": "developer", "content": system_prompt})
 
             # Create non-streaming request with retry logic
-            response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=False
+            response = await self._create_response(
+                model=model, input_items=formatted_messages, stream=False
             )
 
-            # Extract response
-            content = response.choices[0].message.content or ""
+            # Extract response text using convenience property
+            content = response.output_text or ""
 
-            # Check finish reason for edge cases
-            finish_reason = response.choices[0].finish_reason
-            if finish_reason == "length":
-                logger.warning("Response truncated due to max_tokens limit")
-                content += "\n[Response was truncated due to length limit]"
-            elif finish_reason == "content_filter":
-                logger.warning("Response filtered due to content policy")
-                content = "[Response was filtered due to content policy]"
+            # Check output items for status/completion info
+            finish_status = "complete"
+            for item in response.output:
+                if hasattr(item, 'status'):
+                    if item.status == "incomplete":
+                        logger.warning("Response incomplete (may be truncated)")
+                        content += "\n[Response was truncated due to length limit]"
+                        finish_status = "incomplete"
+                    elif item.status == "failed":
+                        logger.warning("Response generation failed")
+                        content = "[Response generation failed]"
+                        finish_status = "failed"
 
             # Extract metadata
+            # Note: Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
             metadata = {
-                "model": response.model,
-                "finish_reason": finish_reason,
+                "model": response.model if hasattr(response, 'model') else model,
+                "finish_status": finish_status,
                 "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+                    "prompt_tokens": response.usage.input_tokens if response.usage else 0,
                     "completion_tokens": (
-                        response.usage.completion_tokens if response.usage else 0
+                        response.usage.output_tokens if response.usage else 0
                     ),
                     "total_tokens": response.usage.total_tokens if response.usage else 0,
                 },
             }
 
             # Add cached tokens if available
-            if response.usage and hasattr(response.usage, "prompt_tokens_details"):
-                if hasattr(response.usage.prompt_tokens_details, "cached_tokens"):
+            if response.usage and hasattr(response.usage, "input_tokens_details"):
+                if hasattr(response.usage.input_tokens_details, "cached_tokens"):
                     metadata["usage"]["cached_tokens"] = (
-                        response.usage.prompt_tokens_details.cached_tokens
+                        response.usage.input_tokens_details.cached_tokens
                     )
 
-            # Add reasoning tokens if available (for o1/o3 models)
-            if response.usage and hasattr(response.usage, "completion_tokens_details"):
-                if hasattr(response.usage.completion_tokens_details, "reasoning_tokens"):
+            # Add reasoning tokens if available (for o3/GPT-5 models)
+            if response.usage and hasattr(response.usage, "output_tokens_details"):
+                if hasattr(response.usage.output_tokens_details, "reasoning_tokens"):
                     metadata["usage"]["reasoning_tokens"] = (
-                        response.usage.completion_tokens_details.reasoning_tokens
+                        response.usage.output_tokens_details.reasoning_tokens
                     )
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "
-                f"finish_reason={finish_reason}"
+                f"status={finish_status}"
             )
 
             return content, metadata

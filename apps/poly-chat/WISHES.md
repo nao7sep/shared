@@ -486,3 +486,13 @@ currently, log messages dont contain contextual information. we wont know which 
 ---
 
 the design to require opt + enter to send a message has pros and cons. is it possible to dynamically switch the behavior? one mode that doesnt require opt to send a message (and there'll be other ways to insert a line break). another mode is just like the current design. and the one that doesnt require a key combination must be the default behavior. what would you call these modes? what commands would you define to change the behavior? => quick/compose modes, /input command, quick is default, shift + enter for newline in quick mode, still opt + enter to send message in compose mode.
+
+---
+
+let's update openai provider to use responses api.
+
+please refer to openai-responses-api-guide.md.
+
+for more information, be sure to refer to https://platform.openai.com/docs/guides/text as well. if you encounter 403 error and cant load the page, please tell me.
+
+openai provider should be caller-agnostic type. if we carefully update the code and the corresponding tests, poly-chat should work with absolutely no modifications. if not, please suggest a refactoring plan.
