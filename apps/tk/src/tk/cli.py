@@ -2,17 +2,16 @@
 
 import argparse
 import sys
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
-from tk import data, profile
+from tk import data, markdown, profile
 from tk.repl import repl
 from tk.session import Session
 
 
 def display_profile_info(prof: dict) -> None:
     """Display profile information on startup."""
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
     print("\nProfile Information:")
     print(f"  Timezone: {prof['timezone']}")
 
@@ -66,8 +65,6 @@ Examples:
 
             tasks_data = {"tasks": []}
             data.save_tasks(prof["data_path"], tasks_data)
-
-            from tk import markdown
 
             markdown.generate_todo([], prof["output_path"])
 

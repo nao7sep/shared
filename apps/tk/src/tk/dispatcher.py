@@ -1,6 +1,7 @@
 """Command dispatching for tk REPL/CLI."""
 
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable
 
 from tk import commands, formatters
 from tk.session import Session
@@ -18,6 +19,14 @@ COMMAND_ALIASES = {
     "y": "yesterday",
     "r": "recent",
 }
+
+
+@dataclass
+class CommandHandler:
+    """Defines how to execute a command."""
+    executor: Callable[[list[Any], dict[str, Any], Session], str]
+    clears_list: bool = True
+    usage: str = ""
 
 
 def resolve_command_alias(cmd: str) -> str:
@@ -46,121 +55,150 @@ def _apply_last_list_mapping_from_payload(session: Session, payload: dict[str, A
     session.set_last_list(commands.extract_last_list_mapping(payload))
 
 
+# Command executor functions
+def _exec_init(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) != 1:
+        raise ValueError("Usage: init <profile_path>")
+    return commands.cmd_init(args[0], session)
+
+
+def _exec_add(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) != 1:
+        raise ValueError("Usage: add <text...>")
+    return commands.cmd_add(session, args[0])
+
+
+def _exec_list(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if args or kwargs:
+        raise ValueError("Usage: list")
+    payload = commands.list_pending_data(session)
+    _apply_last_list_mapping_from_payload(session, payload)
+    return formatters.format_pending_list(payload)
+
+
+def _exec_history(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if args:
+        raise ValueError("Usage: history [--days N] [--working-days N]")
+    payload = commands.list_history_data(
+        session,
+        days=kwargs.get("days"),
+        working_days=kwargs.get("working_days"),
+    )
+    _apply_last_list_mapping_from_payload(session, payload)
+    return formatters.format_history_list(payload)
+
+
+def _exec_done(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) != 1:
+        raise ValueError("Usage: done <num> [--note <text>] [--date YYYY-MM-DD]")
+    array_index = session.resolve_array_index(args[0])
+    return commands.cmd_done(session, array_index, kwargs.get("note"), kwargs.get("date"))
+
+
+def _exec_cancel(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) != 1:
+        raise ValueError("Usage: cancel <num> [--note <text>] [--date YYYY-MM-DD]")
+    array_index = session.resolve_array_index(args[0])
+    return commands.cmd_cancel(session, array_index, kwargs.get("note"), kwargs.get("date"))
+
+
+def _exec_edit(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) < 2:
+        raise ValueError("Usage: edit <num> <text>")
+    array_index = session.resolve_array_index(args[0])
+    return commands.cmd_edit(session, array_index, " ".join(str(a) for a in args[1:]))
+
+
+def _exec_delete(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) != 1:
+        raise ValueError("Usage: delete <num>")
+    array_index = session.resolve_array_index(args[0])
+    return commands.cmd_delete(session, array_index, confirm=bool(kwargs.get("confirm", False)))
+
+
+def _exec_note(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) < 1:
+        raise ValueError("Usage: note <num> [<text>]")
+    array_index = session.resolve_array_index(args[0])
+    note_text = " ".join(str(a) for a in args[1:]) if len(args) > 1 else None
+    return commands.cmd_note(session, array_index, note_text)
+
+
+def _exec_date(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if len(args) != 2:
+        raise ValueError("Usage: date <num> <YYYY-MM-DD>")
+    array_index = session.resolve_array_index(args[0])
+    return commands.cmd_date(session, array_index, args[1])
+
+
+def _exec_sync(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if args or kwargs:
+        raise ValueError("Usage: sync")
+    return commands.cmd_sync(session)
+
+
+def _exec_today(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if args or kwargs:
+        raise ValueError("Usage: today")
+    payload = commands.cmd_today_data(session)
+    _apply_last_list_mapping_from_payload(session, payload)
+    return formatters.format_history_list(payload)
+
+
+def _exec_yesterday(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if args or kwargs:
+        raise ValueError("Usage: yesterday")
+    payload = commands.cmd_yesterday_data(session)
+    _apply_last_list_mapping_from_payload(session, payload)
+    return formatters.format_history_list(payload)
+
+
+def _exec_recent(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if args or kwargs:
+        raise ValueError("Usage: recent")
+    payload = commands.cmd_recent_data(session)
+    _apply_last_list_mapping_from_payload(session, payload)
+    return formatters.format_history_list(payload)
+
+
+# Command registry
+COMMAND_REGISTRY = {
+    "init": CommandHandler(_exec_init, clears_list=True, usage="init <profile_path>"),
+    "add": CommandHandler(_exec_add, clears_list=True, usage="add <text...>"),
+    "list": CommandHandler(_exec_list, clears_list=False, usage="list"),
+    "history": CommandHandler(_exec_history, clears_list=False, usage="history [--days N] [--working-days N]"),
+    "done": CommandHandler(_exec_done, clears_list=True, usage="done <num> [--note <text>] [--date YYYY-MM-DD]"),
+    "cancel": CommandHandler(_exec_cancel, clears_list=True, usage="cancel <num> [--note <text>] [--date YYYY-MM-DD]"),
+    "edit": CommandHandler(_exec_edit, clears_list=True, usage="edit <num> <text>"),
+    "delete": CommandHandler(_exec_delete, clears_list=True, usage="delete <num>"),
+    "note": CommandHandler(_exec_note, clears_list=True, usage="note <num> [<text>]"),
+    "date": CommandHandler(_exec_date, clears_list=True, usage="date <num> <YYYY-MM-DD>"),
+    "sync": CommandHandler(_exec_sync, clears_list=True, usage="sync"),
+    "today": CommandHandler(_exec_today, clears_list=False, usage="today"),
+    "yesterday": CommandHandler(_exec_yesterday, clears_list=False, usage="yesterday"),
+    "recent": CommandHandler(_exec_recent, clears_list=False, usage="recent"),
+}
+
+
 def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     """Execute one parsed command and return user-facing text."""
     cmd = resolve_command_alias(cmd)
     args = _normalize_args(cmd, args)
 
-    if cmd == "init":
-        if len(args) != 1:
-            raise ValueError("Usage: init <profile_path>")
-        result = commands.cmd_init(args[0], session)
-        session.clear_last_list()
-        return result
-
-    if cmd == "add":
-        if len(args) != 1:
-            raise ValueError("Usage: add <text...>")
-        result = commands.cmd_add(session, args[0])
-        session.clear_last_list()
-        return result
-
-    if cmd == "list":
-        if args or kwargs:
-            raise ValueError("Usage: list")
-        payload = commands.list_pending_data(session)
-        _apply_last_list_mapping_from_payload(session, payload)
-        return formatters.format_pending_list(payload)
-
-    if cmd == "history":
-        if args:
-            raise ValueError("Usage: history [--days N] [--working-days N]")
-        payload = commands.list_history_data(
-            session,
-            days=kwargs.get("days"),
-            working_days=kwargs.get("working_days"),
-        )
-        _apply_last_list_mapping_from_payload(session, payload)
-        return formatters.format_history_list(payload)
-
-    if cmd == "done":
-        if len(args) != 1:
-            raise ValueError("Usage: done <num> [--note <text>] [--date YYYY-MM-DD]")
-        array_index = session.resolve_array_index(args[0])
-        result = commands.cmd_done(session, array_index, kwargs.get("note"), kwargs.get("date"))
-        session.clear_last_list()
-        return result
-
-    if cmd == "cancel":
-        if len(args) != 1:
-            raise ValueError("Usage: cancel <num> [--note <text>] [--date YYYY-MM-DD]")
-        array_index = session.resolve_array_index(args[0])
-        result = commands.cmd_cancel(session, array_index, kwargs.get("note"), kwargs.get("date"))
-        session.clear_last_list()
-        return result
-
-    if cmd == "edit":
-        if len(args) < 2:
-            raise ValueError("Usage: edit <num> <text>")
-        array_index = session.resolve_array_index(args[0])
-        result = commands.cmd_edit(session, array_index, " ".join(str(a) for a in args[1:]))
-        session.clear_last_list()
-        return result
-
-    if cmd == "delete":
-        if len(args) != 1:
-            raise ValueError("Usage: delete <num>")
-        array_index = session.resolve_array_index(args[0])
-        result = commands.cmd_delete(session, array_index, confirm=bool(kwargs.get("confirm", False)))
-        session.clear_last_list()
-        return result
-
-    if cmd == "note":
-        if len(args) < 1:
-            raise ValueError("Usage: note <num> [<text>]")
-        array_index = session.resolve_array_index(args[0])
-        note_text = " ".join(str(a) for a in args[1:]) if len(args) > 1 else None
-        result = commands.cmd_note(session, array_index, note_text)
-        session.clear_last_list()
-        return result
-
-    if cmd == "date":
-        if len(args) != 2:
-            raise ValueError("Usage: date <num> <YYYY-MM-DD>")
-        array_index = session.resolve_array_index(args[0])
-        result = commands.cmd_date(session, array_index, args[1])
-        session.clear_last_list()
-        return result
-
-    if cmd == "sync":
-        if args or kwargs:
-            raise ValueError("Usage: sync")
-        result = commands.cmd_sync(session)
-        session.clear_last_list()
-        return result
-
-    if cmd == "today":
-        if args or kwargs:
-            raise ValueError("Usage: today")
-        payload = commands.cmd_today_data(session)
-        _apply_last_list_mapping_from_payload(session, payload)
-        return formatters.format_history_list(payload)
-
-    if cmd == "yesterday":
-        if args or kwargs:
-            raise ValueError("Usage: yesterday")
-        payload = commands.cmd_yesterday_data(session)
-        _apply_last_list_mapping_from_payload(session, payload)
-        return formatters.format_history_list(payload)
-
-    if cmd == "recent":
-        if args or kwargs:
-            raise ValueError("Usage: recent")
-        payload = commands.cmd_recent_data(session)
-        _apply_last_list_mapping_from_payload(session, payload)
-        return formatters.format_history_list(payload)
-
+    # Handle special exit commands
     if cmd in ("exit", "quit"):
         return "EXIT"
 
-    raise ValueError(f"Unknown command: {cmd}")
+    # Look up command in registry
+    handler = COMMAND_REGISTRY.get(cmd)
+    if not handler:
+        raise ValueError(f"Unknown command: {cmd}")
+
+    # Execute command
+    result = handler.executor(args, kwargs, session)
+
+    # Clear list mapping if needed
+    if handler.clears_list:
+        session.clear_last_list()
+
+    return result

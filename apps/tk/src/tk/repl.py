@@ -1,10 +1,11 @@
 """REPL parsing and loop orchestration for tk."""
 
+import os
+import traceback
 from typing import Any
 
-from tk import commands, dispatcher, markdown
+from tk import commands, dispatcher, markdown, prompts
 from tk.session import Session
-from tk.validation import validate_date_format
 
 
 def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
@@ -81,27 +82,22 @@ def _prepare_interactive_command(
 
         task = session.get_task_by_display_number(num)
         status = "done" if normalized == "done" else "cancelled"
-
-        provided_date = kwargs.get("date")
-        default_date = provided_date if provided_date else commands.get_default_subjective_date(session)
-
-        print(f"Task: {task['text']}")
-        print(f"Will be marked as: {status}")
-        print(f"Subjective date: {default_date}")
-        print("(Press Ctrl+C to cancel)")
+        default_date = commands.get_default_subjective_date(session)
 
         try:
-            if "note" not in kwargs:
-                note_input = input("Note (press Enter to skip): ").strip()
-                kwargs["note"] = note_input if note_input else None
+            result = prompts.collect_done_cancel_prompts(
+                task=task,
+                status=status,
+                default_date=default_date,
+                provided_note=kwargs.get("note"),
+                provided_date=kwargs.get("date"),
+            )
 
-            if "date" not in kwargs:
-                date_input = input(f"Date override (press Enter to use {default_date}): ").strip()
-                if date_input:
-                    validate_date_format(date_input)
-                    kwargs["date"] = date_input
-                else:
-                    kwargs["date"] = default_date
+            if result == "CANCELLED":
+                session.clear_last_list()
+                return "Cancelled."
+
+            kwargs.update(result)
 
         except KeyboardInterrupt:
             print()
@@ -114,11 +110,7 @@ def _prepare_interactive_command(
             return cmd, args, kwargs
 
         task = session.get_task_by_display_number(num)
-        print(f"Task: {task['text']}")
-        print(f"Status: {task['status']}")
-
-        confirm = input("Delete permanently? (yes/N): ").strip().lower()
-        kwargs["confirm"] = confirm == "yes"
+        kwargs["confirm"] = prompts.collect_delete_confirmation(task)
 
     return cmd, args, kwargs
 
@@ -168,8 +160,16 @@ def repl(session: Session) -> None:
             print()
             continue
 
-        except Exception as e:
+        except ValueError as e:
+            # Expected business logic errors (user errors, validation failures)
             print(f"Error: {e}")
+
+        except Exception as e:
+            # Unexpected errors - provide more detail in debug mode
+            print(f"Unexpected error: {e}")
+            if os.getenv("TK_DEBUG"):
+                print("\nDebug traceback:")
+                traceback.print_exc()
 
     profile_data = session.profile
     tasks_data = session.tasks

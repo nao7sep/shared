@@ -6,6 +6,38 @@ from typing import Any
 from datetime import datetime, timezone
 
 
+def validate_tasks_structure(data: dict[str, Any]) -> None:
+    """Validate tasks data structure and task schemas.
+
+    Args:
+        data: Tasks data structure to validate
+
+    Raises:
+        ValueError: If structure is invalid or tasks are malformed
+    """
+    if "tasks" not in data:
+        raise ValueError("Invalid tasks file structure: missing 'tasks' key")
+
+    if not isinstance(data["tasks"], list):
+        raise ValueError("Invalid tasks file structure: 'tasks' must be an array")
+
+    required_fields = {"text", "status", "created_at"}
+    valid_statuses = {"pending", "done", "cancelled"}
+
+    for i, task in enumerate(data["tasks"]):
+        if not isinstance(task, dict):
+            raise ValueError(f"Task {i} is not a valid object")
+
+        # Check required fields
+        missing = required_fields - set(task.keys())
+        if missing:
+            raise ValueError(f"Task {i} missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate status
+        if task["status"] not in valid_statuses:
+            raise ValueError(f"Task {i} has invalid status: {task['status']}")
+
+
 def load_tasks(path: str) -> dict[str, Any]:
     """Load tasks from JSON file.
 
@@ -31,9 +63,8 @@ def load_tasks(path: str) -> dict[str, Any]:
         with open(task_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Validate structure
-        if "tasks" not in data:
-            raise ValueError("Invalid tasks file structure")
+        # Validate structure and schema
+        validate_tasks_structure(data)
 
         return data
     except json.JSONDecodeError as e:
@@ -116,7 +147,18 @@ def update_task(data: dict[str, Any], index: int, **updates) -> bool:
 
     Returns:
         True if task was found and updated, False otherwise
+
+    Raises:
+        ValueError: If any update field is not a valid task field
     """
+    # Whitelist of allowed task fields
+    ALLOWED_FIELDS = {"text", "status", "handled_at", "subjective_date", "note"}
+
+    # Check for invalid fields
+    invalid_fields = set(updates.keys()) - ALLOWED_FIELDS
+    if invalid_fields:
+        raise ValueError(f"Invalid task fields: {', '.join(sorted(invalid_fields))}")
+
     task = get_task_by_index(data, index)
     if task is None:
         return False

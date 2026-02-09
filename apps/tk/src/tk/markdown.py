@@ -5,10 +5,6 @@ from typing import Any
 
 from tk import data
 
-def sort_tasks(tasks: list[dict[str, Any]]) -> dict[str, Any]:
-    """Sort tasks into structure for rendering."""
-    return data.group_tasks_for_display(tasks)
-
 
 def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     """Generate TODO.md from tasks.
@@ -35,7 +31,7 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     - Empty line after "## History"
     - File ends with empty line
     """
-    sorted_data = sort_tasks(tasks)
+    sorted_data = data.group_tasks_for_display(tasks)
     lines = ["# TODO", ""]
 
     # Pending section
