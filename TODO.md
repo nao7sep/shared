@@ -16,12 +16,12 @@
 - release tk
 - release poly-chat
 - review poly-chat and update readme.md
-- tk: shouldnt be able to set note to pending task
 
 ## History
 
 ### 2026-02-09
 - ✅ review tk and update readme.md
+- ✅ tk: shouldnt be able to set note to pending task
 
 ### 2026-02-08
 - ✅ multi-ai cli chat tool => first version of poly-chat runs. refactored and tested
