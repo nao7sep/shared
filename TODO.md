@@ -23,7 +23,7 @@
 - ✅ review tk and update readme.md
 
 ### 2026-02-08
-- ✅ multi-ai cli chat tool => first version runs. refactored, tested and checked
+- ✅ multi-ai cli chat tool => first version of poly-chat runs. refactored and tested
 - ✅ try developing 2 projects in parallel => poly-chat and tk. it worked
 
 ### 2026-02-06
