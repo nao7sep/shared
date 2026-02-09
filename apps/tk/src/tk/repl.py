@@ -169,7 +169,7 @@ def repl(session: Session) -> None:
             # Unexpected errors - provide more detail in debug mode
             print(f"Unexpected error: {e}")
             if os.getenv("TK_DEBUG"):
-                print("\nDebug traceback:")
+                print("Debug traceback:")
                 traceback.print_exc()
             print()
 

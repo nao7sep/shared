@@ -12,7 +12,7 @@ from tk.session import Session
 
 def display_profile_info(prof: dict) -> None:
     """Display profile information on startup."""
-    print("\nProfile Information:")
+    print("Profile Information:")
     print(f"  Timezone: {prof['timezone']}")
 
     tz = ZoneInfo(prof["timezone"])
