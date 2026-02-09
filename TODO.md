@@ -15,10 +15,12 @@
 - still write app to zip-archive source code to separate vibe coding from code review
 - release tk
 - release poly-chat
-- review tk and update readme.md
 - review poly-chat and update readme.md
 
 ## History
+
+### 2026-02-09
+- ✅ review tk and update readme.md
 
 ### 2026-02-08
 - ✅ multi-ai cli chat tool => first version runs. refactored, tested and checked
