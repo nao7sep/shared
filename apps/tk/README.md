@@ -36,6 +36,22 @@ This creates a profile with:
 poetry run tk -p ~/work/my-profile.json
 ```
 
+You'll see:
+```
+Profile Information:
+  Timezone: America/New_York
+  DST: No
+  Current time: 2026-02-08 22:48:10
+  Subjective day starts at: 04:00:00
+
+tk task manager
+Type 'exit' or 'quit' to exit, or Ctrl-D
+
+tk> 
+```
+
+Type `help` to see available commands.
+
 ### 4. Use it
 ```
 tk> a implement user login
@@ -73,7 +89,46 @@ tk> d 1    # completes "task one"
 
 Numbers are only valid until you run another command that changes the list.
 
+### Interactive Prompts
+
+When marking tasks as done or cancelled without flags, tk prompts for details:
+
+```
+tk> d 1
+Task: implement user login
+Will be marked as: done
+Subjective date: 2026-02-06
+(Press Ctrl+C to cancel)
+Note (press Enter to skip): deployed to staging
+Date override (press Enter to use 2026-02-06): 2026-02-05
+Task marked as done.
+```
+
+**Prompt behavior:**
+- Press Enter to skip optional fields
+- Press Ctrl+C to cancel entire operation
+- If you provide `--note` or `--date` flags, those prompts are skipped
+
+**Delete confirmation:**
+```
+tk> delete 1
+Task: old task
+Status: pending
+
+Delete this task? (yes/no): yes
+Task deleted.
+```
+
 ### Profile Structure
+
+**Path shortcuts** in data_path/output_path:
+- `~/dir/file` → your home directory
+- `@/dir/file` → tk app root (where pyproject.toml is) - source mode only
+- `./dir/file` or `file` → relative to profile directory
+- `/abs/path` → absolute path used as-is
+
+**Note**: Avoid `@/` paths if building packaged executables.
+
 A profile JSON contains:
 - `timezone`: IANA timezone (e.g., "Asia/Tokyo")
 - `subjective_day_start`: Time when your day starts (e.g., "04:00:00")
@@ -97,6 +152,11 @@ tk> add fix navigation bug
 **list (l)** - Show pending tasks
 ```
 tk> l
+```
+
+**help** - Show available commands
+```
+tk> help
 ```
 
 **history (h)** `[--days N] [--working-days N]` - Show completed/cancelled tasks
@@ -174,10 +234,12 @@ Generated automatically after each change (if `auto_sync: true`):
 
 ## Tips
 
+- **Use help command:** Type `help` in REPL to see available commands
 - **Numbers reset:** After any command that changes state, run `list` or `history` again to get fresh numbers
 - **Use shortcuts:** `a`, `l`, `d`, `c`, `e` for speed
-- **Ctrl+C cancels:** Interactive prompts can be cancelled anytime
-- **Unknown handled date:** If a handled task has no subjective date (for example from manual JSON edits), it appears under `unknown` in both `history` output and `TODO.md`
+- **Ctrl+C cancels:** Interactive prompts (done/cancel/delete) can be cancelled anytime
+- **Skip prompts with flags:** `d 1 --note "done" --date 2026-02-05` skips interactive prompts
+- **Unknown handled date:** If a handled task has no subjective date (from manual JSON edits), it appears under `unknown` in both `history` output and `TODO.md`
 - **No duplicate checking:** Intentional design choice - just cancel or delete if needed
 - **Delete is rare:** Use `cancel` for tasks you won't do; reserve `delete` for mistakes
 
@@ -203,6 +265,45 @@ tk -p ~/my-profile.json
 cd /path/to/tk
 pip install -e .
 tk -p ~/my-profile.json
+```
+
+## Troubleshooting
+
+**"Unknown command" error:** Run `list` or `history` first to get task numbers.
+
+**Numbers not working:** Task numbers reset after state-changing commands (add, edit, done, etc). Run `list` again.
+
+**Getting help in REPL:** Type `help` to see command list.
+
+**Debug mode:** Set `TK_DEBUG=1` environment variable for detailed error traces:
+```bash
+TK_DEBUG=1 tk -p ~/my-profile.json
+```
+
+## Advanced Usage
+
+### Debug Mode
+Set `TK_DEBUG=1` for detailed stack traces on unexpected errors:
+```bash
+TK_DEBUG=1 poetry run tk -p ~/my-profile.json
+```
+
+### Manual Data Edits
+You can edit tasks.json directly, but:
+- Always keep valid JSON structure
+- Tasks without `subjective_date` will appear as "unknown" in history
+- Running any command will validate and may fail if structure is invalid
+
+### Profile Fields Reference
+```json
+{
+  "data_path": "./tasks.json",       // required
+  "output_path": "./TODO.md",        // required
+  "timezone": "America/New_York",    // required, IANA format
+  "subjective_day_start": "04:00:00",// required, HH:MM:SS or HH:MM
+  "auto_sync": true,                 // optional, default: true
+  "sync_on_exit": false              // optional, default: false
+}
 ```
 
 ## Windows & One-File Packaging Notes

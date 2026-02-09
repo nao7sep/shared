@@ -161,6 +161,32 @@ def _exec_recent(args: list[Any], kwargs: dict[str, Any], session: Session) -> s
     return formatters.format_history_list(payload)
 
 
+def _exec_help(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
+    if args or kwargs:
+        raise ValueError("Usage: help")
+    return """Available commands:
+
+  add (a) <text>          - Add a task
+  list (l)                - Show pending tasks
+  done (d) <num>          - Mark task as done (interactive)
+  cancel (c) <num>        - Mark task as cancelled (interactive)
+  edit (e) <num> <text>   - Change task text
+  note (n) <num> [<text>] - Add/update/remove note
+  delete <num>            - Delete task permanently
+
+  history (h) [--days N] [--working-days N]
+  today (t)               - Today's completed tasks
+  yesterday (y)           - Yesterday's completed tasks
+  recent (r)              - Last 3 working days
+
+  date <num> <YYYY-MM-DD> - Change subjective date
+  sync (s)                - Regenerate TODO.md
+  exit / quit             - Exit (Ctrl-D also works)
+
+Run 'list' or 'history' first to get task numbers.
+For full documentation, see README.md"""
+
+
 # Command registry
 COMMAND_REGISTRY = {
     "init": CommandHandler(_exec_init, clears_list=True, usage="init <profile_path>"),
@@ -177,6 +203,7 @@ COMMAND_REGISTRY = {
     "today": CommandHandler(_exec_today, clears_list=False, usage="today"),
     "yesterday": CommandHandler(_exec_yesterday, clears_list=False, usage="yesterday"),
     "recent": CommandHandler(_exec_recent, clears_list=False, usage="recent"),
+    "help": CommandHandler(_exec_help, clears_list=False, usage="help"),
 }
 
 
