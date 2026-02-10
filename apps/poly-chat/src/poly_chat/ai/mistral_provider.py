@@ -82,13 +82,20 @@ class MistralProvider:
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):
+    async def _create_chat_completion(
+        self,
+        model: str,
+        messages: list[dict],
+        stream: bool,
+        max_output_tokens: int | None = None,
+    ):
         """Create chat completion with retry logic.
 
         Args:
             model: Model name
             messages: Formatted messages
             stream: Whether to stream
+            max_output_tokens: Optional output token cap
 
         Returns:
             API response
@@ -96,12 +103,15 @@ class MistralProvider:
         # VERIFIED: Mistral does NOT support stream_options parameter
         # Returns 422 error: "Input should be a valid dictionary or object to extract fields from"
         # Mistral automatically includes usage data in responses without needing stream_options
-        return await self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            stream=stream,
+        kwargs: dict[str, object] = {
+            "model": model,
+            "messages": messages,
+            "stream": stream,
             # stream_options NOT included - Mistral rejects it with 422
-        )
+        }
+        if max_output_tokens is not None:
+            kwargs["max_tokens"] = max_output_tokens
+        return await self.client.chat.completions.create(**kwargs)
 
     async def send_message(
         self,
@@ -135,7 +145,10 @@ class MistralProvider:
 
             # Create streaming request with retry logic
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=stream
+                model=model,
+                messages=formatted_messages,
+                stream=stream,
+                max_output_tokens=max_output_tokens,
             )
 
             # Yield chunks
@@ -215,7 +228,10 @@ class MistralProvider:
 
             # Create non-streaming request with retry logic
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=False
+                model=model,
+                messages=formatted_messages,
+                stream=False,
+                max_output_tokens=max_output_tokens,
             )
 
             # Extract response

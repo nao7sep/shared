@@ -120,10 +120,13 @@ class GeminiProvider:
 
             # Build config with system instruction and tools if provided
             tools = [types.Tool(google_search=types.GoogleSearch())] if search else None
-            config = types.GenerateContentConfig(
-                system_instruction=system_prompt if system_prompt else None,
-                tools=tools,
-            )
+            config_kwargs: dict[str, object] = {
+                "system_instruction": system_prompt if system_prompt else None,
+                "tools": tools,
+            }
+            if max_output_tokens is not None:
+                config_kwargs["max_output_tokens"] = max_output_tokens
+            config = types.GenerateContentConfig(**config_kwargs)
 
             # Timeout and retry are configured in the Client via http_options
             response = await self.client.aio.models.generate_content_stream(
@@ -231,10 +234,13 @@ class GeminiProvider:
 
             # Build config with system instruction and tools if provided
             tools = [types.Tool(google_search=types.GoogleSearch())] if search else None
-            config = types.GenerateContentConfig(
-                system_instruction=system_prompt if system_prompt else None,
-                tools=tools,
-            )
+            config_kwargs: dict[str, object] = {
+                "system_instruction": system_prompt if system_prompt else None,
+                "tools": tools,
+            }
+            if max_output_tokens is not None:
+                config_kwargs["max_output_tokens"] = max_output_tokens
+            config = types.GenerateContentConfig(**config_kwargs)
 
             # Timeout and retry are configured in the Client via http_options
             response = await self.client.aio.models.generate_content(

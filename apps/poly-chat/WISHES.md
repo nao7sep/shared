@@ -637,3 +637,13 @@ then, when /search or /thinking is on, let's triple the profile based timeout va
 let's also centralize all embedded prompts. i remember there were ones for title/summary generation and also one for /safe. there should be more.
 
 from now on, we will never embed a prompt in code. that will make the app behavior more consistent.
+
+---
+
+_field_max_len seems to limit things. what does it limit? is it unsafe to ulimit them?
+
+one more thing i would like to add is partial matching of model names. currently, we have commands like /gpt that switches to the pre-configured specific gpt-based model and /model <name> is supposed to switch the ai AND the actual model at once if <name> exists in the model list. but i dont always remember or want to type the entire model name accurately. so, if "opus" or even "o4.6" with a dot can find "claude-opus-4-6", i can more casually switch models. the algorithm would be: we keep only alphabets and numbers and see if every char in the pattern appears in each model in the same order. if no model matches, app says so. if 1 model matches, app switches to the ai and the specific model. if 2 or more models match, app says so and asks the user to select one with a number.
+
+then, we can also update /helper to take "gpt", "gem", etc as a sub-command so that the command will be as easy as "/gpt". plus, if /helper too can do partial matches, i'll be using it like "/helper op4", which will again match "claude-opus-4-6".
+
+please implement these, add tests, run them and update readme.md, /help content and all relevant documentation.

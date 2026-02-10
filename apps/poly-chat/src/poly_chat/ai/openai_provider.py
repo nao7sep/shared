@@ -104,7 +104,14 @@ class OpenAIProvider:
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_response(self, model: str, input_items: list[dict], stream: bool, search: bool = False):
+    async def _create_response(
+        self,
+        model: str,
+        input_items: list[dict],
+        stream: bool,
+        search: bool = False,
+        max_output_tokens: int | None = None,
+    ):
         """Create response using Responses API with retry logic.
 
         Args:
@@ -112,17 +119,22 @@ class OpenAIProvider:
             input_items: Formatted input items (messages in Responses API format)
             stream: Whether to stream
             search: Whether to enable web search
+            max_output_tokens: Optional output token cap
 
         Returns:
             API response
         """
+        kwargs: dict[str, object] = {
+            "model": model,
+            "input": input_items,
+            "stream": stream,
+        }
         tools = [{"type": "web_search_preview"}] if search else None
-        return await self.client.responses.create(
-            model=model,
-            input=input_items,
-            stream=stream,
-            tools=tools,
-        )
+        if tools is not None:
+            kwargs["tools"] = tools
+        if max_output_tokens is not None:
+            kwargs["max_output_tokens"] = max_output_tokens
+        return await self.client.responses.create(**kwargs)
 
     async def send_message(
         self,
@@ -159,7 +171,11 @@ class OpenAIProvider:
 
             # Create streaming request with retry logic
             response = await self._create_response(
-                model=model, input_items=formatted_messages, stream=stream, search=search
+                model=model,
+                input_items=formatted_messages,
+                stream=stream,
+                search=search,
+                max_output_tokens=max_output_tokens,
             )
 
             # Yield chunks from streaming events
@@ -273,7 +289,11 @@ class OpenAIProvider:
 
             # Create non-streaming request with retry logic
             response = await self._create_response(
-                model=model, input_items=formatted_messages, stream=False, search=search
+                model=model,
+                input_items=formatted_messages,
+                stream=False,
+                search=search,
+                max_output_tokens=max_output_tokens,
             )
 
             # Extract response text using convenience property

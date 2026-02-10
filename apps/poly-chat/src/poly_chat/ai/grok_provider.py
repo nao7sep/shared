@@ -103,15 +103,26 @@ class GrokProvider:
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_response(self, model: str, input_items: list[dict], stream: bool, search: bool = False):
+    async def _create_response(
+        self,
+        model: str,
+        input_items: list[dict],
+        stream: bool,
+        search: bool = False,
+        max_output_tokens: int | None = None,
+    ):
         """Create response via Responses API with retry logic."""
+        kwargs: dict[str, object] = {
+            "model": model,
+            "input": input_items,
+            "stream": stream,
+        }
         tools = [{"type": "web_search"}] if search else None
-        return await self.client.responses.create(
-            model=model,
-            input=input_items,
-            stream=stream,
-            tools=tools,
-        )
+        if tools is not None:
+            kwargs["tools"] = tools
+        if max_output_tokens is not None:
+            kwargs["max_output_tokens"] = max_output_tokens
+        return await self.client.responses.create(**kwargs)
 
     @staticmethod
     def _extract_citations_from_response(payload: object) -> tuple[list[dict], object]:
@@ -180,6 +191,7 @@ class GrokProvider:
                 input_items=formatted_messages,
                 stream=stream,
                 search=search,
+                max_output_tokens=max_output_tokens,
             )
 
             async for event in response:
@@ -253,6 +265,7 @@ class GrokProvider:
                 input_items=formatted_messages,
                 stream=False,
                 search=search,
+                max_output_tokens=max_output_tokens,
             )
             content = response.output_text or ""
 

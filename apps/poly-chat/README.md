@@ -16,6 +16,7 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 - **System Prompts**: Predefined and custom system prompts with version control
 - **Streaming Responses**: Real-time response display with async streaming
 - **Profile-Based**: Each profile contains AI preferences, API keys, and default settings
+- **Centralized Runtime Policy**: Optional per-provider output limits and shared timeout policy
 
 ## Installation
 
@@ -247,6 +248,25 @@ When search is enabled, AI responses will include a "Sources:" section at the en
     "type": "text",
     "content": "You are a helpful assistant."
   },
+  "ai_limits": {
+    "default": {
+      "max_output_tokens": null,
+      "search_max_output_tokens": null,
+      "thinking_budget_tokens": null
+    },
+    "providers": {
+      "claude": {
+        "max_output_tokens": null,
+        "search_max_output_tokens": null,
+        "thinking_budget_tokens": null
+      }
+    },
+    "helper": {
+      "max_output_tokens": null,
+      "search_max_output_tokens": null,
+      "thinking_budget_tokens": null
+    }
+  },
   "chats_dir": "~/poly-chat/chats",
   "logs_dir": "~/poly-chat/logs",
   "pages_dir": "~/poly-chat/pages",
@@ -269,12 +289,39 @@ When search is enabled, AI responses will include a "Sources:" section at the en
 }
 ```
 
+### AI Request Limits (Optional)
+
+`ai_limits` lets you control output/thinking budgets centrally.
+
+- Precedence:
+  - `ai_limits.default`
+  - `ai_limits.providers.<provider>`
+  - `ai_limits.helper` (helper-only requests like `/title`, `/summary`, `/safe`)
+- Allowed keys:
+  - `max_output_tokens`
+  - `search_max_output_tokens`
+  - `thinking_budget_tokens`
+- Values must be positive integers or `null`.
+- `null` means "do not send this limit to provider APIs."
+- `search_max_output_tokens` is used when `/search` is ON; otherwise `max_output_tokens` is used.
+- `thinking_budget_tokens` is currently applied for Claude thinking mode.
+
 ### Path Mapping
 
 - `~` or `~/...` → User home directory
 - `@` or `@/...` → App root directory (where pyproject.toml is)
 - Absolute paths → Used as-is
 - Relative paths without prefix → **Error** (to avoid ambiguity)
+
+### Timeout Behavior
+
+- `timeout` in profile (or `/timeout`) is the base read timeout in seconds.
+- Base timeout is applied to:
+  - AI provider `read` timeout
+  - Citation page fetch `read` timeout
+- When `/search` or `/thinking` is ON, AI provider read timeout is automatically multiplied by `3`.
+- Page fetching is **not** multiplied by search/thinking mode.
+- `0` means no timeout (wait forever).
 
 ### Required Directories
 
@@ -428,10 +475,13 @@ poetry run mypy src/poly_chat
 
 - `profile.py` - Profile management and path mapping
 - `session_manager.py` - Unified runtime session state, timeout/cache control
+- `timeouts.py` - Central timeout policy and mode-aware timeout helpers
 - `chat.py` - Chat history data management
 - `message_formatter.py` - Line array formatting
+- `prompts.py` - Centralized helper prompt templates
 - `keys/` - API key management (env vars, Keychain, JSON)
 - `ai/` - AI provider implementations
+- `ai/limits.py` - Optional request-limit resolution and precedence
 - `models.py` - Model registry and provider mapping
 - `commands/` - Command handler and command mixins
 - `streaming.py` - Streaming response handling

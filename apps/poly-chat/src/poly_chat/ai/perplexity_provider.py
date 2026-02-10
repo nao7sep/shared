@@ -162,25 +162,35 @@ class PerplexityProvider:
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):
+    async def _create_chat_completion(
+        self,
+        model: str,
+        messages: list[dict],
+        stream: bool,
+        max_output_tokens: int | None = None,
+    ):
         """Create chat completion with retry logic.
 
         Args:
             model: Model name
             messages: Formatted messages
             stream: Whether to stream
+            max_output_tokens: Optional output token cap
 
         Returns:
             API response
         """
         # Perplexity supports stream_options like OpenAI
         stream_options = {"include_usage": True} if stream else None
-        return await self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            stream=stream,
-            stream_options=stream_options,
-        )
+        kwargs: dict[str, object] = {
+            "model": model,
+            "messages": messages,
+            "stream": stream,
+            "stream_options": stream_options,
+        }
+        if max_output_tokens is not None:
+            kwargs["max_tokens"] = max_output_tokens
+        return await self.client.chat.completions.create(**kwargs)
 
     async def send_message(
         self,
@@ -217,7 +227,10 @@ class PerplexityProvider:
 
             # Create streaming request with retry logic
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=stream
+                model=model,
+                messages=formatted_messages,
+                stream=stream,
+                max_output_tokens=max_output_tokens,
             )
 
             # Yield chunks
@@ -316,7 +329,10 @@ class PerplexityProvider:
 
             # Create non-streaming request with retry logic
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=False
+                model=model,
+                messages=formatted_messages,
+                stream=False,
+                max_output_tokens=max_output_tokens,
             )
 
             # Extract response

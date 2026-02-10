@@ -1,4 +1,12 @@
-"""Centralized optional AI response/thinking limits."""
+"""Centralized optional AI response/thinking limits.
+
+Resolved precedence order:
+1. ``ai_limits.default``
+2. ``ai_limits.providers.<provider>``
+3. ``ai_limits.helper`` (helper invocations only)
+
+All fields are optional; ``None`` means "omit this parameter from provider calls".
+"""
 
 from __future__ import annotations
 
@@ -87,4 +95,3 @@ def select_max_output_tokens(limits: Mapping[str, Any], *, search: bool) -> int 
         if search_limit is not None:
             return search_limit
     return _normalize_optional_limit(limits.get("max_output_tokens"))
-
