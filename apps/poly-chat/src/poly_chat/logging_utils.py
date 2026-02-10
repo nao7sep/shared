@@ -156,7 +156,6 @@ class StructuredTextFormatter(logging.Formatter):
             "search",
             "search_requested",
             "search_executed",
-            "searched",
             "search_evidence",
             "citations",
             "citation_urls",

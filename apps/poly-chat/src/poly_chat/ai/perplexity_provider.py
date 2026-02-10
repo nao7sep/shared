@@ -242,12 +242,6 @@ class PerplexityProvider:
                         if search_results:
                             metadata["search_results"] = search_results
                             self._mark_search_executed(metadata, "search_results")
-                        metadata["search_raw"] = {
-                            "provider": "perplexity",
-                            "raw_citations": getattr(chunk, "citations", None),
-                            "raw_search_results": getattr(chunk, "search_results", None),
-                            "usage": getattr(chunk, "usage", None),
-                        }
                     continue
 
                 # Check for content
@@ -338,12 +332,6 @@ class PerplexityProvider:
             if search_results:
                 metadata["search_results"] = search_results
                 self._mark_search_executed(metadata, "search_results")
-            metadata["search_raw"] = {
-                "provider": "perplexity",
-                "raw_citations": getattr(response, "citations", None),
-                "raw_search_results": getattr(response, "search_results", None),
-                "usage": getattr(response, "usage", None),
-            }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

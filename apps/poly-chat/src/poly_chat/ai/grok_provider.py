@@ -164,6 +164,8 @@ class GrokProvider:
         Yields:
             Response text chunks
         """
+        if not stream:
+            raise ValueError("GrokProvider.send_message requires stream=True")
         try:
             formatted_messages = self.format_messages(messages)
 
@@ -203,16 +205,10 @@ class GrokProvider:
                                 metadata["usage"]["reasoning_tokens"] = details.reasoning_tokens
 
                     if event.response and metadata is not None:
-                        citations, raw_citations = self._extract_citations_from_response(event.response)
+                        citations, _ = self._extract_citations_from_response(event.response)
                         if citations:
                             metadata["citations"] = citations
                             self._mark_search_executed(metadata, "citations")
-                        metadata["search_raw"] = {
-                            "provider": "grok",
-                            "response_id": getattr(event.response, "id", None),
-                            "raw_citations": raw_citations,
-                            "output": getattr(event.response, "output", None),
-                        }
 
         except AuthenticationError as e:
             logger.error(f"Authentication failed: {e}")
@@ -282,16 +278,10 @@ class GrokProvider:
                 if hasattr(details, "reasoning_tokens"):
                     metadata["usage"]["reasoning_tokens"] = details.reasoning_tokens
 
-            citations, raw_citations = self._extract_citations_from_response(response)
+            citations, _ = self._extract_citations_from_response(response)
             if citations:
                 metadata["citations"] = citations
                 self._mark_search_executed(metadata, "citations")
-            metadata["search_raw"] = {
-                "provider": "grok",
-                "response_id": getattr(response, "id", None),
-                "raw_citations": raw_citations,
-                "output": getattr(response, "output", None),
-            }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

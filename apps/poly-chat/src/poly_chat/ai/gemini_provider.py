@@ -167,19 +167,6 @@ class GeminiProvider:
                     if citations:
                         metadata["citations"] = citations
                     self._mark_search_executed(metadata, "grounding_metadata")
-                    supports = getattr(grounding, "grounding_supports", None) or []
-                    metadata["search_raw"] = {
-                        "provider": "gemini",
-                        "grounding_metadata": grounding,
-                        "grounding_chunks": [
-                            {
-                                "url": getattr(getattr(chunk, "web", None), "uri", None),
-                                "title": getattr(getattr(chunk, "web", None), "title", None),
-                            }
-                            for chunk in chunks
-                        ],
-                        "grounding_support_count": len(supports),
-                    }
 
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
@@ -295,19 +282,6 @@ class GeminiProvider:
                     if citations:
                         metadata["citations"] = citations
                     self._mark_search_executed(metadata, "grounding_metadata")
-                    supports = getattr(grounding, "grounding_supports", None) or []
-                    metadata["search_raw"] = {
-                        "provider": "gemini",
-                        "grounding_metadata": grounding,
-                        "grounding_chunks": [
-                            {
-                                "url": getattr(getattr(chunk, "web", None), "uri", None),
-                                "title": getattr(getattr(chunk, "web", None), "title", None),
-                            }
-                            for chunk in chunks
-                        ],
-                        "grounding_support_count": len(supports),
-                    }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

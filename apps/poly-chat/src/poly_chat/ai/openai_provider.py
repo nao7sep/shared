@@ -196,7 +196,6 @@ class OpenAIProvider:
                     # Extract citations from response.output items
                     if search and event.response and metadata is not None:
                         citations = []
-                        trace_annotations = []
                         for item in event.response.output:
                             if item.type == "message":
                                 for content in item.content:
@@ -206,26 +205,11 @@ class OpenAIProvider:
                                                 "url": annotation.url,
                                                 "title": getattr(annotation, "title", None)
                                             })
-                                            trace_annotations.append(
-                                                {
-                                                    "type": annotation.type,
-                                                    "url": annotation.url,
-                                                    "title": getattr(annotation, "title", None),
-                                                    "start_index": getattr(annotation, "start_index", None),
-                                                    "end_index": getattr(annotation, "end_index", None),
-                                                }
-                                            )
                         if citations:
                             metadata["citations"] = citations
                             self._mark_search_executed(
                                 metadata, "url_citation_annotations"
                             )
-                        metadata["search_raw"] = {
-                            "provider": "openai",
-                            "response_id": getattr(event.response, "id", None),
-                            "output": getattr(event.response, "output", None),
-                            "annotations": trace_annotations,
-                        }
 
                 # Handle output item completion (check for special finish reasons)
                 elif event.type == "response.output_item.done":
@@ -329,7 +313,6 @@ class OpenAIProvider:
             # Extract citations if search was enabled
             if search:
                 citations = []
-                trace_annotations = []
                 for item in response.output:
                     if item.type == "message":
                         for content in item.content:
@@ -339,23 +322,8 @@ class OpenAIProvider:
                                         "url": annotation.url,
                                         "title": getattr(annotation, "title", None)
                                     })
-                                    trace_annotations.append(
-                                        {
-                                            "type": annotation.type,
-                                            "url": annotation.url,
-                                            "title": getattr(annotation, "title", None),
-                                            "start_index": getattr(annotation, "start_index", None),
-                                            "end_index": getattr(annotation, "end_index", None),
-                                        }
-                                    )
                 if citations:
                     metadata["citations"] = citations
-                metadata["search_raw"] = {
-                    "provider": "openai",
-                    "response_id": getattr(response, "id", None),
-                    "output": getattr(response, "output", None),
-                    "annotations": trace_annotations,
-                }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

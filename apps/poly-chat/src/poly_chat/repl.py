@@ -267,7 +267,6 @@ async def repl_loop(
                 search=use_search,
                 search_requested=use_search,
                 search_executed=search_executed,
-                searched=search_executed,
                 search_evidence=search_evidence,
                 citation_urls=[c.get("url") for c in citations if isinstance(c, dict) and c.get("url")] if citations else None,
                 search_results=search_results,
