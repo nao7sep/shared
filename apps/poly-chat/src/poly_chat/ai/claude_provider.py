@@ -23,6 +23,7 @@ from tenacity import (
 )
 
 from ..message_formatter import lines_to_text
+from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class ClaudeProvider:
         return formatted
 
     @staticmethod
-    def _mark_search_executed(metadata: dict | None, evidence: str) -> None:
+    def _mark_search_executed(metadata: AIResponseMetadata | None, evidence: str) -> None:
         if metadata is None:
             return
         metadata["search_executed"] = True
@@ -126,7 +127,7 @@ class ClaudeProvider:
         search: bool = False,
         thinking: bool = False,
         max_tokens: int = 4096,
-        metadata: dict | None = None,
+        metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Claude and yield response chunks.
 

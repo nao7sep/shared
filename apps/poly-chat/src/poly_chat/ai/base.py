@@ -5,6 +5,8 @@ This module defines the Protocol that all AI providers must implement.
 
 from typing import Protocol, AsyncIterator
 
+from .types import AIResponseMetadata
+
 
 class AIProvider(Protocol):
     """Protocol for AI provider implementations.
@@ -20,7 +22,7 @@ class AIProvider(Protocol):
         stream: bool = True,
         search: bool = False,
         thinking: bool = False,
-        metadata: dict | None = None,
+        metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to AI and yield response chunks if streaming.
 

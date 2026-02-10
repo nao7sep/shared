@@ -5,7 +5,6 @@ transitions, decoupling this logic from the REPL loop. The orchestrator processe
 command responses (signals) and user messages, returning actions for the REPL to execute.
 """
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -13,39 +12,23 @@ from .session_manager import SessionManager
 from . import chat
 from .logging_utils import log_event
 from .message_formatter import text_to_lines
-
-
-@dataclass
-class OrchestratorAction:
-    """Result of orchestration that tells REPL what to do.
-
-    Attributes:
-        action: Type of action to take ("continue", "break", "print", "error", "send_normal", "send_retry", "send_secret")
-        message: Optional message to display to user
-        chat_path: Optional new chat path (for chat switching)
-        chat_data: Optional new chat data (for chat switching)
-        error: Optional error information
-        messages: Optional messages to send to AI
-        mode: Optional execution mode ("normal", "retry", "secret")
-    """
-    action: str
-    message: Optional[str] = None
-    chat_path: Optional[str] = None
-    chat_data: Optional[dict] = None
-    error: Optional[str] = None
-    messages: Optional[list] = None
-    mode: Optional[str] = None  # Execution mode ("normal" | "retry" | "secret")
-    assistant_hex_id: Optional[str] = None
-    retry_user_input: Optional[str] = None  # Stored retry prompt for retry attempt table
-    search_enabled: Optional[bool] = None  # Per-action override; None falls back to session mode
+from .commands.types import CommandResult, CommandSignal
+from .orchestrator_types import (
+    ActionMode,
+    BreakAction,
+    ContinueAction,
+    OrchestratorAction,
+    PrintAction,
+    SendAction,
+)
 
 
 class ChatOrchestrator:
     """Orchestrates chat lifecycle, mode transitions, and command signal processing.
 
     This class encapsulates the complex orchestration logic that was previously
-    embedded in repl.py's main loop. It processes command signals (like __NEW_CHAT__,
-    __OPEN_CHAT__, __APPLY_RETRY__, etc.) and user messages in different modes
+    embedded in repl.py's main loop. It processes typed command signals
+    (exit/new_chat/open_chat/apply_retry/etc.) and user messages in different modes
     (normal, retry, secret), returning structured actions for the REPL to execute.
 
     Example:
@@ -53,12 +36,12 @@ class ChatOrchestrator:
 
         # Handle command response
         action = await orchestrator.handle_command_response(
-            "__NEW_CHAT__:/path/to/chat.json",
+            CommandSignal(kind="new_chat", chat_path="/path/to/chat.json"),
             current_chat_path="/old/chat.json",
             current_chat_data=old_chat
         )
 
-        if action.action == "continue":
+        if isinstance(action, ContinueAction):
             # Update chat path and data
             chat_path = action.chat_path
             chat_data = action.chat_data
@@ -74,71 +57,76 @@ class ChatOrchestrator:
 
     async def handle_command_response(
         self,
-        response: str,
+        response: CommandResult,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict]
+        current_chat_data: Optional[dict],
     ) -> OrchestratorAction:
-        """Process command response signal and return action for REPL.
+        """Process command result and return a typed action for REPL."""
+        if isinstance(response, CommandSignal):
+            return await self._handle_command_signal(
+                response,
+                current_chat_path=current_chat_path,
+                current_chat_data=current_chat_data,
+            )
 
-        Handles special command signals like:
-        - __EXIT__: Exit application
-        - __NEW_CHAT__:<path>: Create and switch to new chat
-        - __OPEN_CHAT__:<path>: Open existing chat
-        - __CLOSE_CHAT__: Close current chat
-        - __RENAME_CURRENT__:<new_path>: Rename current chat file
-        - __DELETE_CURRENT__:<filename>: Delete current chat
-        - __APPLY_RETRY__: Apply current retry attempt
-        - __CANCEL_RETRY__: Cancel retry mode
-        - __CLEAR_SECRET_CONTEXT__: Clear secret mode context
+        if isinstance(response, str):
+            await self._save_chat_if_dirty(current_chat_path, current_chat_data)
+            return PrintAction(message=response)
 
-        Args:
-            response: Command response (may be signal or regular message)
-            current_chat_path: Path to current chat file (if any)
-            current_chat_data: Current chat data (if any)
+        # Command handlers may intentionally return None for silent no-op.
+        return ContinueAction()
 
-        Returns:
-            OrchestratorAction describing what the REPL should do next
-        """
-        # Handle EXIT signal
-        if response == "__EXIT__":
-            return OrchestratorAction(action="break")
+    async def _handle_command_signal(
+        self,
+        signal: CommandSignal,
+        *,
+        current_chat_path: Optional[str],
+        current_chat_data: Optional[dict],
+    ) -> OrchestratorAction:
+        """Handle typed command-layer control signals."""
+        if signal.kind == "exit":
+            return BreakAction()
 
-        # Handle NEW_CHAT signal
-        if response.startswith("__NEW_CHAT__:"):
-            return await self._handle_new_chat(response, current_chat_path, current_chat_data)
+        if signal.kind == "new_chat":
+            if not signal.chat_path:
+                return PrintAction(message="Error: Invalid command signal (missing new chat path)")
+            return await self._handle_new_chat(signal.chat_path, current_chat_path, current_chat_data)
 
-        # Handle OPEN_CHAT signal
-        if response.startswith("__OPEN_CHAT__:"):
-            return await self._handle_open_chat(response, current_chat_path, current_chat_data)
+        if signal.kind == "open_chat":
+            if not signal.chat_path:
+                return PrintAction(message="Error: Invalid command signal (missing open chat path)")
+            return await self._handle_open_chat(signal.chat_path, current_chat_path, current_chat_data)
 
-        # Handle CLOSE_CHAT signal
-        if response == "__CLOSE_CHAT__":
+        if signal.kind == "close_chat":
             return await self._handle_close_chat(current_chat_path, current_chat_data)
 
-        # Handle RENAME_CURRENT signal
-        if response.startswith("__RENAME_CURRENT__:"):
-            return self._handle_rename_current(response)
+        if signal.kind == "rename_current":
+            if not signal.chat_path:
+                return PrintAction(message="Error: Invalid command signal (missing rename path)")
+            return self._handle_rename_current(signal.chat_path)
 
-        # Handle DELETE_CURRENT signal
-        if response.startswith("__DELETE_CURRENT__:"):
-            return await self._handle_delete_current(response, current_chat_path, current_chat_data)
+        if signal.kind == "delete_current":
+            if signal.value is None:
+                return PrintAction(message="Error: Invalid command signal (missing deleted filename)")
+            return await self._handle_delete_current(
+                signal.value,
+                current_chat_path,
+                current_chat_data,
+            )
 
-        # Handle APPLY_RETRY signal
-        if response.startswith("__APPLY_RETRY__:"):
-            retry_hex_id = response.split(":", 1)[1].strip().lower()
+        if signal.kind == "apply_retry":
+            retry_hex_id = (signal.value or "").strip().lower()
+            if not retry_hex_id:
+                return PrintAction(message="Retry ID not found")
             return await self._handle_apply_retry(current_chat_path, current_chat_data, retry_hex_id)
 
-        # Handle CANCEL_RETRY signal
-        if response == "__CANCEL_RETRY__":
+        if signal.kind == "cancel_retry":
             return self._handle_cancel_retry()
 
-        # Handle CLEAR_SECRET_CONTEXT signal
-        if response == "__CLEAR_SECRET_CONTEXT__":
+        if signal.kind == "clear_secret_context":
             return self._handle_clear_secret_context()
 
-        # Not a signal - persist command-driven chat mutations through orchestrator.
-        await self._save_chat_if_dirty(current_chat_path, current_chat_data)
-        return OrchestratorAction(action="print", message=response)
+        return PrintAction(message=f"Error: Unknown command signal '{signal.kind}'")
 
     async def _save_chat_if_dirty(
         self,
@@ -150,12 +138,11 @@ class ChatOrchestrator:
 
     async def _handle_new_chat(
         self,
-        signal: str,
+        new_chat_path: str,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict]
+        current_chat_data: Optional[dict],
     ) -> OrchestratorAction:
-        """Handle __NEW_CHAT__ signal."""
-        new_chat_path = signal.split(":", 1)[1]
+        """Handle create-and-switch to new chat path."""
 
         # Save current chat before switching
         if current_chat_path and current_chat_data:
@@ -184,21 +171,19 @@ class ChatOrchestrator:
             message_count=len(new_chat_data.get("messages", [])),
         )
 
-        return OrchestratorAction(
-            action="continue",
+        return ContinueAction(
             message=f"Created new chat: {new_chat_path}",
             chat_path=new_chat_path,
-            chat_data=new_chat_data
+            chat_data=new_chat_data,
         )
 
     async def _handle_open_chat(
         self,
-        signal: str,
+        new_chat_path: str,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict]
+        current_chat_data: Optional[dict],
     ) -> OrchestratorAction:
-        """Handle __OPEN_CHAT__ signal."""
-        new_chat_path = signal.split(":", 1)[1]
+        """Handle open-and-switch to selected chat path."""
 
         # Save current chat before switching
         if current_chat_path and current_chat_data:
@@ -222,19 +207,18 @@ class ChatOrchestrator:
             message_count=len(new_chat_data.get("messages", [])),
         )
 
-        return OrchestratorAction(
-            action="continue",
+        return ContinueAction(
             message=f"Opened chat: {new_chat_path}",
             chat_path=new_chat_path,
-            chat_data=new_chat_data
+            chat_data=new_chat_data,
         )
 
     async def _handle_close_chat(
         self,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict]
+        current_chat_data: Optional[dict],
     ) -> OrchestratorAction:
-        """Handle __CLOSE_CHAT__ signal."""
+        """Handle close-chat signal."""
         # Save current chat before closing
         if current_chat_path and current_chat_data:
             await self.manager.save_current_chat(
@@ -252,17 +236,15 @@ class ChatOrchestrator:
             message_count=len(current_chat_data.get("messages", [])) if current_chat_data else 0,
         )
 
-        return OrchestratorAction(
-            action="continue",
+        return ContinueAction(
             message="Chat closed",
             chat_path=None,
-            chat_data={}
+            chat_data={},
         )
 
-    def _handle_rename_current(self, signal: str) -> OrchestratorAction:
-        """Handle __RENAME_CURRENT__ signal."""
+    def _handle_rename_current(self, new_chat_path: str) -> OrchestratorAction:
+        """Handle current chat path update after rename."""
         old_chat_path = self.manager.chat_path
-        new_chat_path = signal.split(":", 1)[1]
         self.manager.chat_path = new_chat_path
 
         log_event(
@@ -271,20 +253,18 @@ class ChatOrchestrator:
             new_chat_file=new_chat_path,
         )
 
-        return OrchestratorAction(
-            action="continue",
+        return ContinueAction(
             message=f"Renamed to: {new_chat_path}",
-            chat_path=new_chat_path
+            chat_path=new_chat_path,
         )
 
     async def _handle_delete_current(
         self,
-        signal: str,
+        deleted_filename: str,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict]
+        current_chat_data: Optional[dict],
     ) -> OrchestratorAction:
-        """Handle __DELETE_CURRENT__ signal."""
-        deleted_filename = signal.split(":", 1)[1]
+        """Handle deletion of the currently open chat."""
 
         # Clear chat in session manager
         self.manager.close_chat()
@@ -294,11 +274,10 @@ class ChatOrchestrator:
             chat_file=current_chat_path,
         )
 
-        return OrchestratorAction(
-            action="continue",
+        return ContinueAction(
             message=f"Deleted: {deleted_filename}",
             chat_path=None,
-            chat_data={}
+            chat_data={},
         )
 
     async def _handle_apply_retry(
@@ -307,21 +286,21 @@ class ChatOrchestrator:
         current_chat_data: Optional[dict],
         retry_hex_id: str,
     ) -> OrchestratorAction:
-        """Handle __APPLY_RETRY__ signal."""
+        """Handle apply-retry signal."""
         if not self.manager.retry_mode:
-            return OrchestratorAction(action="print", message="Not in retry mode")
+            return PrintAction(message="Not in retry mode")
 
         if not current_chat_data:
-            return OrchestratorAction(action="print", message="No chat open")
+            return PrintAction(message="No chat open")
 
         retry_attempt = self.manager.get_retry_attempt(retry_hex_id)
         if not retry_attempt:
-            return OrchestratorAction(action="print", message=f"Retry ID not found: {retry_hex_id}")
+            return PrintAction(message=f"Retry ID not found: {retry_hex_id}")
 
         messages = current_chat_data.get("messages", [])
         target_index = self.manager.get_retry_target_index()
         if target_index is None or target_index < 0 or target_index >= len(messages):
-            return OrchestratorAction(action="print", message="Retry target is no longer valid")
+            return PrintAction(message="Retry target is no longer valid")
 
         existing_hex_id = messages[target_index].get("hex_id")
         replaced_message = {
@@ -347,31 +326,30 @@ class ChatOrchestrator:
 
         self.manager.exit_retry_mode()
 
-        return OrchestratorAction(action="print", message=f"Applied retry [{retry_hex_id}]")
+        return PrintAction(message=f"Applied retry [{retry_hex_id}]")
 
     def _handle_cancel_retry(self) -> OrchestratorAction:
-        """Handle __CANCEL_RETRY__ signal."""
+        """Handle cancel-retry signal."""
         if not self.manager.retry_mode:
-            return OrchestratorAction(action="print", message="Not in retry mode")
+            return PrintAction(message="Not in retry mode")
 
         self.manager.exit_retry_mode()
 
-        return OrchestratorAction(action="print", message="Cancelled retry mode")
+        return PrintAction(message="Cancelled retry mode")
 
     def _handle_clear_secret_context(self) -> OrchestratorAction:
-        """Handle __CLEAR_SECRET_CONTEXT__ signal."""
+        """Handle clear-secret-context signal."""
         if self.manager.secret_mode:
             self.manager.exit_secret_mode()
-            return OrchestratorAction(action="print", message="Secret mode disabled")
+            return PrintAction(message="Secret mode disabled")
 
-        return OrchestratorAction(action="continue")
+        return ContinueAction()
 
     def _build_send_action(
         self,
         *,
-        action: str,
         messages: list[dict],
-        mode: str,
+        mode: ActionMode,
         search_enabled: Optional[bool] = None,
         retry_user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
@@ -379,8 +357,7 @@ class ChatOrchestrator:
         chat_data: Optional[dict] = None,
     ) -> OrchestratorAction:
         """Build a send action with optional execution metadata."""
-        return OrchestratorAction(
-            action=action,
+        return SendAction(
             messages=messages,
             mode=mode,
             search_enabled=search_enabled,
@@ -416,17 +393,22 @@ class ChatOrchestrator:
         """
         # Check if chat is open
         if not chat_path:
-            return OrchestratorAction(
-                action="print",
-                message="\nNo chat is currently open.\nUse /new to create a new chat or /open to open an existing one."
+            return PrintAction(
+                message=(
+                    "\nNo chat is currently open.\n"
+                    "Use /new to create a new chat or /open to open an existing one."
+                )
             )
 
         # Check for pending error
         from .app_state import has_pending_error
         if has_pending_error(chat_data) and not self.manager.retry_mode and not self.manager.secret_mode:
-            return OrchestratorAction(
-                action="print",
-                message="\n⚠️  Cannot continue - last interaction resulted in an error.\nUse /retry to retry the last message, /secret to ask without saving,\nor /rewind to remove the error and continue from an earlier point."
+            return PrintAction(
+                message=(
+                    "\n⚠️  Cannot continue - last interaction resulted in an error.\n"
+                    "Use /retry to retry the last message, /secret to ask without saving,\n"
+                    "or /rewind to remove the error and continue from an earlier point."
+                )
             )
 
         # Handle secret mode
@@ -457,7 +439,6 @@ class ChatOrchestrator:
         temp_messages = secret_context + [{"role": "user", "content": user_input}]
 
         return self._build_send_action(
-            action="send_secret",
             messages=temp_messages,
             mode="secret",
         )
@@ -482,7 +463,6 @@ class ChatOrchestrator:
         temp_messages = retry_context + [{"role": "user", "content": user_input}]
 
         return self._build_send_action(
-            action="send_retry",
             messages=temp_messages,
             mode="retry",
             retry_user_input=user_input,
@@ -502,7 +482,6 @@ class ChatOrchestrator:
         messages = chat.get_messages_for_ai(chat_data)
 
         return self._build_send_action(
-            action="send_normal",
             messages=messages,
             mode="normal",
             chat_path=chat_path,
@@ -514,7 +493,7 @@ class ChatOrchestrator:
         response_text: str,
         chat_path: str,
         chat_data: dict,
-        mode: str,
+        mode: ActionMode,
         user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
         citations: Optional[list[dict]] = None,
@@ -541,13 +520,13 @@ class ChatOrchestrator:
                     retry_hex_id=assistant_hex_id,
                     citations=citations,
                 )
-            return OrchestratorAction(action="continue")
+            return ContinueAction()
 
         elif mode == "secret":
             # Secret messages not saved
             if assistant_hex_id:
                 self.manager.release_hex_id(assistant_hex_id)
-            return OrchestratorAction(action="continue")
+            return ContinueAction()
 
         elif mode == "normal":
             # Add assistant message and save
@@ -569,16 +548,16 @@ class ChatOrchestrator:
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
-            return OrchestratorAction(action="continue")
+            return ContinueAction()
 
-        return OrchestratorAction(action="continue")
+        return ContinueAction()
 
     async def rollback_pre_send_failure(
         self,
         *,
         chat_path: Optional[str],
         chat_data: Optional[dict],
-        mode: str,
+        mode: ActionMode,
         assistant_hex_id: Optional[str] = None,
     ) -> bool:
         """Rollback pending state when provider validation fails pre-send."""
@@ -607,7 +586,7 @@ class ChatOrchestrator:
         error: Exception,
         chat_path: str,
         chat_data: dict,
-        mode: str,
+        mode: ActionMode,
         assistant_hex_id: Optional[str] = None,
     ) -> OrchestratorAction:
         """Handle AI error.
@@ -648,12 +627,12 @@ class ChatOrchestrator:
         # For retry and secret modes, just show error (don't save)
         if assistant_hex_id:
             self.manager.release_hex_id(assistant_hex_id)
-        return OrchestratorAction(action="print", message=f"\nError: {error}")
+        return PrintAction(message=f"\nError: {error}")
 
     async def handle_user_cancel(
         self,
         chat_data: dict,
-        mode: str,
+        mode: ActionMode,
         chat_path: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
     ) -> OrchestratorAction:
@@ -681,4 +660,4 @@ class ChatOrchestrator:
         # For retry and secret modes, nothing to clean up
         if mode in ("retry", "secret") and assistant_hex_id:
             self.manager.release_hex_id(assistant_hex_id)
-        return OrchestratorAction(action="print", message="\n[Message cancelled]")
+        return PrintAction(message="\n[Message cancelled]")

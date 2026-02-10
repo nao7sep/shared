@@ -24,6 +24,7 @@ from tenacity import (
 )
 
 from ..message_formatter import lines_to_text
+from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class DeepSeekProvider:
         return formatted
 
     @staticmethod
-    def _emit_thought(metadata: dict | None, chunk: str | None) -> None:
+    def _emit_thought(metadata: AIResponseMetadata | None, chunk: str | None) -> None:
         if metadata is None or not chunk:
             return
         thoughts = metadata.setdefault("thoughts", [])
@@ -124,7 +125,7 @@ class DeepSeekProvider:
         stream: bool = True,
         search: bool = False,
         thinking: bool = False,
-        metadata: dict | None = None,
+        metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to DeepSeek and yield response chunks.
 

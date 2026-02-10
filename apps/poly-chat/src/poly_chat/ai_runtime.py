@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import Optional
+from typing import AsyncIterator, Optional
 
 from .app_state import SessionState
 from .keys.loader import load_api_key, validate_api_key
@@ -20,6 +20,7 @@ from .ai.grok_provider import GrokProvider
 from .ai.perplexity_provider import PerplexityProvider
 from .ai.mistral_provider import MistralProvider
 from .ai.deepseek_provider import DeepSeekProvider
+from .ai.types import AIResponseMetadata
 
 ProviderInstance = (
     OpenAIProvider
@@ -74,7 +75,7 @@ async def send_message_to_ai(
     chat_path: Optional[str] = None,
     search: bool = False,
     thinking: bool = False,
-) -> tuple:
+) -> tuple[AsyncIterator[str], AIResponseMetadata]:
     """Send message to AI and get streaming response.
 
     Returns:
@@ -101,7 +102,7 @@ async def send_message_to_ai(
     started = time.perf_counter()
     try:
         # Create metadata dict that provider can populate with usage info
-        metadata = {"model": model, "started": started}
+        metadata: AIResponseMetadata = {"model": model, "started": started}
 
         # Pass metadata to provider so it can populate usage after streaming
         response_stream = provider_instance.send_message(

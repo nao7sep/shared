@@ -24,6 +24,7 @@ from tenacity import (
 )
 
 from ..message_formatter import lines_to_text
+from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class GrokProvider:
         return formatted
 
     @staticmethod
-    def _emit_thought(metadata: dict | None, chunk: str | None) -> None:
+    def _emit_thought(metadata: AIResponseMetadata | None, chunk: str | None) -> None:
         if metadata is None or not chunk:
             return
         thoughts = metadata.setdefault("thoughts", [])
@@ -87,7 +88,7 @@ class GrokProvider:
                 pass
 
     @staticmethod
-    def _mark_search_executed(metadata: dict | None, evidence: str) -> None:
+    def _mark_search_executed(metadata: AIResponseMetadata | None, evidence: str) -> None:
         if metadata is None:
             return
         metadata["search_executed"] = True
@@ -150,7 +151,7 @@ class GrokProvider:
         stream: bool = True,
         search: bool = False,
         thinking: bool = False,
-        metadata: dict | None = None,
+        metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Grok and yield response chunks.
 

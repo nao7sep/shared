@@ -8,17 +8,18 @@ from ..chat_manager import (
     generate_chat_filename,
     rename_chat,
 )
+from .types import CommandResult, CommandSignal
 
 
 class ChatFileCommandsMixin:
-    async def new_chat(self, args: str) -> str:
+    async def new_chat(self, args: str) -> CommandResult:
         """Create new chat file.
 
         Args:
             args: Optional chat name
 
         Returns:
-            Confirmation message or special __NEW_CHAT__ signal
+            Command text or typed new-chat control signal
         """
         chats_dir = self.manager.profile["chats_dir"]
 
@@ -26,18 +27,17 @@ class ChatFileCommandsMixin:
         name = args.strip() if args else None
         new_path = generate_chat_filename(chats_dir, name)
 
-        # Signal to REPL to switch to new chat
-        # Format: __NEW_CHAT__:path
-        return f"__NEW_CHAT__:{new_path}"
+        # Signal to REPL to switch to new chat.
+        return CommandSignal(kind="new_chat", chat_path=new_path)
 
-    async def open_chat(self, args: str) -> str:
+    async def open_chat(self, args: str) -> CommandResult:
         """Open existing chat file.
 
         Args:
             args: Optional filename or path
 
         Returns:
-            Special __OPEN_CHAT__ signal or error message
+            Typed open-chat control signal or error message
         """
         chats_dir = self.manager.profile["chats_dir"]
 
@@ -64,45 +64,44 @@ class ChatFileCommandsMixin:
         except Exception as e:
             return f"Error loading chat: {e}"
 
-        # Signal to REPL to switch chat
-        # Format: __OPEN_CHAT__:path
-        return f"__OPEN_CHAT__:{selected_path}"
+        # Signal to REPL to switch chat.
+        return CommandSignal(kind="open_chat", chat_path=selected_path)
 
-    async def switch_chat(self, args: str) -> str:
+    async def switch_chat(self, args: str) -> CommandResult:
         """Switch to another chat file.
 
         Args:
             args: Optional filename or path (shows selection if empty)
 
         Returns:
-            Special __OPEN_CHAT__ signal or error message
+            Typed open-chat control signal or error message
         """
         # Reuse /open behavior. The REPL loop saves current chat and opens selected one.
         return await self.open_chat(args)
 
-    async def close_chat(self, args: str) -> str:
+    async def close_chat(self, args: str) -> CommandResult:
         """Close current chat.
 
         Args:
             args: Not used
 
         Returns:
-            Special __CLOSE_CHAT__ signal
+            Typed close-chat control signal
         """
         if not self.manager.chat_path:
             return "No chat is currently open"
 
         # Signal to REPL to close chat
-        return "__CLOSE_CHAT__"
+        return CommandSignal(kind="close_chat")
 
-    async def rename_chat_file(self, args: str) -> str:
+    async def rename_chat_file(self, args: str) -> CommandResult:
         """Rename a chat file.
 
         Args:
             args: "<target> <new_name>", where target is "current" or a chat name/path
 
         Returns:
-            Confirmation message or special __RENAME_CURRENT__ signal
+            Command text or typed rename-current signal
         """
         chats_dir = self.manager.profile["chats_dir"]
 
@@ -130,7 +129,7 @@ class ChatFileCommandsMixin:
                 current_path = self.manager.chat_path
                 if current_path and Path(current_path).resolve() == Path(selected_path).resolve():
                     # Signal to update current chat path
-                    return f"__RENAME_CURRENT__:{new_path}"
+                    return CommandSignal(kind="rename_current", chat_path=new_path)
                 else:
                     return f"Renamed: {Path(selected_path).name} → {Path(new_path).name}"
 
@@ -161,20 +160,20 @@ class ChatFileCommandsMixin:
             # Check if this was the current chat
             current_path = self.manager.chat_path
             if current_path and Path(current_path).resolve() == old_path.resolve():
-                return f"__RENAME_CURRENT__:{new_path}"
+                return CommandSignal(kind="rename_current", chat_path=new_path)
             return f"Renamed: {old_path.name} → {Path(new_path).name}"
 
         except Exception as e:
             return f"Error renaming chat: {e}"
 
-    async def delete_chat_command(self, args: str) -> str:
+    async def delete_chat_command(self, args: str) -> CommandResult:
         """Delete a chat file.
 
         Args:
             args: Chat name/path, or "current"
 
         Returns:
-            Confirmation message or special __DELETE_CURRENT__ signal
+            Command text or typed delete-current signal
         """
         chats_dir = self.manager.profile["chats_dir"]
 
@@ -218,7 +217,10 @@ class ChatFileCommandsMixin:
 
             if is_current:
                 # Signal to close current chat
-                return f"__DELETE_CURRENT__:{Path(selected_path).name}"
+                return CommandSignal(
+                    kind="delete_current",
+                    value=Path(selected_path).name,
+                )
             else:
                 return f"Deleted: {Path(selected_path).name}"
 

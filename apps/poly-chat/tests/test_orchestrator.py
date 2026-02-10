@@ -3,7 +3,14 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from poly_chat.orchestrator import ChatOrchestrator, OrchestratorAction
+from poly_chat.commands.types import CommandSignal
+from poly_chat.orchestrator import ChatOrchestrator
+from poly_chat.orchestrator_types import (
+    BreakAction,
+    ContinueAction,
+    PrintAction,
+    SendAction,
+)
 from poly_chat.session_manager import SessionManager
 
 
@@ -43,58 +50,57 @@ def sample_chat_data():
     }
 
 
-class TestOrchestratorAction:
-    """Test OrchestratorAction dataclass."""
+class TestOrchestratorActionTypes:
+    """Test typed orchestrator actions."""
 
     def test_create_continue_action(self):
         """Test creating a continue action."""
-        action = OrchestratorAction(action="continue", message="Test message")
+        action = ContinueAction(message="Test message")
 
-        assert action.action == "continue"
+        assert isinstance(action, ContinueAction)
+        assert action.kind == "continue"
         assert action.message == "Test message"
         assert action.chat_path is None
         assert action.chat_data is None
-        assert action.error is None
 
     def test_create_break_action(self):
         """Test creating a break action."""
-        action = OrchestratorAction(action="break")
+        action = BreakAction()
 
-        assert action.action == "break"
-        assert action.message is None
+        assert isinstance(action, BreakAction)
+        assert action.kind == "break"
 
     def test_create_action_with_chat_data(self):
         """Test creating action with chat data."""
         chat_data = {"messages": []}
-        action = OrchestratorAction(
-            action="continue",
+        action = ContinueAction(
             chat_path="/test/chat.json",
             chat_data=chat_data,
         )
 
-        assert action.action == "continue"
+        assert isinstance(action, ContinueAction)
+        assert action.kind == "continue"
         assert action.chat_path == "/test/chat.json"
         assert action.chat_data == chat_data
 
 
 class TestExitSignal:
-    """Test __EXIT__ signal handling."""
+    """Test exit signal handling."""
 
     @pytest.mark.asyncio
     async def test_exit_signal(self, orchestrator):
-        """Test that __EXIT__ returns break action."""
+        """Test that exit signal returns break action."""
         action = await orchestrator.handle_command_response(
-            "__EXIT__",
+            CommandSignal(kind="exit"),
             current_chat_path=None,
             current_chat_data=None,
         )
 
-        assert action.action == "break"
-        assert action.message is None
+        assert isinstance(action, BreakAction)
 
 
 class TestNewChatSignal:
-    """Test __NEW_CHAT__ signal handling."""
+    """Test new-chat signal handling."""
 
     @pytest.mark.asyncio
     async def test_new_chat_signal(self, orchestrator, sample_chat_data):
@@ -103,7 +109,7 @@ class TestNewChatSignal:
             mock_chat.load_chat = MagicMock(return_value={"messages": []})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
-                    "__NEW_CHAT__:/test/new-chat.json",
+                    CommandSignal(kind="new_chat", chat_path="/test/new-chat.json"),
                     current_chat_path="/test/old-chat.json",
                     current_chat_data=sample_chat_data,
                 )
@@ -115,7 +121,7 @@ class TestNewChatSignal:
             mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
 
             # Should return continue action with new chat
-            assert action.action == "continue"
+            assert isinstance(action, ContinueAction)
             assert action.chat_path == "/test/new-chat.json"
             assert action.chat_data == {"messages": []}
             assert "Created new chat" in action.message
@@ -127,7 +133,7 @@ class TestNewChatSignal:
             mock_chat.load_chat = MagicMock(return_value={"messages": []})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
-                    "__NEW_CHAT__:/test/new-chat.json",
+                    CommandSignal(kind="new_chat", chat_path="/test/new-chat.json"),
                     current_chat_path=None,
                     current_chat_data=None,
                 )
@@ -138,12 +144,12 @@ class TestNewChatSignal:
             # Should load new chat
             mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
 
-            assert action.action == "continue"
+            assert isinstance(action, ContinueAction)
             assert action.chat_path == "/test/new-chat.json"
 
 
 class TestOpenChatSignal:
-    """Test __OPEN_CHAT__ signal handling."""
+    """Test open-chat signal handling."""
 
     @pytest.mark.asyncio
     async def test_open_chat_signal(self, orchestrator, sample_chat_data):
@@ -152,7 +158,7 @@ class TestOpenChatSignal:
             mock_chat.load_chat = MagicMock(return_value={"messages": [{"role": "user", "content": "Test"}]})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
-                    "__OPEN_CHAT__:/test/existing-chat.json",
+                    CommandSignal(kind="open_chat", chat_path="/test/existing-chat.json"),
                     current_chat_path="/test/current-chat.json",
                     current_chat_data=sample_chat_data,
                 )
@@ -164,20 +170,20 @@ class TestOpenChatSignal:
             mock_chat.load_chat.assert_called_once_with("/test/existing-chat.json")
 
             # Should return continue action
-            assert action.action == "continue"
+            assert isinstance(action, ContinueAction)
             assert action.chat_path == "/test/existing-chat.json"
             assert "Opened chat" in action.message
 
 
 class TestCloseChatSignal:
-    """Test __CLOSE_CHAT__ signal handling."""
+    """Test close-chat signal handling."""
 
     @pytest.mark.asyncio
     async def test_close_chat_signal(self, orchestrator, sample_chat_data):
         """Test closing current chat."""
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
-                "__CLOSE_CHAT__",
+                CommandSignal(kind="close_chat"),
                 current_chat_path="/test/chat.json",
                 current_chat_data=sample_chat_data,
             )
@@ -186,7 +192,7 @@ class TestCloseChatSignal:
             mock_save.assert_called_once()
 
             # Should return continue action with empty chat
-            assert action.action == "continue"
+            assert isinstance(action, ContinueAction)
             assert action.chat_path is None
             assert action.chat_data == {}
             assert action.message == "Chat closed"
@@ -196,7 +202,7 @@ class TestCloseChatSignal:
         """Test closing when no chat is open."""
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
-                "__CLOSE_CHAT__",
+                CommandSignal(kind="close_chat"),
                 current_chat_path=None,
                 current_chat_data=None,
             )
@@ -205,41 +211,41 @@ class TestCloseChatSignal:
             mock_save.assert_not_called()
 
             # Should still return action
-            assert action.action == "continue"
+            assert isinstance(action, ContinueAction)
             assert action.chat_path is None
 
 
 class TestRenameChatSignal:
-    """Test __RENAME_CURRENT__ signal handling."""
+    """Test rename-current signal handling."""
 
     @pytest.mark.asyncio
     async def test_rename_current_signal(self, orchestrator):
         """Test renaming current chat."""
         action = await orchestrator.handle_command_response(
-            "__RENAME_CURRENT__:/test/renamed-chat.json",
+            CommandSignal(kind="rename_current", chat_path="/test/renamed-chat.json"),
             current_chat_path="/test/old-chat.json",
             current_chat_data={},
         )
 
-        assert action.action == "continue"
+        assert isinstance(action, ContinueAction)
         assert action.chat_path == "/test/renamed-chat.json"
         assert "Renamed to" in action.message
 
 
 class TestDeleteChatSignal:
-    """Test __DELETE_CURRENT__ signal handling."""
+    """Test delete-current signal handling."""
 
     @pytest.mark.asyncio
     async def test_delete_current_signal(self, orchestrator, sample_chat_data):
         """Test deleting current chat."""
         action = await orchestrator.handle_command_response(
-            "__DELETE_CURRENT__:test-chat.json",
+            CommandSignal(kind="delete_current", value="test-chat.json"),
             current_chat_path="/test/test-chat.json",
             current_chat_data=sample_chat_data,
         )
 
         # Should clear chat and return action
-        assert action.action == "continue"
+        assert isinstance(action, ContinueAction)
         assert action.chat_path is None
         assert action.chat_data == {}
         assert "Deleted" in action.message
@@ -262,7 +268,7 @@ class TestRetryModeSignals:
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
-                f"__APPLY_RETRY__:{retry_hex_id}",
+                CommandSignal(kind="apply_retry", value=retry_hex_id),
                 current_chat_path="/test/chat.json",
                 current_chat_data=sample_chat_data,
             )
@@ -271,7 +277,7 @@ class TestRetryModeSignals:
             mock_save.assert_called_once()
 
         # Should return print action
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert f"Applied retry [{retry_hex_id}]" == action.message
 
         # Should replace only the target message, preserving its hex_id
@@ -299,12 +305,12 @@ class TestRetryModeSignals:
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
             action = await orchestrator.handle_command_response(
-                f"__APPLY_RETRY__:{retry_hex_id}",
+                CommandSignal(kind="apply_retry", value=retry_hex_id),
                 current_chat_path="/test/chat.json",
                 current_chat_data=sample_chat_data,
             )
 
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert sample_chat_data["messages"][1]["citations"] == [
             {"url": "https://example.com", "title": "Example"}
         ]
@@ -313,12 +319,12 @@ class TestRetryModeSignals:
     async def test_apply_retry_when_not_in_retry_mode(self, orchestrator):
         """Test applying retry when not in retry mode."""
         action = await orchestrator.handle_command_response(
-            "__APPLY_RETRY__:abc",
+            CommandSignal(kind="apply_retry", value="abc"),
             current_chat_path="/test/chat.json",
             current_chat_data={},
         )
 
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert "Not in retry mode" in action.message
 
     @pytest.mark.asyncio
@@ -328,12 +334,12 @@ class TestRetryModeSignals:
         orchestrator.manager.enter_retry_mode([{"role": "user", "content": "Test"}])
 
         action = await orchestrator.handle_command_response(
-            "__CANCEL_RETRY__",
+            CommandSignal(kind="cancel_retry"),
             current_chat_path=None,
             current_chat_data=None,
         )
 
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert "Cancelled retry mode" in action.message
         assert orchestrator.manager.retry_mode is False
 
@@ -341,12 +347,12 @@ class TestRetryModeSignals:
     async def test_cancel_retry_when_not_in_retry_mode(self, orchestrator):
         """Test cancelling retry when not in retry mode."""
         action = await orchestrator.handle_command_response(
-            "__CANCEL_RETRY__",
+            CommandSignal(kind="cancel_retry"),
             current_chat_path=None,
             current_chat_data=None,
         )
 
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert "Not in retry mode" in action.message
 
 
@@ -360,12 +366,12 @@ class TestSecretModeSignals:
         orchestrator.manager.enter_secret_mode([{"role": "user", "content": "Base"}])
 
         action = await orchestrator.handle_command_response(
-            "__CLEAR_SECRET_CONTEXT__",
+            CommandSignal(kind="clear_secret_context"),
             current_chat_path=None,
             current_chat_data=None,
         )
 
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert "Secret mode disabled" in action.message
         assert orchestrator.manager.secret_mode is False
 
@@ -373,12 +379,12 @@ class TestSecretModeSignals:
     async def test_clear_secret_context_when_not_in_secret_mode(self, orchestrator):
         """Test clearing secret context when not in secret mode."""
         action = await orchestrator.handle_command_response(
-            "__CLEAR_SECRET_CONTEXT__",
+            CommandSignal(kind="clear_secret_context"),
             current_chat_path=None,
             current_chat_data=None,
         )
 
-        assert action.action == "continue"
+        assert isinstance(action, ContinueAction)
         assert action.message is None
 
 
@@ -395,7 +401,7 @@ class TestRegularMessages:
             current_chat_data=None,
         )
 
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert action.message == "This is a regular message"
 
     @pytest.mark.asyncio
@@ -407,7 +413,7 @@ class TestRegularMessages:
             current_chat_data=None,
         )
 
-        assert action.action == "print"
+        assert isinstance(action, PrintAction)
         assert action.message == ""
 
     @pytest.mark.asyncio
@@ -422,7 +428,7 @@ class TestRegularMessages:
                 current_chat_data=sample_chat_data,
             )
 
-            assert action.action == "print"
+            assert isinstance(action, PrintAction)
             assert action.message == "Updated title"
             mock_save.assert_called_once()
 
@@ -461,7 +467,7 @@ class TestSessionManagerIntegration:
 
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
                 await orchestrator.handle_command_response(
-                    "__NEW_CHAT__:/test/new.json",
+                    CommandSignal(kind="new_chat", chat_path="/test/new.json"),
                     current_chat_path=None,
                     current_chat_data=None,
                 )
@@ -477,7 +483,7 @@ class TestSessionManagerIntegration:
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
             await orchestrator.handle_command_response(
-                "__CLOSE_CHAT__",
+                CommandSignal(kind="close_chat"),
                 current_chat_path="/test/chat.json",
                 current_chat_data=sample_chat_data,
             )
@@ -501,7 +507,7 @@ class TestCancelHandling:
                 chat_path="/test/chat.json",
             )
 
-            assert action.action == "print"
+            assert isinstance(action, PrintAction)
             assert chat_data["messages"] == []
             mock_save.assert_awaited_once_with(
                 force=True,
@@ -516,7 +522,7 @@ class TestCancelHandling:
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_user_cancel(chat_data, "retry")
 
-            assert action.action == "print"
+            assert isinstance(action, PrintAction)
             mock_save.assert_not_called()
 
 
@@ -535,7 +541,8 @@ class TestPreSendValidationRollback:
             "/test/chat.json",
         )
 
-        assert action.action == "send_normal"
+        assert isinstance(action, SendAction)
+        assert action.mode == "normal"
         assert chat_data["messages"][-1]["role"] == "user"
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:

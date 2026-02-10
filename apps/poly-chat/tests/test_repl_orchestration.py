@@ -1,80 +1,61 @@
-"""Tests for REPL orchestration and command signal handling.
-
-These tests document the current behavior of command response signals
-and state transitions in the REPL loop. This serves as a safety net
-before refactoring the orchestration logic out of repl.py.
-"""
+"""Tests for REPL/session orchestration state transitions."""
 
 from poly_chat.app_state import (
     SessionState,
     initialize_message_hex_ids,
 )
+from poly_chat.commands.types import CommandSignal
 
 
 class TestCommandSignals:
-    """Test command signal patterns used in REPL orchestration."""
+    """Test typed command signal contracts used in REPL orchestration."""
 
     def test_exit_signal(self):
-        """Test __EXIT__ signal pattern."""
-        signal = "__EXIT__"
-        assert signal == "__EXIT__"
+        signal = CommandSignal(kind="exit")
+        assert signal.kind == "exit"
+        assert signal.chat_path is None
+        assert signal.value is None
 
     def test_new_chat_signal(self):
-        """Test __NEW_CHAT__ signal pattern with path."""
         chat_path = "/path/to/new-chat.json"
-        signal = f"__NEW_CHAT__:{chat_path}"
-
-        assert signal.startswith("__NEW_CHAT__:")
-        extracted_path = signal.split(":", 1)[1]
-        assert extracted_path == chat_path
+        signal = CommandSignal(kind="new_chat", chat_path=chat_path)
+        assert signal.kind == "new_chat"
+        assert signal.chat_path == chat_path
 
     def test_open_chat_signal(self):
-        """Test __OPEN_CHAT__ signal pattern with path."""
         chat_path = "/path/to/existing-chat.json"
-        signal = f"__OPEN_CHAT__:{chat_path}"
-
-        assert signal.startswith("__OPEN_CHAT__:")
-        extracted_path = signal.split(":", 1)[1]
-        assert extracted_path == chat_path
+        signal = CommandSignal(kind="open_chat", chat_path=chat_path)
+        assert signal.kind == "open_chat"
+        assert signal.chat_path == chat_path
 
     def test_close_chat_signal(self):
-        """Test __CLOSE_CHAT__ signal pattern."""
-        signal = "__CLOSE_CHAT__"
-        assert signal == "__CLOSE_CHAT__"
+        signal = CommandSignal(kind="close_chat")
+        assert signal.kind == "close_chat"
 
     def test_rename_current_signal(self):
-        """Test __RENAME_CURRENT__ signal pattern with new path."""
         new_path = "/path/to/renamed-chat.json"
-        signal = f"__RENAME_CURRENT__:{new_path}"
-
-        assert signal.startswith("__RENAME_CURRENT__:")
-        extracted_path = signal.split(":", 1)[1]
-        assert extracted_path == new_path
+        signal = CommandSignal(kind="rename_current", chat_path=new_path)
+        assert signal.kind == "rename_current"
+        assert signal.chat_path == new_path
 
     def test_delete_current_signal(self):
-        """Test __DELETE_CURRENT__ signal pattern with filename."""
         filename = "deleted-chat.json"
-        signal = f"__DELETE_CURRENT__:{filename}"
-
-        assert signal.startswith("__DELETE_CURRENT__:")
-        extracted_filename = signal.split(":", 1)[1]
-        assert extracted_filename == filename
+        signal = CommandSignal(kind="delete_current", value=filename)
+        assert signal.kind == "delete_current"
+        assert signal.value == filename
 
     def test_apply_retry_signal(self):
-        """Test __APPLY_RETRY__ signal pattern."""
-        signal = "__APPLY_RETRY__:abc"
-        assert signal.startswith("__APPLY_RETRY__:")
-        assert signal.split(":", 1)[1] == "abc"
+        signal = CommandSignal(kind="apply_retry", value="abc")
+        assert signal.kind == "apply_retry"
+        assert signal.value == "abc"
 
     def test_cancel_retry_signal(self):
-        """Test __CANCEL_RETRY__ signal pattern."""
-        signal = "__CANCEL_RETRY__"
-        assert signal == "__CANCEL_RETRY__"
+        signal = CommandSignal(kind="cancel_retry")
+        assert signal.kind == "cancel_retry"
 
     def test_clear_secret_context_signal(self):
-        """Test __CLEAR_SECRET_CONTEXT__ signal pattern."""
-        signal = "__CLEAR_SECRET_CONTEXT__"
-        assert signal == "__CLEAR_SECRET_CONTEXT__"
+        signal = CommandSignal(kind="clear_secret_context")
+        assert signal.kind == "clear_secret_context"
 
 
 class TestChatSwitchingOrchestration:

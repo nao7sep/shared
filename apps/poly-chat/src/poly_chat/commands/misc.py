@@ -1,5 +1,7 @@
 """Misc command mixin."""
 
+from .types import CommandResult, CommandSignal
+
 
 class MiscCommandsMixin:
     async def show_help(self, args: str) -> str:
@@ -98,7 +100,7 @@ Other:
 
 Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
 
-    async def exit_app(self, args: str) -> str:
+    async def exit_app(self, args: str) -> CommandResult:
         """Exit the application.
 
         Args:
@@ -107,4 +109,4 @@ Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
         Returns:
             Exit message (triggers exit in main loop)
         """
-        return "__EXIT__"
+        return CommandSignal(kind="exit")

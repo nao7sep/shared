@@ -2,6 +2,7 @@
 
 from .. import chat, hex_id, models, profile
 from ..chat import delete_message_and_following, update_metadata
+from .types import CommandResult, CommandSignal
 
 
 class RuntimeCommandsMixin:
@@ -273,7 +274,7 @@ class RuntimeCommandsMixin:
         )
         return "Retry mode enabled"
 
-    async def apply_retry(self, args: str) -> str:
+    async def apply_retry(self, args: str) -> CommandResult:
         """Apply current retry attempt and exit retry mode.
 
         Args:
@@ -293,9 +294,9 @@ class RuntimeCommandsMixin:
             return f"Invalid hex ID: {args.strip()}"
 
         # Signal to REPL loop to apply selected retry response
-        return f"__APPLY_RETRY__:{retry_hex_id}"
+        return CommandSignal(kind="apply_retry", value=retry_hex_id)
 
-    async def cancel_retry(self, args: str) -> str:
+    async def cancel_retry(self, args: str) -> CommandResult:
         """Cancel retry mode and keep original messages.
 
         Args:
@@ -309,7 +310,7 @@ class RuntimeCommandsMixin:
             return "Not in retry mode"
 
         # Signal to REPL loop to cancel retry
-        return "__CANCEL_RETRY__"
+        return CommandSignal(kind="cancel_retry")
 
     async def secret_mode_command(self, args: str) -> str:
         """Show or set secret mode (messages not saved to history).

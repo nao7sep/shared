@@ -24,6 +24,7 @@ from tenacity import (
 )
 
 from ..message_formatter import lines_to_text
+from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ class MistralProvider:
         stream: bool = True,
         search: bool = False,
         thinking: bool = False,
-        metadata: dict | None = None,
+        metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Mistral and yield response chunks.
 

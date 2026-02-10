@@ -23,3 +23,4 @@ based on these, claude code (sonnet 4.5) implemented web search.
 codex (gpt-5.3-codex xhigh) generated and implemented:
 
 - comprehensive-issue-remediation-plan-2026-02-10.md (2026-02-10)
+- tangled-type-separation-plan-2026-02-10.md (2026-02-10)

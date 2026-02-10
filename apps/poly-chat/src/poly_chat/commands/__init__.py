@@ -1,7 +1,5 @@
 """Command system façade for PolyChat."""
 
-from typing import Optional
-
 from ..chat import save_chat
 from ..helper_ai import invoke_helper_ai
 from .base import CommandHandlerBaseMixin
@@ -9,6 +7,7 @@ from .runtime import RuntimeCommandsMixin
 from .metadata import MetadataCommandsMixin
 from .chat_files import ChatFileCommandsMixin
 from .misc import MiscCommandsMixin
+from .types import CommandResult
 
 
 class CommandHandler(
@@ -20,14 +19,14 @@ class CommandHandler(
 ):
     """Handles command parsing and execution."""
 
-    async def execute_command(self, text: str) -> Optional[str]:
+    async def execute_command(self, text: str) -> CommandResult:
         """Execute a command.
 
         Args:
             text: Command text
 
         Returns:
-            Response message, or None if command modifies state silently
+            Command result (text output, control signal, or None)
 
         Raises:
             ValueError: If command is invalid

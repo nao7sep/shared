@@ -25,7 +25,13 @@ from . import chat
 from .ai_runtime import send_message_to_ai, validate_and_get_provider
 from .app_state import has_pending_error
 from .session_manager import SessionManager
-from .orchestrator import ChatOrchestrator, OrchestratorAction
+from .orchestrator import ChatOrchestrator
+from .orchestrator_types import (
+    BreakAction,
+    ContinueAction,
+    PrintAction,
+    SendAction,
+)
 from .citations import (
     normalize_citations,
     enrich_citation_titles,
@@ -152,7 +158,7 @@ async def repl_loop(
     print("=" * 70)
     print()
 
-    async def execute_send_action(action: OrchestratorAction) -> None:
+    async def execute_send_action(action: SendAction) -> None:
         """Execute a prepared send action from orchestrator."""
         provider_instance, error = validate_and_get_provider(manager, chat_path=chat_path)
         if error:
@@ -300,7 +306,7 @@ async def repl_loop(
                 thoughts=thoughts_text if thoughts_text else None,
             )
 
-            if result.action == "print" and result.message:
+            if isinstance(result, PrintAction):
                 print(result.message)
             print()
 
@@ -365,7 +371,7 @@ async def repl_loop(
                     )
 
                     # Process orchestrator action
-                    if action.action == "break":
+                    if isinstance(action, BreakAction):
                         log_event(
                             "session_stop",
                             level=logging.INFO,
@@ -376,7 +382,7 @@ async def repl_loop(
                         print("\nGoodbye!")
                         break
 
-                    elif action.action == "continue":
+                    elif isinstance(action, ContinueAction):
                         # Update local chat state from action
                         if action.chat_path is not None:
                             chat_path = action.chat_path
@@ -389,12 +395,11 @@ async def repl_loop(
                             print(action.message)
                             print()
 
-                    elif action.action == "print":
-                        if action.message:
-                            print(action.message)
-                            print()
+                    elif isinstance(action, PrintAction):
+                        print(action.message)
+                        print()
 
-                    elif action.action in ("send_normal", "send_retry", "send_secret"):
+                    elif isinstance(action, SendAction):
                         await execute_send_action(action)
 
                 except ValueError as e:
@@ -435,12 +440,12 @@ async def repl_loop(
             action = await orchestrator.handle_user_message(user_input, chat_path, chat_data)
 
             # Handle orchestrator action
-            if action.action == "print":
+            if isinstance(action, PrintAction):
                 print(action.message)
                 print()
                 continue
 
-            if action.action in ("send_normal", "send_retry", "send_secret"):
+            if isinstance(action, SendAction):
                 await execute_send_action(action)
                 continue
 
