@@ -64,6 +64,8 @@ Chat Control:
   /secret on/off    Enable/disable secret mode explicitly
   /search           Show current search mode state
   /search on/off    Enable/disable web search
+  /thinking         Show current thinking mode state
+  /thinking on/off  Enable/disable extended reasoning
   /rewind <hex_id>  Delete that message and all following messages
   /rewind turn      Delete the last full interaction (user+assistant/error)
   /rewind last      Delete only the last message
@@ -93,10 +95,6 @@ Safety:
 Other:
   /help             Show this help
   /exit, /quit      Exit PolyChat
-
-Mode Combinations:
-  Secret and search modes can be combined:
-  - /secret on + /search on         Both modes active for all messages
 
 Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
 

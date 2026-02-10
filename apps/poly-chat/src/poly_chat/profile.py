@@ -103,7 +103,8 @@ def load_profile(path: str) -> dict[str, Any]:
 
     # Map all path fields
     profile["chats_dir"] = map_path(profile["chats_dir"])
-    profile["log_dir"] = map_path(profile["log_dir"])
+    profile["logs_dir"] = map_path(profile["logs_dir"])
+    profile["pages_dir"] = map_path(profile["pages_dir"])
 
     # Map system_prompt if it's a path (string)
     if isinstance(profile.get("system_prompt"), str):
@@ -127,7 +128,7 @@ def validate_profile(profile: dict[str, Any]) -> None:
     Raises:
         ValueError: If profile is invalid
     """
-    required = ["default_ai", "models", "chats_dir", "log_dir", "api_keys"]
+    required = ["default_ai", "models", "chats_dir", "logs_dir", "pages_dir", "api_keys"]
 
     missing = [f for f in required if f not in profile]
     if missing:
@@ -238,7 +239,8 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             "content": "You are a helpful assistant."
         },
         "chats_dir": "~/poly-chat/chats",
-        "log_dir": "~/poly-chat/logs",
+        "logs_dir": "~/poly-chat/logs",
+        "pages_dir": "~/poly-chat/pages",
         "api_keys": {
             "openai": {
                 "type": "env",

@@ -232,6 +232,15 @@ class SessionManager:
         self._state.search_mode = bool(value)
 
     @property
+    def thinking_mode(self) -> bool:
+        """Whether thinking mode is active."""
+        return self._state.thinking_mode
+
+    @thinking_mode.setter
+    def thinking_mode(self, value: bool) -> None:
+        self._state.thinking_mode = bool(value)
+
+    @property
     def chat_dirty(self) -> bool:
         """Whether current chat has unsaved command-driven changes."""
         return self._state.chat_dirty
@@ -292,6 +301,7 @@ class SessionManager:
             "retry_mode": self._state.retry_mode,
             "secret_mode": self._state.secret_mode,
             "search_mode": self._state.search_mode,
+            "thinking_mode": self._state.thinking_mode,
             "chat_dirty": self._state.chat_dirty,
             "message_hex_ids": self.message_hex_ids,
             "hex_id_set": self._state.hex_id_set,
@@ -359,6 +369,9 @@ class SessionManager:
 
         # Clear search mode
         self._state.search_mode = False
+
+        # Clear thinking mode
+        self._state.thinking_mode = False
 
     def clear_chat_scoped_state(self) -> None:
         """Public wrapper to clear retry/secret state."""

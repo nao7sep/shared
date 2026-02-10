@@ -11,7 +11,8 @@ from src.poly_chat.session_manager import SessionManager
 def session_manager():
     """Create a test session manager."""
     manager = SessionManager(
-        profile={"chats_dir": "/test/chats", "log_dir": "/test/logs"},
+        profile={"chats_dir": "/test/chats", "logs_dir": "/test/logs"},
+        "pages_dir": "/test/pages",
         current_ai="claude",
         current_model="claude-haiku-4-5",
     )

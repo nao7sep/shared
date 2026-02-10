@@ -43,7 +43,7 @@ class StructuredTextFormatter(logging.Formatter):
             "chat_file",
             "log_file",
             "chats_dir",
-            "log_dir",
+            "logs_dir",
             "input_mode",
             "timeout",
             "system_prompt_path",
@@ -67,7 +67,7 @@ class StructuredTextFormatter(logging.Formatter):
             "chat_file",
             "log_file",
             "chats_dir",
-            "log_dir",
+            "logs_dir",
             "input_mode",
             "timeout",
             "system_prompt_path",
@@ -379,18 +379,18 @@ def log_event(event: str, level: int = logging.INFO, **fields: Any) -> None:
     logging.log(level, json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 
 
-def build_run_log_path(log_dir: str) -> str:
-    """Build a unique run log path in the configured log directory."""
-    log_dir_path = Path(log_dir)
-    log_dir_path.mkdir(parents=True, exist_ok=True)
+def build_run_log_path(logs_dir: str) -> str:
+    """Build a unique run log path in the configured logs directory."""
+    logs_dir_path = Path(logs_dir)
+    logs_dir_path.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_name = f"poly-chat_{timestamp}"
-    candidate = log_dir_path / f"{base_name}.log"
+    candidate = logs_dir_path / f"{base_name}.log"
 
     suffix = 1
     while candidate.exists():
-        candidate = log_dir_path / f"{base_name}_{suffix}.log"
+        candidate = logs_dir_path / f"{base_name}_{suffix}.log"
         suffix += 1
 
     return str(candidate)

@@ -19,6 +19,7 @@ class AIProvider(Protocol):
         system_prompt: str | None = None,
         stream: bool = True,
         search: bool = False,
+        thinking: bool = False,
     ) -> AsyncIterator[str]:
         """Send message to AI and yield response chunks if streaming.
 
@@ -28,6 +29,7 @@ class AIProvider(Protocol):
             system_prompt: Optional system prompt
             stream: Whether to stream the response
             search: Whether to enable web search
+            thinking: Whether to enable extended reasoning/thinking
 
         Yields:
             Response text chunks (if streaming)
@@ -38,7 +40,7 @@ class AIProvider(Protocol):
         ...
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False
+        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False, thinking: bool = False
     ) -> tuple[str, dict]:
         """Get full response (non-streaming).
 
@@ -47,6 +49,7 @@ class AIProvider(Protocol):
             model: Model name to use
             system_prompt: Optional system prompt
             search: Whether to enable web search
+            thinking: Whether to enable extended reasoning/thinking
 
         Returns:
             Tuple of (response_text, metadata) where metadata contains

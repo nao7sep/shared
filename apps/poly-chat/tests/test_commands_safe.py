@@ -45,7 +45,8 @@ def mock_session_manager_safe():
                 }
             },
             "chats_dir": "/test/chats",
-            "log_dir": "/test/logs",
+            "logs_dir": "/test/logs",
+            "pages_dir": "/test/pages",
             "timeout": 30,
         },
         current_ai="claude",

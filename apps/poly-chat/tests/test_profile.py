@@ -84,7 +84,8 @@ def test_load_profile_missing_required_field(tmp_path):
     profile_data = {
         "default_ai": "claude",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -99,7 +100,7 @@ def test_load_profile_valid(tmp_path):
     """Test loading valid profile."""
     profile_path = tmp_path / "valid.json"
     chats_dir = tmp_path / "chats"
-    log_dir = tmp_path / "logs"
+    logs_dir = tmp_path / "logs"
 
     profile_data = {
         "default_ai": "claude",
@@ -111,7 +112,7 @@ def test_load_profile_valid(tmp_path):
         "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": str(chats_dir),
-        "log_dir": str(log_dir),
+        "logs_dir": str(logs_dir),
         "api_keys": {
             "claude": {
                 "type": "env",
@@ -128,7 +129,7 @@ def test_load_profile_valid(tmp_path):
     assert profile["default_ai"] == "claude"
     assert profile["models"]["claude"] == "claude-haiku-4-5"
     assert profile["chats_dir"] == str(chats_dir)
-    assert profile["log_dir"] == str(log_dir)
+    assert profile["logs_dir"] == str(logs_dir)
 
 
 def test_load_profile_maps_tilde_paths(tmp_path):
@@ -142,7 +143,8 @@ def test_load_profile_maps_tilde_paths(tmp_path):
         "input_mode": "quick",
         "system_prompt": "~/system-prompt.txt",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -153,7 +155,7 @@ def test_load_profile_maps_tilde_paths(tmp_path):
 
     # Should map tilde to home directory
     assert profile["chats_dir"] == str(Path.home() / "chats")
-    assert profile["log_dir"] == str(Path.home() / "logs")
+    assert profile["logs_dir"] == str(Path.home() / "logs")
 
 
 def test_load_profile_maps_at_paths(tmp_path):
@@ -167,7 +169,7 @@ def test_load_profile_maps_at_paths(tmp_path):
         "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "@/chats",
-        "log_dir": "@/logs",
+        "logs_dir": "@/logs",
         "api_keys": {}
     }
 
@@ -178,7 +180,7 @@ def test_load_profile_maps_at_paths(tmp_path):
 
     # Should map @ to app root
     assert "poly-chat" in profile["chats_dir"]
-    assert "poly-chat" in profile["log_dir"]
+    assert "poly-chat" in profile["logs_dir"]
     assert "poly-chat" in profile["system_prompt"]
 
 
@@ -193,7 +195,8 @@ def test_load_profile_maps_json_api_key_path(tmp_path):
         "input_mode": "quick",
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "json",
@@ -222,7 +225,8 @@ def test_load_profile_sets_default_timeout(tmp_path):
         "models": {"claude": "claude-haiku-4-5"},
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -239,7 +243,7 @@ def test_validate_profile_missing_required_fields():
     profile = {
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"}
-        # Missing: chats_dir, log_dir, api_keys
+        # Missing: chats_dir, logs_dir, api_keys
     }
 
     with pytest.raises(ValueError, match="Profile missing required fields"):
@@ -252,7 +256,8 @@ def test_validate_profile_models_not_dict():
         "default_ai": "claude",
         "models": ["claude", "openai"],  # Should be dict
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -266,7 +271,8 @@ def test_validate_profile_models_empty():
         "default_ai": "claude",
         "models": {},  # Empty
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -280,7 +286,8 @@ def test_validate_profile_default_ai_not_in_models():
         "default_ai": "gemini",  # Not in models
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -295,7 +302,8 @@ def test_validate_profile_timeout_not_number():
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": "30",  # Should be number
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -310,7 +318,8 @@ def test_validate_profile_timeout_negative():
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": -10,
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -325,7 +334,8 @@ def test_validate_profile_input_mode_valid():
         "models": {"claude": "claude-haiku-4-5"},
         "input_mode": "quick",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
     validate_profile(profile)
@@ -341,7 +351,8 @@ def test_validate_profile_input_mode_invalid_value():
         "models": {"claude": "claude-haiku-4-5"},
         "input_mode": "invalid-mode",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
     with pytest.raises(ValueError, match="'input_mode' must be 'quick' or 'compose'"):
@@ -355,7 +366,8 @@ def test_validate_profile_input_mode_invalid_type():
         "models": {"claude": "claude-haiku-4-5"},
         "input_mode": 123,
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
     with pytest.raises(ValueError, match="'input_mode' must be a string"):
@@ -370,7 +382,8 @@ def test_validate_profile_timeout_zero_allowed():
         "timeout": 0,
         "input_mode": "quick",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -384,7 +397,8 @@ def test_validate_profile_api_keys_not_dict():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": []  # Should be dict
     }
 
@@ -398,7 +412,8 @@ def test_validate_profile_api_key_config_not_dict():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": "sk-test-key"  # Should be dict
         }
@@ -414,7 +429,8 @@ def test_validate_profile_api_key_missing_type():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "key": "CLAUDE_API_KEY"
@@ -433,7 +449,8 @@ def test_validate_profile_api_key_env_missing_key():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "env"
@@ -452,7 +469,8 @@ def test_validate_profile_api_key_keychain_missing_service():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "keychain",
@@ -472,7 +490,8 @@ def test_validate_profile_api_key_keychain_missing_account():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "keychain",
@@ -492,7 +511,8 @@ def test_validate_profile_api_key_json_missing_path():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "json",
@@ -512,7 +532,8 @@ def test_validate_profile_api_key_json_missing_key():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "json",
@@ -532,7 +553,8 @@ def test_validate_profile_api_key_direct_missing_value():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "direct"
@@ -551,7 +573,8 @@ def test_validate_profile_api_key_unknown_type():
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "unknown_type",
@@ -577,7 +600,8 @@ def test_validate_profile_valid_all_api_key_types():
         "timeout": 60,
         "input_mode": "quick",
         "chats_dir": "~/chats",
-        "log_dir": "~/logs",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "env",
@@ -615,7 +639,7 @@ def test_create_profile_template_uses_inline_prompt_and_mixed_api_key_examples(t
         "content": "You are a helpful assistant."
     }
     assert created_profile["chats_dir"] == "~/poly-chat/chats"
-    assert created_profile["log_dir"] == "~/poly-chat/logs"
+    assert created_profile["logs_dir"] == "~/poly-chat/logs"
     assert created_profile["api_keys"]["openai"] == {
         "type": "env",
         "key": "OPENAI_API_KEY",

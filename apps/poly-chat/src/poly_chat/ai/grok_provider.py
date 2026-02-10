@@ -149,6 +149,7 @@ class GrokProvider:
         system_prompt: str | None = None,
         stream: bool = True,
         search: bool = False,
+        thinking: bool = False,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Grok and yield response chunks.

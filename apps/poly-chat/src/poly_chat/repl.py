@@ -81,7 +81,7 @@ async def repl_loop(
         chat_file=chat_path,
         log_file=log_file,
         chats_dir=manager.profile.get("chats_dir"),
-        log_dir=manager.profile.get("log_dir"),
+        logs_dir=manager.profile.get("logs_dir"),
         assistant_provider=manager.current_ai,
         assistant_model=manager.current_model,
         helper_provider=manager.helper_ai,
@@ -169,6 +169,7 @@ async def repl_loop(
         try:
             print(prefix, end="", flush=True)
             use_search = action.search_enabled if action.search_enabled is not None else manager.search_mode
+            use_thinking = manager.thinking_mode
             effective_request_mode = action.mode or "normal"
             if use_search:
                 if action.mode == "secret":
@@ -186,6 +187,7 @@ async def repl_loop(
                 mode=effective_request_mode,
                 chat_path=chat_path,
                 search=use_search,
+                thinking=use_thinking,
             )
             thought_chunks: list[str] = []
             thought_header_printed = False
@@ -210,10 +212,15 @@ async def repl_loop(
 
             citations = metadata.get("citations")
             citations = normalize_citations(citations)
-            if citations and citations_need_enrichment(citations):
+
+            # Always download and save pages when citations are present
+            if citations:
                 grace_timeout = 0.25
                 total_timeout = 6.0
-                enrich_task = asyncio.create_task(enrich_citation_titles(citations))
+                pages_dir = manager.profile.get("pages_dir")
+                enrich_task = asyncio.create_task(
+                    enrich_citation_titles(citations, pages_dir=pages_dir)
+                )
                 try:
                     enriched, changed = await asyncio.wait_for(
                         asyncio.shield(enrich_task), timeout=grace_timeout
@@ -221,7 +228,7 @@ async def repl_loop(
                     if changed:
                         citations = enriched
                 except asyncio.TimeoutError:
-                    print("\n[Collecting citation titles...]", flush=True)
+                    print("\n[Downloading and saving cited pages...]", flush=True)
                     try:
                         enriched, changed = await asyncio.wait_for(
                             asyncio.shield(enrich_task),
@@ -231,11 +238,12 @@ async def repl_loop(
                             citations = enriched
                     except asyncio.TimeoutError:
                         enrich_task.cancel()
-                        print("[Citation title lookup timed out; showing available sources.]")
+                        print("[Page download timed out; showing available sources.]")
                     except Exception:
-                        print("[Citation title lookup failed; showing available sources.]")
+                        print("[Page download failed; showing available sources.]")
                 except Exception:
                     pass
+
             if citations:
                 metadata["citations"] = citations
             if citations:
@@ -283,6 +291,7 @@ async def repl_loop(
                 user_input=action.retry_user_input,
                 assistant_hex_id=action.assistant_hex_id,
                 citations=citations,
+                thoughts=thoughts_text if thoughts_text else None,
             )
 
             if result.action == "print" and result.message:

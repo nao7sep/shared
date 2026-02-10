@@ -124,6 +124,7 @@ class ClaudeProvider:
         system_prompt: str | None = None,
         stream: bool = True,
         search: bool = False,
+        thinking: bool = False,
         max_tokens: int = 4096,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
@@ -135,6 +136,7 @@ class ClaudeProvider:
             system_prompt: Optional system prompt
             stream: Whether to stream the response
             search: Whether to enable web search
+            thinking: Whether to enable extended thinking/reasoning
             max_tokens: Maximum tokens in response (default 4096, increased to 8192 for search)
             metadata: Optional dict to populate with usage info after streaming
 
@@ -157,6 +159,9 @@ class ClaudeProvider:
 
             if search:
                 kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
+
+            if thinking:
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
 
             # Create streaming request with retry logic
             async with await self._create_message_stream(**kwargs) as response_stream:

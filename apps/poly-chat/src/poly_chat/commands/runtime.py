@@ -345,10 +345,7 @@ class RuntimeCommandsMixin:
         if normalized in {"on/off", "on|off"}:
             return "Use /secret on or /secret off"
 
-        return (
-            "One-shot /secret is not supported. "
-            "Use /secret on, send message, then /secret off."
-        )
+        raise ValueError("Invalid argument. Use /secret on or /secret off")
 
     async def search_mode_command(self, args: str) -> str:
         """Show or set search mode (web search enabled).
@@ -395,10 +392,54 @@ class RuntimeCommandsMixin:
         if normalized in {"on/off", "on|off"}:
             return "Use /search on or /search off"
 
-        return (
-            "One-shot /search is not supported. "
-            "Use /search on, send message, then /search off."
-        )
+        raise ValueError("Invalid argument. Use /search on or /search off")
+
+    async def thinking_mode_command(self, args: str) -> str:
+        """Show or set thinking mode (extended reasoning enabled).
+
+        Args:
+            args: Empty to show status or 'on'/'off' to toggle
+
+        Returns:
+            Status message
+        """
+        from ..models import provider_supports_thinking, THINKING_SUPPORTED_PROVIDERS
+
+        chat_data = self.manager.chat
+
+        if not chat_data or "messages" not in chat_data:
+            return "No chat is currently open"
+
+        normalized = args.strip().lower()
+
+        # No args - show current mode + supported providers
+        if not normalized:
+            status = "on" if self.manager.thinking_mode else "off"
+            providers = ", ".join(sorted(THINKING_SUPPORTED_PROVIDERS))
+            return f"Thinking mode: {status}\nSupported providers: {providers}"
+
+        # Explicit on
+        if normalized == "on":
+            if not provider_supports_thinking(self.manager.current_ai):
+                providers = ", ".join(sorted(THINKING_SUPPORTED_PROVIDERS))
+                return f"Thinking not supported for {self.manager.current_ai}. Supported: {providers}"
+            if self.manager.thinking_mode:
+                return "Thinking mode already on"
+            self.manager.thinking_mode = True
+            return "Thinking mode enabled"
+
+        # Explicit off
+        if normalized == "off":
+            if self.manager.thinking_mode:
+                self.manager.thinking_mode = False
+                return "Thinking mode disabled"
+            return "Thinking mode already off"
+
+        # Typo hint
+        if normalized in {"on/off", "on|off"}:
+            return "Use /thinking on or /thinking off"
+
+        raise ValueError("Invalid argument. Use /thinking on or /thinking off")
 
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting a target message and all following.

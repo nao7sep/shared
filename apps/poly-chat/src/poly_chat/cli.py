@@ -77,7 +77,7 @@ def main() -> None:
         mapped_log_path = map_cli_path(args.log, "log")
 
         profile_data = profile.load_profile(mapped_profile_path)
-        effective_log_path = mapped_log_path or build_run_log_path(profile_data["log_dir"])
+        effective_log_path = mapped_log_path or build_run_log_path(profile_data["logs_dir"])
         setup_logging(effective_log_path)
 
         chat_path = None
@@ -101,7 +101,7 @@ def main() -> None:
             chat_file=mapped_chat_path,
             log_file=effective_log_path,
             chats_dir=profile_data.get("chats_dir"),
-            log_dir=profile_data.get("log_dir"),
+            logs_dir=profile_data.get("logs_dir"),
             assistant_provider=profile_data.get("default_ai"),
             assistant_model=profile_data.get("models", {}).get(profile_data.get("default_ai", ""), "(unknown)"),
             helper_provider=profile_data.get("default_helper_ai", profile_data.get("default_ai")),

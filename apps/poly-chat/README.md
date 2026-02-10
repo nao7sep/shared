@@ -100,7 +100,7 @@ CLI path flags use the same path mapping rules:
 
 Use `~/...`, `@/...`, or absolute paths. Plain relative paths are rejected.
 
-If `-l/--log` is omitted, PolyChat creates one log file for the current app run in the profile's `log_dir`:
+If `-l/--log` is omitted, PolyChat creates one log file for the current app run in the profile's `logs_dir`:
 - `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
 
 Logs are written in a structured plaintext block format and include contextual events such as app/session start and stop, command execution, chat lifecycle actions, and AI request/response/error details (with redaction for sensitive token patterns).
@@ -149,6 +149,8 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/secret on|off` - Explicitly enable/disable secret mode
 - `/search` - Show current search mode state and supported providers
 - `/search on|off` - Enable/disable web search with inline citations
+- `/thinking` - Show current thinking mode state and supported providers
+- `/thinking on|off` - Enable/disable extended reasoning
 - `/rewind <hex_id>` - Delete that message and all following messages
 - `/rewind turn` - Delete the last full interaction (user+assistant/error)
 - `/rewind last` - Delete only the last message
@@ -225,11 +227,7 @@ Where can I find current stock prices for AAPL?
 ```
 
 **Citations:**
-When search is enabled, AI responses will include a "Sources:" section at the end listing the URLs and titles of web pages used to generate the response.
-
-**Mode Combinations:**
-Search mode can be combined with secret mode:
-- `/secret on` + `/search on` - All messages use both secret and search
+When search is enabled, AI responses will include a "Sources:" section at the end listing the URLs and titles of web pages used to generate the response. All cited pages are automatically downloaded and saved to your `pages_dir` for offline access and accurate title extraction.
 
 ## Configuration
 
@@ -250,7 +248,8 @@ Search mode can be combined with secret mode:
     "content": "You are a helpful assistant."
   },
   "chats_dir": "~/poly-chat/chats",
-  "log_dir": "~/poly-chat/logs",
+  "logs_dir": "~/poly-chat/logs",
+  "pages_dir": "~/poly-chat/pages",
   "api_keys": {
     "openai": {
       "type": "env",
@@ -276,6 +275,28 @@ Search mode can be combined with secret mode:
 - `@` or `@/...` → App root directory (where pyproject.toml is)
 - Absolute paths → Used as-is
 - Relative paths without prefix → **Error** (to avoid ambiguity)
+
+### Required Directories
+
+The profile requires three directory paths:
+
+**`chats_dir`** - Where conversation history files are stored
+- Chat files are JSON format with `.json` extension
+- Named by user or auto-generated with timestamps
+- Use `/new`, `/open`, `/save` commands to manage
+
+**`logs_dir`** - Where application log files are written
+- One log file per app run: `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
+- Structured plaintext format with contextual events
+- Includes AI requests/responses, commands, errors
+
+**`pages_dir`** - Where cited web pages are saved
+- All cited pages are automatically downloaded and saved
+- Filename format: `YYYY-MM-DD_HH-MM-SS_XX.html` (XX = citation number)
+- Titles are extracted from saved pages and used in citations
+- Enables offline access to sources and better title accuracy
+
+All three directories are created automatically if they don't exist.
 
 ### API Key Configuration
 

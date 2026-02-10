@@ -27,7 +27,8 @@ def sample_profile(temp_dir):
         "input_mode": "quick",
         "system_prompt": "You are a helpful assistant.",
         "chats_dir": str(temp_dir / "chats"),
-        "log_dir": str(temp_dir / "logs"),
+        "logs_dir": str(temp_dir / "logs"),
+        "pages_dir": "/test/pages",
         "api_keys": {
             "openai": {
                 "type": "env",
@@ -99,7 +100,8 @@ def mock_session_manager():
             "models": {"claude": "claude-haiku-4-5", "openai": "gpt-5-mini"},
             "api_keys": {},
             "chats_dir": "/test/chats",
-            "log_dir": "/test/logs",
+            "logs_dir": "/test/logs",
+            "pages_dir": "/test/pages",
             "timeout": 30,
         },
         current_ai="claude",

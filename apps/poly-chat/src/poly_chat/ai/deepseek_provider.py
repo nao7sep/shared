@@ -122,6 +122,8 @@ class DeepSeekProvider:
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
+        search: bool = False,
+        thinking: bool = False,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to DeepSeek and yield response chunks.

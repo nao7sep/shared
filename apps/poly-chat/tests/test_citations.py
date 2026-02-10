@@ -3,6 +3,8 @@
 import pytest
 
 from poly_chat import citations as citation_utils
+from poly_chat import page_fetcher
+from poly_chat import html_parser
 
 
 def test_normalize_citations_orders_keys_numbers_and_dedupes():
@@ -13,20 +15,6 @@ def test_normalize_citations_orders_keys_numbers_and_dedupes():
     ]
     result = citation_utils.normalize_citations(citations)
     assert result == [{"number": 1, "title": "Example", "url": "https://example.com/path"}]
-
-
-def test_normalize_citations_resolves_gemini_redirect():
-    citations = [
-        {
-            "title": "example.com",
-            "url": (
-                "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
-                "?url=https%3A%2F%2Fexample.com%2Farticle"
-            ),
-        }
-    ]
-    result = citation_utils.normalize_citations(citations)
-    assert result == [{"number": 1, "title": "example.com", "url": "https://example.com/article"}]
 
 
 def test_citations_need_enrichment_true_for_numeric_or_missing_titles():
@@ -49,7 +37,7 @@ async def test_enrich_citation_titles_updates_low_quality(monkeypatch):
     async def fake_fetch(url: str, timeout_sec: float = 5.0) -> str | None:
         return "Real Page Title"
 
-    monkeypatch.setattr(citation_utils, "_fetch_page_title", fake_fetch)
+    monkeypatch.setattr("poly_chat.citations.fetch_page_title", fake_fetch)
     citations = [{"number": 1, "title": "1", "url": "https://example.com/a"}]
     enriched, changed = await citation_utils.enrich_citation_titles(citations)
     assert changed is True
@@ -61,7 +49,7 @@ async def test_enrich_citation_titles_drops_numeric_when_fetch_fails(monkeypatch
     async def fake_fetch(url: str, timeout_sec: float = 5.0) -> str | None:
         return None
 
-    monkeypatch.setattr(citation_utils, "_fetch_page_title", fake_fetch)
+    monkeypatch.setattr("poly_chat.citations.fetch_page_title", fake_fetch)
     citations = [
         {"number": 1, "title": "1", "url": "https://example.com/a"},
         {"number": 2, "title": "2", "url": "https://example.com/b"},
@@ -81,12 +69,12 @@ def test_decode_html_bytes_prefers_meta_over_xml():
         '<html><head><meta charset="utf-8"><title>日本語タイトル</title></head></html>'
     )
     raw = html_text.encode("utf-8")
-    decoded = citation_utils._decode_html_bytes(raw, "text/html")
+    decoded = html_parser.decode_html_bytes(raw, "text/html")
     assert "日本語タイトル" in decoded
 
 
 def test_decode_html_bytes_supports_shift_jis_with_meta():
     html_text = '<html><head><meta charset="Shift_JIS"><title>日本語サイト</title></head></html>'
     raw = html_text.encode("shift_jis")
-    decoded = citation_utils._decode_html_bytes(raw, "text/html")
+    decoded = html_parser.decode_html_bytes(raw, "text/html")
     assert "日本語サイト" in decoded

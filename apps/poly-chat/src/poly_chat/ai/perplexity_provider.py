@@ -187,6 +187,7 @@ class PerplexityProvider:
         system_prompt: str | None = None,
         stream: bool = True,
         search: bool = False,
+        thinking: bool = False,
         metadata: dict | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Perplexity and yield response chunks.
@@ -232,7 +233,7 @@ class PerplexityProvider:
                             f"{chunk.usage.completion_tokens} completion = "
                             f"{chunk.usage.total_tokens} total tokens"
                         )
-                    # Extract citations/search results if available (final chunk)
+                    # Extract citations/search results if available (final chunk without choices)
                     if metadata is not None:
                         citations = self._extract_citations(chunk)
                         if citations:
@@ -252,6 +253,17 @@ class PerplexityProvider:
                 # Check finish reason for edge cases
                 if chunk.choices[0].finish_reason:
                     finish_reason = chunk.choices[0].finish_reason
+
+                    # Extract citations/search_results from finish chunk
+                    if metadata is not None:
+                        citations = self._extract_citations(chunk)
+                        if citations:
+                            metadata["citations"] = citations
+                            self._mark_search_executed(metadata, "citations")
+                        search_results = self._extract_search_results(chunk)
+                        if search_results:
+                            metadata["search_results"] = search_results
+                            self._mark_search_executed(metadata, "search_results")
                     if finish_reason == "length":
                         logger.warning("Response truncated due to max_tokens limit")
                     elif finish_reason == "content_filter":
@@ -282,7 +294,7 @@ class PerplexityProvider:
             raise
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False
+        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False, thinking: bool = False
     ) -> tuple[str, dict]:
         """Get full response from Perplexity."""
         try:

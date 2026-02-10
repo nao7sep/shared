@@ -86,6 +86,10 @@ SEARCH_SUPPORTED_PROVIDERS: set[str] = {
     "openai", "claude", "gemini", "grok", "perplexity",
 }
 
+THINKING_SUPPORTED_PROVIDERS: set[str] = {
+    "claude",
+}
+
 # Reverse mapping: model -> provider
 MODEL_TO_PROVIDER: Dict[str, str] = {}
 for provider, models in MODEL_REGISTRY.items():
@@ -172,3 +176,15 @@ def provider_supports_search(provider: str) -> bool:
         True if provider supports web search, False otherwise
     """
     return provider in SEARCH_SUPPORTED_PROVIDERS
+
+
+def provider_supports_thinking(provider: str) -> bool:
+    """Check if provider supports extended thinking/reasoning.
+
+    Args:
+        provider: Provider name
+
+    Returns:
+        True if provider supports thinking mode, False otherwise
+    """
+    return provider in THINKING_SUPPORTED_PROVIDERS

@@ -118,6 +118,7 @@ def add_assistant_message(
     content: str,
     model: str,
     citations: list[dict[str, Any]] | None = None,
+    thoughts: str | None = None,
 ) -> None:
     """Add assistant message to chat.
 
@@ -126,6 +127,7 @@ def add_assistant_message(
         content: Response text
         model: Model that generated the response
         citations: Optional list of source citations
+        thoughts: Optional thinking/reasoning content
     """
     lines = text_to_lines(content)
 
@@ -137,6 +139,8 @@ def add_assistant_message(
     }
     if citations:
         message["citations"] = citations
+    if thoughts:
+        message["thoughts"] = thoughts
 
     data["messages"].append(message)
 

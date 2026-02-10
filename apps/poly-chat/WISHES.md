@@ -528,7 +528,7 @@ claude's citations contain the same pair of title and url like 5 times and nothi
 
 can we eliminate duplications in citations? not only in claude.
 
-grok added urls within the response. is there a switch or something for this? it would be cleaner to just get the content AND citations separated.
+grok embeds urls within its responses. is there a switch or something for this? it would be cleaner to just get the content AND citations separated.
 
 also, in grok's case, citation titles are just numbers. it might help to load the pages and extract their real titles.
 
@@ -554,7 +554,7 @@ also, if there's a good python library to detect encoding, we should consider us
 
 ---
 
-"poetry run pytest" frequently stops the coding agent. i believe it's because the 2 chat/models integration tests are executed too. is there a way to exclude them by default? when i need them, i run the corresponding .command files by myself. so, there's little point in coding agents running them again and again.
+"poetry run pytest" frequently stops the coding agent for minutes. i believe it's because the 2 chat/models integration tests are executed too. is there a way to exclude them by default? when i need them, i run the corresponding .command files by myself. so, there's little point in coding agents running them again and again.
 
 ---
 
@@ -568,7 +568,7 @@ then, IF app needs more time for citation-related things, app shows a message fo
 
 many models take some time before the first token. i guess some are "thinking" models. which ones return thoughts? maybe we can display them on terminal, NOT save them in chat history and save them in log file.
 
-one more thing: the design to write all search-related info to log file was wrong. i saw what app actually saved and it was mostly useless. so, KISS.
+one more thing: the design to write all search-related info to log file was wrong. i saw what app actually saved and it was mostly useless. so, let's not write search-related info to log file, KISS.
 
 ---
 
@@ -580,12 +580,36 @@ current log file says search: true, but it only means /search was on. whether se
 
 ---
 
-let's make it simpler: let's completely remove support for one-shot commands. if we implement /thinking and one shot /secret and /search are supported, should we also support one shot /thinking? if we omit one-shot command support, code structure should be significantly simpler. please refactor the code if there is a high roi opportunity.
+let's make it simpler: let's completely remove support for one-shot commands. if we implement /thinking and one shot /secret and /search are supported, should we also support one shot /thinking? if we omit one-shot command support, code structure should be significantly simpler. please refactor the code if there is a high roi refactoring opportunity.
 
-perplexity might search without /search enabled. so, WITHOUT /search, app may sometimes need to write searched: true to log file.
+perplexity might search without /search enabled. so, WITHOUT /search, app may still need to write searched: true to log file.
 
 ---
 
 to enable grok's x/web search, we migrated some of grok provider's code to responses api.
 
 let's make it a full migration. it is generally unhealthy to have 2 branches of code for one purpose.
+
+---
+
+let's implement /thinking. it is an on/off flag like /secret and /search.
+
+now is a good time to also clarify: /thinking is merely a flag that makes efforts to enable thinking and /search is merely a flag that makes efforts to enable web search.
+
+so, when /thinking is off and a thinks-by-default model emits thoughts, app still displays and logs them. when /search is off and perplexity for example returns citations, app still displays and logs them. app will not ignore them just because the corresponding modes are off.
+
+---
+
+let's add a pages directory path in profile. it will be mandatory like chat history / error log directories.
+
+the purpose of this pages directory is to save ALL cited pages. file name will contain a timestamp like YYYY-MM-DD_HH-MM-SS_XX where XX is the 0-padded citation number.
+
+then whenever citations are parsed, let's ALWAYS download them. if app succeeds, app uses the titles found in the pages.
+
+we need to update readme.md too regarding the pages directory.
+
+---
+
+in profile, logs directory path is stored as "log_dir". this is trivial, but let's change it to "logs_dir" as we now have "pages_dir" as well and only one key being singular looks odder than before.
+
+pages_dir is mandatory. if it's not provided, app fails to start.

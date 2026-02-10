@@ -73,6 +73,7 @@ async def send_message_to_ai(
     mode: str = "normal",
     chat_path: Optional[str] = None,
     search: bool = False,
+    thinking: bool = False,
 ) -> tuple:
     """Send message to AI and get streaming response.
 
@@ -93,6 +94,8 @@ async def send_message_to_ai(
         has_system_prompt=bool(system_prompt),
         search=search,
         search_requested=search,
+        thinking=thinking,
+        thinking_requested=thinking,
     )
 
     started = time.perf_counter()
@@ -107,6 +110,7 @@ async def send_message_to_ai(
             system_prompt=system_prompt,
             stream=True,
             search=search,
+            thinking=thinking,
             metadata=metadata,
         )
 
