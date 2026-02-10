@@ -113,6 +113,7 @@ def test_load_profile_valid(tmp_path):
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": str(chats_dir),
         "logs_dir": str(logs_dir),
+        "pages_dir": str(tmp_path / "pages"),
         "api_keys": {
             "claude": {
                 "type": "env",
@@ -170,6 +171,7 @@ def test_load_profile_maps_at_paths(tmp_path):
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "@/chats",
         "logs_dir": "@/logs",
+        "pages_dir": "@/pages",
         "api_keys": {}
     }
 

@@ -91,7 +91,7 @@ def mock_api_key(monkeypatch):
 @pytest.fixture
 def mock_session_manager():
     """Create a mock SessionManager for testing commands."""
-    from src.poly_chat.session_manager import SessionManager
+    from poly_chat.session_manager import SessionManager
 
     manager = SessionManager(
         profile={
@@ -117,5 +117,5 @@ def mock_session_manager():
 @pytest.fixture
 def command_handler(mock_session_manager):
     """Create a CommandHandler with SessionManager state only."""
-    from src.poly_chat.commands import CommandHandler
+    from poly_chat.commands import CommandHandler
     return CommandHandler(mock_session_manager)

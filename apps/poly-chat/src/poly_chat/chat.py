@@ -14,6 +14,55 @@ import aiofiles
 from .message_formatter import text_to_lines
 
 
+REQUIRED_METADATA_KEYS = (
+    "title",
+    "summary",
+    "system_prompt",
+    "created_at",
+    "updated_at",
+)
+
+
+def _normalize_metadata(raw_metadata: Any) -> dict[str, Any]:
+    """Validate metadata shape and backfill missing known keys."""
+    if not isinstance(raw_metadata, dict):
+        raise ValueError("Invalid chat metadata: expected object")
+
+    metadata = dict(raw_metadata)
+    for key in REQUIRED_METADATA_KEYS:
+        metadata.setdefault(key, None)
+    return metadata
+
+
+def _normalize_content(raw_content: Any) -> list[str]:
+    """Normalize message content to list[str]."""
+    if isinstance(raw_content, str):
+        return text_to_lines(raw_content)
+    if isinstance(raw_content, list):
+        return [str(part) for part in raw_content]
+    raise ValueError("Invalid message content: expected string or list")
+
+
+def _normalize_messages(raw_messages: Any) -> list[dict[str, Any]]:
+    """Validate message list and normalize content shape."""
+    if not isinstance(raw_messages, list):
+        raise ValueError("Invalid chat messages: expected list")
+
+    normalized: list[dict[str, Any]] = []
+    for index, raw_message in enumerate(raw_messages):
+        if not isinstance(raw_message, dict):
+            raise ValueError(f"Invalid chat message at index {index}: expected object")
+        if "content" not in raw_message:
+            raise ValueError(f"Invalid chat message at index {index}: missing content")
+
+        message = dict(raw_message)
+        message["content"] = _normalize_content(raw_message.get("content"))
+        message.pop("hex_id", None)
+        normalized.append(message)
+
+    return normalized
+
+
 def load_chat(path: str) -> dict[str, Any]:
     """Load chat history from JSON file.
 
@@ -45,16 +94,15 @@ def load_chat(path: str) -> dict[str, Any]:
         with open(chat_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Validate structure
+        if not isinstance(data, dict):
+            raise ValueError("Invalid chat history file structure")
         if "metadata" not in data or "messages" not in data:
             raise ValueError("Invalid chat history file structure")
 
-        # Runtime-only fields are not persisted in canonical chat files.
-        for message in data.get("messages", []):
-            if isinstance(message, dict):
-                message.pop("hex_id", None)
+        metadata = _normalize_metadata(data.get("metadata"))
+        messages = _normalize_messages(data.get("messages"))
 
-        return data
+        return {"metadata": metadata, "messages": messages}
 
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in chat history file: {e}")

@@ -105,6 +105,85 @@ def test_load_chat_missing_messages(tmp_path):
         load_chat(str(chat_path))
 
 
+def test_load_chat_normalizes_string_content_and_metadata_defaults(tmp_path):
+    """String content should normalize to line arrays and metadata keys should be backfilled."""
+    chat_path = tmp_path / "legacy_string_content.json"
+    chat_data = {
+        "metadata": {"title": "Legacy"},
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hello\nWorld",
+            }
+        ],
+    }
+    with open(chat_path, "w", encoding="utf-8") as f:
+        json.dump(chat_data, f)
+
+    loaded = load_chat(str(chat_path))
+
+    assert loaded["messages"][0]["content"] == ["Hello", "World"]
+    assert loaded["metadata"]["title"] == "Legacy"
+    assert loaded["metadata"]["summary"] is None
+    assert loaded["metadata"]["system_prompt"] is None
+    assert loaded["metadata"]["created_at"] is None
+    assert loaded["metadata"]["updated_at"] is None
+
+
+def test_load_chat_rejects_invalid_metadata_type(tmp_path):
+    """Metadata must be an object."""
+    chat_path = tmp_path / "invalid_metadata_type.json"
+    chat_data = {"metadata": [], "messages": []}
+    with open(chat_path, "w", encoding="utf-8") as f:
+        json.dump(chat_data, f)
+
+    with pytest.raises(ValueError, match="Invalid chat metadata"):
+        load_chat(str(chat_path))
+
+
+def test_load_chat_rejects_invalid_messages_type(tmp_path):
+    """Messages must be a list."""
+    chat_path = tmp_path / "invalid_messages_type.json"
+    chat_data = {"metadata": {}, "messages": {"role": "user"}}
+    with open(chat_path, "w", encoding="utf-8") as f:
+        json.dump(chat_data, f)
+
+    with pytest.raises(ValueError, match="Invalid chat messages"):
+        load_chat(str(chat_path))
+
+
+def test_load_chat_rejects_invalid_message_content_type(tmp_path):
+    """Message content must be string or list."""
+    chat_path = tmp_path / "invalid_message_content_type.json"
+    chat_data = {
+        "metadata": {},
+        "messages": [
+            {"role": "user", "content": {"nested": "invalid"}},
+        ],
+    }
+    with open(chat_path, "w", encoding="utf-8") as f:
+        json.dump(chat_data, f)
+
+    with pytest.raises(ValueError, match="Invalid message content"):
+        load_chat(str(chat_path))
+
+
+def test_load_chat_casts_list_content_entries_to_strings(tmp_path):
+    """List content entries should be normalized to strings."""
+    chat_path = tmp_path / "list_content_cast.json"
+    chat_data = {
+        "metadata": {},
+        "messages": [
+            {"role": "assistant", "content": ["ok", 1, None]},
+        ],
+    }
+    with open(chat_path, "w", encoding="utf-8") as f:
+        json.dump(chat_data, f)
+
+    loaded = load_chat(str(chat_path))
+    assert loaded["messages"][0]["content"] == ["ok", "1", "None"]
+
+
 @pytest.mark.asyncio
 async def test_save_chat_basic(tmp_path):
     """Test basic chat save operation."""

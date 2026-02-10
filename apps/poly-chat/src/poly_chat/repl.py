@@ -29,9 +29,9 @@ from .orchestrator import ChatOrchestrator, OrchestratorAction
 from .citations import (
     normalize_citations,
     enrich_citation_titles,
-    citations_need_enrichment,
 )
 from .commands import CommandHandler
+from .ui.interaction import ThreadedConsoleInteraction
 from .logging_utils import log_event, sanitize_error_message, summarize_command_args
 from .streaming import display_streaming_response
 
@@ -71,7 +71,7 @@ async def repl_loop(
     if chat_data and system_prompt_path and not chat_data["metadata"].get("system_prompt"):
         chat.update_metadata(chat_data, system_prompt=system_prompt_path)
 
-    cmd_handler = CommandHandler(manager)
+    cmd_handler = CommandHandler(manager, interaction=ThreadedConsoleInteraction())
     orchestrator = ChatOrchestrator(manager)
     chat_metadata = manager.chat.get("metadata", {}) if isinstance(manager.chat, dict) else {}
     log_event(
@@ -156,6 +156,12 @@ async def repl_loop(
         """Execute a prepared send action from orchestrator."""
         provider_instance, error = validate_and_get_provider(manager, chat_path=chat_path)
         if error:
+            await orchestrator.rollback_pre_send_failure(
+                chat_path=chat_path,
+                chat_data=chat_data,
+                mode=action.mode or "normal",
+                assistant_hex_id=action.assistant_hex_id,
+            )
             print(f"Error: {error}")
             print()
             return

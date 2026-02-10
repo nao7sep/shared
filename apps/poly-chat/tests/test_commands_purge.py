@@ -2,13 +2,28 @@
 
 import pytest
 from poly_chat.commands import CommandHandler
-from src.poly_chat.session_manager import SessionManager
+from poly_chat.session_manager import SessionManager
 
 
-@pytest.fixture(autouse=True)
-def auto_confirm_purge(monkeypatch):
-    """Auto-confirm purge prompts unless a test overrides input."""
-    monkeypatch.setattr("builtins.input", lambda _prompt: "yes")
+class FakeInteraction:
+    """Deterministic async interaction adapter for command tests."""
+
+    def __init__(self, responses: list[str] | None = None):
+        self.responses = list(responses or ["yes"])
+
+    async def prompt_text(self, prompt: str) -> str:
+        if self.responses:
+            return self.responses.pop(0)
+        return "yes"
+
+    async def prompt_chat_selection(
+        self,
+        chats_dir: str,
+        *,
+        action: str = "open",
+        allow_cancel: bool = True,
+    ) -> str | None:
+        return None
 
 
 @pytest.fixture
@@ -74,7 +89,10 @@ def mock_session_manager_purge():
 @pytest.fixture
 def command_handler_purge(mock_session_manager_purge):
     """Create a CommandHandler for purge tests."""
-    return CommandHandler(mock_session_manager_purge)
+    return CommandHandler(
+        mock_session_manager_purge,
+        interaction=FakeInteraction(["yes"] * 20),
+    )
 
 
 @pytest.mark.asyncio
@@ -205,9 +223,9 @@ async def test_purge_multiple_messages_order_independent(command_handler_purge, 
 
 
 @pytest.mark.asyncio
-async def test_purge_cancelled_on_non_yes(command_handler_purge, mock_session_manager_purge, monkeypatch):
+async def test_purge_cancelled_on_non_yes(command_handler_purge, mock_session_manager_purge):
     """Test purge cancellation when confirmation is not 'yes'."""
-    monkeypatch.setattr("builtins.input", lambda _prompt: "no")
+    command_handler_purge.interaction = FakeInteraction(["no"])
 
     result = await command_handler_purge.purge_messages("a3f")
 

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 from poly_chat.commands import CommandHandler
-from src.poly_chat.session_manager import SessionManager
+from poly_chat.session_manager import SessionManager
 
 
 @pytest.fixture

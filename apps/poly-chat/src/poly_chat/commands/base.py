@@ -6,19 +6,25 @@ from typing import Any, Optional, TYPE_CHECKING
 
 from .. import models, profile
 from ..chat import update_metadata
+from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort
 
 if TYPE_CHECKING:
     from ..session_manager import SessionManager
 
 
 class CommandHandlerBaseMixin:
-    def __init__(self, manager: "SessionManager"):
+    def __init__(
+        self,
+        manager: "SessionManager",
+        interaction: Optional[UserInteractionPort] = None,
+    ):
         """Initialize command handler.
 
         Args:
             manager: SessionManager instance for unified state access
         """
         self.manager = manager
+        self.interaction = interaction or ThreadedConsoleInteraction()
 
     def _require_open_chat(
         self, *, need_messages: bool = False, need_metadata: bool = False
@@ -39,6 +45,28 @@ class CommandHandlerBaseMixin:
         chat_data = self.manager.chat
         if chat_path and isinstance(chat_data, dict):
             self.manager.mark_chat_dirty()
+
+    async def _prompt_text(self, prompt: str) -> str:
+        """Prompt user for input through injected interaction adapter."""
+        return await self.interaction.prompt_text(prompt)
+
+    async def _confirm_yes(self, prompt: str) -> bool:
+        """Return True when user enters 'yes' (case-insensitive)."""
+        return (await self._prompt_text(prompt)).strip().lower() == "yes"
+
+    async def _prompt_chat_selection(
+        self,
+        chats_dir: str,
+        *,
+        action: str,
+        allow_cancel: bool = True,
+    ) -> Optional[str]:
+        """Prompt user to select a chat through injected interaction adapter."""
+        return await self.interaction.prompt_chat_selection(
+            chats_dir,
+            action=action,
+            allow_cancel=allow_cancel,
+        )
 
     async def _update_metadata_and_save(self, **metadata_updates: Any) -> None:
         """Update current chat metadata and persist the chat."""
@@ -116,7 +144,27 @@ class CommandHandlerBaseMixin:
 
         self.manager.switch_provider(provider, model)
 
+        notices = self._reconcile_provider_modes(provider)
+        if notices:
+            return f"Switched to {provider} ({model})\n" + "\n".join(notices)
         return f"Switched to {provider} ({model})"
+
+    def _reconcile_provider_modes(self, provider: Optional[str] = None) -> list[str]:
+        """Disable incompatible mode flags for the active provider."""
+        provider_name = provider or self.manager.current_ai
+        notices: list[str] = []
+
+        if self.manager.search_mode and not models.provider_supports_search(provider_name):
+            self.manager.search_mode = False
+            notices.append(f"Search mode auto-disabled: {provider_name} does not support search.")
+
+        if self.manager.thinking_mode and not models.provider_supports_thinking(provider_name):
+            self.manager.thinking_mode = False
+            notices.append(
+                f"Thinking mode auto-disabled: {provider_name} does not support thinking."
+            )
+
+        return notices
 
     def _resolve_chat_path_arg(self, raw_path: str, chats_dir: str) -> str:
         """Resolve chat path argument to an absolute file path.

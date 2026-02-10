@@ -5,9 +5,14 @@ This module handles listing, selecting, creating, renaming, and deleting chat fi
 
 import json
 import logging
-from pathlib import Path
-from datetime import datetime, timezone
+from pathlib import Path, PureWindowsPath
+from datetime import datetime
 from typing import Optional, Any
+
+
+def _is_windows_absolute_path(path: str) -> bool:
+    """Return True for Windows absolute paths on any platform."""
+    return PureWindowsPath(path).is_absolute()
 
 
 def list_chats(chats_dir: str) -> list[dict[str, Any]]:
@@ -115,12 +120,28 @@ def rename_chat(old_path: str, new_name: str, chats_dir: str) -> str:
     # Determine new path
     chats_dir_resolved = Path(chats_dir).resolve()
 
-    if "/" in new_name or new_name.startswith("~"):
-        # Full path provided
-        new_file = Path(new_name).expanduser().resolve()
+    is_native_absolute = Path(new_name).is_absolute()
+    is_windows_absolute = _is_windows_absolute_path(new_name)
+    is_absolute = is_native_absolute or is_windows_absolute
+    is_path_like = (
+        "/" in new_name
+        or "\\" in new_name
+        or new_name.startswith("~")
+        or is_absolute
+    )
 
-        # Security check: If it looks like a relative path, validate it's within chats_dir
-        if not Path(new_name).is_absolute() and not new_name.startswith("~"):
+    if is_path_like:
+        # Full/relative path provided.
+        if is_windows_absolute and not is_native_absolute:
+            raise ValueError(
+                f"Invalid path: {new_name} (Windows absolute paths are not supported on this platform)"
+            )
+
+        new_file = Path(new_name).expanduser()
+        if is_absolute:
+            new_file = new_file.resolve()
+        else:
+            new_file = (Path(chats_dir) / new_name).resolve()
             try:
                 new_file.relative_to(chats_dir_resolved)
             except ValueError:

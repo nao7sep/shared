@@ -78,3 +78,27 @@ def test_decode_html_bytes_supports_shift_jis_with_meta():
     raw = html_text.encode("shift_jis")
     decoded = html_parser.decode_html_bytes(raw, "text/html")
     assert "日本語サイト" in decoded
+
+
+def test_build_unique_page_path_avoids_same_timestamp_collisions(tmp_path):
+    pages_path = tmp_path / "pages"
+    pages_path.mkdir(parents=True, exist_ok=True)
+
+    first = page_fetcher.build_unique_page_path(
+        pages_path,
+        timestamp="2026-02-10_12-34-56",
+        citation_number=1,
+        unique_fragment="123456",
+    )
+    first.write_text("<html>first</html>", encoding="utf-8")
+
+    second = page_fetcher.build_unique_page_path(
+        pages_path,
+        timestamp="2026-02-10_12-34-56",
+        citation_number=1,
+        unique_fragment="123456",
+    )
+
+    assert first != second
+    assert second.name.startswith("2026-02-10_12-34-56_01_123456")
+    assert second.suffix == ".html"

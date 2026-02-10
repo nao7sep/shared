@@ -31,6 +31,9 @@ class RuntimeCommandsMixin:
             self.manager.current_ai = default_ai
             self.manager.current_model = default_model
 
+            notices = self._reconcile_provider_modes(default_ai)
+            if notices:
+                return f"Reverted to profile default: {default_ai} ({default_model})\n" + "\n".join(notices)
             return f"Reverted to profile default: {default_ai} ({default_model})"
 
         # Check if model exists and switch provider if needed
@@ -38,11 +41,14 @@ class RuntimeCommandsMixin:
         if provider:
             self.manager.current_ai = provider
             self.manager.current_model = args
+            notices = self._reconcile_provider_modes(provider)
+            if notices:
+                return f"Switched to {provider} ({args})\n" + "\n".join(notices)
             return f"Switched to {provider} ({args})"
         else:
             # Model not in registry, but allow it anyway (might be new)
             self.manager.current_model = args
-            return f"Set model to {args} (provider: {self.session['current_ai']})"
+            return f"Set model to {args} (provider: {self.manager.current_ai})"
 
     async def set_helper(self, args: str) -> str:
         """Set or show the helper AI model.
@@ -79,7 +85,7 @@ class RuntimeCommandsMixin:
         else:
             # Model not in registry, but allow it anyway (might be new)
             self.manager.helper_model = args
-            return f"Helper model set to {args} (provider: {self.session.get('helper_ai', 'unknown')})"
+            return f"Helper model set to {args} (provider: {self.manager.helper_ai})"
 
     async def set_timeout(self, args: str) -> str:
         """Set or show the timeout setting.
@@ -495,8 +501,7 @@ class RuntimeCommandsMixin:
                 target_label = "selected target"
 
             print(f"WARNING: Rewind will delete from {target_label} onwards")
-            confirm = input("Type 'yes' to confirm rewind: ").strip().lower()
-            if confirm != "yes":
+            if not await self._confirm_yes("Type 'yes' to confirm rewind: "):
                 return "Rewind cancelled"
 
             count = delete_message_and_following(chat, index)
@@ -545,8 +550,7 @@ class RuntimeCommandsMixin:
         # Confirm destructive operation
         ids_for_prompt = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
         print(f"WARNING: Purging message(s) breaks conversation context: {ids_for_prompt}")
-        confirm = input("Type 'yes' to confirm purge: ").strip().lower()
-        if confirm != "yes":
+        if not await self._confirm_yes("Type 'yes' to confirm purge: "):
             return "Purge cancelled"
 
         # Delete messages

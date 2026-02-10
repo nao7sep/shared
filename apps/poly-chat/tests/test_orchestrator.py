@@ -3,16 +3,19 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.poly_chat.orchestrator import ChatOrchestrator, OrchestratorAction
-from src.poly_chat.session_manager import SessionManager
+from poly_chat.orchestrator import ChatOrchestrator, OrchestratorAction
+from poly_chat.session_manager import SessionManager
 
 
 @pytest.fixture
 def session_manager():
     """Create a test session manager."""
     manager = SessionManager(
-        profile={"chats_dir": "/test/chats", "logs_dir": "/test/logs"},
-        "pages_dir": "/test/pages",
+        profile={
+            "chats_dir": "/test/chats",
+            "logs_dir": "/test/logs",
+            "pages_dir": "/test/pages",
+        },
         current_ai="claude",
         current_model="claude-haiku-4-5",
     )
@@ -96,7 +99,7 @@ class TestNewChatSignal:
     @pytest.mark.asyncio
     async def test_new_chat_signal(self, orchestrator, sample_chat_data):
         """Test creating new chat."""
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
+        with patch("poly_chat.orchestrator.chat") as mock_chat:
             mock_chat.load_chat = MagicMock(return_value={"messages": []})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
@@ -120,7 +123,7 @@ class TestNewChatSignal:
     @pytest.mark.asyncio
     async def test_new_chat_without_current_chat(self, orchestrator):
         """Test creating new chat when no current chat."""
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
+        with patch("poly_chat.orchestrator.chat") as mock_chat:
             mock_chat.load_chat = MagicMock(return_value={"messages": []})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
@@ -145,7 +148,7 @@ class TestOpenChatSignal:
     @pytest.mark.asyncio
     async def test_open_chat_signal(self, orchestrator, sample_chat_data):
         """Test opening existing chat."""
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
+        with patch("poly_chat.orchestrator.chat") as mock_chat:
             mock_chat.load_chat = MagicMock(return_value={"messages": [{"role": "user", "content": "Test"}]})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
@@ -442,7 +445,7 @@ class TestSessionManagerIntegration:
     @pytest.mark.asyncio
     async def test_chat_switching_updates_session_manager(self, orchestrator):
         """Test that chat switching updates the session manager."""
-        with patch("src.poly_chat.orchestrator.chat") as mock_chat:
+        with patch("poly_chat.orchestrator.chat") as mock_chat:
             mock_chat.load_chat = MagicMock(
                 return_value={
                     "metadata": {
@@ -514,4 +517,60 @@ class TestCancelHandling:
             action = await orchestrator.handle_user_cancel(chat_data, "retry")
 
             assert action.action == "print"
+            mock_save.assert_not_called()
+
+
+class TestPreSendValidationRollback:
+    @pytest.mark.asyncio
+    async def test_normal_mode_rolls_back_pending_user_message(self, orchestrator):
+        chat_data = {
+            "metadata": {"title": "Validation rollback"},
+            "messages": [{"role": "assistant", "content": ["existing"]}],
+        }
+        orchestrator.manager.switch_chat("/test/chat.json", chat_data)
+
+        action = await orchestrator._handle_normal_message(
+            "unsent user input",
+            chat_data,
+            "/test/chat.json",
+        )
+
+        assert action.action == "send_normal"
+        assert chat_data["messages"][-1]["role"] == "user"
+
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+            rolled_back = await orchestrator.rollback_pre_send_failure(
+                chat_path="/test/chat.json",
+                chat_data=chat_data,
+                mode="normal",
+            )
+
+            assert rolled_back is True
+            assert len(chat_data["messages"]) == 1
+            assert chat_data["messages"][-1]["role"] == "assistant"
+            mock_save.assert_awaited_once_with(
+                force=True,
+                chat_path="/test/chat.json",
+                chat_data=chat_data,
+            )
+
+    @pytest.mark.asyncio
+    async def test_non_normal_mode_does_not_mutate_chat(self, orchestrator):
+        chat_data = {
+            "metadata": {},
+            "messages": [{"role": "user", "content": ["base"]}],
+        }
+        orchestrator.manager._state.hex_id_set.add("abc")
+
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
+            rolled_back = await orchestrator.rollback_pre_send_failure(
+                chat_path="/test/chat.json",
+                chat_data=chat_data,
+                mode="retry",
+                assistant_hex_id="abc",
+            )
+
+            assert rolled_back is False
+            assert len(chat_data["messages"]) == 1
+            assert "abc" not in orchestrator.manager.hex_id_set
             mock_save.assert_not_called()

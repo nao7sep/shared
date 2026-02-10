@@ -8,7 +8,6 @@ from ..chat_manager import (
     generate_chat_filename,
     rename_chat,
 )
-from ..ui.chat_ui import prompt_chat_selection
 
 
 class ChatFileCommandsMixin:
@@ -26,9 +25,6 @@ class ChatFileCommandsMixin:
         # Generate filename
         name = args.strip() if args else None
         new_path = generate_chat_filename(chats_dir, name)
-
-        # Create new chat structure
-        new_chat_data = load_chat(new_path)  # Returns empty structure
 
         # Signal to REPL to switch to new chat
         # Format: __NEW_CHAT__:path
@@ -53,7 +49,11 @@ class ChatFileCommandsMixin:
                 return str(e)
         else:
             # Interactive selection
-            selected_path = prompt_chat_selection(chats_dir, action="open", allow_cancel=True)
+            selected_path = await self._prompt_chat_selection(
+                chats_dir,
+                action="open",
+                allow_cancel=True,
+            )
 
         if not selected_path:
             return "Chat open cancelled"
@@ -111,14 +111,14 @@ class ChatFileCommandsMixin:
 
         if not parts:
             # No args - prompt for chat to rename
-            selected_path = prompt_chat_selection(
+            selected_path = await self._prompt_chat_selection(
                 chats_dir, action="rename", allow_cancel=True
             )
 
             if not selected_path:
                 return "Rename cancelled"
 
-            new_name = input("Enter new name: ").strip()
+            new_name = (await self._prompt_text("Enter new name: ")).strip()
             if not new_name:
                 return "Rename cancelled"
 
@@ -180,7 +180,7 @@ class ChatFileCommandsMixin:
 
         if not args.strip():
             # Interactive selection
-            selected_path = prompt_chat_selection(
+            selected_path = await self._prompt_chat_selection(
                 chats_dir, action="delete", allow_cancel=True
             )
 
@@ -209,9 +209,7 @@ class ChatFileCommandsMixin:
 
         # Confirm deletion
         print(f"\nWARNING: This will permanently delete: {Path(selected_path).name}")
-        confirm = input("Type 'yes' to confirm deletion: ").strip().lower()
-
-        if confirm != "yes":
+        if not await self._confirm_yes("Type 'yes' to confirm deletion: "):
             return "Deletion cancelled"
 
         # Perform deletion

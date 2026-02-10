@@ -190,7 +190,12 @@ class GeminiProvider:
             raise
 
     async def get_full_response(
-        self, messages: list[dict], model: str, system_prompt: str | None = None, search: bool = False
+        self,
+        messages: list[dict],
+        model: str,
+        system_prompt: str | None = None,
+        search: bool = False,
+        thinking: bool = False,
     ) -> tuple[str, dict]:
         """Get full response from Gemini.
 

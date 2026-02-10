@@ -58,3 +58,52 @@ async def test_secret_off_when_already_off(command_handler, mock_session_manager
 async def test_secret_on_off_literal_gives_hint(command_handler):
     result = await command_handler.secret_mode_command("on/off")
     assert result == "Use /secret on or /secret off"
+
+
+@pytest.mark.asyncio
+async def test_model_unknown_name_keeps_provider_and_does_not_crash(command_handler, mock_session_manager):
+    mock_session_manager.current_ai = "claude"
+
+    result = await command_handler.set_model("foo-new-model")
+
+    assert result == "Set model to foo-new-model (provider: claude)"
+    assert mock_session_manager.current_model == "foo-new-model"
+    assert mock_session_manager.current_ai == "claude"
+
+
+@pytest.mark.asyncio
+async def test_helper_unknown_name_keeps_provider_and_does_not_crash(command_handler, mock_session_manager):
+    mock_session_manager.helper_ai = "openai"
+
+    result = await command_handler.set_helper("foo-helper-model")
+
+    assert result == "Helper model set to foo-helper-model (provider: openai)"
+    assert mock_session_manager.helper_model == "foo-helper-model"
+    assert mock_session_manager.helper_ai == "openai"
+
+
+@pytest.mark.asyncio
+async def test_model_switch_reconciles_incompatible_modes(command_handler, mock_session_manager):
+    mock_session_manager.search_mode = True
+    mock_session_manager.thinking_mode = True
+
+    result = await command_handler.set_model("mistral-large-latest")
+
+    assert result.startswith("Switched to mistral (mistral-large-latest)")
+    assert "Search mode auto-disabled" in result
+    assert "Thinking mode auto-disabled" in result
+    assert mock_session_manager.search_mode is False
+    assert mock_session_manager.thinking_mode is False
+
+
+@pytest.mark.asyncio
+async def test_model_switch_preserves_supported_mode(command_handler, mock_session_manager):
+    mock_session_manager.search_mode = True
+    mock_session_manager.thinking_mode = True
+
+    result = await command_handler.set_model("gpt-5-mini")
+
+    assert result.startswith("Switched to openai (gpt-5-mini)")
+    assert "Thinking mode auto-disabled" in result
+    assert mock_session_manager.search_mode is True
+    assert mock_session_manager.thinking_mode is False

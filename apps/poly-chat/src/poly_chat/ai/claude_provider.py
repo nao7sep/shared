@@ -241,6 +241,7 @@ class ClaudeProvider:
         model: str,
         system_prompt: str | None = None,
         search: bool = False,
+        thinking: bool = False,
         max_tokens: int = 4096,
     ) -> tuple[str, dict]:
         """Get full response from Claude.
@@ -268,6 +269,8 @@ class ClaudeProvider:
 
             if search:
                 kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
+            if thinking:
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
 
             if system_prompt:
                 kwargs["system"] = system_prompt

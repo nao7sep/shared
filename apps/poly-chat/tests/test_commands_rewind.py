@@ -2,13 +2,28 @@
 
 import pytest
 from poly_chat.commands import CommandHandler
-from src.poly_chat.session_manager import SessionManager
+from poly_chat.session_manager import SessionManager
 
 
-@pytest.fixture(autouse=True)
-def auto_confirm_rewind(monkeypatch):
-    """Auto-confirm rewind prompts unless a test overrides input."""
-    monkeypatch.setattr("builtins.input", lambda _prompt: "yes")
+class FakeInteraction:
+    """Deterministic async interaction adapter for command tests."""
+
+    def __init__(self, responses: list[str] | None = None):
+        self.responses = list(responses or ["yes"])
+
+    async def prompt_text(self, prompt: str) -> str:
+        if self.responses:
+            return self.responses.pop(0)
+        return "yes"
+
+    async def prompt_chat_selection(
+        self,
+        chats_dir: str,
+        *,
+        action: str = "open",
+        allow_cancel: bool = True,
+    ) -> str | None:
+        return None
 
 
 @pytest.fixture
@@ -43,7 +58,7 @@ def rewind_manager():
 
 @pytest.fixture
 def rewind_handler(rewind_manager):
-    return CommandHandler(rewind_manager)
+    return CommandHandler(rewind_manager, interaction=FakeInteraction(["yes"] * 20))
 
 
 @pytest.mark.asyncio
@@ -110,8 +125,8 @@ async def test_rewind_turn_rejects_incomplete_tail(rewind_handler, rewind_manage
 
 
 @pytest.mark.asyncio
-async def test_rewind_cancelled_on_non_yes(rewind_handler, rewind_manager, monkeypatch):
-    monkeypatch.setattr("builtins.input", lambda _prompt: "no")
+async def test_rewind_cancelled_on_non_yes(rewind_handler, rewind_manager):
+    rewind_handler.interaction = FakeInteraction(["no"])
     initial_len = len(rewind_manager.chat["messages"])
 
     result = await rewind_handler.rewind_messages("last")

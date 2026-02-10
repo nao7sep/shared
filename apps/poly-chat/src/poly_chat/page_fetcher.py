@@ -2,11 +2,37 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 
 from .html_parser import decode_html_bytes, extract_html_title
+
+
+def build_unique_page_path(
+    pages_path: Path,
+    *,
+    timestamp: str,
+    citation_number: int,
+    unique_fragment: str | None = None,
+) -> Path:
+    """Build a unique destination path for a citation HTML page."""
+    fragment = unique_fragment or datetime.now().strftime("%f")
+    stem = f"{timestamp}_{citation_number:02d}_{fragment}"
+    filepath = pages_path / f"{stem}.html"
+
+    # Last-resort collision loop: preserve readability while ensuring uniqueness.
+    counter = 1
+    while filepath.exists():
+        if counter <= 9:
+            suffix = str(counter)
+        else:
+            suffix = uuid4().hex[:8]
+        filepath = pages_path / f"{stem}_{suffix}.html"
+        counter += 1
+    return filepath
 
 
 async def fetch_page_title(url: str, timeout_sec: float = 5.0) -> str | None:
@@ -77,9 +103,11 @@ async def fetch_and_save_page(
             pages_path = Path(pages_dir)
             pages_path.mkdir(parents=True, exist_ok=True)
 
-            # Filename format: YYYY-MM-DD_HH-MM-SS_XX.html
-            filename = f"{timestamp}_{citation_number:02d}.html"
-            filepath = pages_path / filename
+            filepath = build_unique_page_path(
+                pages_path,
+                timestamp=timestamp,
+                citation_number=citation_number,
+            )
 
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(decoded)

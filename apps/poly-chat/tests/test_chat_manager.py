@@ -283,6 +283,20 @@ def test_rename_chat_with_full_path(tmp_path):
     assert str(new_full_path) == new_path
 
 
+def test_rename_chat_rejects_windows_absolute_path_on_non_windows(tmp_path):
+    """Windows absolute paths should not be treated as chats_dir-relative names."""
+    if Path("C:/").exists():
+        pytest.skip("Windows-specific non-Windows guard")
+
+    old_file = tmp_path / "old.json"
+    old_file.write_text("{}")
+
+    with pytest.raises(ValueError, match="Windows absolute paths are not supported"):
+        rename_chat(str(old_file), r"C:\\Users\\alice\\renamed.json", str(tmp_path))
+
+    assert old_file.exists()
+
+
 def test_rename_chat_nonexistent_file(tmp_path):
     """Test renaming non-existent file raises error."""
     with pytest.raises(FileNotFoundError, match="Chat file not found"):

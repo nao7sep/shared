@@ -5,7 +5,7 @@ and state transitions in the REPL loop. This serves as a safety net
 before refactoring the orchestration logic out of repl.py.
 """
 
-from src.poly_chat.app_state import (
+from poly_chat.app_state import (
     SessionState,
     initialize_message_hex_ids,
 )
