@@ -17,3 +17,9 @@ claude code (opus 4.6) generated:
 - web-search-implementation-context.md (2026-02-10)
 
 based on these, claude code (sonnet 4.5) implemented web search.
+
+## code reviews
+
+codex (gpt-5.3-codex xhigh) generated and implemented:
+
+- comprehensive-issue-remediation-plan-2026-02-10.md (2026-02-10)
