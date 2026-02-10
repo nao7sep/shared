@@ -62,6 +62,26 @@ async def test_enrich_citation_titles_drops_numeric_when_fetch_fails(monkeypatch
     ]
 
 
+@pytest.mark.asyncio
+async def test_enrich_citation_titles_passes_timeout_to_fetch(monkeypatch):
+    seen_timeouts: list[float] = []
+
+    async def fake_fetch(url: str, timeout_sec: float = 5.0) -> str | None:
+        seen_timeouts.append(timeout_sec)
+        return "Fetched Title"
+
+    monkeypatch.setattr("poly_chat.citations.fetch_page_title", fake_fetch)
+    citations = [{"number": 1, "title": "1", "url": "https://example.com/a"}]
+    enriched, changed = await citation_utils.enrich_citation_titles(
+        citations,
+        timeout_sec=42,
+    )
+
+    assert changed is True
+    assert seen_timeouts == [42]
+    assert enriched == [{"number": 1, "title": "Fetched Title", "url": "https://example.com/a"}]
+
+
 def test_decode_html_bytes_prefers_meta_over_xml():
     # XML declaration says euc-jp, meta says utf-8: meta should win.
     html_text = (

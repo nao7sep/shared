@@ -1,5 +1,6 @@
 """Session state container and shared state utilities for PolyChat."""
 
+import math
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -32,15 +33,59 @@ class SessionState:
     thinking_mode: bool = False
     chat_dirty: bool = False
     hex_id_set: set[str] = field(default_factory=set)
-    _provider_cache: dict[tuple[str, str], Any] = field(default_factory=dict)
+    _provider_cache: dict[tuple[str, str, int | float | None], Any] = field(
+        default_factory=dict
+    )
 
-    def get_cached_provider(self, provider_name: str, api_key: str) -> Optional[Any]:
+    @staticmethod
+    def _normalize_timeout_key(timeout_sec: int | float | None) -> int | float | None:
+        if timeout_sec is None:
+            return None
+        if isinstance(timeout_sec, bool) or not isinstance(timeout_sec, (int, float)):
+            return None
+        numeric = float(timeout_sec)
+        if not math.isfinite(numeric):
+            return None
+        if numeric.is_integer():
+            return int(numeric)
+        return numeric
+
+    def _provider_cache_key(
+        self,
+        provider_name: str,
+        api_key: str,
+        timeout_sec: int | float | None = None,
+    ) -> tuple[str, str, int | float | None]:
+        return (
+            provider_name,
+            api_key,
+            self._normalize_timeout_key(timeout_sec),
+        )
+
+    def get_cached_provider(
+        self,
+        provider_name: str,
+        api_key: str,
+        timeout_sec: int | float | None = None,
+    ) -> Optional[Any]:
         """Get cached provider instance if available."""
-        return self._provider_cache.get((provider_name, api_key))
+        key = self._provider_cache_key(provider_name, api_key, timeout_sec=timeout_sec)
+        instance = self._provider_cache.get(key)
+        if instance is not None:
+            return instance
+        # Backward-compat for tests/older cache entries keyed without timeout.
+        return self._provider_cache.get((provider_name, api_key))  # type: ignore[arg-type]
 
-    def cache_provider(self, provider_name: str, api_key: str, instance: Any) -> None:
+    def cache_provider(
+        self,
+        provider_name: str,
+        api_key: str,
+        instance: Any,
+        timeout_sec: int | float | None = None,
+    ) -> None:
         """Cache a provider instance."""
-        self._provider_cache[(provider_name, api_key)] = instance
+        key = self._provider_cache_key(provider_name, api_key, timeout_sec=timeout_sec)
+        self._provider_cache[key] = instance
 
     def clear_provider_cache(self) -> None:
         """Clear all cached provider instances."""
@@ -77,3 +122,15 @@ def has_pending_error(chat_data: dict) -> bool:
         return False
 
     return messages[-1].get("role") == "error"
+
+
+def pending_error_guidance(*, compact: bool = False) -> str:
+    """Return user guidance when a chat has a pending error."""
+    if compact:
+        return "[⚠️  PENDING ERROR - Use /retry or /rewind]"
+
+    return (
+        "\n⚠️  Cannot continue: last interaction failed.\n"
+        "Use /retry to rerun the same message.\n"
+        "Use /rewind to remove the failed turn."
+    )

@@ -401,15 +401,9 @@ class ChatOrchestrator:
             )
 
         # Check for pending error
-        from .app_state import has_pending_error
+        from .app_state import has_pending_error, pending_error_guidance
         if has_pending_error(chat_data) and not self.manager.retry_mode and not self.manager.secret_mode:
-            return PrintAction(
-                message=(
-                    "\n⚠️  Cannot continue - last interaction resulted in an error.\n"
-                    "Use /retry to retry the last message,\n"
-                    "or /rewind to remove the error and continue from an earlier point."
-                )
-            )
+            return PrintAction(message=pending_error_guidance())
 
         # Handle secret mode
         if self.manager.secret_mode:

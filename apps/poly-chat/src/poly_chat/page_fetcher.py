@@ -9,6 +9,10 @@ from uuid import uuid4
 import httpx
 
 from .html_parser import decode_html_bytes, extract_html_title
+from .timeouts import (
+    PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC,
+    build_page_fetch_httpx_timeout,
+)
 
 
 def build_unique_page_path(
@@ -35,7 +39,9 @@ def build_unique_page_path(
     return filepath
 
 
-async def fetch_page_title(url: str, timeout_sec: float = 5.0) -> str | None:
+async def fetch_page_title(
+    url: str, timeout_sec: float = PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC
+) -> str | None:
     """Fetch a page and extract its title.
 
     Args:
@@ -45,7 +51,7 @@ async def fetch_page_title(url: str, timeout_sec: float = 5.0) -> str | None:
     Returns:
         Page title or None on failure
     """
-    timeout = httpx.Timeout(connect=3.0, read=timeout_sec, write=3.0, pool=3.0)
+    timeout = build_page_fetch_httpx_timeout(timeout_sec)
     headers = {
         "User-Agent": "poly-chat/1.0 (+citation-title-enricher)",
         "Accept": "text/html,application/xhtml+xml",
@@ -65,7 +71,7 @@ async def fetch_and_save_page(
     pages_dir: str,
     citation_number: int,
     timestamp: str,
-    timeout_sec: float = 5.0
+    timeout_sec: float = PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC
 ) -> tuple[str | None, str | None]:
     """Fetch page, save to disk, and extract title.
 
@@ -79,7 +85,7 @@ async def fetch_and_save_page(
     Returns:
         Tuple of (title, saved_filepath) or (None, None) on failure
     """
-    timeout = httpx.Timeout(connect=3.0, read=timeout_sec, write=3.0, pool=3.0)
+    timeout = build_page_fetch_httpx_timeout(timeout_sec)
     headers = {
         "User-Agent": "poly-chat/1.0 (+citation-saver)",
         "Accept": "text/html,application/xhtml+xml",

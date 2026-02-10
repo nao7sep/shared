@@ -2,6 +2,7 @@
 
 from .. import chat, hex_id, models, profile
 from ..chat import delete_message_and_following, update_metadata
+from ..timeouts import resolve_profile_timeout
 from .types import CommandResult, CommandSignal
 
 
@@ -99,7 +100,7 @@ class RuntimeCommandsMixin:
         """
         if not args:
             # Show current timeout
-            timeout = self.manager.profile.get("timeout", 30)
+            timeout = resolve_profile_timeout(self.manager.profile)
             return f"Current timeout: {self.manager.format_timeout(timeout)}"
 
         # Handle "default" - revert to profile's original timeout

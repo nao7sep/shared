@@ -8,6 +8,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .prompts import DEFAULT_ASSISTANT_SYSTEM_PROMPT
+from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
+
 
 _AI_LIMIT_KEYS = {
     "max_output_tokens",
@@ -122,7 +125,7 @@ def load_profile(path: str) -> dict[str, Any]:
 
     # Set default timeout if not present
     if "timeout" not in profile:
-        profile["timeout"] = 30
+        profile["timeout"] = DEFAULT_PROFILE_TIMEOUT_SEC
 
     # Map all path fields
     profile["chats_dir"] = map_path(profile["chats_dir"])
@@ -287,11 +290,11 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             "mistral": "mistral-small-latest",
             "deepseek": "deepseek-chat"
         },
-        "timeout": 30,
+        "timeout": DEFAULT_PROFILE_TIMEOUT_SEC,
         "input_mode": "quick",
         "system_prompt": {
             "type": "text",
-            "content": "You are a helpful assistant."
+            "content": DEFAULT_ASSISTANT_SYSTEM_PROMPT,
         },
         "ai_limits": {
             "default": {

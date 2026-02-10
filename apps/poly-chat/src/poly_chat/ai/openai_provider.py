@@ -6,7 +6,6 @@ See: https://platform.openai.com/docs/guides/text
 
 import logging
 from typing import AsyncIterator
-import httpx
 from openai import AsyncOpenAI
 from openai import (
     APIConnectionError,
@@ -25,6 +24,13 @@ from tenacity import (
 )
 
 from ..message_formatter import lines_to_text
+from ..timeouts import (
+    DEFAULT_PROFILE_TIMEOUT_SEC,
+    RETRY_BACKOFF_INITIAL_SEC,
+    RETRY_BACKOFF_MAX_SEC,
+    STANDARD_RETRY_ATTEMPTS,
+    build_ai_httpx_timeout,
+)
 from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
@@ -33,24 +39,14 @@ logger = logging.getLogger(__name__)
 class OpenAIProvider:
     """OpenAI (GPT) provider implementation using the Responses API."""
 
-    def __init__(self, api_key: str, timeout: float = 30.0):
+    def __init__(self, api_key: str, timeout: float = DEFAULT_PROFILE_TIMEOUT_SEC):
         """Initialize OpenAI provider.
 
         Args:
             api_key: OpenAI API key
             timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
-        # Configure granular timeouts for better error handling
-        # Reasoning models (o3, GPT-5) can have longer TTFT
-        if timeout > 0:
-            timeout_config = httpx.Timeout(
-                connect=5.0,  # Fast fail on connection issues
-                read=timeout,  # Allow model time to generate
-                write=10.0,  # Should be quick to send request
-                pool=2.0,  # Fast fail if connection pool exhausted
-            )
-        else:
-            timeout_config = None
+        timeout_config = build_ai_httpx_timeout(timeout)
 
         # Disable default retries - we handle retries explicitly
         self.client = AsyncOpenAI(
@@ -101,8 +97,11 @@ class OpenAIProvider:
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
         ),
-        wait=wait_exponential_jitter(initial=1, max=60),
-        stop=stop_after_attempt(4),
+        wait=wait_exponential_jitter(
+            initial=RETRY_BACKOFF_INITIAL_SEC,
+            max=RETRY_BACKOFF_MAX_SEC,
+        ),
+        stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _create_response(self, model: str, input_items: list[dict], stream: bool, search: bool = False):

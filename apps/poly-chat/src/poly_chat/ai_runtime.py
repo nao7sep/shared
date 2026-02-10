@@ -22,6 +22,7 @@ from .ai.mistral_provider import MistralProvider
 from .ai.deepseek_provider import DeepSeekProvider
 from .ai.types import AIResponseMetadata
 from .ai.limits import resolve_profile_limits, select_max_output_tokens
+from .timeouts import resolve_ai_read_timeout, resolve_profile_timeout
 
 ProviderInstance = (
     OpenAIProvider
@@ -45,11 +46,22 @@ PROVIDER_CLASSES: dict[str, type] = {
 
 
 def get_provider_instance(
-    provider_name: str, api_key: str, session: Optional[SessionState] = None
+    provider_name: str,
+    api_key: str,
+    session: Optional[SessionState] = None,
+    timeout_sec: int | float | None = None,
 ) -> ProviderInstance:
     """Get AI provider instance, using cache if available."""
+    effective_timeout = (
+        timeout_sec
+        if timeout_sec is not None
+        else resolve_profile_timeout(session.profile if session else None)
+    )
+
     if session:
-        cached = session.get_cached_provider(provider_name, api_key)
+        cached = session.get_cached_provider(
+            provider_name, api_key, timeout_sec=effective_timeout
+        )
         if cached:
             return cached
 
@@ -57,11 +69,15 @@ def get_provider_instance(
     if not provider_class:
         raise ValueError(f"Unsupported provider: {provider_name}")
 
-    timeout = session.profile.get("timeout", 30) if session else 30
-    instance = provider_class(api_key, timeout=timeout)
+    instance = provider_class(api_key, timeout=effective_timeout)
 
     if session:
-        session.cache_provider(provider_name, api_key, instance)
+        session.cache_provider(
+            provider_name,
+            api_key,
+            instance,
+            timeout_sec=effective_timeout,
+        )
 
     return instance
 
@@ -159,6 +175,9 @@ async def send_message_to_ai(
 def validate_and_get_provider(
     session: SessionState,
     chat_path: Optional[str] = None,
+    *,
+    search: bool = False,
+    thinking: bool = False,
 ) -> tuple[Optional[ProviderInstance], Optional[str]]:
     """Validate API key and get provider instance."""
     provider_name = session.current_ai
@@ -208,7 +227,18 @@ def validate_and_get_provider(
         return None, f"Invalid API key for {provider_name}"
 
     try:
-        provider_instance = get_provider_instance(provider_name, api_key, session)
+        profile_timeout = resolve_profile_timeout(session.profile)
+        effective_timeout = resolve_ai_read_timeout(
+            profile_timeout,
+            search=search,
+            thinking=thinking,
+        )
+        provider_instance = get_provider_instance(
+            provider_name,
+            api_key,
+            session,
+            timeout_sec=effective_timeout,
+        )
     except Exception as e:
         sanitized = sanitize_error_message(str(e))
         log_event(

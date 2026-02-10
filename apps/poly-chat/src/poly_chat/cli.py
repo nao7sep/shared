@@ -16,6 +16,7 @@ from .logging_utils import (
 )
 from .repl import repl_loop
 from .session_manager import SessionManager
+from .timeouts import resolve_profile_timeout
 
 
 def main() -> None:
@@ -110,7 +111,7 @@ def main() -> None:
                 "(unknown)",
             ),
             input_mode=profile_data.get("input_mode", "quick"),
-            timeout=profile_data.get("timeout", 30),
+            timeout=resolve_profile_timeout(profile_data),
             system_prompt_path=system_prompt_path,
         )
 

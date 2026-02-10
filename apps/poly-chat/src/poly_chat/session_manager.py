@@ -11,6 +11,7 @@ from typing import Any, Optional
 from .app_state import SessionState, initialize_message_hex_ids, assign_new_message_hex_id
 from . import hex_id
 from . import profile
+from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 
 
 class SessionManager:
@@ -75,7 +76,9 @@ class SessionManager:
         helper_ai = helper_ai or current_ai
         helper_model = helper_model or current_model
 
-        default_timeout = self._normalize_timeout(profile.get("timeout", 30))
+        default_timeout = self._normalize_timeout(
+            profile.get("timeout", DEFAULT_PROFILE_TIMEOUT_SEC)
+        )
         profile["timeout"] = default_timeout
         self._default_timeout = default_timeout
 
@@ -695,27 +698,44 @@ class SessionManager:
     # Provider Caching
     # ===================================================================
 
-    def get_cached_provider(self, provider_name: str, api_key: str) -> Optional[Any]:
+    def get_cached_provider(
+        self,
+        provider_name: str,
+        api_key: str,
+        timeout_sec: int | float | None = None,
+    ) -> Optional[Any]:
         """Get cached provider instance.
 
         Args:
             provider_name: Name of the provider
             api_key: API key for the provider
+            timeout_sec: Effective timeout used to build provider instance
 
         Returns:
             Cached provider instance or None
         """
-        return self._state.get_cached_provider(provider_name, api_key)
+        return self._state.get_cached_provider(
+            provider_name, api_key, timeout_sec=timeout_sec
+        )
 
-    def cache_provider(self, provider_name: str, api_key: str, instance: Any) -> None:
+    def cache_provider(
+        self,
+        provider_name: str,
+        api_key: str,
+        instance: Any,
+        timeout_sec: int | float | None = None,
+    ) -> None:
         """Cache a provider instance.
 
         Args:
             provider_name: Name of the provider
             api_key: API key for the provider
             instance: Provider instance to cache
+            timeout_sec: Effective timeout used to build provider instance
         """
-        self._state.cache_provider(provider_name, api_key, instance)
+        self._state.cache_provider(
+            provider_name, api_key, instance, timeout_sec=timeout_sec
+        )
 
     # ===================================================================
     # Provider Switching

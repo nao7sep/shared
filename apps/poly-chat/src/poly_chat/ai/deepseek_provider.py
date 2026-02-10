@@ -5,7 +5,6 @@ Note: DeepSeek uses OpenAI-compatible API.
 
 import logging
 from typing import AsyncIterator
-import httpx
 from openai import (
     APIConnectionError,
     RateLimitError,
@@ -24,6 +23,14 @@ from tenacity import (
 )
 
 from ..message_formatter import lines_to_text
+from ..timeouts import (
+    DEFAULT_PROFILE_TIMEOUT_SEC,
+    DEEPSEEK_RETRY_ATTEMPTS,
+    DEEPSEEK_RETRY_MIN_SEC,
+    DEEPSEEK_RETRY_MULTIPLIER,
+    RETRY_BACKOFF_MAX_SEC,
+    build_ai_httpx_timeout,
+)
 from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
@@ -35,7 +42,7 @@ class DeepSeekProvider:
     DeepSeek uses OpenAI-compatible API.
     """
 
-    def __init__(self, api_key: str, timeout: float = 30.0):
+    def __init__(self, api_key: str, timeout: float = DEFAULT_PROFILE_TIMEOUT_SEC):
         """Initialize DeepSeek provider.
 
         Args:
@@ -44,15 +51,7 @@ class DeepSeekProvider:
         """
         from openai import AsyncOpenAI
 
-        if timeout > 0:
-            timeout_config = httpx.Timeout(
-                connect=5.0,  # Fast fail on connection issues
-                read=timeout,  # Allow model time to generate
-                write=10.0,  # Should be quick to send request
-                pool=2.0,  # Fast fail if connection pool exhausted
-            )
-        else:
-            timeout_config = None
+        timeout_config = build_ai_httpx_timeout(timeout)
 
         self.api_key = api_key
         self.timeout = timeout
@@ -94,8 +93,12 @@ class DeepSeekProvider:
         ),
         # DeepSeek 503 errors can last 30-60s during peak load
         # Aggressive exponential backoff: 1s, 2s, 4s, 8s... up to 60s
-        wait=wait_exponential(multiplier=1, min=1, max=60),
-        stop=stop_after_attempt(10),  # More attempts for DeepSeek's 503 issues
+        wait=wait_exponential(
+            multiplier=DEEPSEEK_RETRY_MULTIPLIER,
+            min=DEEPSEEK_RETRY_MIN_SEC,
+            max=RETRY_BACKOFF_MAX_SEC,
+        ),
+        stop=stop_after_attempt(DEEPSEEK_RETRY_ATTEMPTS),  # More attempts for 503 issues
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):

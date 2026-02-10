@@ -1,6 +1,5 @@
 """Tests for session state management."""
 
-import pytest
 from poly_chat.app_state import (
     SessionState,
     initialize_message_hex_ids,
@@ -190,6 +189,26 @@ class TestProviderCaching:
 
         assert session.get_cached_provider("claude", "key1") == provider1
         assert session.get_cached_provider("openai", "key2") == provider2
+
+    def test_cache_keys_include_timeout_variant(self):
+        """Test that cache distinguishes provider instances by timeout."""
+        session = SessionState(
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+            helper_ai="claude",
+            helper_model="claude-haiku-4-5",
+            profile={},
+            chat={},
+        )
+
+        provider_fast = {"name": "claude-fast"}
+        provider_slow = {"name": "claude-slow"}
+
+        session.cache_provider("claude", "key1", provider_fast, timeout_sec=30)
+        session.cache_provider("claude", "key1", provider_slow, timeout_sec=90)
+
+        assert session.get_cached_provider("claude", "key1", timeout_sec=30) == provider_fast
+        assert session.get_cached_provider("claude", "key1", timeout_sec=90) == provider_slow
 
     def test_cache_miss_returns_none(self):
         """Test that cache miss returns None."""

@@ -4,6 +4,13 @@ import logging
 
 from .. import hex_id
 from ..chat import get_messages_for_ai
+from ..prompts import (
+    SAFETY_CHECK_SYSTEM_PROMPT,
+    build_safety_check_prompt,
+    build_summary_generation_prompt,
+    build_title_generation_prompt,
+)
+from ..timeouts import resolve_profile_timeout
 
 
 class MetadataCommandsMixin:
@@ -83,15 +90,7 @@ class MetadataCommandsMixin:
 
         prompt_messages = [{
             "role": "user",
-            "content": (
-                "Generate a short, descriptive title for this conversation.\n\n"
-                f"{context_text}\n\n"
-                "Output requirements:\n"
-                "- Use the dominant conversation language.\n"
-                "- One line only.\n"
-                "- Plain text only (no markdown, no bullets, no code fences, no quotes).\n"
-                "- Output only the title."
-            )
+            "content": build_title_generation_prompt(context_text),
         }]
 
         # Invoke helper AI
@@ -176,15 +175,7 @@ class MetadataCommandsMixin:
 
         prompt_messages = [{
             "role": "user",
-            "content": (
-                "Generate a concise summary of this conversation.\n\n"
-                f"{context_text}\n\n"
-                "Output requirements:\n"
-                "- Use the dominant conversation language.\n"
-                "- One paragraph only.\n"
-                "- Plain text only (no markdown, no bullets, no headings, no code fences).\n"
-                "- Output only the summary paragraph."
-            )
+            "content": build_summary_generation_prompt(context_text),
         }]
 
         # Invoke helper AI
@@ -248,23 +239,9 @@ class MetadataCommandsMixin:
             scope = "entire chat"
 
         # Create safety check prompt for helper AI
-        system_prompt = """You are a safety analyzer. Check the provided content for:
-1. PII (Personally Identifiable Information) - names, emails, phone numbers, addresses, SSN, etc.
-2. Credentials - API keys, passwords, tokens, access keys, secrets
-3. Proprietary Information - confidential business data, trade secrets
-4. Offensive Content - hate speech, discriminatory language, explicit content
-
-Respond ONLY in this exact format:
-PII: [✓ None | ⚠ Found: brief description]
-CREDENTIALS: [✓ None | ⚠ Found: brief description]
-PROPRIETARY: [✓ None | ⚠ Found: brief description]
-OFFENSIVE: [✓ None | ⚠ Found: brief description]
-
-Keep descriptions brief (one line max). For found items, mention location if checking multiple messages."""
-
         prompt_messages = [{
             "role": "user",
-            "content": f"Check this content for safety issues:\n\n{content_to_check}"
+            "content": build_safety_check_prompt(content_to_check),
         }]
 
         # Invoke helper AI
@@ -274,7 +251,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
                 self.manager.helper_model,
                 self.manager.profile,
                 prompt_messages,
-                system_prompt,
+                SAFETY_CHECK_SYSTEM_PROMPT,
                 task="safety_check",
             )
 
@@ -497,7 +474,7 @@ Keep descriptions brief (one line max). For found items, mention location if che
         messages = chat_data.get("messages", []) if isinstance(chat_data, dict) else []
         metadata = chat_data.get("metadata", {}) if isinstance(chat_data, dict) else {}
 
-        timeout = profile_data.get("timeout", 30)
+        timeout = resolve_profile_timeout(profile_data)
         timeout_display = self.manager.format_timeout(timeout)
 
         chat_title = metadata.get("title") or "(none)"

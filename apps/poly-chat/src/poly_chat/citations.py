@@ -8,6 +8,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 from .page_fetcher import fetch_and_save_page, fetch_page_title
+from .timeouts import PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC
 
 
 _NUMERIC_TITLE_RE = re.compile(r"^\s*\d+\s*$")
@@ -123,6 +124,7 @@ async def enrich_citation_titles(
     *,
     concurrency: int = 3,
     pages_dir: str | None = None,
+    timeout_sec: float = PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC,
 ) -> tuple[list[dict[str, object]], bool]:
     """Best-effort async title enrichment for low-quality/missing titles.
 
@@ -168,7 +170,11 @@ async def enrich_citation_titles(
                 async with sem:
                     citation_number = citation.get("number", index + 1)
                     fetched_title, saved_path = await fetch_and_save_page(
-                        url, pages_dir, citation_number, timestamp
+                        url,
+                        pages_dir,
+                        citation_number,
+                        timestamp,
+                        timeout_sec=timeout_sec,
                     )
                 if fetched_title:
                     successful_fetches += 1
@@ -183,7 +189,7 @@ async def enrich_citation_titles(
                 return
             try:
                 async with sem:
-                    fetched = await fetch_page_title(url)
+                    fetched = await fetch_page_title(url, timeout_sec=timeout_sec)
             except Exception:
                 return
             if fetched:

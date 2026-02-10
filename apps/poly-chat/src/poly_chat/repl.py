@@ -23,7 +23,7 @@ from prompt_toolkit.key_binding import KeyBindings
 
 from . import chat
 from .ai_runtime import send_message_to_ai, validate_and_get_provider
-from .app_state import has_pending_error
+from .app_state import has_pending_error, pending_error_guidance
 from .session_manager import SessionManager
 from .orchestrator import ChatOrchestrator
 from .orchestrator_types import (
@@ -40,6 +40,11 @@ from .commands import CommandHandler
 from .ui.interaction import ThreadedConsoleInteraction
 from .logging_utils import log_event, sanitize_error_message, summarize_command_args
 from .streaming import display_streaming_response
+from .timeouts import (
+    CITATION_ENRICH_GRACE_TIMEOUT_SEC,
+    CITATION_ENRICH_TOTAL_TIMEOUT_SEC,
+    resolve_profile_timeout,
+)
 
 
 async def repl_loop(
@@ -93,7 +98,7 @@ async def repl_loop(
         helper_provider=manager.helper_ai,
         helper_model=manager.helper_model,
         input_mode=manager.input_mode,
-        timeout=manager.profile.get("timeout", 30),
+        timeout=resolve_profile_timeout(manager.profile),
         system_prompt_path=manager.system_prompt_path,
         chat_title=chat_metadata.get("title"),
         chat_summary=chat_metadata.get("summary"),
@@ -160,7 +165,18 @@ async def repl_loop(
 
     async def execute_send_action(action: SendAction) -> None:
         """Execute a prepared send action from orchestrator."""
-        provider_instance, error = validate_and_get_provider(manager, chat_path=chat_path)
+        use_search = (
+            action.search_enabled
+            if action.search_enabled is not None
+            else manager.search_mode
+        )
+        use_thinking = manager.thinking_mode
+        provider_instance, error = validate_and_get_provider(
+            manager,
+            chat_path=chat_path,
+            search=use_search,
+            thinking=use_thinking,
+        )
         if error:
             await orchestrator.rollback_pre_send_failure(
                 chat_path=chat_path,
@@ -180,8 +196,6 @@ async def repl_loop(
 
         try:
             print(prefix, end="", flush=True)
-            use_search = action.search_enabled if action.search_enabled is not None else manager.search_mode
-            use_thinking = manager.thinking_mode
             effective_request_mode = action.mode or "normal"
             if use_search:
                 if action.mode == "secret":
@@ -228,11 +242,16 @@ async def repl_loop(
 
             # Always download and save pages when citations are present
             if citations:
-                grace_timeout = 0.25
-                total_timeout = 6.0
+                grace_timeout = CITATION_ENRICH_GRACE_TIMEOUT_SEC
+                total_timeout = CITATION_ENRICH_TOTAL_TIMEOUT_SEC
+                page_fetch_read_timeout = resolve_profile_timeout(manager.profile)
                 pages_dir = manager.profile.get("pages_dir")
                 enrich_task = asyncio.create_task(
-                    enrich_citation_titles(citations, pages_dir=pages_dir)
+                    enrich_citation_titles(
+                        citations,
+                        pages_dir=pages_dir,
+                        timeout_sec=page_fetch_read_timeout,
+                    )
                 )
                 try:
                     enriched, changed = await asyncio.wait_for(
@@ -337,7 +356,7 @@ async def repl_loop(
     while True:
         try:
             if has_pending_error(chat_data) and not manager.retry_mode:
-                print("[⚠️  PENDING ERROR - Use /retry or /rewind]")
+                print(pending_error_guidance(compact=True))
             elif manager.retry_mode:
                 print("[🔄 RETRY MODE - Use /apply to accept, /cancel to abort]")
             elif manager.secret_mode:

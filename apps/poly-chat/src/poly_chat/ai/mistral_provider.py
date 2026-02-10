@@ -5,7 +5,6 @@ Note: Mistral uses OpenAI-compatible API.
 
 import logging
 from typing import AsyncIterator
-import httpx
 from openai import (
     APIConnectionError,
     RateLimitError,
@@ -24,6 +23,13 @@ from tenacity import (
 )
 
 from ..message_formatter import lines_to_text
+from ..timeouts import (
+    DEFAULT_PROFILE_TIMEOUT_SEC,
+    RETRY_BACKOFF_INITIAL_SEC,
+    RETRY_BACKOFF_MAX_SEC,
+    STANDARD_RETRY_ATTEMPTS,
+    build_ai_httpx_timeout,
+)
 from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
@@ -35,7 +41,7 @@ class MistralProvider:
     Mistral uses OpenAI-compatible API.
     """
 
-    def __init__(self, api_key: str, timeout: float = 30.0):
+    def __init__(self, api_key: str, timeout: float = DEFAULT_PROFILE_TIMEOUT_SEC):
         """Initialize Mistral provider.
 
         Args:
@@ -44,16 +50,7 @@ class MistralProvider:
         """
         from openai import AsyncOpenAI
 
-        # Configure granular timeouts for better error handling
-        if timeout > 0:
-            timeout_config = httpx.Timeout(
-                connect=5.0,  # Fast fail on connection issues
-                read=timeout,  # Allow model time to generate
-                write=10.0,  # Should be quick to send request
-                pool=2.0,  # Fast fail if connection pool exhausted
-            )
-        else:
-            timeout_config = None
+        timeout_config = build_ai_httpx_timeout(timeout)
 
         self.api_key = api_key
         self.timeout = timeout
@@ -78,8 +75,11 @@ class MistralProvider:
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
         ),
-        wait=wait_exponential_jitter(initial=1, max=60),
-        stop=stop_after_attempt(4),
+        wait=wait_exponential_jitter(
+            initial=RETRY_BACKOFF_INITIAL_SEC,
+            max=RETRY_BACKOFF_MAX_SEC,
+        ),
+        stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool):

@@ -10,6 +10,14 @@ from google.genai.errors import (
 )
 
 from ..message_formatter import lines_to_text
+from ..timeouts import (
+    DEFAULT_PROFILE_TIMEOUT_SEC,
+    GEMINI_RETRY_ATTEMPTS,
+    GEMINI_RETRY_EXP_BASE,
+    GEMINI_RETRY_INITIAL_DELAY_SEC,
+    GEMINI_RETRY_JITTER,
+    GEMINI_RETRY_MAX_DELAY_SEC,
+)
 from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
@@ -18,7 +26,7 @@ logger = logging.getLogger(__name__)
 class GeminiProvider:
     """Gemini (Google) provider implementation."""
 
-    def __init__(self, api_key: str, timeout: float = 30.0):
+    def __init__(self, api_key: str, timeout: float = DEFAULT_PROFILE_TIMEOUT_SEC):
         """Initialize Gemini provider.
 
         Args:
@@ -31,11 +39,11 @@ class GeminiProvider:
 
         # Configure retry policy for transient errors
         retry_policy = types.HttpRetryOptions(
-            attempts=5,  # Try up to 5 times
-            initial_delay=1.0,  # Wait 1 second initially
-            exp_base=2.0,  # Double the delay each time
-            jitter=0.5,  # Add randomness to prevent thundering herd
-            max_delay=60.0,  # Never wait more than 60 seconds
+            attempts=GEMINI_RETRY_ATTEMPTS,
+            initial_delay=GEMINI_RETRY_INITIAL_DELAY_SEC,
+            exp_base=GEMINI_RETRY_EXP_BASE,
+            jitter=GEMINI_RETRY_JITTER,
+            max_delay=GEMINI_RETRY_MAX_DELAY_SEC,
             http_status_codes=[429, 503, 504],  # Only retry on these codes
         )
 
