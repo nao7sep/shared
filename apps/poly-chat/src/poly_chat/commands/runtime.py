@@ -345,9 +345,17 @@ class RuntimeCommandsMixin:
         if normalized in {"on/off", "on|off"}:
             return "Use /secret on or /secret off"
 
+        payload = args.strip()
+        first_token = payload.split(None, 1)[0].lower() if payload else ""
+        if first_token == "/search":
+            return (
+                "Only one command is allowed per input. "
+                "Use /secret on + /search <msg> (or /search on + /secret <msg>)."
+            )
+
         # Otherwise it's a one-shot secret message
         # Signal to REPL loop to handle this as one-shot secret message
-        return f"__SECRET_ONESHOT__:{args.strip()}"
+        return f"__SECRET_ONESHOT__:{payload}"
 
     async def search_mode_command(self, args: str) -> str:
         """Show, set, or use search mode (web search enabled).
@@ -394,8 +402,16 @@ class RuntimeCommandsMixin:
         if normalized in {"on/off", "on|off"}:
             return "Use /search on or /search off"
 
+        payload = args.strip()
+        first_token = payload.split(None, 1)[0].lower() if payload else ""
+        if first_token == "/secret":
+            return (
+                "Only one command is allowed per input. "
+                "Use /secret on + /search <msg> (or /search on + /secret <msg>)."
+            )
+
         # One-shot search message
-        return f"__SEARCH_ONESHOT__:{args.strip()}"
+        return f"__SEARCH_ONESHOT__:{payload}"
 
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting a target message and all following.

@@ -24,7 +24,7 @@ from . import chat
 from .ai_runtime import send_message_to_ai, validate_and_get_provider
 from .app_state import has_pending_error
 from .session_manager import SessionManager
-from .orchestrator import ChatOrchestrator
+from .orchestrator import ChatOrchestrator, OrchestratorAction
 from .commands import CommandHandler
 from .logging_utils import log_event, sanitize_error_message, summarize_command_args
 from .streaming import display_streaming_response
@@ -146,6 +146,102 @@ async def repl_loop(
     print("=" * 70)
     print()
 
+    async def execute_send_action(action: OrchestratorAction) -> None:
+        """Execute a prepared send action from orchestrator."""
+        provider_instance, error = validate_and_get_provider(manager, chat_path=chat_path)
+        if error:
+            print(f"Error: {error}")
+            print()
+            return
+
+        # Determine display prefix.
+        if action.mode == "retry" and action.assistant_hex_id:
+            prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
+        elif action.mode_tag:
+            prefix = f"\n{manager.current_ai.capitalize()} ({action.mode_tag}): "
+        else:
+            prefix = f"\n{manager.current_ai.capitalize()}: "
+
+        try:
+            print(prefix, end="", flush=True)
+            use_search = action.search_enabled if action.search_enabled is not None else manager.search_mode
+            response_stream, metadata = await send_message_to_ai(
+                provider_instance,
+                action.messages or [],
+                manager.current_model,
+                manager.system_prompt,
+                provider_name=manager.current_ai,
+                mode=action.request_mode or action.mode or "normal",
+                chat_path=chat_path,
+                search=use_search,
+            )
+            response_text = await display_streaming_response(response_stream, prefix="")
+
+            # Display citations if present
+            from .streaming import display_citations
+
+            citations = metadata.get("citations")
+            if citations:
+                display_citations(citations)
+
+            # Calculate latency and log successful AI response
+            latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
+            usage = metadata.get("usage", {})
+
+            from .logging_utils import chat_file_label
+
+            log_event(
+                "ai_response",
+                level=logging.INFO,
+                mode=action.request_mode or action.mode,
+                provider=manager.current_ai,
+                model=manager.current_model,
+                chat_file=chat_file_label(chat_path),
+                latency_ms=latency_ms,
+                output_chars=len(response_text),
+                input_tokens=usage.get("prompt_tokens"),
+                output_tokens=usage.get("completion_tokens"),
+                total_tokens=usage.get("total_tokens"),
+                citations=len(citations) if citations else None,
+            )
+
+            # Handle successful response
+            result = await orchestrator.handle_ai_response(
+                response_text,
+                chat_path,
+                chat_data,
+                action.mode or "normal",
+                user_input=action.retry_user_input,
+                assistant_hex_id=action.assistant_hex_id,
+            )
+
+            if result.action == "print" and result.message:
+                print(result.message)
+            print()
+
+        except KeyboardInterrupt:
+            cancel_result = await orchestrator.handle_user_cancel(
+                chat_data,
+                action.mode or "normal",
+                chat_path=chat_path,
+                assistant_hex_id=action.assistant_hex_id,
+            )
+            print(cancel_result.message)
+            print()
+            return
+
+        except Exception as e:
+            error_result = await orchestrator.handle_ai_error(
+                e,
+                chat_path,
+                chat_data,
+                action.mode or "normal",
+                assistant_hex_id=action.assistant_hex_id,
+            )
+            print(error_result.message)
+            print()
+            return
+
     while True:
         try:
             if has_pending_error(chat_data) and not manager.retry_mode:
@@ -213,156 +309,8 @@ async def repl_loop(
                             print(action.message)
                             print()
 
-                    elif action.action == "secret_oneshot":
-                        secret_message = action.message
-
-                        provider_instance, error = validate_and_get_provider(manager)
-                        if error:
-                            print(f"Error: {error}")
-                            print()
-                            continue
-
-                        messages = chat.get_messages_for_ai(chat_data)
-                        temp_messages = messages + [{"role": "user", "content": secret_message}]
-
-                        try:
-                            print(f"\n{manager.current_ai.capitalize()} (secret): ", end="", flush=True)
-                            use_search = manager.search_mode
-                            response_stream, metadata = await send_message_to_ai(
-                                provider_instance,
-                                temp_messages,
-                                manager.current_model,
-                                manager.system_prompt,
-                                provider_name=manager.current_ai,
-                                mode="secret_oneshot",
-                                chat_path=chat_path,
-                                search=use_search,
-                            )
-                            response_text = await display_streaming_response(response_stream, prefix="")
-
-                            # Display citations if present
-                            from .streaming import display_citations
-                            citations = metadata.get("citations")
-                            if citations:
-                                display_citations(citations)
-
-                            # Log successful AI response
-                            latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
-                            usage = metadata.get("usage", {})
-
-                            from .logging_utils import chat_file_label
-                            log_event(
-                                "ai_response",
-                                level=logging.INFO,
-                                mode="secret_oneshot",
-                                provider=manager.current_ai,
-                                model=manager.current_model,
-                                chat_file=chat_file_label(chat_path),
-                                latency_ms=latency_ms,
-                                output_chars=len(response_text),
-                                input_tokens=usage.get("prompt_tokens"),
-                                output_tokens=usage.get("completion_tokens"),
-                                total_tokens=usage.get("total_tokens"),
-                                citations=len(citations) if citations else None,
-                            )
-
-                            print()
-                        except Exception as e:
-                            print(f"\nError: {e}")
-                            print()
-
-                        continue
-
-                    elif action.action == "search_oneshot":
-                        search_message = action.message
-
-                        provider_instance, error = validate_and_get_provider(manager)
-                        if error:
-                            print(f"Error: {error}")
-                            print()
-                            continue
-
-                        # Check provider support
-                        from .models import provider_supports_search, SEARCH_SUPPORTED_PROVIDERS
-                        if not provider_supports_search(manager.current_ai):
-                            providers = ", ".join(sorted(SEARCH_SUPPORTED_PROVIDERS))
-                            print(f"Error: Search not supported for {manager.current_ai}.")
-                            print(f"Supported providers: {providers}")
-                            print()
-                            continue
-
-                        # Check if in secret mode - if so, use secret context
-                        if manager.secret_mode:
-                            # Use secret context (don't save to history)
-                            try:
-                                secret_context = manager.get_secret_context()
-                            except ValueError:
-                                # Not in secret mode yet, freeze context
-                                secret_context = chat.get_messages_for_ai(chat_data)
-                                manager.enter_secret_mode(secret_context)
-                                secret_context = manager.get_secret_context()
-
-                            messages = secret_context + [{"role": "user", "content": search_message}]
-                            save_to_history = False
-                            mode_label = "search+secret"
-                        else:
-                            # Normal mode - save to history
-                            messages = chat.get_messages_for_ai(chat_data)
-                            messages.append({"role": "user", "content": search_message})
-                            chat.add_user_message(chat_data, search_message)
-                            save_to_history = True
-                            mode_label = "search"
-
-                        try:
-                            print(f"\n{manager.current_ai.capitalize()} ({mode_label}): ", end="", flush=True)
-                            response_stream, metadata = await send_message_to_ai(
-                                provider_instance,
-                                messages,
-                                manager.current_model,
-                                manager.system_prompt,
-                                provider_name=manager.current_ai,
-                                mode="search_oneshot",
-                                chat_path=chat_path,
-                                search=True,
-                            )
-                            response_text = await display_streaming_response(response_stream, prefix="")
-
-                            # Display citations
-                            from .streaming import display_citations
-                            citations = metadata.get("citations")
-                            if citations:
-                                display_citations(citations)
-
-                            # Save AI response only if not in secret mode
-                            if save_to_history:
-                                chat.add_ai_message(chat_data, response_text)
-                                manager.save_chat()
-
-                            # Log response
-                            latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
-                            usage = metadata.get("usage", {})
-                            from .logging_utils import chat_file_label
-                            log_event(
-                                "ai_response",
-                                level=logging.INFO,
-                                mode="search_oneshot",
-                                provider=manager.current_ai,
-                                model=manager.current_model,
-                                chat_file=chat_file_label(chat_path),
-                                latency_ms=latency_ms,
-                                output_chars=len(response_text),
-                                input_tokens=usage.get("prompt_tokens"),
-                                output_tokens=usage.get("completion_tokens"),
-                                total_tokens=usage.get("total_tokens"),
-                                citations=len(citations) if citations else 0,
-                            )
-
-                            print()
-                        except Exception as e:
-                            print(f"\nError: {e}")
-                            print()
-
-                        continue
+                    elif action.action in ("send_normal", "send_retry", "send_secret"):
+                        await execute_send_action(action)
 
                 except ValueError as e:
                     command_name, command_args = cmd_handler.parse_command(user_input)
@@ -408,102 +356,8 @@ async def repl_loop(
                 continue
 
             if action.action in ("send_normal", "send_retry", "send_secret"):
-                # Validate provider
-                provider_instance, error = validate_and_get_provider(manager, chat_path=chat_path)
-                if error:
-                    print(f"Error: {error}")
-                    print()
-                    continue
-
-                # Determine display prefix
-                if action.mode == "retry":
-                    if action.assistant_hex_id:
-                        prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
-                    else:
-                        prefix = f"\n{manager.current_ai.capitalize()}: "
-                elif action.mode == "secret":
-                    prefix = f"\n{manager.current_ai.capitalize()}: "
-                else:
-                    prefix = f"\n{manager.current_ai.capitalize()}: "
-
-                # Send message to AI
-                try:
-                    print(prefix, end="", flush=True)
-                    use_search = manager.search_mode
-                    response_stream, metadata = await send_message_to_ai(
-                        provider_instance,
-                        action.messages,
-                        manager.current_model,
-                        manager.system_prompt,
-                        provider_name=manager.current_ai,
-                        mode=action.mode,
-                        chat_path=chat_path,
-                        search=use_search,
-                    )
-                    response_text = await display_streaming_response(response_stream, prefix="")
-
-                    # Display citations if present
-                    from .streaming import display_citations
-                    citations = metadata.get("citations")
-                    if citations:
-                        display_citations(citations)
-
-                    # Calculate latency and log successful AI response
-                    latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
-                    usage = metadata.get("usage", {})
-
-                    from .logging_utils import chat_file_label
-                    log_event(
-                        "ai_response",
-                        level=logging.INFO,
-                        mode=action.mode,
-                        provider=manager.current_ai,
-                        model=manager.current_model,
-                        chat_file=chat_file_label(chat_path),
-                        latency_ms=latency_ms,
-                        output_chars=len(response_text),
-                        input_tokens=usage.get("prompt_tokens"),
-                        output_tokens=usage.get("completion_tokens"),
-                        total_tokens=usage.get("total_tokens"),
-                        citations=len(citations) if citations else None,
-                    )
-
-                    # Handle successful response
-                    result = await orchestrator.handle_ai_response(
-                        response_text,
-                        chat_path,
-                        chat_data,
-                        action.mode,
-                        user_input=action.message,  # For retry mode
-                        assistant_hex_id=action.assistant_hex_id,
-                    )
-
-                    if result.action == "print" and result.message:
-                        print(result.message)
-                    print()
-
-                except KeyboardInterrupt:
-                    cancel_result = await orchestrator.handle_user_cancel(
-                        chat_data,
-                        action.mode,
-                        chat_path=chat_path,
-                        assistant_hex_id=action.assistant_hex_id,
-                    )
-                    print(cancel_result.message)
-                    print()
-                    continue
-
-                except Exception as e:
-                    error_result = await orchestrator.handle_ai_error(
-                        e,
-                        chat_path,
-                        chat_data,
-                        action.mode,
-                        assistant_hex_id=action.assistant_hex_id,
-                    )
-                    print(error_result.message)
-                    print()
-                    continue
+                await execute_send_action(action)
+                continue
 
         except (EOFError, KeyboardInterrupt):
             log_event(

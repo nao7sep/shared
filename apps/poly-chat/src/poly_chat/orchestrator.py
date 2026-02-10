@@ -7,7 +7,7 @@ command responses (signals) and user messages, returning actions for the REPL to
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Optional
 
 from .session_manager import SessionManager
 from . import chat
@@ -26,16 +26,20 @@ class OrchestratorAction:
         chat_data: Optional new chat data (for chat switching)
         error: Optional error information
         messages: Optional messages to send to AI
-        mode: Optional mode string ("normal", "retry", "secret", "secret_oneshot")
+        mode: Optional execution mode ("normal", "retry", "secret")
     """
-    action: str  # "continue", "break", "print", "error", "send_normal", "send_retry", "send_secret"
+    action: str
     message: Optional[str] = None
     chat_path: Optional[str] = None
     chat_data: Optional[dict] = None
     error: Optional[str] = None
     messages: Optional[list] = None
-    mode: Optional[str] = None
+    mode: Optional[str] = None  # Execution mode ("normal" | "retry" | "secret")
     assistant_hex_id: Optional[str] = None
+    retry_user_input: Optional[str] = None  # Stored retry prompt for retry attempt table
+    search_enabled: Optional[bool] = None  # Per-action override; None falls back to session mode
+    request_mode: Optional[str] = None  # Logging/request mode label
+    mode_tag: Optional[str] = None  # UI tag shown in prompt prefix
 
 
 class ChatOrchestrator:
@@ -138,16 +142,17 @@ class ChatOrchestrator:
 
         # Handle SECRET_ONESHOT signal
         if response.startswith("__SECRET_ONESHOT__:"):
-            return OrchestratorAction(
-                action="secret_oneshot",
-                message=response.split(":", 1)[1]
+            return await self._handle_secret_oneshot_signal(
+                response.split(":", 1)[1],
+                current_chat_data,
             )
 
         # Handle SEARCH_ONESHOT signal
         if response.startswith("__SEARCH_ONESHOT__:"):
-            return OrchestratorAction(
-                action="search_oneshot",
-                message=response.split(":", 1)[1]
+            return await self._handle_search_oneshot_signal(
+                response.split(":", 1)[1],
+                current_chat_path,
+                current_chat_data,
             )
 
         # Not a signal - persist command-driven chat mutations through orchestrator.
@@ -377,6 +382,137 @@ class ChatOrchestrator:
 
         return OrchestratorAction(action="continue")
 
+    def _build_send_action(
+        self,
+        *,
+        action: str,
+        messages: list[dict],
+        mode: str,
+        search_enabled: Optional[bool] = None,
+        request_mode: Optional[str] = None,
+        mode_tag: Optional[str] = None,
+        retry_user_input: Optional[str] = None,
+        assistant_hex_id: Optional[str] = None,
+        chat_path: Optional[str] = None,
+        chat_data: Optional[dict] = None,
+    ) -> OrchestratorAction:
+        """Build a send action with optional execution metadata."""
+        return OrchestratorAction(
+            action=action,
+            messages=messages,
+            mode=mode,
+            search_enabled=search_enabled,
+            request_mode=request_mode,
+            mode_tag=mode_tag,
+            retry_user_input=retry_user_input,
+            assistant_hex_id=assistant_hex_id,
+            chat_path=chat_path,
+            chat_data=chat_data,
+        )
+
+    def _get_secret_context(self, chat_data: dict) -> list[dict]:
+        """Get or initialize frozen secret context."""
+        try:
+            return self.manager.get_secret_context()
+        except ValueError:
+            secret_context = chat.get_messages_for_ai(chat_data)
+            self.manager.enter_secret_mode(secret_context)
+            return self.manager.get_secret_context()
+
+    def _append_user_message_with_runtime_hex(self, chat_data: dict, user_input: str) -> None:
+        """Append user message and assign runtime hex ID without requiring manager.chat identity."""
+        from . import hex_id
+
+        chat.add_user_message(chat_data, user_input)
+        new_msg_index = len(chat_data["messages"]) - 1
+        chat_data["messages"][new_msg_index]["hex_id"] = hex_id.generate_hex_id(
+            self.manager.hex_id_set
+        )
+
+    async def _handle_secret_oneshot_signal(
+        self,
+        secret_message: str,
+        current_chat_data: Optional[dict],
+    ) -> OrchestratorAction:
+        """Prepare one-shot secret send action."""
+        if not current_chat_data:
+            return OrchestratorAction(action="print", message="No chat is currently open")
+
+        if self.manager.secret_mode:
+            base_messages = self._get_secret_context(current_chat_data)
+        else:
+            base_messages = chat.get_messages_for_ai(current_chat_data)
+
+        messages = base_messages + [{"role": "user", "content": secret_message}]
+        return self._build_send_action(
+            action="send_secret",
+            messages=messages,
+            mode="secret",
+            search_enabled=self.manager.search_mode,
+            request_mode="secret_oneshot",
+            mode_tag="secret",
+        )
+
+    async def _handle_search_oneshot_signal(
+        self,
+        search_message: str,
+        current_chat_path: Optional[str],
+        current_chat_data: Optional[dict],
+    ) -> OrchestratorAction:
+        """Prepare one-shot search send action."""
+        if not current_chat_data:
+            return OrchestratorAction(action="print", message="No chat is currently open")
+
+        from .models import provider_supports_search, SEARCH_SUPPORTED_PROVIDERS
+
+        if not provider_supports_search(self.manager.current_ai):
+            providers = ", ".join(sorted(SEARCH_SUPPORTED_PROVIDERS))
+            return OrchestratorAction(
+                action="print",
+                message=f"Search not supported for {self.manager.current_ai}. Supported providers: {providers}",
+            )
+
+        if self.manager.retry_mode:
+            retry_context = self.manager.get_retry_context()
+            temp_messages = retry_context + [{"role": "user", "content": search_message}]
+            return self._build_send_action(
+                action="send_retry",
+                messages=temp_messages,
+                mode="retry",
+                retry_user_input=search_message,
+                assistant_hex_id=self.manager.reserve_hex_id(),
+                search_enabled=True,
+                request_mode="search_oneshot",
+                mode_tag="search+retry",
+            )
+
+        if self.manager.secret_mode:
+            secret_context = self._get_secret_context(current_chat_data)
+            messages = secret_context + [{"role": "user", "content": search_message}]
+            return self._build_send_action(
+                action="send_secret",
+                messages=messages,
+                mode="secret",
+                search_enabled=True,
+                request_mode="search_oneshot",
+                mode_tag="search+secret",
+            )
+
+        # Normal chat mode: persist through normal orchestration path.
+        self._append_user_message_with_runtime_hex(current_chat_data, search_message)
+        messages = chat.get_messages_for_ai(current_chat_data)
+
+        return self._build_send_action(
+            action="send_normal",
+            messages=messages,
+            mode="normal",
+            chat_path=current_chat_path,
+            chat_data=current_chat_data,
+            search_enabled=True,
+            request_mode="search_oneshot",
+            mode_tag="search",
+        )
+
     # ===================================================================
     # User Message Handling
     # ===================================================================
@@ -443,7 +579,7 @@ class ChatOrchestrator:
         # Prepare temporary messages (not saved)
         temp_messages = secret_context + [{"role": "user", "content": user_input}]
 
-        return OrchestratorAction(
+        return self._build_send_action(
             action="send_secret",
             messages=temp_messages,
             mode="secret",
@@ -468,11 +604,11 @@ class ChatOrchestrator:
         # Prepare temporary messages
         temp_messages = retry_context + [{"role": "user", "content": user_input}]
 
-        return OrchestratorAction(
+        return self._build_send_action(
             action="send_retry",
             messages=temp_messages,
             mode="retry",
-            message=user_input,  # Store for set_retry_attempt
+            retry_user_input=user_input,
             assistant_hex_id=self.manager.reserve_hex_id(),
         )
 
@@ -488,7 +624,7 @@ class ChatOrchestrator:
         # Get messages for AI
         messages = chat.get_messages_for_ai(chat_data)
 
-        return OrchestratorAction(
+        return self._build_send_action(
             action="send_normal",
             messages=messages,
             mode="normal",

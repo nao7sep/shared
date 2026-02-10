@@ -101,7 +101,9 @@ Mode Combinations:
   - /secret on + /search on         Both modes active for all messages
   - /secret on + /search <msg>      Search with secret context
   - /secret <msg> + /search on      Secret question with search
-  Note: Combining two one-shot commands (/secret /search <msg>) is not supported
+  Note:
+  - /secret /search <msg> and /search /secret <msg> are not supported
+  - Slash-prefixed payloads that are not command chaining are allowed (e.g., /secret /tmp/file.txt)
 
 Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
 

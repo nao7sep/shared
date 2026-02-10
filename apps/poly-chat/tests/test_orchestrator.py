@@ -352,16 +352,21 @@ class TestSecretModeSignals:
         assert action.message is None
 
     @pytest.mark.asyncio
-    async def test_secret_oneshot_signal(self, orchestrator):
+    async def test_secret_oneshot_signal(self, orchestrator, sample_chat_data):
         """Test secret oneshot message."""
         action = await orchestrator.handle_command_response(
             "__SECRET_ONESHOT__:What is the meaning of life?",
-            current_chat_path=None,
-            current_chat_data=None,
+            current_chat_path="/test/chat.json",
+            current_chat_data=sample_chat_data,
         )
 
-        assert action.action == "secret_oneshot"
-        assert action.message == "What is the meaning of life?"
+        assert action.action == "send_secret"
+        assert action.mode == "secret"
+        assert action.request_mode == "secret_oneshot"
+        assert action.mode_tag == "secret"
+        assert action.search_enabled is False
+        assert action.messages[-1]["role"] == "user"
+        assert action.messages[-1]["content"] == "What is the meaning of life?"
 
 
 class TestRegularMessages:
@@ -420,6 +425,44 @@ class TestRegularMessages:
             mock_save.assert_called_once()
 
 
+class TestSearchOneShotSignals:
+    """Test /search <msg> signal preparation."""
+
+    @pytest.mark.asyncio
+    async def test_search_oneshot_normal_mode_returns_send_normal(self, orchestrator, sample_chat_data):
+        action = await orchestrator.handle_command_response(
+            "__SEARCH_ONESHOT__:Find latest news",
+            current_chat_path="/test/chat.json",
+            current_chat_data=sample_chat_data,
+        )
+
+        assert action.action == "send_normal"
+        assert action.mode == "normal"
+        assert action.search_enabled is True
+        assert action.request_mode == "search_oneshot"
+        assert action.mode_tag == "search"
+        assert action.messages[-1]["role"] == "user"
+        assert action.messages[-1]["content"] == ["Find latest news"]
+
+    @pytest.mark.asyncio
+    async def test_search_oneshot_retry_mode_returns_send_retry(self, orchestrator, sample_chat_data):
+        orchestrator.manager.enter_retry_mode([{"role": "user", "content": "base"}], target_index=1)
+
+        action = await orchestrator.handle_command_response(
+            "__SEARCH_ONESHOT__:Try with web",
+            current_chat_path="/test/chat.json",
+            current_chat_data=sample_chat_data,
+        )
+
+        assert action.action == "send_retry"
+        assert action.mode == "retry"
+        assert action.search_enabled is True
+        assert action.request_mode == "search_oneshot"
+        assert action.mode_tag == "search+retry"
+        assert action.retry_user_input == "Try with web"
+        assert action.assistant_hex_id is not None
+
+
 class TestSessionManagerIntegration:
     """Test integration with SessionManager."""
 
@@ -439,8 +482,6 @@ class TestSessionManagerIntegration:
                     "messages": [],
                 }
             )
-
-            initial_chat = orchestrator.manager.chat
 
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
                 await orchestrator.handle_command_response(

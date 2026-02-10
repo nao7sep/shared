@@ -238,7 +238,9 @@ Search mode can be combined with secret mode:
 - `/secret on` + `/search <msg>` - One search with secret context (not saved)
 - `/secret <msg>` + `/search on` - One secret question with search enabled
 
-Note: Combining two one-shot commands in a single message (e.g., `/secret /search <msg>`) is not supported to avoid complexity and potential bugs.
+Note:
+- `/secret /search <msg>` and `/search /secret <msg>` are rejected because only one command is allowed per input.
+- Slash-prefixed payloads that are not command chaining are allowed (for example, `/secret /tmp/file.txt`).
 
 ## Configuration
 

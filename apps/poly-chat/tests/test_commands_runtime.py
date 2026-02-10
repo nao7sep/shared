@@ -58,3 +58,35 @@ async def test_secret_off_when_already_off(command_handler, mock_session_manager
 async def test_secret_on_off_literal_gives_hint(command_handler):
     result = await command_handler.secret_mode_command("on/off")
     assert result == "Use /secret on or /secret off"
+
+
+@pytest.mark.asyncio
+async def test_secret_oneshot_rejects_second_command(command_handler):
+    result = await command_handler.secret_mode_command("/search latest ai news")
+    assert (
+        result
+        == "Only one command is allowed per input. "
+        "Use /secret on + /search <msg> (or /search on + /secret <msg>)."
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_oneshot_rejects_second_command(command_handler):
+    result = await command_handler.search_mode_command("/secret my password is 1234")
+    assert (
+        result
+        == "Only one command is allowed per input. "
+        "Use /secret on + /search <msg> (or /search on + /secret <msg>)."
+    )
+
+
+@pytest.mark.asyncio
+async def test_secret_oneshot_accepts_slash_prefixed_path_payload(command_handler):
+    result = await command_handler.secret_mode_command("/tmp/my-secret-file.txt")
+    assert result == "__SECRET_ONESHOT__:/tmp/my-secret-file.txt"
+
+
+@pytest.mark.asyncio
+async def test_search_oneshot_accepts_slash_prefixed_path_payload(command_handler):
+    result = await command_handler.search_mode_command("/Users/me/docs/topic.txt")
+    assert result == "__SEARCH_ONESHOT__:/Users/me/docs/topic.txt"
