@@ -38,6 +38,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+addopts = "-m 'not integration'"
 markers = [
     "integration: marks tests that make real API calls (deselect with '-m \"not integration\"')",
 ]

@@ -5,7 +5,6 @@ and state transitions in the REPL loop. This serves as a safety net
 before refactoring the orchestration logic out of repl.py.
 """
 
-import pytest
 from src.poly_chat.app_state import (
     SessionState,
     initialize_message_hex_ids,
@@ -76,15 +75,6 @@ class TestCommandSignals:
         """Test __CLEAR_SECRET_CONTEXT__ signal pattern."""
         signal = "__CLEAR_SECRET_CONTEXT__"
         assert signal == "__CLEAR_SECRET_CONTEXT__"
-
-    def test_secret_oneshot_signal(self):
-        """Test __SECRET_ONESHOT__ signal pattern with message."""
-        secret_message = "This is a secret question"
-        signal = f"__SECRET_ONESHOT__:{secret_message}"
-
-        assert signal.startswith("__SECRET_ONESHOT__:")
-        extracted_message = signal.split(":", 1)[1]
-        assert extracted_message == secret_message
 
 
 class TestChatSwitchingOrchestration:
@@ -258,14 +248,6 @@ class TestRetryModeOrchestration:
             ]
         }
 
-        session = SessionState(
-            current_ai="claude",
-            current_model="claude-haiku-4-5",
-            helper_ai="claude",
-            helper_model="claude-haiku-4-5",
-            profile={},
-            chat=chat_data,
-        )
         selected_assistant_msg = "Better answer"
 
         # Simulate applying retry by replacing only the target message.

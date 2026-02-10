@@ -199,7 +199,7 @@ class RuntimeCommandsMixin:
 
             await self._mark_chat_dirty_if_open()
 
-            return f"System prompt restored to profile default"
+            return "System prompt restored to profile default"
 
         # Otherwise, it's a path - validate and set it
         try:
@@ -226,7 +226,7 @@ class RuntimeCommandsMixin:
 
             return f"System prompt set to: {args}"
 
-        except ValueError as e:
+        except ValueError:
             # Re-raise with original error message
             raise
 
@@ -306,13 +306,13 @@ class RuntimeCommandsMixin:
         return "__CANCEL_RETRY__"
 
     async def secret_mode_command(self, args: str) -> str:
-        """Show, set, or use secret mode (messages not saved to history).
+        """Show or set secret mode (messages not saved to history).
 
         Args:
-            args: Empty to show status, 'on'/'off' to set explicitly, or message for one-shot
+            args: Empty to show status or 'on'/'off' to set explicitly
 
         Returns:
-            Status message or special signal for one-shot mode
+            Status message
         """
         chat_data = self.manager.chat
 
@@ -345,26 +345,19 @@ class RuntimeCommandsMixin:
         if normalized in {"on/off", "on|off"}:
             return "Use /secret on or /secret off"
 
-        payload = args.strip()
-        first_token = payload.split(None, 1)[0].lower() if payload else ""
-        if first_token == "/search":
-            return (
-                "Only one command is allowed per input. "
-                "Use /secret on + /search <msg> (or /search on + /secret <msg>)."
-            )
-
-        # Otherwise it's a one-shot secret message
-        # Signal to REPL loop to handle this as one-shot secret message
-        return f"__SECRET_ONESHOT__:{payload}"
+        return (
+            "One-shot /secret is not supported. "
+            "Use /secret on, send message, then /secret off."
+        )
 
     async def search_mode_command(self, args: str) -> str:
-        """Show, set, or use search mode (web search enabled).
+        """Show or set search mode (web search enabled).
 
         Args:
-            args: Empty to show status, 'on'/'off' to toggle, or message for one-shot
+            args: Empty to show status or 'on'/'off' to toggle
 
         Returns:
-            Status message or special signal for one-shot mode
+            Status message
         """
         from ..models import provider_supports_search, SEARCH_SUPPORTED_PROVIDERS
 
@@ -402,16 +395,10 @@ class RuntimeCommandsMixin:
         if normalized in {"on/off", "on|off"}:
             return "Use /search on or /search off"
 
-        payload = args.strip()
-        first_token = payload.split(None, 1)[0].lower() if payload else ""
-        if first_token == "/secret":
-            return (
-                "Only one command is allowed per input. "
-                "Use /secret on + /search <msg> (or /search on + /secret <msg>)."
-            )
-
-        # One-shot search message
-        return f"__SEARCH_ONESHOT__:{payload}"
+        return (
+            "One-shot /search is not supported. "
+            "Use /search on, send message, then /search off."
+        )
 
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting a target message and all following.

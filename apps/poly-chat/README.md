@@ -147,10 +147,8 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/cancel` - Abort retry and keep original response
 - `/secret` - Show current secret mode state
 - `/secret on|off` - Explicitly enable/disable secret mode
-- `/secret <msg>` - Send one secret message without toggling mode
 - `/search` - Show current search mode state and supported providers
 - `/search on|off` - Enable/disable web search with inline citations
-- `/search <msg>` - Send one search-enabled message without toggling mode
 - `/rewind <hex_id>` - Delete that message and all following messages
 - `/rewind turn` - Delete the last full interaction (user+assistant/error)
 - `/rewind last` - Delete only the last message
@@ -222,9 +220,6 @@ Where can I find current stock prices for AAPL?
 # Disable search mode
 /search off
 
-# One-shot search (doesn't change mode)
-/search What's happening in tech news today?
-
 # Check current mode
 /search
 ```
@@ -235,12 +230,6 @@ When search is enabled, AI responses will include a "Sources:" section at the en
 **Mode Combinations:**
 Search mode can be combined with secret mode:
 - `/secret on` + `/search on` - All messages use both secret and search
-- `/secret on` + `/search <msg>` - One search with secret context (not saved)
-- `/secret <msg>` + `/search on` - One secret question with search enabled
-
-Note:
-- `/secret /search <msg>` and `/search /secret <msg>` are rejected because only one command is allowed per input.
-- Slash-prefixed payloads that are not command chaining are allowed (for example, `/secret /tmp/file.txt`).
 
 ## Configuration
 

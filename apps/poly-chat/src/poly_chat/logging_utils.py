@@ -138,6 +138,7 @@ class StructuredTextFormatter(logging.Formatter):
             "input_chars",
             "has_system_prompt",
             "search",
+            "search_requested",
             "system_prompt_path",
         ],
         "ai_response": [
@@ -153,10 +154,15 @@ class StructuredTextFormatter(logging.Formatter):
             "output_tokens",
             "total_tokens",
             "search",
+            "search_requested",
+            "search_executed",
+            "searched",
+            "search_evidence",
             "citations",
             "citation_urls",
             "search_results",
-            "search_raw",
+            "thought_chars",
+            "thoughts",
         ],
         "ai_error": [
             "ts",
@@ -239,8 +245,10 @@ class StructuredTextFormatter(logging.Formatter):
             return 4000
         if key == "search_results":
             return 10000
-        if key == "search_raw":
-            return 1000000
+        if key == "search_evidence":
+            return 2000
+        if key == "thoughts":
+            return 20000
         return 400
 
     def _ordered_keys(self, event_name: str, data: dict[str, Any]) -> list[str]:

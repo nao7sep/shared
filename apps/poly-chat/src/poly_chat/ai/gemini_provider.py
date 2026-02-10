@@ -67,6 +67,15 @@ class GeminiProvider:
             formatted.append(types.Content(role=role, parts=[types.Part(text=content)]))
         return formatted
 
+    @staticmethod
+    def _mark_search_executed(metadata: dict | None, evidence: str) -> None:
+        if metadata is None:
+            return
+        metadata["search_executed"] = True
+        evidence_list = metadata.setdefault("search_evidence", [])
+        if isinstance(evidence_list, list) and evidence not in evidence_list:
+            evidence_list.append(evidence)
+
     async def send_message(
         self,
         messages: list[dict],
@@ -157,6 +166,7 @@ class GeminiProvider:
                     ]
                     if citations:
                         metadata["citations"] = citations
+                    self._mark_search_executed(metadata, "grounding_metadata")
                     supports = getattr(grounding, "grounding_supports", None) or []
                     metadata["search_raw"] = {
                         "provider": "gemini",
@@ -284,6 +294,7 @@ class GeminiProvider:
                     ]
                     if citations:
                         metadata["citations"] = citations
+                    self._mark_search_executed(metadata, "grounding_metadata")
                     supports = getattr(grounding, "grounding_supports", None) or []
                     metadata["search_raw"] = {
                         "provider": "gemini",

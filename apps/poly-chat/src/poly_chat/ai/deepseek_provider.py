@@ -73,6 +73,20 @@ class DeepSeekProvider:
             formatted.append({"role": msg["role"], "content": content})
         return formatted
 
+    @staticmethod
+    def _emit_thought(metadata: dict | None, chunk: str | None) -> None:
+        if metadata is None or not chunk:
+            return
+        thoughts = metadata.setdefault("thoughts", [])
+        if isinstance(thoughts, list):
+            thoughts.append(chunk)
+        callback = metadata.get("thought_callback")
+        if callable(callback):
+            try:
+                callback(chunk)
+            except Exception:
+                pass
+
     @retry(
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError, APIStatusError)
@@ -159,6 +173,9 @@ class DeepSeekProvider:
 
                 # Check for content
                 delta = chunk.choices[0].delta
+                reasoning_content = getattr(delta, "reasoning_content", None)
+                if isinstance(reasoning_content, str) and reasoning_content:
+                    self._emit_thought(metadata, reasoning_content)
                 if delta.content:
                     yield delta.content
 
@@ -252,7 +269,7 @@ class DeepSeekProvider:
             # Add reasoning content if available (R1 thinking traces)
             if reasoning_content:
                 metadata["reasoning_content"] = reasoning_content
-                logger.info(f"Reasoning model generated thinking traces")
+                logger.info("Reasoning model generated thinking traces")
 
             # Add reasoning tokens if available (for cost tracking)
             if response.usage and hasattr(response.usage, "completion_tokens_details"):

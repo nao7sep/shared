@@ -13,6 +13,7 @@ ChatOrchestrator for better separation of concerns and testability.
 
 import logging
 import time
+import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -25,6 +26,11 @@ from .ai_runtime import send_message_to_ai, validate_and_get_provider
 from .app_state import has_pending_error
 from .session_manager import SessionManager
 from .orchestrator import ChatOrchestrator, OrchestratorAction
+from .citations import (
+    normalize_citations,
+    enrich_citation_titles,
+    citations_need_enrichment,
+)
 from .commands import CommandHandler
 from .logging_utils import log_event, sanitize_error_message, summarize_command_args
 from .streaming import display_streaming_response
@@ -157,16 +163,14 @@ async def repl_loop(
         # Determine display prefix.
         if action.mode == "retry" and action.assistant_hex_id:
             prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
-        elif action.mode_tag:
-            prefix = f"\n{manager.current_ai.capitalize()} ({action.mode_tag}): "
         else:
             prefix = f"\n{manager.current_ai.capitalize()}: "
 
         try:
             print(prefix, end="", flush=True)
             use_search = action.search_enabled if action.search_enabled is not None else manager.search_mode
-            effective_request_mode = action.request_mode or action.mode or "normal"
-            if action.request_mode is None and use_search:
+            effective_request_mode = action.mode or "normal"
+            if use_search:
                 if action.mode == "secret":
                     effective_request_mode = "search+secret"
                 elif action.mode == "retry":
@@ -183,16 +187,63 @@ async def repl_loop(
                 chat_path=chat_path,
                 search=use_search,
             )
+            thought_chunks: list[str] = []
+            thought_header_printed = False
+
+            def on_thought(chunk: str) -> None:
+                nonlocal thought_header_printed
+                if not chunk:
+                    return
+                thought_chunks.append(chunk)
+                if not thought_header_printed:
+                    print("\n[Thoughts] ", end="", flush=True)
+                    thought_header_printed = True
+                print(chunk, end="", flush=True)
+
+            metadata["thought_callback"] = on_thought
             response_text = await display_streaming_response(response_stream, prefix="")
+            if thought_header_printed:
+                print()
 
             # Display citations if present
             from .streaming import display_citations
 
             citations = metadata.get("citations")
+            citations = normalize_citations(citations)
+            if citations and citations_need_enrichment(citations):
+                grace_timeout = 0.25
+                total_timeout = 6.0
+                enrich_task = asyncio.create_task(enrich_citation_titles(citations))
+                try:
+                    enriched, changed = await asyncio.wait_for(
+                        asyncio.shield(enrich_task), timeout=grace_timeout
+                    )
+                    if changed:
+                        citations = enriched
+                except asyncio.TimeoutError:
+                    print("\n[Collecting citation titles...]", flush=True)
+                    try:
+                        enriched, changed = await asyncio.wait_for(
+                            asyncio.shield(enrich_task),
+                            timeout=max(0.0, total_timeout - grace_timeout),
+                        )
+                        if changed:
+                            citations = enriched
+                    except asyncio.TimeoutError:
+                        enrich_task.cancel()
+                        print("[Citation title lookup timed out; showing available sources.]")
+                    except Exception:
+                        print("[Citation title lookup failed; showing available sources.]")
+                except Exception:
+                    pass
+            if citations:
+                metadata["citations"] = citations
             if citations:
                 display_citations(citations)
             search_results = metadata.get("search_results")
-            search_raw = metadata.get("search_raw")
+            thoughts_text = "".join(thought_chunks).strip()
+            search_executed = metadata.get("search_executed")
+            search_evidence = metadata.get("search_evidence")
 
             # Calculate latency and log successful AI response
             latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
@@ -214,9 +265,14 @@ async def repl_loop(
                 total_tokens=usage.get("total_tokens"),
                 citations=len(citations) if citations else None,
                 search=use_search,
+                search_requested=use_search,
+                search_executed=search_executed,
+                searched=search_executed,
+                search_evidence=search_evidence,
                 citation_urls=[c.get("url") for c in citations if isinstance(c, dict) and c.get("url")] if citations else None,
                 search_results=search_results,
-                search_raw=search_raw,
+                thought_chars=len(thoughts_text) if thoughts_text else None,
+                thoughts=thoughts_text if thoughts_text else None,
             )
 
             # Handle successful response

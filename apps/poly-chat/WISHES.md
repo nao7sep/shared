@@ -517,3 +517,69 @@ i got [Error during streaming: 'NoneType' object is not iterable] from gemini. p
 when i ran /history, possibly due to an error message in the chat history, i got: Failed to deserialize the JSON body into the target type: tools[0].type: unknown variant `web_sea... please identify the issue and look for similar cases.
 
 /search didnt work well with grok. i unfortunately lost the log by accident, but it said we sent the wrong parameter or something in the request. can you investigate?
+
+---
+
+in citations of chat history files, title should come before url. url is acquired before title, but titles means more to users.
+
+gemini returns urls starting with https://vertexaisearch.cloud.google.com/grounding-api-redirect/ and titles are just domain names such as mirror.co.uk and greenvillejournal.com. would it be too much trouble to redirect to the actual pages and parse their titles OR find them in gemini's responses?
+
+claude's citations contain the same pair of title and url like 5 times and nothing else. the page is https://en.wikipedia.org/wiki/Portal:Current_events/February_2026. so, it is natural to assume that the api extract 5 pieces of information from the same page.
+
+can we eliminate duplications in citations? not only in claude.
+
+grok added urls within the response. is there a switch or something for this? it would be cleaner to just get the content AND citations separated.
+
+also, in grok's case, citation titles are just numbers. it might help to load the pages and extract their real titles.
+
+in fact, i am already thinking about downloading ALL cited pages to have local caches. how would you design this? we dont need related files (like scripts, stylesheets, etc).
+
+perplexity's search returns text containing [1], [2], etc without citations. can we extract citations from their responses? also, if there's a way to get rid of these [1], [2], etc, content would be cleaner.
+
+---
+
+can we implement a fire-and-forget async mechanism to update citation title IF url is valid, page is loaded and title is parsed?
+
+then, we know which ais return titles and which dont. we check their title patterns as well. if we get only 1, 2, 3... and pages arent loaded successfully, we can omit all titles and keep only urls.
+
+or, we can use these numbers. so, number, title and url for each citation. is "number" the best term? if we are keeping this numeric info, we probably dont need to clean up citations.
+
+under any circumstances, retrieved ai-content must not be altered. 
+
+---
+
+when we load a remote page, we should look for their encoding specifier. the xhtml based one (if they still use it in 2026) and the meta element one. the meta one before the xhtml one, i think.
+
+also, if there's a good python library to detect encoding, we should consider using it because i still sometimes encounter a legacy japanese site where a traditional encoding (like euc-jp, shift-jis, etc) are used. that actually makes sense, though. japanese language tends to be larger in utf-8 than in a traditional encoding.
+
+---
+
+"poetry run pytest" frequently stops the coding agent. i believe it's because the 2 chat/models integration tests are executed too. is there a way to exclude them by default? when i need them, i run the corresponding .command files by myself. so, there's little point in coding agents running them again and again.
+
+---
+
+when app receives a response with citations and app decides to load the pages for accurate titles/urls, we should use an async mechanism to extract info from multiple pages at the same time, but i think we should wait for ALL of the threads to finish (or timeout is reached) so that we'll construct the final citation data and display/save it just once.
+
+luckily, content can be displayed first.
+
+then, IF app needs more time for citation-related things, app shows a message for the user to understand what they are waiting for and then citations are displayed as soon as they are complete (or timeout is reached).
+
+---
+
+many models take some time before the first token. i guess some are "thinking" models. which ones return thoughts? maybe we can display them on terminal, NOT save them in chat history and save them in log file.
+
+one more thing: the design to write all search-related info to log file was wrong. i saw what app actually saved and it was mostly useless. so, KISS.
+
+---
+
+should be implement /thinking?
+
+is there a reliable way to determine whether search has been actually done or not? is checking citations generally reliable?
+
+current log file says search: true, but it only means /search was on. whether search was actually done or not should be in the log.
+
+---
+
+let's make it simpler: let's completely remove support for one-shot commands. if we implement /thinking and one shot /secret and /search are supported, should we also support one shot /thinking? if we omit one-shot command support, code structure should be significantly simpler. please refactor the code if there is a high roi opportunity.
+
+perplexity might search without /search enabled. so, WITHOUT /search, app may sometimes need to write searched: true to log file.

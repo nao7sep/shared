@@ -70,6 +70,15 @@ class ClaudeProvider:
             formatted.append({"role": msg["role"], "content": content})
         return formatted
 
+    @staticmethod
+    def _mark_search_executed(metadata: dict | None, evidence: str) -> None:
+        if metadata is None:
+            return
+        metadata["search_executed"] = True
+        evidence_list = metadata.setdefault("search_evidence", [])
+        if isinstance(evidence_list, list) and evidence not in evidence_list:
+            evidence_list.append(evidence)
+
     @retry(
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
@@ -186,6 +195,7 @@ class ClaudeProvider:
                                 )
                     if citations:
                         metadata["citations"] = citations
+                        self._mark_search_executed(metadata, "citations")
                     metadata["search_raw"] = {
                         "provider": "claude",
                         "id": getattr(final_message, "id", None),
@@ -319,6 +329,7 @@ class ClaudeProvider:
                             )
                 if citations:
                     metadata["citations"] = citations
+                    self._mark_search_executed(metadata, "citations")
                 metadata["search_raw"] = {
                     "provider": "claude",
                     "id": getattr(response, "id", None),

@@ -2,7 +2,6 @@
 
 import pytest
 from poly_chat.session_manager import SessionManager
-from poly_chat.app_state import SessionState
 
 
 @pytest.fixture
@@ -91,28 +90,6 @@ def test_mode_combination_case1_both_persistent(session_manager):
     state_dict = session_manager.to_dict()
     assert state_dict["secret_mode"] is True
     assert state_dict["search_mode"] is True
-
-
-def test_mode_combination_case2_secret_persistent_search_oneshot(session_manager):
-    """Test Case 2: /secret on + /search <msg> (persistent secret, one-shot search)."""
-    # Simulate /secret on
-    session_manager.secret_mode = True
-
-    # When handling /search <msg>, should check secret_mode
-    # This is validated in the REPL code, here we just verify state
-    assert session_manager.secret_mode is True
-    assert session_manager.search_mode is False  # Not in persistent search mode
-
-
-def test_mode_combination_case3_search_persistent_secret_oneshot(session_manager):
-    """Test Case 3: /search on + /secret <msg> (persistent search, one-shot secret)."""
-    # Simulate /search on
-    session_manager.search_mode = True
-
-    # When handling /secret <msg>, should check search_mode
-    # This is validated in the REPL code, here we just verify state
-    assert session_manager.search_mode is True
-    assert session_manager.secret_mode is False  # Not in persistent secret mode
 
 
 def test_unsupported_provider_with_search_mode(session_manager):

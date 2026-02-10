@@ -62,10 +62,8 @@ Chat Control:
   /cancel           Abort retry and keep original response
   /secret           Show current secret mode state
   /secret on/off    Enable/disable secret mode explicitly
-  /secret <msg>     Ask one secret question (doesn't toggle mode)
   /search           Show current search mode state
   /search on/off    Enable/disable web search
-  /search <msg>     Send one search-enabled message
   /rewind <hex_id>  Delete that message and all following messages
   /rewind turn      Delete the last full interaction (user+assistant/error)
   /rewind last      Delete only the last message
@@ -99,11 +97,6 @@ Other:
 Mode Combinations:
   Secret and search modes can be combined:
   - /secret on + /search on         Both modes active for all messages
-  - /secret on + /search <msg>      Search with secret context
-  - /secret <msg> + /search on      Secret question with search
-  Note:
-  - /secret /search <msg> and /search /secret <msg> are not supported
-  - Slash-prefixed payloads that are not command chaining are allowed (e.g., /secret /tmp/file.txt)
 
 Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
 
