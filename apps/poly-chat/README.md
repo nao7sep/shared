@@ -232,6 +232,14 @@ Where can I find current stock prices for AAPL?
 **Citations:**
 When search is enabled, AI responses will include a "Sources:" section at the end listing the URLs and titles of web pages used to generate the response.
 
+**Mode Combinations:**
+Search mode can be combined with secret mode:
+- `/secret on` + `/search on` - All messages use both secret and search
+- `/secret on` + `/search <msg>` - One search with secret context (not saved)
+- `/secret <msg>` + `/search on` - One secret question with search enabled
+
+Note: Combining two one-shot commands in a single message (e.g., `/secret /search <msg>`) is not supported to avoid complexity and potential bugs.
+
 ## Configuration
 
 ### Profile File Format

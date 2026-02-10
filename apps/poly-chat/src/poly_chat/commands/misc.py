@@ -96,6 +96,13 @@ Other:
   /help             Show this help
   /exit, /quit      Exit PolyChat
 
+Mode Combinations:
+  Secret and search modes can be combined:
+  - /secret on + /search on         Both modes active for all messages
+  - /secret on + /search <msg>      Search with secret context
+  - /secret <msg> + /search on      Secret question with search
+  Note: Combining two one-shot commands (/secret /search <msg>) is not supported
+
 Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
 
     async def exit_app(self, args: str) -> str:

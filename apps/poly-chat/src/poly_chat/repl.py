@@ -227,6 +227,7 @@ async def repl_loop(
 
                         try:
                             print(f"\n{manager.current_ai.capitalize()} (secret): ", end="", flush=True)
+                            use_search = manager.search_mode
                             response_stream, metadata = await send_message_to_ai(
                                 provider_instance,
                                 temp_messages,
@@ -235,8 +236,15 @@ async def repl_loop(
                                 provider_name=manager.current_ai,
                                 mode="secret_oneshot",
                                 chat_path=chat_path,
+                                search=use_search,
                             )
                             response_text = await display_streaming_response(response_stream, prefix="")
+
+                            # Display citations if present
+                            from .streaming import display_citations
+                            citations = metadata.get("citations")
+                            if citations:
+                                display_citations(citations)
 
                             # Log successful AI response
                             latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
@@ -255,6 +263,7 @@ async def repl_loop(
                                 input_tokens=usage.get("prompt_tokens"),
                                 output_tokens=usage.get("completion_tokens"),
                                 total_tokens=usage.get("total_tokens"),
+                                citations=len(citations) if citations else None,
                             )
 
                             print()
@@ -282,12 +291,30 @@ async def repl_loop(
                             print()
                             continue
 
-                        messages = chat.get_messages_for_ai(chat_data)
-                        messages.append({"role": "user", "content": search_message})
-                        chat.add_user_message(chat_data, search_message)
+                        # Check if in secret mode - if so, use secret context
+                        if manager.secret_mode:
+                            # Use secret context (don't save to history)
+                            try:
+                                secret_context = manager.get_secret_context()
+                            except ValueError:
+                                # Not in secret mode yet, freeze context
+                                secret_context = chat.get_messages_for_ai(chat_data)
+                                manager.enter_secret_mode(secret_context)
+                                secret_context = manager.get_secret_context()
+
+                            messages = secret_context + [{"role": "user", "content": search_message}]
+                            save_to_history = False
+                            mode_label = "search+secret"
+                        else:
+                            # Normal mode - save to history
+                            messages = chat.get_messages_for_ai(chat_data)
+                            messages.append({"role": "user", "content": search_message})
+                            chat.add_user_message(chat_data, search_message)
+                            save_to_history = True
+                            mode_label = "search"
 
                         try:
-                            print(f"\n{manager.current_ai.capitalize()} (search): ", end="", flush=True)
+                            print(f"\n{manager.current_ai.capitalize()} ({mode_label}): ", end="", flush=True)
                             response_stream, metadata = await send_message_to_ai(
                                 provider_instance,
                                 messages,
@@ -306,9 +333,10 @@ async def repl_loop(
                             if citations:
                                 display_citations(citations)
 
-                            # Save AI response
-                            chat.add_ai_message(chat_data, response_text)
-                            manager.save_chat()
+                            # Save AI response only if not in secret mode
+                            if save_to_history:
+                                chat.add_ai_message(chat_data, response_text)
+                                manager.save_chat()
 
                             # Log response
                             latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)

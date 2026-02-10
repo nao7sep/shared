@@ -47,3 +47,46 @@ def test_session_state_search_mode_can_be_set():
     )
     state.search_mode = True
     assert state.search_mode is True
+
+
+def test_session_state_both_modes_can_be_enabled():
+    """Test that both secret_mode and search_mode can be enabled simultaneously."""
+    state = SessionState(
+        current_ai="openai",
+        current_model="gpt-5",
+        helper_ai="openai",
+        helper_model="gpt-5-mini",
+        profile={},
+        chat={},
+    )
+    state.secret_mode = True
+    state.search_mode = True
+    assert state.secret_mode is True
+    assert state.search_mode is True
+
+
+def test_session_state_modes_are_independent():
+    """Test that secret_mode and search_mode are independent."""
+    state = SessionState(
+        current_ai="openai",
+        current_model="gpt-5",
+        helper_ai="openai",
+        helper_model="gpt-5-mini",
+        profile={},
+        chat={},
+    )
+
+    # Enable search, verify secret is still off
+    state.search_mode = True
+    assert state.search_mode is True
+    assert state.secret_mode is False
+
+    # Enable secret, verify search stays on
+    state.secret_mode = True
+    assert state.secret_mode is True
+    assert state.search_mode is True
+
+    # Disable search, verify secret stays on
+    state.search_mode = False
+    assert state.search_mode is False
+    assert state.secret_mode is True

@@ -44,7 +44,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
     )
     event_names = [call.args[0] for call in mock_log_event.call_args_list]
     assert "helper_ai_request" in event_names
-    assert "helper_ai_response" not in event_names
+    assert "helper_ai_response" in event_names
 
 
 @pytest.mark.asyncio
