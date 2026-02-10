@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class GrokProvider:
     """Grok (xAI) provider implementation.
 
-    Note: Grok uses OpenAI-compatible API, so we can use the OpenAI SDK.
+    Note: Grok uses xAI's Responses API via the OpenAI-compatible SDK.
     """
 
     def __init__(self, api_key: str, timeout: float = 30.0):
@@ -103,36 +103,6 @@ class GrokProvider:
         stop=stop_after_attempt(4),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _create_chat_completion(self, model: str, messages: list[dict], stream: bool, search: bool = False):
-        """Create chat completion with retry logic.
-
-        Args:
-            model: Model name
-            messages: Formatted messages
-            stream: Whether to stream
-            search: Whether to enable web search
-
-        Returns:
-            API response
-        """
-        stream_options = {"include_usage": True} if stream else None
-        tools = [{"type": "web_search"}] if search else None
-        return await self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            stream=stream,
-            stream_options=stream_options,
-            tools=tools,
-        )
-
-    @retry(
-        retry=retry_if_exception_type(
-            (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
-        ),
-        wait=wait_exponential_jitter(initial=1, max=60),
-        stop=stop_after_attempt(4),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-    )
     async def _create_response(self, model: str, input_items: list[dict], stream: bool, search: bool = False):
         """Create response via Responses API with retry logic."""
         tools = [{"type": "web_search"}] if search else None
@@ -142,6 +112,35 @@ class GrokProvider:
             stream=stream,
             tools=tools,
         )
+
+    @staticmethod
+    def _extract_citations_from_response(payload: object) -> tuple[list[dict], object]:
+        citations = []
+        raw_citations = getattr(payload, "citations", None) or []
+        for c in raw_citations:
+            if isinstance(c, dict):
+                citations.append({"url": c.get("url"), "title": c.get("title")})
+            else:
+                citations.append(
+                    {
+                        "url": getattr(c, "url", None),
+                        "title": getattr(c, "title", None),
+                    }
+                )
+        if not citations and getattr(payload, "output", None):
+            for item in payload.output:
+                if getattr(item, "type", None) == "message":
+                    for content in getattr(item, "content", []):
+                        for annotation in getattr(content, "annotations", []):
+                            if getattr(annotation, "type", None) == "url_citation":
+                                citations.append(
+                                    {
+                                        "url": getattr(annotation, "url", None),
+                                        "title": getattr(annotation, "title", None),
+                                    }
+                                )
+        citations = [c for c in citations if c.get("url")]
+        return citations, raw_citations
 
     async def send_message(
         self,
@@ -171,124 +170,49 @@ class GrokProvider:
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-            if search:
-                # xAI web search is available via Responses API.
-                response = await self._create_response(
-                    model=model, input_items=formatted_messages, stream=stream, search=True
-                )
-
-                async for event in response:
-                    if "web_search" in getattr(event, "type", ""):
-                        self._mark_search_executed(metadata, getattr(event, "type", "web_search"))
-                    if event.type == "response.output_text.delta":
-                        if event.delta:
-                            yield event.delta
-                    elif "reasoning" in event.type:
-                        delta = getattr(event, "delta", None)
-                        if isinstance(delta, str) and delta:
-                            self._emit_thought(metadata, delta)
-                    elif event.type == "response.completed":
-                        if event.response and event.response.usage and metadata is not None:
-                            usage = event.response.usage
-                            metadata["usage"] = {
-                                "prompt_tokens": usage.input_tokens,
-                                "completion_tokens": usage.output_tokens,
-                                "total_tokens": usage.total_tokens,
-                            }
-
-                        if event.response and metadata is not None:
-                            citations = []
-                            raw_citations = getattr(event.response, "citations", None) or []
-                            for c in raw_citations:
-                                if isinstance(c, dict):
-                                    citations.append(
-                                        {"url": c.get("url"), "title": c.get("title")}
-                                    )
-                                else:
-                                    citations.append(
-                                        {
-                                            "url": getattr(c, "url", None),
-                                            "title": getattr(c, "title", None),
-                                        }
-                                    )
-                            if not citations and getattr(event.response, "output", None):
-                                for item in event.response.output:
-                                    if getattr(item, "type", None) == "message":
-                                        for content in getattr(item, "content", []):
-                                            for annotation in getattr(content, "annotations", []):
-                                                if getattr(annotation, "type", None) == "url_citation":
-                                                    citations.append(
-                                                        {
-                                                            "url": getattr(annotation, "url", None),
-                                                            "title": getattr(annotation, "title", None),
-                                                        }
-                                                    )
-                            citations = [c for c in citations if c.get("url")]
-                            if citations:
-                                metadata["citations"] = citations
-                                self._mark_search_executed(metadata, "citations")
-                            metadata["search_raw"] = {
-                                "provider": "grok",
-                                "response_id": getattr(event.response, "id", None),
-                                "raw_citations": raw_citations,
-                                "output": getattr(event.response, "output", None),
-                            }
-                return
-
-            # Non-search path: chat completions API
-            response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=stream, search=False
+            response = await self._create_response(
+                model=model,
+                input_items=formatted_messages,
+                stream=stream,
+                search=search,
             )
 
-            # Yield chunks
-            async for chunk in response:
-                # Check if this is a usage-only chunk (no choices)
-                if not chunk.choices:
-                    if chunk.usage:
-                        # Populate metadata with usage info if provided
-                        if metadata is not None:
-                            metadata["usage"] = {
-                                "prompt_tokens": chunk.usage.prompt_tokens,
-                                "completion_tokens": chunk.usage.completion_tokens,
-                                "total_tokens": chunk.usage.total_tokens,
-                            }
-                        logger.info(
-                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
-                            f"{chunk.usage.completion_tokens} completion = "
-                            f"{chunk.usage.total_tokens} total tokens"
-                        )
-                        # Log reasoning tokens if present (Grok reasoning models)
-                        if hasattr(chunk.usage, "completion_tokens_details"):
-                            details = chunk.usage.completion_tokens_details
+            async for event in response:
+                event_type = getattr(event, "type", "")
+                if "web_search" in event_type:
+                    self._mark_search_executed(metadata, event_type)
+
+                if event_type == "response.output_text.delta":
+                    if event.delta:
+                        yield event.delta
+                elif "reasoning" in event_type:
+                    delta = getattr(event, "delta", None)
+                    if isinstance(delta, str) and delta:
+                        self._emit_thought(metadata, delta)
+                elif event_type == "response.completed":
+                    if event.response and event.response.usage and metadata is not None:
+                        usage = event.response.usage
+                        metadata["usage"] = {
+                            "prompt_tokens": usage.input_tokens,
+                            "completion_tokens": usage.output_tokens,
+                            "total_tokens": usage.total_tokens,
+                        }
+                        if hasattr(usage, "output_tokens_details"):
+                            details = usage.output_tokens_details
                             if hasattr(details, "reasoning_tokens"):
-                                logger.info(f"Reasoning tokens: {details.reasoning_tokens}")
-                    # Extract citations if available (final chunk)
-                    citations = getattr(chunk, "citations", None)
-                    if citations and metadata is not None:
-                        # Normalize to standard format
-                        metadata["citations"] = [
-                            {"url": c.get("url", c), "title": c.get("title")}
-                            if isinstance(c, dict) else {"url": c, "title": None}
-                            for c in citations
-                        ]
-                    continue
+                                metadata["usage"]["reasoning_tokens"] = details.reasoning_tokens
 
-                # Check for content
-                delta = chunk.choices[0].delta
-                reasoning_content = getattr(delta, "reasoning_content", None)
-                if isinstance(reasoning_content, str) and reasoning_content:
-                    self._emit_thought(metadata, reasoning_content)
-                if delta.content:
-                    yield delta.content
-
-                # Check finish reason for edge cases
-                if chunk.choices[0].finish_reason:
-                    finish_reason = chunk.choices[0].finish_reason
-                    if finish_reason == "length":
-                        logger.warning("Response truncated due to max_tokens limit")
-                    elif finish_reason == "content_filter":
-                        logger.warning("Response filtered due to content policy")
-                        yield "\n[Response was filtered due to content policy]"
+                    if event.response and metadata is not None:
+                        citations, raw_citations = self._extract_citations_from_response(event.response)
+                        if citations:
+                            metadata["citations"] = citations
+                            self._mark_search_executed(metadata, "citations")
+                        metadata["search_raw"] = {
+                            "provider": "grok",
+                            "response_id": getattr(event.response, "id", None),
+                            "raw_citations": raw_citations,
+                            "output": getattr(event.response, "output", None),
+                        }
 
         except AuthenticationError as e:
             logger.error(f"Authentication failed: {e}")
@@ -318,115 +242,61 @@ class GrokProvider:
 
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
-
-            if search:
-                response = await self._create_response(
-                    model=model, input_items=formatted_messages, stream=False, search=True
-                )
-                content = response.output_text or ""
-                metadata = {
-                    "model": getattr(response, "model", model),
-                    "finish_reason": "completed",
-                    "usage": {
-                        "prompt_tokens": response.usage.input_tokens if response.usage else 0,
-                        "completion_tokens": response.usage.output_tokens if response.usage else 0,
-                        "total_tokens": response.usage.total_tokens if response.usage else 0,
-                    },
-                }
-
-                citations = []
-                raw_citations = getattr(response, "citations", None) or []
-                for c in raw_citations:
-                    if isinstance(c, dict):
-                        citations.append({"url": c.get("url"), "title": c.get("title")})
-                    else:
-                        citations.append(
-                            {"url": getattr(c, "url", None), "title": getattr(c, "title", None)}
-                        )
-                if not citations and getattr(response, "output", None):
-                    for item in response.output:
-                        if getattr(item, "type", None) == "message":
-                            for part in getattr(item, "content", []):
-                                for annotation in getattr(part, "annotations", []):
-                                    if getattr(annotation, "type", None) == "url_citation":
-                                        citations.append(
-                                            {
-                                                "url": getattr(annotation, "url", None),
-                                                "title": getattr(annotation, "title", None),
-                                            }
-                                        )
-                citations = [c for c in citations if c.get("url")]
-                if citations:
-                    metadata["citations"] = citations
-                metadata["search_raw"] = {
-                    "provider": "grok",
-                    "response_id": getattr(response, "id", None),
-                    "raw_citations": raw_citations,
-                    "output": getattr(response, "output", None),
-                }
-
-                return content, metadata
-
-            # Non-search path: chat completions API
-            response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=False, search=False
+            response = await self._create_response(
+                model=model,
+                input_items=formatted_messages,
+                stream=False,
+                search=search,
             )
+            content = response.output_text or ""
 
-            # Extract response
-            content = response.choices[0].message.content or ""
+            finish_status = "complete"
+            for item in getattr(response, "output", []) or []:
+                if hasattr(item, "status"):
+                    if item.status == "incomplete":
+                        logger.warning("Response incomplete (may be truncated)")
+                        content += "\n[Response was truncated due to length limit]"
+                        finish_status = "incomplete"
+                    elif item.status == "failed":
+                        logger.warning("Response generation failed")
+                        content = "[Response generation failed]"
+                        finish_status = "failed"
 
-            # Check finish reason for edge cases
-            finish_reason = response.choices[0].finish_reason
-            if finish_reason == "length":
-                logger.warning("Response truncated due to max_tokens limit")
-                content += "\n[Response was truncated due to length limit]"
-            elif finish_reason == "content_filter":
-                logger.warning("Response filtered due to content policy")
-                content = "[Response was filtered due to content policy]"
-
-            # Extract metadata
+            usage = getattr(response, "usage", None)
             metadata = {
-                "model": response.model,
-                "finish_reason": finish_reason,
+                "model": getattr(response, "model", model),
+                "finish_status": finish_status,
                 "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                    "completion_tokens": (
-                        response.usage.completion_tokens if response.usage else 0
-                    ),
-                    "total_tokens": response.usage.total_tokens if response.usage else 0,
+                    "prompt_tokens": usage.input_tokens if usage else 0,
+                    "completion_tokens": usage.output_tokens if usage else 0,
+                    "total_tokens": usage.total_tokens if usage else 0,
                 },
             }
 
-            # Add cached tokens if available
-            if response.usage and hasattr(response.usage, "prompt_tokens_details"):
-                if hasattr(response.usage.prompt_tokens_details, "cached_tokens"):
-                    metadata["usage"]["cached_tokens"] = (
-                        response.usage.prompt_tokens_details.cached_tokens
-                    )
+            if usage and hasattr(usage, "input_tokens_details"):
+                details = usage.input_tokens_details
+                if hasattr(details, "cached_tokens"):
+                    metadata["usage"]["cached_tokens"] = details.cached_tokens
+            if usage and hasattr(usage, "output_tokens_details"):
+                details = usage.output_tokens_details
+                if hasattr(details, "reasoning_tokens"):
+                    metadata["usage"]["reasoning_tokens"] = details.reasoning_tokens
 
-            # Add reasoning tokens if available (for Grok reasoning models)
-            if response.usage and hasattr(response.usage, "completion_tokens_details"):
-                if hasattr(response.usage.completion_tokens_details, "reasoning_tokens"):
-                    metadata["usage"]["reasoning_tokens"] = (
-                        response.usage.completion_tokens_details.reasoning_tokens
-                    )
-                    logger.info(f"Reasoning tokens used: {metadata['usage']['reasoning_tokens']}")
-
-            # Extract citations if available
-            citations = getattr(response, "citations", None)
+            citations, raw_citations = self._extract_citations_from_response(response)
             if citations:
-                # Normalize to standard format
-                metadata["citations"] = [
-                    {"url": c.get("url", c), "title": c.get("title")}
-                    if isinstance(c, dict) else {"url": c, "title": None}
-                    for c in citations
-                ]
+                metadata["citations"] = citations
+                self._mark_search_executed(metadata, "citations")
+            metadata["search_raw"] = {
+                "provider": "grok",
+                "response_id": getattr(response, "id", None),
+                "raw_citations": raw_citations,
+                "output": getattr(response, "output", None),
+            }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "
-                f"finish_reason={finish_reason}"
+                f"status={finish_status}"
             )
-
             return content, metadata
 
         except AuthenticationError as e:

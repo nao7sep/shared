@@ -583,3 +583,9 @@ current log file says search: true, but it only means /search was on. whether se
 let's make it simpler: let's completely remove support for one-shot commands. if we implement /thinking and one shot /secret and /search are supported, should we also support one shot /thinking? if we omit one-shot command support, code structure should be significantly simpler. please refactor the code if there is a high roi opportunity.
 
 perplexity might search without /search enabled. so, WITHOUT /search, app may sometimes need to write searched: true to log file.
+
+---
+
+to enable grok's x/web search, we migrated some of grok provider's code to responses api.
+
+let's make it a full migration. it is generally unhealthy to have 2 branches of code for one purpose.
