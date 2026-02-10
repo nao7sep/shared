@@ -280,6 +280,32 @@ class TestRetryModeSignals:
         assert orchestrator.manager.retry_mode is False
 
     @pytest.mark.asyncio
+    async def test_apply_retry_preserves_citations(self, orchestrator, sample_chat_data):
+        """Applied retry should persist citations when available."""
+        orchestrator.manager.switch_chat("/test/chat.json", sample_chat_data)
+        orchestrator.manager.enter_retry_mode(
+            [{"role": "user", "content": "Original"}],
+            target_index=1,
+        )
+        retry_hex_id = orchestrator.manager.add_retry_attempt(
+            "Retry question",
+            "Retry answer",
+            citations=[{"url": "https://example.com", "title": "Example"}],
+        )
+
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
+            action = await orchestrator.handle_command_response(
+                f"__APPLY_RETRY__:{retry_hex_id}",
+                current_chat_path="/test/chat.json",
+                current_chat_data=sample_chat_data,
+            )
+
+        assert action.action == "print"
+        assert sample_chat_data["messages"][1]["citations"] == [
+            {"url": "https://example.com", "title": "Example"}
+        ]
+
+    @pytest.mark.asyncio
     async def test_apply_retry_when_not_in_retry_mode(self, orchestrator):
         """Test applying retry when not in retry mode."""
         action = await orchestrator.handle_command_response(

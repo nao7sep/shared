@@ -503,3 +503,17 @@ please read the following documents and implement web search:
 
 - web-search-implementation-plan.md
 - web-search-implementation-context.md
+
+---
+
+when we search, please store citations (urls and titles) in the chat history.
+
+in citations from perplexity, titles seem to be none. can we extract the titles?
+
+i want to keep chat history files minimal, but i also want to be able to verify what the ais have retrieved upon search. please suggest a plan to store ALL search-related info in the error log file.
+
+i got [Error during streaming: 'NoneType' object is not iterable] from gemini. possibly, it was a streaming chunk. please investigate.
+
+when i ran /history, possibly due to an error message in the chat history, i got: Failed to deserialize the JSON body into the target type: tools[0].type: unknown variant `web_sea... please identify the issue and look for similar cases.
+
+/search didnt work well with grok. i unfortunately lost the log by accident, but it said we sent the wrong parameter or something in the request. can you investigate?

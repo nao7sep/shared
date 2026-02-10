@@ -528,6 +528,7 @@ class SessionManager:
         user_msg: str,
         assistant_msg: str,
         retry_hex_id: Optional[str] = None,
+        citations: Optional[list[dict[str, Any]]] = None,
     ) -> str:
         """Store a retry attempt and return its runtime hex ID."""
         if not self._state.retry_mode:
@@ -541,9 +542,11 @@ class SessionManager:
             "user_msg": user_msg,
             "assistant_msg": assistant_msg,
         }
+        if citations:
+            self._state.retry_attempts[retry_hex_id]["citations"] = citations
         return retry_hex_id
 
-    def get_retry_attempt(self, retry_hex_id: str) -> Optional[dict[str, str]]:
+    def get_retry_attempt(self, retry_hex_id: str) -> Optional[dict[str, Any]]:
         """Get one retry attempt by runtime hex ID."""
         return self._state.retry_attempts.get(retry_hex_id)
 

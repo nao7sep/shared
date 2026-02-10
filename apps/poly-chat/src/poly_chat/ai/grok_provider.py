@@ -7,6 +7,7 @@ import logging
 from typing import AsyncIterator
 import httpx
 from openai import (
+    AsyncOpenAI,
     APIConnectionError,
     RateLimitError,
     APITimeoutError,
@@ -40,8 +41,6 @@ class GrokProvider:
             api_key: xAI API key
             timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
         """
-        from openai import AsyncOpenAI
-
         # Configure granular timeouts for better error handling
         # Reasoning models can have long TTFT (Time to First Token) delays
         if timeout > 0:
@@ -103,6 +102,24 @@ class GrokProvider:
             tools=tools,
         )
 
+    @retry(
+        retry=retry_if_exception_type(
+            (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
+        ),
+        wait=wait_exponential_jitter(initial=1, max=60),
+        stop=stop_after_attempt(4),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def _create_response(self, model: str, input_items: list[dict], stream: bool, search: bool = False):
+        """Create response via Responses API with retry logic."""
+        tools = [{"type": "web_search"}] if search else None
+        return await self.client.responses.create(
+            model=model,
+            input=input_items,
+            stream=stream,
+            tools=tools,
+        )
+
     async def send_message(
         self,
         messages: list[dict],
@@ -131,9 +148,66 @@ class GrokProvider:
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-            # Create streaming request with retry logic
+            if search:
+                # xAI web search is available via Responses API.
+                response = await self._create_response(
+                    model=model, input_items=formatted_messages, stream=stream, search=True
+                )
+
+                async for event in response:
+                    if event.type == "response.output_text.delta":
+                        if event.delta:
+                            yield event.delta
+                    elif event.type == "response.completed":
+                        if event.response and event.response.usage and metadata is not None:
+                            usage = event.response.usage
+                            metadata["usage"] = {
+                                "prompt_tokens": usage.input_tokens,
+                                "completion_tokens": usage.output_tokens,
+                                "total_tokens": usage.total_tokens,
+                            }
+
+                        if event.response and metadata is not None:
+                            citations = []
+                            raw_citations = getattr(event.response, "citations", None) or []
+                            for c in raw_citations:
+                                if isinstance(c, dict):
+                                    citations.append(
+                                        {"url": c.get("url"), "title": c.get("title")}
+                                    )
+                                else:
+                                    citations.append(
+                                        {
+                                            "url": getattr(c, "url", None),
+                                            "title": getattr(c, "title", None),
+                                        }
+                                    )
+                            if not citations and getattr(event.response, "output", None):
+                                for item in event.response.output:
+                                    if getattr(item, "type", None) == "message":
+                                        for content in getattr(item, "content", []):
+                                            for annotation in getattr(content, "annotations", []):
+                                                if getattr(annotation, "type", None) == "url_citation":
+                                                    citations.append(
+                                                        {
+                                                            "url": getattr(annotation, "url", None),
+                                                            "title": getattr(annotation, "title", None),
+                                                        }
+                                                    )
+                            citations = [c for c in citations if c.get("url")]
+                            if citations:
+                                metadata["citations"] = citations
+                            metadata["search_raw"] = {
+                                "provider": "grok",
+                                "response_id": getattr(event.response, "id", None),
+                                "raw_citations": raw_citations,
+                                "output": getattr(event.response, "output", None),
+                            }
+                return
+
+            # Non-search path: chat completions API
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=stream, search=search
+                model=model, messages=formatted_messages, stream=stream, search=False
             )
 
             # Yield chunks
@@ -212,9 +286,57 @@ class GrokProvider:
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
 
-            # Create non-streaming request with retry logic
+            if search:
+                response = await self._create_response(
+                    model=model, input_items=formatted_messages, stream=False, search=True
+                )
+                content = response.output_text or ""
+                metadata = {
+                    "model": getattr(response, "model", model),
+                    "finish_reason": "completed",
+                    "usage": {
+                        "prompt_tokens": response.usage.input_tokens if response.usage else 0,
+                        "completion_tokens": response.usage.output_tokens if response.usage else 0,
+                        "total_tokens": response.usage.total_tokens if response.usage else 0,
+                    },
+                }
+
+                citations = []
+                raw_citations = getattr(response, "citations", None) or []
+                for c in raw_citations:
+                    if isinstance(c, dict):
+                        citations.append({"url": c.get("url"), "title": c.get("title")})
+                    else:
+                        citations.append(
+                            {"url": getattr(c, "url", None), "title": getattr(c, "title", None)}
+                        )
+                if not citations and getattr(response, "output", None):
+                    for item in response.output:
+                        if getattr(item, "type", None) == "message":
+                            for part in getattr(item, "content", []):
+                                for annotation in getattr(part, "annotations", []):
+                                    if getattr(annotation, "type", None) == "url_citation":
+                                        citations.append(
+                                            {
+                                                "url": getattr(annotation, "url", None),
+                                                "title": getattr(annotation, "title", None),
+                                            }
+                                        )
+                citations = [c for c in citations if c.get("url")]
+                if citations:
+                    metadata["citations"] = citations
+                metadata["search_raw"] = {
+                    "provider": "grok",
+                    "response_id": getattr(response, "id", None),
+                    "raw_citations": raw_citations,
+                    "output": getattr(response, "output", None),
+                }
+
+                return content, metadata
+
+            # Non-search path: chat completions API
             response = await self._create_chat_completion(
-                model=model, messages=formatted_messages, stream=False, search=search
+                model=model, messages=formatted_messages, stream=False, search=False
             )
 
             # Extract response

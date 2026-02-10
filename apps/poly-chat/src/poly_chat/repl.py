@@ -191,6 +191,8 @@ async def repl_loop(
             citations = metadata.get("citations")
             if citations:
                 display_citations(citations)
+            search_results = metadata.get("search_results")
+            search_raw = metadata.get("search_raw")
 
             # Calculate latency and log successful AI response
             latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
@@ -211,6 +213,10 @@ async def repl_loop(
                 output_tokens=usage.get("completion_tokens"),
                 total_tokens=usage.get("total_tokens"),
                 citations=len(citations) if citations else None,
+                search=use_search,
+                citation_urls=[c.get("url") for c in citations if isinstance(c, dict) and c.get("url")] if citations else None,
+                search_results=search_results,
+                search_raw=search_raw,
             )
 
             # Handle successful response
@@ -221,6 +227,7 @@ async def repl_loop(
                 action.mode or "normal",
                 user_input=action.retry_user_input,
                 assistant_hex_id=action.assistant_hex_id,
+                citations=citations,
             )
 
             if result.action == "print" and result.message:

@@ -137,6 +137,7 @@ class StructuredTextFormatter(logging.Formatter):
             "message_count",
             "input_chars",
             "has_system_prompt",
+            "search",
             "system_prompt_path",
         ],
         "ai_response": [
@@ -151,6 +152,11 @@ class StructuredTextFormatter(logging.Formatter):
             "input_tokens",
             "output_tokens",
             "total_tokens",
+            "search",
+            "citations",
+            "citation_urls",
+            "search_results",
+            "search_raw",
         ],
         "ai_error": [
             "ts",
@@ -227,6 +233,16 @@ class StructuredTextFormatter(logging.Formatter):
             value_str = value_str[: max_len - 3] + "..."
         return value_str.replace("\n", "\\n")
 
+    def _field_max_len(self, key: str) -> int:
+        """Allow larger payloads for search-related fields."""
+        if key == "citation_urls":
+            return 4000
+        if key == "search_results":
+            return 10000
+        if key == "search_raw":
+            return 1000000
+        return 400
+
     def _ordered_keys(self, event_name: str, data: dict[str, Any]) -> list[str]:
         preferred = self.EVENT_KEY_ORDER.get(event_name, ["ts", "level", "logger"])
         preferred_present = [k for k in preferred if k in data and data[k] is not None]
@@ -261,7 +277,7 @@ class StructuredTextFormatter(logging.Formatter):
 
         ordered_keys = self._ordered_keys(event_name, base)
         for key in ordered_keys:
-            lines.append(f"{key}: {self._format_value(base[key])}")
+            lines.append(f"{key}: {self._format_value(base[key], max_len=self._field_max_len(key))}")
 
         if record.exc_info:
             lines.append("traceback:")

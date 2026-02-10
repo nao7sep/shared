@@ -113,13 +113,19 @@ def add_user_message(data: dict[str, Any], content: str) -> None:
     data["messages"].append(message)
 
 
-def add_assistant_message(data: dict[str, Any], content: str, model: str) -> None:
+def add_assistant_message(
+    data: dict[str, Any],
+    content: str,
+    model: str,
+    citations: list[dict[str, Any]] | None = None,
+) -> None:
     """Add assistant message to chat.
 
     Args:
         data: Chat dictionary
         content: Response text
         model: Model that generated the response
+        citations: Optional list of source citations
     """
     lines = text_to_lines(content)
 
@@ -129,6 +135,8 @@ def add_assistant_message(data: dict[str, Any], content: str, model: str) -> Non
         "model": model,
         "content": lines,
     }
+    if citations:
+        message["citations"] = citations
 
     data["messages"].append(message)
 

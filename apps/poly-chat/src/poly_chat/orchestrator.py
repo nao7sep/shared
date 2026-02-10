@@ -349,6 +349,9 @@ class ChatOrchestrator:
             "model": self.manager.current_model,
             "content": text_to_lines(retry_attempt["assistant_msg"]),
         }
+        citations = retry_attempt.get("citations")
+        if citations:
+            replaced_message["citations"] = citations
         if isinstance(existing_hex_id, str):
             replaced_message["hex_id"] = existing_hex_id
         messages[target_index] = replaced_message
@@ -640,6 +643,7 @@ class ChatOrchestrator:
         mode: str,
         user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
+        citations: Optional[list[dict]] = None,
     ) -> OrchestratorAction:
         """Handle successful AI response.
 
@@ -660,6 +664,7 @@ class ChatOrchestrator:
                     user_input,
                     response_text,
                     retry_hex_id=assistant_hex_id,
+                    citations=citations,
                 )
             return OrchestratorAction(action="continue")
 
@@ -671,7 +676,12 @@ class ChatOrchestrator:
 
         elif mode == "normal":
             # Add assistant message and save
-            chat.add_assistant_message(chat_data, response_text, self.manager.current_model)
+            chat.add_assistant_message(
+                chat_data,
+                response_text,
+                self.manager.current_model,
+                citations=citations,
+            )
             if chat_data.get("messages"):
                 if assistant_hex_id:
                     chat_data["messages"][-1]["hex_id"] = assistant_hex_id

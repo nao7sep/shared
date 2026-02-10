@@ -278,6 +278,18 @@ def test_add_assistant_message(sample_chat):
     assert messages[-1]["model"] == "gpt-5-mini"
 
 
+def test_add_assistant_message_with_citations(sample_chat):
+    """Test adding assistant message with search citations."""
+    citations = [{"url": "https://example.com", "title": "Example"}]
+    add_assistant_message(sample_chat, "Response text", "gpt-5-mini", citations=citations)
+
+    messages = sample_chat["messages"]
+    assert len(messages) == 3
+    assert messages[-1]["role"] == "assistant"
+    assert messages[-1]["model"] == "gpt-5-mini"
+    assert messages[-1]["citations"] == citations
+
+
 def test_add_error_message(sample_chat):
     """Test adding error message."""
     add_error_message(

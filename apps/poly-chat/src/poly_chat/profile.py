@@ -286,7 +286,7 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
         f"  1. Edit {profile_path}",
         "     Update model names, paths, and API key placeholders",
         "",  # Empty line
-        f"  2. Start PolyChat:",
+        "  2. Start PolyChat:",
         f"     poetry run pc -p {profile_path}",
     ])
 

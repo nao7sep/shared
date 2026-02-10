@@ -169,6 +169,7 @@ class ClaudeProvider:
                 # Extract citations from final_message if search was enabled
                 if search and metadata is not None:
                     citations = []
+                    trace_citations = []
                     for block in final_message.content:
                         if hasattr(block, "citations"):
                             for citation in (block.citations or []):
@@ -176,8 +177,22 @@ class ClaudeProvider:
                                     "url": citation.url,
                                     "title": getattr(citation, "title", None)
                                 })
+                                trace_citations.append(
+                                    {
+                                        "url": citation.url,
+                                        "title": getattr(citation, "title", None),
+                                        "cited_text": getattr(citation, "cited_text", None),
+                                    }
+                                )
                     if citations:
                         metadata["citations"] = citations
+                    metadata["search_raw"] = {
+                        "provider": "claude",
+                        "id": getattr(final_message, "id", None),
+                        "stop_reason": getattr(final_message, "stop_reason", None),
+                        "content": getattr(final_message, "content", None),
+                        "citations": trace_citations,
+                    }
 
                 if final_message.stop_reason == "max_tokens":
                     logger.warning("Response truncated due to max_tokens limit")
@@ -287,6 +302,7 @@ class ClaudeProvider:
             # Extract citations if search was enabled
             if search:
                 citations = []
+                trace_citations = []
                 for block in response.content:
                     if hasattr(block, "citations"):
                         for citation in (block.citations or []):
@@ -294,8 +310,22 @@ class ClaudeProvider:
                                 "url": citation.url,
                                 "title": getattr(citation, "title", None)
                             })
+                            trace_citations.append(
+                                {
+                                    "url": citation.url,
+                                    "title": getattr(citation, "title", None),
+                                    "cited_text": getattr(citation, "cited_text", None),
+                                }
+                            )
                 if citations:
                     metadata["citations"] = citations
+                metadata["search_raw"] = {
+                    "provider": "claude",
+                    "id": getattr(response, "id", None),
+                    "stop_reason": getattr(response, "stop_reason", None),
+                    "content": getattr(response, "content", None),
+                    "citations": trace_citations,
+                }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

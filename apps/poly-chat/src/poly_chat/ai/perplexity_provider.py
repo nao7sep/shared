@@ -103,6 +103,46 @@ class PerplexityProvider:
 
         return formatted
 
+    @staticmethod
+    def _extract_search_results(payload: object) -> list[dict]:
+        """Extract Perplexity search_results into normalized citation-like records."""
+        results = getattr(payload, "search_results", None) or []
+        normalized = []
+        for item in results:
+            if isinstance(item, dict):
+                url = item.get("url")
+                title = item.get("title")
+                date = item.get("date")
+            else:
+                url = getattr(item, "url", None)
+                title = getattr(item, "title", None)
+                date = getattr(item, "date", None)
+            if url:
+                normalized.append({"url": url, "title": title, "date": date})
+        return normalized
+
+    @classmethod
+    def _extract_citations(cls, payload: object) -> list[dict]:
+        """Extract citations with best available title information."""
+        # Prefer search_results, which include titles in current Perplexity API.
+        search_results = cls._extract_search_results(payload)
+        if search_results:
+            return [{"url": r.get("url"), "title": r.get("title")} for r in search_results if r.get("url")]
+
+        # Fallback to legacy citations field.
+        citations = getattr(payload, "citations", None) or []
+        normalized = []
+        for c in citations:
+            if isinstance(c, dict):
+                url = c.get("url")
+                title = c.get("title")
+            else:
+                url = c
+                title = None
+            if url:
+                normalized.append({"url": url, "title": title})
+        return normalized
+
     @retry(
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
@@ -181,10 +221,20 @@ class PerplexityProvider:
                             f"{chunk.usage.completion_tokens} completion = "
                             f"{chunk.usage.total_tokens} total tokens"
                         )
-                    # Extract citations if available (final chunk)
-                    citations = getattr(chunk, "citations", None)
-                    if citations and metadata is not None:
-                        metadata["citations"] = [{"url": c, "title": None} for c in citations]
+                    # Extract citations/search results if available (final chunk)
+                    if metadata is not None:
+                        citations = self._extract_citations(chunk)
+                        if citations:
+                            metadata["citations"] = citations
+                        search_results = self._extract_search_results(chunk)
+                        if search_results:
+                            metadata["search_results"] = search_results
+                        metadata["search_raw"] = {
+                            "provider": "perplexity",
+                            "raw_citations": getattr(chunk, "citations", None),
+                            "raw_search_results": getattr(chunk, "search_results", None),
+                            "usage": getattr(chunk, "usage", None),
+                        }
                     continue
 
                 # Check for content
@@ -251,8 +301,8 @@ class PerplexityProvider:
                 logger.warning("Response filtered due to content policy")
                 content = "[Response was filtered due to content policy]"
 
-            # Extract citations if available (Perplexity-specific feature)
-            citations = getattr(response, "citations", None)
+            citations = self._extract_citations(response)
+            search_results = self._extract_search_results(response)
 
             # Extract metadata
             metadata = {
@@ -267,11 +317,18 @@ class PerplexityProvider:
                 },
             }
 
-            # Add citations if available (Perplexity provides source URLs)
+            # Add citations/search results if available.
             if citations:
-                # Normalize to standard format
-                metadata["citations"] = [{"url": c, "title": None} for c in citations]
+                metadata["citations"] = citations
                 logger.info(f"Response included {len(citations)} citations")
+            if search_results:
+                metadata["search_results"] = search_results
+            metadata["search_raw"] = {
+                "provider": "perplexity",
+                "raw_citations": getattr(response, "citations", None),
+                "raw_search_results": getattr(response, "search_results", None),
+                "usage": getattr(response, "usage", None),
+            }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

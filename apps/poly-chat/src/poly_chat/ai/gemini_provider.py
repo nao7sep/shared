@@ -149,13 +149,27 @@ class GeminiProvider:
             if search and metadata is not None and final_chunk and final_chunk.candidates:
                 candidate = final_chunk.candidates[0]
                 if hasattr(candidate, "grounding_metadata"):
-                    chunks = candidate.grounding_metadata.grounding_chunks
+                    grounding = candidate.grounding_metadata
+                    chunks = getattr(grounding, "grounding_chunks", None) or []
                     citations = [
                         {"url": chunk.web.uri, "title": chunk.web.title}
                         for chunk in chunks if hasattr(chunk, "web")
                     ]
                     if citations:
                         metadata["citations"] = citations
+                    supports = getattr(grounding, "grounding_supports", None) or []
+                    metadata["search_raw"] = {
+                        "provider": "gemini",
+                        "grounding_metadata": grounding,
+                        "grounding_chunks": [
+                            {
+                                "url": getattr(getattr(chunk, "web", None), "uri", None),
+                                "title": getattr(getattr(chunk, "web", None), "title", None),
+                            }
+                            for chunk in chunks
+                        ],
+                        "grounding_support_count": len(supports),
+                    }
 
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
@@ -262,13 +276,27 @@ class GeminiProvider:
             if search and response.candidates:
                 candidate = response.candidates[0]
                 if hasattr(candidate, "grounding_metadata"):
-                    chunks = candidate.grounding_metadata.grounding_chunks
+                    grounding = candidate.grounding_metadata
+                    chunks = getattr(grounding, "grounding_chunks", None) or []
                     citations = [
                         {"url": chunk.web.uri, "title": chunk.web.title}
                         for chunk in chunks if hasattr(chunk, "web")
                     ]
                     if citations:
                         metadata["citations"] = citations
+                    supports = getattr(grounding, "grounding_supports", None) or []
+                    metadata["search_raw"] = {
+                        "provider": "gemini",
+                        "grounding_metadata": grounding,
+                        "grounding_chunks": [
+                            {
+                                "url": getattr(getattr(chunk, "web", None), "uri", None),
+                                "title": getattr(getattr(chunk, "web", None), "title", None),
+                            }
+                            for chunk in chunks
+                        ],
+                        "grounding_support_count": len(supports),
+                    }
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

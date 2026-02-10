@@ -25,7 +25,7 @@ class SessionState:
     retry_mode: bool = False
     retry_base_messages: list = field(default_factory=list)
     retry_target_index: Optional[int] = None
-    retry_attempts: dict[str, dict[str, str]] = field(default_factory=dict)
+    retry_attempts: dict[str, dict[str, Any]] = field(default_factory=dict)
     secret_mode: bool = False
     secret_base_messages: list = field(default_factory=list)
     search_mode: bool = False
