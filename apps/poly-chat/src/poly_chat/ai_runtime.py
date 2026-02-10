@@ -21,6 +21,7 @@ from .ai.perplexity_provider import PerplexityProvider
 from .ai.mistral_provider import MistralProvider
 from .ai.deepseek_provider import DeepSeekProvider
 from .ai.types import AIResponseMetadata
+from .ai.limits import resolve_profile_limits, select_max_output_tokens
 
 ProviderInstance = (
     OpenAIProvider
@@ -71,6 +72,7 @@ async def send_message_to_ai(
     model: str,
     system_prompt: Optional[str] = None,
     provider_name: Optional[str] = None,
+    profile: Optional[dict] = None,
     mode: str = "normal",
     chat_path: Optional[str] = None,
     search: bool = False,
@@ -82,6 +84,10 @@ async def send_message_to_ai(
         Tuple of (response_stream, metadata) where response_stream is an async
         generator that yields response chunks.
     """
+    resolved_provider_name = (
+        provider_name
+        or provider_instance.__class__.__name__.removesuffix("Provider").lower()
+    )
     provider_label = provider_name or provider_instance.__class__.__name__
     log_event(
         "ai_request",
@@ -103,17 +109,26 @@ async def send_message_to_ai(
     try:
         # Create metadata dict that provider can populate with usage info
         metadata: AIResponseMetadata = {"model": model, "started": started}
+        limits = resolve_profile_limits(profile, resolved_provider_name)
+        max_output_tokens = select_max_output_tokens(limits, search=search)
+        thinking_budget_tokens = limits.get("thinking_budget_tokens")
 
         # Pass metadata to provider so it can populate usage after streaming
-        response_stream = provider_instance.send_message(
-            messages=messages,
-            model=model,
-            system_prompt=system_prompt,
-            stream=True,
-            search=search,
-            thinking=thinking,
-            metadata=metadata,
-        )
+        send_kwargs: dict[str, object] = {
+            "messages": messages,
+            "model": model,
+            "system_prompt": system_prompt,
+            "stream": True,
+            "search": search,
+            "thinking": thinking,
+            "metadata": metadata,
+        }
+        if max_output_tokens is not None:
+            send_kwargs["max_output_tokens"] = max_output_tokens
+        if thinking_budget_tokens is not None:
+            send_kwargs["thinking_budget_tokens"] = thinking_budget_tokens
+
+        response_stream = provider_instance.send_message(**send_kwargs)
 
         # Return stream for caller to display and log after consumption
         # Provider will populate metadata["usage"] after streaming completes

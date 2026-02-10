@@ -417,6 +417,28 @@ class TestRegularMessages:
         assert action.message == ""
 
     @pytest.mark.asyncio
+    async def test_pending_error_message_excludes_secret_guidance(self, orchestrator):
+        """Pending-error guidance should point to retry/rewind only."""
+        chat_data = {
+            "metadata": {},
+            "messages": [
+                {"role": "user", "content": ["hello"]},
+                {"role": "error", "content": ["oops"]},
+            ],
+        }
+
+        action = await orchestrator.handle_user_message(
+            "new input",
+            "/test/chat.json",
+            chat_data,
+        )
+
+        assert isinstance(action, PrintAction)
+        assert "/retry" in action.message
+        assert "/rewind" in action.message
+        assert "/secret" not in action.message
+
+    @pytest.mark.asyncio
     async def test_regular_message_saves_when_chat_dirty(self, orchestrator, sample_chat_data):
         """Regular command responses should flush dirty chat changes."""
         orchestrator.manager.mark_chat_dirty()
@@ -581,3 +603,37 @@ class TestPreSendValidationRollback:
             assert len(chat_data["messages"]) == 1
             assert "abc" not in orchestrator.manager.hex_id_set
             mock_save.assert_not_called()
+
+
+class TestSecretModeContext:
+    @pytest.mark.asyncio
+    async def test_secret_mode_uses_current_chat_history_each_turn(self, orchestrator):
+        chat_data = {
+            "metadata": {},
+            "messages": [
+                {"role": "user", "content": ["u1"]},
+                {"role": "assistant", "content": ["a1"]},
+            ],
+        }
+        orchestrator.manager.switch_chat("/test/chat.json", chat_data)
+        orchestrator.manager.enter_secret_mode(chat_data["messages"])
+
+        first = await orchestrator.handle_user_message(
+            "secret one",
+            "/test/chat.json",
+            chat_data,
+        )
+        assert isinstance(first, SendAction)
+        assert [m["content"] for m in first.messages[:-1]] == [["u1"], ["a1"]]
+
+        # Simulate persisted history changing between secret turns.
+        chat_data["messages"].append({"role": "user", "content": ["u2"]})
+        chat_data["messages"].append({"role": "assistant", "content": ["a2"]})
+
+        second = await orchestrator.handle_user_message(
+            "secret two",
+            "/test/chat.json",
+            chat_data,
+        )
+        assert isinstance(second, SendAction)
+        assert [m["content"] for m in second.messages[:-1]] == [["u1"], ["a1"], ["u2"], ["a2"]]

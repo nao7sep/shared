@@ -96,6 +96,29 @@ def test_load_profile_missing_required_field(tmp_path):
         load_profile(str(profile_path))
 
 
+def test_load_profile_rejects_relative_dir_paths(tmp_path):
+    """chats/logs/pages dirs must use ~/, @/, or absolute paths."""
+    profile_path = tmp_path / "relative-dirs.json"
+
+    profile_data = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "timeout": 30,
+        "input_mode": "quick",
+        "system_prompt": {"type": "text", "content": "hi"},
+        "chats_dir": "chats",
+        "logs_dir": "logs",
+        "pages_dir": "pages",
+        "api_keys": {},
+    }
+
+    with open(profile_path, "w", encoding="utf-8") as f:
+        json.dump(profile_data, f)
+
+    with pytest.raises(ValueError, match="Relative paths without prefix are not supported"):
+        load_profile(str(profile_path))
+
+
 def test_load_profile_valid(tmp_path):
     """Test loading valid profile."""
     profile_path = tmp_path / "valid.json"
@@ -630,6 +653,78 @@ def test_validate_profile_valid_all_api_key_types():
     validate_profile(profile)
 
 
+def test_validate_profile_accepts_ai_limits_configuration():
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "chats_dir": "~/chats",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
+        "api_keys": {},
+        "ai_limits": {
+            "default": {
+                "max_output_tokens": None,
+                "search_max_output_tokens": 1200,
+            },
+            "providers": {
+                "claude": {"thinking_budget_tokens": 8000}
+            },
+            "helper": {"max_output_tokens": 500},
+        },
+    }
+
+    validate_profile(profile)
+
+
+def test_validate_profile_rejects_invalid_ai_limits_shape():
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "chats_dir": "~/chats",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
+        "api_keys": {},
+        "ai_limits": "invalid",
+    }
+
+    with pytest.raises(ValueError, match="'ai_limits' must be a dictionary"):
+        validate_profile(profile)
+
+
+def test_validate_profile_rejects_invalid_ai_limit_value():
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "chats_dir": "~/chats",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
+        "api_keys": {},
+        "ai_limits": {
+            "default": {"max_output_tokens": 0},
+        },
+    }
+
+    with pytest.raises(ValueError, match="must be a positive integer or null"):
+        validate_profile(profile)
+
+
+def test_validate_profile_rejects_unknown_ai_limit_key():
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "chats_dir": "~/chats",
+        "logs_dir": "~/logs",
+        "pages_dir": "~/pages",
+        "api_keys": {},
+        "ai_limits": {
+            "default": {"foo": 123},
+        },
+    }
+
+    with pytest.raises(ValueError, match="Unknown ai_limits key"):
+        validate_profile(profile)
+
+
 def test_create_profile_template_uses_inline_prompt_and_mixed_api_key_examples(tmp_path):
     """Generated template should be directly useful and avoid companion API-key files."""
     profile_path = tmp_path / "poly-chat-profile.json"
@@ -651,6 +746,9 @@ def test_create_profile_template_uses_inline_prompt_and_mixed_api_key_examples(t
         "service": "poly-chat",
         "account": "claude-api-key",
     }
+    assert created_profile["ai_limits"]["default"]["max_output_tokens"] is None
+    assert created_profile["ai_limits"]["default"]["search_max_output_tokens"] is None
+    assert created_profile["ai_limits"]["default"]["thinking_budget_tokens"] is None
     assert created_profile["api_keys"]["gemini"]["type"] == "json"
     assert created_profile["api_keys"]["grok"]["type"] == "direct"
     assert not (profile_path.parent / "api-keys.json").exists()

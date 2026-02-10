@@ -406,7 +406,7 @@ class ChatOrchestrator:
             return PrintAction(
                 message=(
                     "\n⚠️  Cannot continue - last interaction resulted in an error.\n"
-                    "Use /retry to retry the last message, /secret to ask without saving,\n"
+                    "Use /retry to retry the last message,\n"
                     "or /rewind to remove the error and continue from an earlier point."
                 )
             )
@@ -426,16 +426,8 @@ class ChatOrchestrator:
         self, user_input: str, chat_data: dict
     ) -> OrchestratorAction:
         """Handle message in secret mode."""
-        # Enter secret mode if not already (freeze context)
-        try:
-            secret_context = self.manager.get_secret_context()
-        except ValueError:
-            # Not in secret mode yet, freeze context
-            secret_context = chat.get_messages_for_ai(chat_data)
-            self.manager.enter_secret_mode(secret_context)
-            secret_context = self.manager.get_secret_context()
-
-        # Prepare temporary messages (not saved)
+        # Always derive from persisted chat history; secret turns are never saved.
+        secret_context = chat.get_messages_for_ai(chat_data)
         temp_messages = secret_context + [{"role": "user", "content": user_input}]
 
         return self._build_send_action(

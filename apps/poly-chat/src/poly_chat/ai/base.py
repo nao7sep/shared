@@ -22,6 +22,8 @@ class AIProvider(Protocol):
         stream: bool = True,
         search: bool = False,
         thinking: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget_tokens: int | None = None,
         metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to AI and yield response chunks if streaming.
@@ -33,6 +35,8 @@ class AIProvider(Protocol):
             stream: Whether to stream the response
             search: Whether to enable web search
             thinking: Whether to enable extended reasoning/thinking
+            max_output_tokens: Optional provider output token cap
+            thinking_budget_tokens: Optional provider thinking budget cap
             metadata: Optional dict populated with usage/citation stats
 
         Yields:
@@ -50,6 +54,8 @@ class AIProvider(Protocol):
         system_prompt: str | None = None,
         search: bool = False,
         thinking: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget_tokens: int | None = None,
     ) -> tuple[str, dict]:
         """Get full response (non-streaming).
 
@@ -59,6 +65,8 @@ class AIProvider(Protocol):
             system_prompt: Optional system prompt
             search: Whether to enable web search
             thinking: Whether to enable extended reasoning/thinking
+            max_output_tokens: Optional provider output token cap
+            thinking_budget_tokens: Optional provider thinking budget cap
 
         Returns:
             Tuple of (response_text, metadata) where metadata contains

@@ -613,3 +613,27 @@ we need to update readme.md too regarding the pages directory.
 in profile, logs directory path is stored as "log_dir". this is trivial, but let's change it to "logs_dir" as we now have "pages_dir" as well and only one key being singular looks odder than before.
 
 pages_dir is mandatory. if it's not provided, app fails to start.
+
+---
+
+some methods take max_tokens, which is usually 4096 by default. i also see budget_tokens (10000) for thinking. please look for all embedded limits and gather them somewhere so that management will be centralized. also, these limits should be optional. if None, nothing should be set to the ai providers. personally, i dont like setting limits on ais. i like to let them decide how long their responses should be.
+
+please confirm just in case: chats_dir, logs_dir and pages_dir paths are all mapped if relative, but NOT to current directory. only ~/ and @/ should be supported.
+
+let's ask if user wants to open the new chat when /new has been called and no chat is open yet. any other helpful routes like this?
+
+has_pending_error emits a message that suggests to use /retry, /secret and /rewind because there's an error message in the chat history. /retry and /rewind should work, but not /secret. it sends all chat history and just doesnt add any new interactions within that mode to the chat history. please make sure /secret does send all chat history in each new interaction and just doesnt add them to the chat history. then, please update the message in has_pending_error. also, please look for similar mistakes based on this misunderstanding.
+
+---
+
+in ai providers, when we initialize httpx.Timeout, we set "connect", "read", "write" and "pool". profile based timeout is applied only to "read" (and that is correct).
+
+in page_fetcher, "read" is set to "timeout_sec", which is 5 by default. i am not sure whether profile based timeout is applied to this. it should be. when i use a wi-fi router in a bullet train, connectivity is sometimes very unstable.
+
+let's extract embedded timeout-related values not only from these files but also everywhere else as a new file. then, let's make sure profile based timeout is applied to all "read". please also choose reasonable values for the other types of timeouts.
+
+then, when /search or /thinking is on, let's triple the profile based timeout value. the value must be stored somewhere. we will NOT update that value. we will just triple it when we apply it to the ai provider. but we will NOT triple it when we apply it to page_fetcher. there may be cases i am missing. please look for them.
+
+let's also centralize all embedded prompts. i remember there were ones for title/summary generation and also one for /safe. there should be more.
+
+from now on, we will never embed a prompt in code. that will make the app behavior more consistent.

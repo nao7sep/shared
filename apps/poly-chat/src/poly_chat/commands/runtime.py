@@ -338,6 +338,7 @@ class RuntimeCommandsMixin:
             if self.manager.secret_mode:
                 return "Secret mode already on"
             secret_context = chat.get_messages_for_ai(chat_data)
+            # Store a snapshot for state/diagnostics; secret turns are not persisted.
             self.manager.enter_secret_mode(secret_context)
             return "Secret mode enabled"
 

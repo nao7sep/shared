@@ -126,7 +126,8 @@ class ClaudeProvider:
         stream: bool = True,
         search: bool = False,
         thinking: bool = False,
-        max_tokens: int = 4096,
+        max_output_tokens: int | None = None,
+        thinking_budget_tokens: int | None = None,
         metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to Claude and yield response chunks.
@@ -138,7 +139,8 @@ class ClaudeProvider:
             stream: Whether to stream the response
             search: Whether to enable web search
             thinking: Whether to enable extended thinking/reasoning
-            max_tokens: Maximum tokens in response (default 4096, increased to 8192 for search)
+            max_output_tokens: Optional cap for provider output tokens
+            thinking_budget_tokens: Optional cap for Claude extended-thinking budget
             metadata: Optional dict to populate with usage info after streaming
 
         Yields:
@@ -152,8 +154,10 @@ class ClaudeProvider:
             kwargs = {
                 "model": model,
                 "messages": formatted_messages,
-                "max_tokens": 8192 if search else max_tokens,
             }
+
+            if max_output_tokens is not None:
+                kwargs["max_tokens"] = max_output_tokens
 
             if system_prompt:
                 kwargs["system"] = system_prompt
@@ -162,7 +166,10 @@ class ClaudeProvider:
                 kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
 
             if thinking:
-                kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
+                thinking_config = {"type": "enabled"}
+                if thinking_budget_tokens is not None:
+                    thinking_config["budget_tokens"] = thinking_budget_tokens
+                kwargs["thinking"] = thinking_config
 
             # Create streaming request with retry logic
             async with await self._create_message_stream(**kwargs) as response_stream:
@@ -243,7 +250,8 @@ class ClaudeProvider:
         system_prompt: str | None = None,
         search: bool = False,
         thinking: bool = False,
-        max_tokens: int = 4096,
+        max_output_tokens: int | None = None,
+        thinking_budget_tokens: int | None = None,
     ) -> tuple[str, dict]:
         """Get full response from Claude.
 
@@ -252,7 +260,8 @@ class ClaudeProvider:
             model: Model name
             system_prompt: Optional system prompt
             search: Whether to enable web search
-            max_tokens: Maximum tokens in response (default 4096, increased to 8192 for search)
+            max_output_tokens: Optional cap for provider output tokens
+            thinking_budget_tokens: Optional cap for Claude extended-thinking budget
 
         Returns:
             Tuple of (response_text, metadata)
@@ -265,13 +274,18 @@ class ClaudeProvider:
             kwargs = {
                 "model": model,
                 "messages": formatted_messages,
-                "max_tokens": 8192 if search else max_tokens,
             }
+
+            if max_output_tokens is not None:
+                kwargs["max_tokens"] = max_output_tokens
 
             if search:
                 kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
             if thinking:
-                kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
+                thinking_config = {"type": "enabled"}
+                if thinking_budget_tokens is not None:
+                    thinking_config["budget_tokens"] = thinking_budget_tokens
+                kwargs["thinking"] = thinking_config
 
             if system_prompt:
                 kwargs["system"] = system_prompt

@@ -196,6 +196,7 @@ async def repl_loop(
                 manager.current_model,
                 manager.system_prompt,
                 provider_name=manager.current_ai,
+                profile=manager.profile,
                 mode=effective_request_mode,
                 chat_path=chat_path,
                 search=use_search,
@@ -336,7 +337,7 @@ async def repl_loop(
     while True:
         try:
             if has_pending_error(chat_data) and not manager.retry_mode:
-                print("[⚠️  PENDING ERROR - Use /retry to retry or /secret to ask separately]")
+                print("[⚠️  PENDING ERROR - Use /retry or /rewind]")
             elif manager.retry_mode:
                 print("[🔄 RETRY MODE - Use /apply to accept, /cancel to abort]")
             elif manager.secret_mode:

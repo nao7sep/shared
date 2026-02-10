@@ -589,10 +589,10 @@ class SessionManager:
     # ===================================================================
 
     def enter_secret_mode(self, base_messages: list[dict]) -> None:
-        """Enter secret mode with frozen message context.
+        """Enter secret mode and store a snapshot of persisted context.
 
         Args:
-            base_messages: Frozen message context (all current messages)
+            base_messages: Current persisted message context
         """
         if self._state.retry_mode:
             raise ValueError("Cannot enter secret mode while in retry mode")
@@ -601,10 +601,10 @@ class SessionManager:
         self._state.secret_base_messages = base_messages.copy()
 
     def get_secret_context(self) -> list[dict]:
-        """Get frozen secret context.
+        """Get stored secret-mode context snapshot.
 
         Returns:
-            Frozen message context for secret mode
+            Snapshot captured when secret mode was enabled
 
         Raises:
             ValueError: If not in secret mode

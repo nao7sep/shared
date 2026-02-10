@@ -9,6 +9,29 @@ from pathlib import Path
 from typing import Any
 
 
+_AI_LIMIT_KEYS = {
+    "max_output_tokens",
+    "search_max_output_tokens",
+    "thinking_budget_tokens",
+}
+
+
+def _validate_limit_block(block: dict[str, Any], *, context: str) -> None:
+    """Validate one ai_limits block."""
+    for key, value in block.items():
+        if key not in _AI_LIMIT_KEYS:
+            raise ValueError(
+                f"Unknown ai_limits key '{key}' in {context}. "
+                f"Allowed: {', '.join(sorted(_AI_LIMIT_KEYS))}"
+            )
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(
+                f"ai_limits.{key} in {context} must be a positive integer or null"
+            )
+
+
 def map_path(path: str) -> str:
     """Map path with special prefixes to absolute path.
 
@@ -170,6 +193,38 @@ def validate_profile(profile: dict[str, Any]) -> None:
     if not isinstance(profile.get("api_keys"), dict):
         raise ValueError("'api_keys' must be a dictionary")
 
+    # Validate optional ai_limits structure
+    ai_limits = profile.get("ai_limits")
+    if ai_limits is not None:
+        if not isinstance(ai_limits, dict):
+            raise ValueError("'ai_limits' must be a dictionary when provided")
+
+        default_limits = ai_limits.get("default")
+        if default_limits is not None:
+            if not isinstance(default_limits, dict):
+                raise ValueError("'ai_limits.default' must be a dictionary")
+            _validate_limit_block(default_limits, context="ai_limits.default")
+
+        helper_limits = ai_limits.get("helper")
+        if helper_limits is not None:
+            if not isinstance(helper_limits, dict):
+                raise ValueError("'ai_limits.helper' must be a dictionary")
+            _validate_limit_block(helper_limits, context="ai_limits.helper")
+
+        provider_limits = ai_limits.get("providers")
+        if provider_limits is not None:
+            if not isinstance(provider_limits, dict):
+                raise ValueError("'ai_limits.providers' must be a dictionary")
+            for provider_name, block in provider_limits.items():
+                if not isinstance(block, dict):
+                    raise ValueError(
+                        f"'ai_limits.providers.{provider_name}' must be a dictionary"
+                    )
+                _validate_limit_block(
+                    block,
+                    context=f"ai_limits.providers.{provider_name}",
+                )
+
     # Validate each api_key configuration
     for provider, key_config in profile.get("api_keys", {}).items():
         if not isinstance(key_config, dict):
@@ -237,6 +292,20 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
         "system_prompt": {
             "type": "text",
             "content": "You are a helpful assistant."
+        },
+        "ai_limits": {
+            "default": {
+                "max_output_tokens": None,
+                "search_max_output_tokens": None,
+                "thinking_budget_tokens": None,
+            },
+            "providers": {
+                "claude": {
+                    "max_output_tokens": None,
+                    "search_max_output_tokens": None,
+                    "thinking_budget_tokens": None,
+                }
+            },
         },
         "chats_dir": "~/poly-chat/chats",
         "logs_dir": "~/poly-chat/logs",

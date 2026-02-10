@@ -60,3 +60,38 @@ async def test_invoke_helper_ai_missing_api_key_raises_value_error():
                 profile=profile_data,
                 messages=[{"role": "user", "content": "test"}],
             )
+
+
+@pytest.mark.asyncio
+async def test_invoke_helper_ai_applies_helper_limits_when_configured():
+    profile_data = {
+        "api_keys": {
+            "claude": {"type": "direct", "value": "test-key"},
+        },
+        "ai_limits": {
+            "helper": {
+                "max_output_tokens": 123,
+                "thinking_budget_tokens": 456,
+            }
+        },
+    }
+    provider = MagicMock()
+    provider.get_full_response = AsyncMock(return_value=("ok", {"usage": {}}))
+
+    with patch("poly_chat.keys.loader.load_api_key", return_value="test-key"):
+        with patch("poly_chat.ai_runtime.get_provider_instance", return_value=provider):
+            with patch("poly_chat.logging_utils.log_event"):
+                await invoke_helper_ai(
+                    helper_ai="claude",
+                    helper_model="claude-haiku-4-5",
+                    profile=profile_data,
+                    messages=[{"role": "user", "content": "Generate title"}],
+                )
+
+    provider.get_full_response.assert_awaited_once_with(
+        messages=[{"role": "user", "content": "Generate title"}],
+        model="claude-haiku-4-5",
+        system_prompt=None,
+        max_output_tokens=123,
+        thinking_budget_tokens=456,
+    )

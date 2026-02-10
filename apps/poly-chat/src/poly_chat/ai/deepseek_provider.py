@@ -125,6 +125,8 @@ class DeepSeekProvider:
         stream: bool = True,
         search: bool = False,
         thinking: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget_tokens: int | None = None,
         metadata: AIResponseMetadata | None = None,
     ) -> AsyncIterator[str]:
         """Send message to DeepSeek and yield response chunks.
@@ -230,6 +232,8 @@ class DeepSeekProvider:
         system_prompt: str | None = None,
         search: bool = False,
         thinking: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget_tokens: int | None = None,
     ) -> tuple[str, dict]:
         """Get full response from DeepSeek."""
         try:

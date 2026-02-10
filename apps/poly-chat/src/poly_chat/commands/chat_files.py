@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ..chat import load_chat
+from ..chat import load_chat, save_chat
 from ..chat_manager import (
     delete_chat as delete_chat_file,
     generate_chat_filename,
@@ -12,6 +12,14 @@ from .types import CommandResult, CommandSignal
 
 
 class ChatFileCommandsMixin:
+    @staticmethod
+    def _is_yes_choice(answer: str) -> bool:
+        return answer.strip().lower() in {"", "y", "yes"}
+
+    @staticmethod
+    def _is_no_choice(answer: str) -> bool:
+        return answer.strip().lower() in {"n", "no"}
+
     async def new_chat(self, args: str) -> CommandResult:
         """Create new chat file.
 
@@ -26,6 +34,17 @@ class ChatFileCommandsMixin:
         # Generate filename
         name = args.strip() if args else None
         new_path = generate_chat_filename(chats_dir, name)
+
+        if not self.manager.chat_path:
+            answer = await self._prompt_text(
+                "No chat is open. Open the new chat now? [Y/n]: "
+            )
+            if self._is_no_choice(answer):
+                # Persist the file so /open can select it later.
+                await save_chat(new_path, load_chat(new_path))
+                return f"Created new chat (not opened): {new_path}"
+            if not self._is_yes_choice(answer):
+                return "Cancelled"
 
         # Signal to REPL to switch to new chat.
         return CommandSignal(kind="new_chat", chat_path=new_path)
@@ -89,7 +108,7 @@ class ChatFileCommandsMixin:
             Typed close-chat control signal
         """
         if not self.manager.chat_path:
-            return "No chat is currently open"
+            return "No chat is currently open. Use /new or /open."
 
         # Signal to REPL to close chat
         return CommandSignal(kind="close_chat")
@@ -191,7 +210,7 @@ class ChatFileCommandsMixin:
             if name == "current":
                 current_path = self.manager.chat_path
                 if not current_path:
-                    return "No chat is currently open"
+                    return "No chat is currently open. Use /new or /open."
                 selected_path = current_path
             else:
                 try:
