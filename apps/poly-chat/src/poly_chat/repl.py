@@ -165,13 +165,21 @@ async def repl_loop(
         try:
             print(prefix, end="", flush=True)
             use_search = action.search_enabled if action.search_enabled is not None else manager.search_mode
+            effective_request_mode = action.request_mode or action.mode or "normal"
+            if action.request_mode is None and use_search:
+                if action.mode == "secret":
+                    effective_request_mode = "search+secret"
+                elif action.mode == "retry":
+                    effective_request_mode = "search+retry"
+                else:
+                    effective_request_mode = "search"
             response_stream, metadata = await send_message_to_ai(
                 provider_instance,
                 action.messages or [],
                 manager.current_model,
                 manager.system_prompt,
                 provider_name=manager.current_ai,
-                mode=action.request_mode or action.mode or "normal",
+                mode=effective_request_mode,
                 chat_path=chat_path,
                 search=use_search,
             )
@@ -193,7 +201,7 @@ async def repl_loop(
             log_event(
                 "ai_response",
                 level=logging.INFO,
-                mode=action.request_mode or action.mode,
+                mode=effective_request_mode,
                 provider=manager.current_ai,
                 model=manager.current_model,
                 chat_file=chat_file_label(chat_path),
