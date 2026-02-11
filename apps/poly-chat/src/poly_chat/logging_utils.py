@@ -151,13 +151,6 @@ class StructuredTextFormatter(logging.Formatter):
             "input_tokens",
             "output_tokens",
             "total_tokens",
-            "search_executed",
-            "search_evidence",
-            "citations",
-            "citation_urls",
-            "search_results",
-            "thought_chars",
-            "thoughts",
         ],
         "ai_error": [
             "ts",
@@ -236,14 +229,6 @@ class StructuredTextFormatter(logging.Formatter):
 
     def _field_max_len(self, key: str) -> int:
         """Return per-field log truncation limits (display only, not runtime limits)."""
-        if key == "citation_urls":
-            return 4000
-        if key == "search_results":
-            return 10000
-        if key == "search_evidence":
-            return 2000
-        if key == "thoughts":
-            return 20000
         return 400
 
     def _ordered_keys(self, event_name: str, data: dict[str, Any]) -> list[str]:

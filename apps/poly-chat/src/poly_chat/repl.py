@@ -250,10 +250,7 @@ async def repl_loop(
                 metadata["citations"] = citations
             if citations:
                 display_citations(citations)
-            search_results = metadata.get("search_results")
             thoughts_text = "".join(thought_chunks).strip()
-            search_executed = metadata.get("search_executed")
-            search_evidence = metadata.get("search_evidence")
 
             # Calculate latency and log successful AI response
             latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
@@ -273,13 +270,6 @@ async def repl_loop(
                 input_tokens=usage.get("prompt_tokens"),
                 output_tokens=usage.get("completion_tokens"),
                 total_tokens=usage.get("total_tokens"),
-                citations=len(citations) if citations else None,
-                search_executed=search_executed,
-                search_evidence=search_evidence,
-                citation_urls=[c.get("url") for c in citations if isinstance(c, dict) and c.get("url")] if citations else None,
-                search_results=search_results,
-                thought_chars=len(thoughts_text) if thoughts_text else None,
-                thoughts=thoughts_text if thoughts_text else None,
             )
 
             # Handle successful response

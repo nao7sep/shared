@@ -696,3 +696,22 @@ in some real use cases, i do need the original text. in such cases, using an on-
 ok, let's completely remove title extraction, page fetching, etc. we'll only redirect from vertex urls to actual urls (because this header - we will very certainly receive).
 
 in citations of chat history, let's only save numbers, provided titles and (redirected-if-necessary) urls, where unavailable/seemingly-invalid values will be set to null explicitly.
+
+---
+
+i still see noise in logs like:
+
+search_executed: True
+search_evidence: ['grounding_metadata']
+citations: 2
+citation_urls: ...
+
+if search worked, we get citations in chat history and sources on the terminal. please delete these.
+
+then, please suggest what else can be deleted.
+
+---
+
+let's also delete "thought_chars" and "thoughts". these have been either useless or not even working.
+
+we are not verifying model responses with these logs. we only need to know what to fix if something has failed.
