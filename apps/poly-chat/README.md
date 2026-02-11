@@ -33,7 +33,7 @@ poetry install
 poetry run pc init ~/my-profile.json
 ```
 
-This creates template files:
+This creates a template file:
 - Profile JSON at the path you provide
 
 The generated profile template uses home-based paths (`~/poly-chat/...`) and an inline default system prompt (no `@/...` paths), which is safer for Windows and one-file packaging.
@@ -158,9 +158,9 @@ PolyChat defines the "last interaction" as one of:
 - `/apply <hex_id>` - Apply one retry candidate by ID and exit retry mode
 - `/cancel` - Abort retry and keep original response
 - `/secret` - Show current secret mode state
-- `/secret on|off` - Explicitly enable/disable secret mode
+- `/secret on/off` - Explicitly enable/disable secret mode
 - `/search` - Show current search mode state and supported providers
-- `/search on|off` - Enable/disable web search with inline citations
+- `/search on/off` - Enable/disable web search with inline citations
 - `/rewind` - Delete last full interaction (user+assistant/user+error), or trailing error
 - `/rewind last` - Delete the last full interaction (user+assistant/user+error), or trailing error
 - `/rewind <hex_id>` - Delete that message and all following messages
@@ -302,7 +302,7 @@ The profile requires two directory paths:
 **`chats_dir`** - Where conversation history files are stored
 - Chat files are JSON format with `.json` extension
 - Named by user or auto-generated with timestamps
-- Use `/new`, `/open`, `/save` commands to manage
+- Use `/new`, `/open`, `/switch`, `/rename`, and `/delete` commands to manage
 
 **`logs_dir`** - Where application log files are written
 - One log file per app run: `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
