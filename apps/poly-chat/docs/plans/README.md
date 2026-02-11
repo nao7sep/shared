@@ -24,3 +24,10 @@ codex (gpt-5.3-codex xhigh) generated and implemented:
 
 - comprehensive-issue-remediation-plan-2026-02-10.md (2026-02-10)
 - tangled-type-separation-plan-2026-02-10.md (2026-02-10)
+
+as all tasks on my end were handled, i generated and asked copilot (claude opus 4.6) to handle:
+
+- copilot-code-review-2026-02-11.md (2026-02-11, claude opus 4.6)
+- claude-2026-02-11-code-review-refactoring-plan.md (2026-02-11, sonnet 4.5)
+- codex-2026-02-11-safe-shipping-review-plan.md (2026-02-11, gpt-5.2-codex xhigh)
+- gemini-2026-02-11-refactoring-plan.md (2026-02-11, gemini 3 pro or flash)
