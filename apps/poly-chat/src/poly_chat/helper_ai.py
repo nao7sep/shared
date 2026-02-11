@@ -41,6 +41,7 @@ async def invoke_helper_ai(
     from .ai.limits import resolve_profile_limits, select_max_output_tokens
 
     from .logging_utils import (
+        extract_http_error_context,
         log_event,
         sanitize_error_message,
         estimate_message_chars,
@@ -141,6 +142,7 @@ async def invoke_helper_ai(
 
     except Exception as e:
         sanitized = sanitize_error_message(str(e))
+        http_context = extract_http_error_context(e)
         log_event(
             "helper_ai_error",
             level=logging.ERROR,
@@ -150,6 +152,7 @@ async def invoke_helper_ai(
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
             error=sanitized,
+            **http_context,
         )
         logging.error(
             "Error invoking helper AI (provider=%s, model=%s): %s",

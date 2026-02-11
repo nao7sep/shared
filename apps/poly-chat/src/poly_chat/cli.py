@@ -112,7 +112,7 @@ def main() -> None:
             ),
             input_mode=profile_data.get("input_mode", "quick"),
             timeout=resolve_profile_timeout(profile_data),
-            system_prompt_path=system_prompt_path,
+            system_prompt=system_prompt_path,
         )
 
         asyncio.run(

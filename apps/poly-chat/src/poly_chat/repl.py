@@ -96,7 +96,7 @@ async def repl_loop(
         helper_model=manager.helper_model,
         input_mode=manager.input_mode,
         timeout=resolve_profile_timeout(manager.profile),
-        system_prompt_path=manager.system_prompt_path,
+        system_prompt=manager.system_prompt_path,
         chat_title=chat_metadata.get("title"),
         chat_summary=chat_metadata.get("summary"),
         message_count=len(manager.chat.get("messages", [])) if isinstance(manager.chat, dict) else 0,
@@ -256,15 +256,13 @@ async def repl_loop(
             latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
             usage = metadata.get("usage", {})
 
-            from .logging_utils import chat_file_label
-
             log_event(
                 "ai_response",
                 level=logging.INFO,
                 mode=effective_request_mode,
                 provider=manager.current_ai,
                 model=manager.current_model,
-                chat_file=chat_file_label(chat_path),
+                chat_file=effective_path,
                 latency_ms=latency_ms,
                 output_chars=len(response_text),
                 input_tokens=usage.get("prompt_tokens"),

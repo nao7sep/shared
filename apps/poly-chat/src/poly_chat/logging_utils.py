@@ -8,6 +8,31 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+_LOG_PATH_FIELDS = {
+    "profile_file",
+    "chat_file",
+    "log_file",
+    "chats_dir",
+    "logs_dir",
+    "previous_chat_file",
+    "old_chat_file",
+    "new_chat_file",
+    "system_prompt",
+    # Backward compatibility if an older call site still emits this key.
+    "system_prompt_path",
+}
+
+_REDACTED_HEADER_VALUE = "[REDACTED_HEADER]"
+_SENSITIVE_RESPONSE_HEADERS = {
+    "authorization",
+    "proxy-authorization",
+    "cookie",
+    "set-cookie",
+    "x-api-key",
+    "api-key",
+}
+
+
 def sanitize_error_message(error_msg: str) -> str:
     """Sanitize error messages to remove sensitive information."""
     sanitized = re.sub(r"sk-[A-Za-z0-9]{10,}", "[REDACTED_API_KEY]", error_msg)
@@ -46,7 +71,7 @@ class StructuredTextFormatter(logging.Formatter):
             "logs_dir",
             "input_mode",
             "timeout",
-            "system_prompt_path",
+            "system_prompt",
         ],
         "app_stop": [
             "ts",
@@ -70,7 +95,7 @@ class StructuredTextFormatter(logging.Formatter):
             "logs_dir",
             "input_mode",
             "timeout",
-            "system_prompt_path",
+            "system_prompt",
             "chat_title",
             "chat_summary",
             "message_count",
@@ -137,7 +162,6 @@ class StructuredTextFormatter(logging.Formatter):
             "message_count",
             "input_chars",
             "has_system_prompt",
-            "system_prompt_path",
         ],
         "ai_response": [
             "ts",
@@ -160,6 +184,10 @@ class StructuredTextFormatter(logging.Formatter):
             "model",
             "chat_file",
             "latency_ms",
+            "http_status",
+            "http_method",
+            "http_url",
+            "http_response_headers",
             "error_type",
             "error",
         ],
@@ -193,6 +221,10 @@ class StructuredTextFormatter(logging.Formatter):
             "provider",
             "model",
             "latency_ms",
+            "http_status",
+            "http_method",
+            "http_url",
+            "http_response_headers",
             "error_type",
             "error",
         ],
@@ -204,6 +236,10 @@ class StructuredTextFormatter(logging.Formatter):
             "model",
             "phase",
             "chat_file",
+            "http_status",
+            "http_method",
+            "http_url",
+            "http_response_headers",
             "error_type",
             "error",
         ],
@@ -229,6 +265,8 @@ class StructuredTextFormatter(logging.Formatter):
 
     def _field_max_len(self, key: str) -> int:
         """Return per-field log truncation limits (display only, not runtime limits)."""
+        if key == "http_response_headers":
+            return 12000
         return 400
 
     def _ordered_keys(self, event_name: str, data: dict[str, Any]) -> list[str]:
@@ -291,6 +329,85 @@ def _to_log_safe(value: Any) -> Any:
     return str(value)
 
 
+def _resolve_log_path(path_value: str) -> str:
+    """Resolve a path-ish string to absolute form for log readability."""
+    value = path_value.strip()
+    if not value:
+        return path_value
+    try:
+        if value.startswith("@/") or value == "@":
+            app_root = Path(__file__).parent.parent.parent.resolve()
+            if value == "@":
+                return str(app_root)
+            return str((app_root / value[2:]).resolve())
+        if value.startswith("~/") or value == "~":
+            return str(Path(value).expanduser().resolve())
+        return str(Path(value).expanduser().resolve())
+    except Exception:
+        return path_value
+
+
+def sanitize_response_headers(headers: Any) -> dict[str, str]:
+    """Return response headers safe for logs."""
+    if headers is None:
+        return {}
+
+    items: list[tuple[Any, Any]]
+    if hasattr(headers, "multi_items"):
+        items = list(headers.multi_items())
+    elif hasattr(headers, "items"):
+        items = list(headers.items())
+    else:
+        return {}
+
+    sanitized: dict[str, str] = {}
+    for raw_key, raw_value in items:
+        key = str(raw_key)
+        value = str(raw_value)
+        lowered = key.lower()
+        if lowered in _SENSITIVE_RESPONSE_HEADERS or "token" in lowered or "secret" in lowered:
+            sanitized[key] = _REDACTED_HEADER_VALUE
+        else:
+            sanitized[key] = sanitize_error_message(value)
+    return sanitized
+
+
+def extract_http_error_context(error: Exception) -> dict[str, Any]:
+    """Extract safe HTTP context from an exception when available."""
+    context: dict[str, Any] = {}
+
+    response = getattr(error, "response", None)
+    request = getattr(error, "request", None)
+    if request is None and response is not None:
+        request = getattr(response, "request", None)
+
+    status = getattr(error, "status_code", None)
+    if status is None and response is not None:
+        status = getattr(response, "status_code", None)
+    if status is not None:
+        context["http_status"] = status
+
+    if request is not None:
+        method = getattr(request, "method", None)
+        if method:
+            context["http_method"] = str(method)
+        url = getattr(request, "url", None)
+        if url:
+            context["http_url"] = str(url)
+
+    headers = None
+    if response is not None:
+        headers = getattr(response, "headers", None)
+    if headers is None:
+        headers = getattr(error, "headers", None)
+    if headers is not None:
+        sanitized_headers = sanitize_response_headers(headers)
+        if sanitized_headers:
+            context["http_response_headers"] = sanitized_headers
+
+    return context
+
+
 def summarize_text(text: Any, max_len: int = 160) -> str:
     """Return a short, redacted summary for logs."""
     if text is None:
@@ -342,13 +459,6 @@ def estimate_message_chars(messages: list[dict]) -> int:
     return total
 
 
-def chat_file_label(chat_path: Optional[str]) -> Optional[str]:
-    """Return a compact chat file label for logs."""
-    if not chat_path:
-        return None
-    return Path(chat_path).name
-
-
 def log_event(event: str, level: int = logging.INFO, **fields: Any) -> None:
     """Emit a structured log event."""
     payload = {
@@ -356,6 +466,8 @@ def log_event(event: str, level: int = logging.INFO, **fields: Any) -> None:
         "event": event,
     }
     for key, value in fields.items():
+        if key in _LOG_PATH_FIELDS and isinstance(value, str):
+            value = _resolve_log_path(value)
         payload[key] = _to_log_safe(value)
     logging.log(level, json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 

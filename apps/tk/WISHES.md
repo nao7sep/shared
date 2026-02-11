@@ -169,14 +169,3 @@ in "list", we dont need [ ] or any emojis. a simple numbered list is sufficient.
 we dont need to say "statistics: " when we show the statistics. kind of obvious.
 
 "tk new" makes a new profile. let's change it to "tk init". "new" is a very useful word. i want to reserve it for more frequently new-ed things.
-
----
-
-from vertex, i got:
-
-title: nodewave.io
-url: https://www.nodewave.io/blog/top-ai-models-2026-guide-compare-choose-deploy
-
-if title is a host name and is completely contained in the url, let's set None to title.
-
-please search the web to confirm this is a good workaround.

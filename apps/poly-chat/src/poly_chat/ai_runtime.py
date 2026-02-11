@@ -7,7 +7,7 @@ from typing import AsyncIterator, Optional
 from .app_state import SessionState
 from .keys.loader import load_api_key, validate_api_key
 from .logging_utils import (
-    chat_file_label,
+    extract_http_error_context,
     estimate_message_chars,
     log_event,
     sanitize_error_message,
@@ -111,7 +111,7 @@ async def send_message_to_ai(
         mode=mode,
         provider=provider_label,
         model=model,
-        chat_file=chat_file_label(chat_path),
+        chat_file=chat_path,
         message_count=len(messages),
         input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
@@ -146,16 +146,18 @@ async def send_message_to_ai(
         # Provider will populate metadata["usage"] after streaming completes
         return response_stream, metadata
     except Exception as e:
+        http_context = extract_http_error_context(e)
         log_event(
             "ai_error",
             level=logging.ERROR,
             mode=mode,
             provider=provider_label,
             model=model,
-            chat_file=chat_file_label(chat_path),
+            chat_file=chat_path,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
             error=sanitize_error_message(str(e)),
+            **http_context,
         )
         logging.error(
             "Error sending message to AI (provider=%s, model=%s, mode=%s): %s",
@@ -186,7 +188,7 @@ def validate_and_get_provider(
             provider=provider_name,
             model=session.current_model,
             phase="key_config_missing",
-            chat_file=chat_file_label(chat_path),
+            chat_file=chat_path,
             error_type="ValueError",
             error=f"No API key configured for {provider_name}",
         )
@@ -196,15 +198,17 @@ def validate_and_get_provider(
         api_key = load_api_key(provider_name, key_config)
     except Exception as e:
         sanitized = sanitize_error_message(str(e))
+        http_context = extract_http_error_context(e)
         log_event(
             "provider_validation_error",
             level=logging.ERROR,
             provider=provider_name,
             model=session.current_model,
             phase="key_load_failed",
-            chat_file=chat_file_label(chat_path),
+            chat_file=chat_path,
             error_type=type(e).__name__,
             error=sanitized,
+            **http_context,
         )
         logging.error("API key loading error: %s", e, exc_info=True)
         return None, f"Error loading API key: {e}"
@@ -216,7 +220,7 @@ def validate_and_get_provider(
             provider=provider_name,
             model=session.current_model,
             phase="key_validation_failed",
-            chat_file=chat_file_label(chat_path),
+            chat_file=chat_path,
             error_type="ValueError",
             error=f"Invalid API key for {provider_name}",
         )
@@ -237,15 +241,17 @@ def validate_and_get_provider(
         )
     except Exception as e:
         sanitized = sanitize_error_message(str(e))
+        http_context = extract_http_error_context(e)
         log_event(
             "provider_validation_error",
             level=logging.ERROR,
             provider=provider_name,
             model=session.current_model,
             phase="provider_init_failed",
-            chat_file=chat_file_label(chat_path),
+            chat_file=chat_path,
             error_type=type(e).__name__,
             error=sanitized,
+            **http_context,
         )
         logging.error("Provider initialization error: %s", e, exc_info=True)
         return None, f"Error initializing provider: {e}"

@@ -715,3 +715,20 @@ then, please suggest what else can be deleted.
 let's also delete "thought_chars" and "thoughts". these have been either useless or not even working.
 
 we are not verifying model responses with these logs. we only need to know what to fix if something has failed.
+
+---
+
+from vertex, i got:
+
+title: nodewave.io
+url: https://www.nodewave.io/blog/top-ai-models-2026-guide-compare-choose-deploy
+
+if title is a host name and is completely contained in the url, let's set None to title.
+
+please search the web to confirm this is a good workaround.
+
+---
+
+i once suggested to use only file names for some log messages because the format was jsonl at that time. now we are using plaintext. so, we should use full/absolute paths. for chat_file, system_prompt_path, etc. also, key to system prompt file can be just system_prompt, which would be more consistent with keys in profile file and chat history file. there may be other things that should be in full/absolute paths. please look for them.
+
+also, httpx logs dont contain much information. should we show headers app has received from the server? sometimes, headers contain vital information for debugging.
