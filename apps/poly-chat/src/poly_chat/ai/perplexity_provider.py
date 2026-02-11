@@ -103,15 +103,6 @@ class PerplexityProvider:
         return formatted
 
     @staticmethod
-    def _mark_search_executed(metadata: AIResponseMetadata | None, evidence: str) -> None:
-        if metadata is None:
-            return
-        metadata["search_executed"] = True
-        evidence_list = metadata.setdefault("search_evidence", [])
-        if isinstance(evidence_list, list) and evidence not in evidence_list:
-            evidence_list.append(evidence)
-
-    @staticmethod
     def _extract_search_results(payload: object) -> list[dict]:
         """Extract Perplexity search_results into normalized citation-like records."""
         results = getattr(payload, "search_results", None) or []
@@ -217,8 +208,6 @@ class PerplexityProvider:
         """
         try:
             formatted_messages = self.format_messages(messages)
-            if metadata is not None and "sonar" in model.lower():
-                self._mark_search_executed(metadata, "native_search_model")
 
             if system_prompt:
                 formatted_messages.insert(0, {"role": "system", "content": system_prompt})
@@ -253,11 +242,6 @@ class PerplexityProvider:
                         citations = self._extract_citations(chunk)
                         if citations:
                             metadata["citations"] = citations
-                            self._mark_search_executed(metadata, "citations")
-                        search_results = self._extract_search_results(chunk)
-                        if search_results:
-                            metadata["search_results"] = search_results
-                            self._mark_search_executed(metadata, "search_results")
                     continue
 
                 # Check for content
@@ -274,11 +258,6 @@ class PerplexityProvider:
                         citations = self._extract_citations(chunk)
                         if citations:
                             metadata["citations"] = citations
-                            self._mark_search_executed(metadata, "citations")
-                        search_results = self._extract_search_results(chunk)
-                        if search_results:
-                            metadata["search_results"] = search_results
-                            self._mark_search_executed(metadata, "search_results")
                     if finish_reason == "length":
                         logger.warning("Response truncated due to max_tokens limit")
                     elif finish_reason == "content_filter":
@@ -344,7 +323,6 @@ class PerplexityProvider:
                 content = "[Response was filtered due to content policy]"
 
             citations = self._extract_citations(response)
-            search_results = self._extract_search_results(response)
 
             # Extract metadata
             metadata = {
@@ -359,14 +337,10 @@ class PerplexityProvider:
                 },
             }
 
-            # Add citations/search results if available.
+            # Add citations if available.
             if citations:
                 metadata["citations"] = citations
                 logger.info(f"Response included {len(citations)} citations")
-                self._mark_search_executed(metadata, "citations")
-            if search_results:
-                metadata["search_results"] = search_results
-                self._mark_search_executed(metadata, "search_results")
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

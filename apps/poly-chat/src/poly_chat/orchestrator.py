@@ -506,7 +506,6 @@ class ChatOrchestrator:
         user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
         citations: Optional[list[dict]] = None,
-        thoughts: Optional[str] = None,
     ) -> OrchestratorAction:
         """Handle successful AI response.
 
@@ -544,7 +543,6 @@ class ChatOrchestrator:
                 response_text,
                 self.manager.current_model,
                 citations=citations,
-                thoughts=thoughts,
             )
             if chat_data.get("messages"):
                 if assistant_hex_id:

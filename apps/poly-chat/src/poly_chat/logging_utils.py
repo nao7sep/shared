@@ -232,12 +232,15 @@ class StructuredTextFormatter(logging.Formatter):
             "error_type",
             "error",
         ],
-        # Generic log messages
-        "log": [
+        "httpx_request": [
             "ts",
             "level",
             "logger",
-            "message",
+            "http_method",
+            "http_url",
+            "http_version",
+            "http_status",
+            "http_reason",
         ],
     }
 
@@ -276,10 +279,25 @@ class StructuredTextFormatter(logging.Formatter):
         if isinstance(parsed, dict):
             base.update(parsed)
         else:
-            base["event"] = "log"
-            base["message"] = message
+            # Decode known structured runtime logs emitted by httpx.
+            if (
+                record.name == "httpx"
+                and isinstance(record.args, tuple)
+                and len(record.args) == 5
+                and str(record.msg) == 'HTTP Request: %s %s "%s %d %s"'
+            ):
+                method, url, version, status, reason = record.args
+                base["event"] = "httpx_request"
+                base["http_method"] = str(method)
+                base["http_url"] = str(url)
+                base["http_version"] = str(version)
+                base["http_status"] = status
+                base["http_reason"] = str(reason)
+            else:
+                base["event"] = record.name
+                base["message"] = message
 
-        event_name = str(base.pop("event", "log"))
+        event_name = str(base.pop("event", record.name))
         lines = [f"=== {event_name} ==="]
 
         ordered_keys = self._ordered_keys(event_name, base)

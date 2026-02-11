@@ -70,15 +70,6 @@ class ClaudeProvider:
             formatted.append({"role": msg["role"], "content": content})
         return formatted
 
-    @staticmethod
-    def _mark_search_executed(metadata: AIResponseMetadata | None, evidence: str) -> None:
-        if metadata is None:
-            return
-        metadata["search_executed"] = True
-        evidence_list = metadata.setdefault("search_evidence", [])
-        if isinstance(evidence_list, list) and evidence not in evidence_list:
-            evidence_list.append(evidence)
-
     @retry(
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
@@ -193,7 +184,6 @@ class ClaudeProvider:
                                 })
                     if citations:
                         metadata["citations"] = citations
-                        self._mark_search_executed(metadata, "citations")
 
                 if final_message.stop_reason == "max_tokens":
                     logger.warning("Response truncated due to max_tokens limit")
@@ -312,7 +302,6 @@ class ClaudeProvider:
                             })
                 if citations:
                     metadata["citations"] = citations
-                    self._mark_search_executed(metadata, "citations")
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

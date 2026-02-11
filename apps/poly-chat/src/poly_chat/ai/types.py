@@ -23,14 +23,6 @@ class Citation(TypedDict, total=False):
     url: str | None
 
 
-class SearchResult(TypedDict, total=False):
-    """Normalized search result metadata from providers."""
-
-    url: str
-    title: str | None
-    date: str | None
-
-
 class AIResponseMetadata(TypedDict, total=False):
     """Streaming metadata shared between runtime, providers, and REPL."""
 
@@ -38,9 +30,3 @@ class AIResponseMetadata(TypedDict, total=False):
     started: float
     usage: TokenUsage
     citations: list[Citation]
-    search_results: list[SearchResult]
-    search_executed: bool
-    search_evidence: list[str]
-    thought_callback: Callable[[str], None]
-    thoughts: list[str]
-    reasoning_content: str

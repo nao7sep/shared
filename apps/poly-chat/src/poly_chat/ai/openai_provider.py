@@ -71,29 +71,6 @@ class OpenAIProvider:
             formatted.append({"role": msg["role"], "content": content})
         return formatted
 
-    @staticmethod
-    def _emit_thought(metadata: AIResponseMetadata | None, chunk: str | None) -> None:
-        if metadata is None or not chunk:
-            return
-        thoughts = metadata.setdefault("thoughts", [])
-        if isinstance(thoughts, list):
-            thoughts.append(chunk)
-        callback = metadata.get("thought_callback")
-        if callable(callback):
-            try:
-                callback(chunk)
-            except Exception:
-                pass
-
-    @staticmethod
-    def _mark_search_executed(metadata: AIResponseMetadata | None, evidence: str) -> None:
-        if metadata is None:
-            return
-        metadata["search_executed"] = True
-        evidence_list = metadata.setdefault("search_evidence", [])
-        if isinstance(evidence_list, list) and evidence not in evidence_list:
-            evidence_list.append(evidence)
-
     @retry(
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
@@ -182,15 +159,6 @@ class OpenAIProvider:
                 if event.type == "response.output_text.delta":
                     if event.delta:
                         yield event.delta
-                elif "reasoning" in event.type:
-                    delta = getattr(event, "delta", None)
-                    if isinstance(delta, str) and delta:
-                        self._emit_thought(metadata, delta)
-
-                # Handle web search events
-                elif event.type == "response.web_search_call.searching":
-                    logger.info("Web search initiated")
-                    self._mark_search_executed(metadata, event.type)
 
                 # Handle completion event (contains usage stats and citations)
                 elif event.type == "response.completed":
@@ -224,9 +192,6 @@ class OpenAIProvider:
                                             })
                         if citations:
                             metadata["citations"] = citations
-                            self._mark_search_executed(
-                                metadata, "url_citation_annotations"
-                            )
 
                 # Handle output item completion (check for special finish reasons)
                 elif event.type == "response.output_item.done":

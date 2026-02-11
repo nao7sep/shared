@@ -72,20 +72,6 @@ class DeepSeekProvider:
             formatted.append({"role": msg["role"], "content": content})
         return formatted
 
-    @staticmethod
-    def _emit_thought(metadata: AIResponseMetadata | None, chunk: str | None) -> None:
-        if metadata is None or not chunk:
-            return
-        thoughts = metadata.setdefault("thoughts", [])
-        if isinstance(thoughts, list):
-            thoughts.append(chunk)
-        callback = metadata.get("thought_callback")
-        if callable(callback):
-            try:
-                callback(chunk)
-            except Exception:
-                pass
-
     @retry(
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError, APIStatusError)
@@ -190,9 +176,6 @@ class DeepSeekProvider:
 
                 # Check for content
                 delta = chunk.choices[0].delta
-                reasoning_content = getattr(delta, "reasoning_content", None)
-                if isinstance(reasoning_content, str) and reasoning_content:
-                    self._emit_thought(metadata, reasoning_content)
                 if delta.content:
                     yield delta.content
 
@@ -272,12 +255,6 @@ class DeepSeekProvider:
                 logger.warning("Response filtered due to content policy")
                 content = "[Response was filtered due to content policy]"
 
-            # Extract reasoning_content if available (for R1/reasoning models)
-            # NOTE: Do NOT feed reasoning_content back to the model in multi-turn chats!
-            reasoning_content = getattr(
-                response.choices[0].message, "reasoning_content", None
-            )
-
             # Extract metadata
             metadata = {
                 "model": response.model,
@@ -290,11 +267,6 @@ class DeepSeekProvider:
                     "total_tokens": response.usage.total_tokens if response.usage else 0,
                 },
             }
-
-            # Add reasoning content if available (R1 thinking traces)
-            if reasoning_content:
-                metadata["reasoning_content"] = reasoning_content
-                logger.info("Reasoning model generated thinking traces")
 
             # Add reasoning tokens if available (for cost tracking)
             if response.usage and hasattr(response.usage, "completion_tokens_details"):

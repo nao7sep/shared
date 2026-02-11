@@ -217,23 +217,7 @@ async def repl_loop(
                 chat_path=effective_path,
                 search=use_search,
             )
-            thought_chunks: list[str] = []
-            thought_header_printed = False
-
-            def on_thought(chunk: str) -> None:
-                nonlocal thought_header_printed
-                if not chunk:
-                    return
-                thought_chunks.append(chunk)
-                if not thought_header_printed:
-                    print("\n[Thoughts] ", end="", flush=True)
-                    thought_header_printed = True
-                print(chunk, end="", flush=True)
-
-            metadata["thought_callback"] = on_thought
             response_text = await display_streaming_response(response_stream, prefix="")
-            if thought_header_printed:
-                print()
 
             # Display citations if present
             from .streaming import display_citations
@@ -247,7 +231,6 @@ async def repl_loop(
                 metadata["citations"] = citations
             if citations:
                 display_citations(citations)
-            thoughts_text = "".join(thought_chunks).strip()
 
             # Calculate latency and log successful AI response
             latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
@@ -276,7 +259,6 @@ async def repl_loop(
                 user_input=action.retry_user_input,
                 assistant_hex_id=action.assistant_hex_id,
                 citations=citations,
-                thoughts=thoughts_text if thoughts_text else None,
             )
 
             if isinstance(result, PrintAction):

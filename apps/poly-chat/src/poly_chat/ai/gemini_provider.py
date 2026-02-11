@@ -77,15 +77,6 @@ class GeminiProvider:
             formatted.append(types.Content(role=role, parts=[types.Part(text=content)]))
         return formatted
 
-    @staticmethod
-    def _mark_search_executed(metadata: AIResponseMetadata | None, evidence: str) -> None:
-        if metadata is None:
-            return
-        metadata["search_executed"] = True
-        evidence_list = metadata.setdefault("search_evidence", [])
-        if isinstance(evidence_list, list) and evidence not in evidence_list:
-            evidence_list.append(evidence)
-
     async def send_message(
         self,
         messages: list[dict],
@@ -180,7 +171,6 @@ class GeminiProvider:
                     ]
                     if citations:
                         metadata["citations"] = citations
-                    self._mark_search_executed(metadata, "grounding_metadata")
 
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
@@ -303,7 +293,6 @@ class GeminiProvider:
                     ]
                     if citations:
                         metadata["citations"] = citations
-                    self._mark_search_executed(metadata, "grounding_metadata")
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "

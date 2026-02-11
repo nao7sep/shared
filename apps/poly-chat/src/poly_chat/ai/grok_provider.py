@@ -70,29 +70,6 @@ class GrokProvider:
             formatted.append({"role": msg["role"], "content": content})
         return formatted
 
-    @staticmethod
-    def _emit_thought(metadata: AIResponseMetadata | None, chunk: str | None) -> None:
-        if metadata is None or not chunk:
-            return
-        thoughts = metadata.setdefault("thoughts", [])
-        if isinstance(thoughts, list):
-            thoughts.append(chunk)
-        callback = metadata.get("thought_callback")
-        if callable(callback):
-            try:
-                callback(chunk)
-            except Exception:
-                pass
-
-    @staticmethod
-    def _mark_search_executed(metadata: AIResponseMetadata | None, evidence: str) -> None:
-        if metadata is None:
-            return
-        metadata["search_executed"] = True
-        evidence_list = metadata.setdefault("search_evidence", [])
-        if isinstance(evidence_list, list) and evidence not in evidence_list:
-            evidence_list.append(evidence)
-
     @retry(
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError)
@@ -194,16 +171,10 @@ class GrokProvider:
 
             async for event in response:
                 event_type = getattr(event, "type", "")
-                if "web_search" in event_type:
-                    self._mark_search_executed(metadata, event_type)
 
                 if event_type == "response.output_text.delta":
                     if event.delta:
                         yield event.delta
-                elif "reasoning" in event_type:
-                    delta = getattr(event, "delta", None)
-                    if isinstance(delta, str) and delta:
-                        self._emit_thought(metadata, delta)
                 elif event_type == "response.completed":
                     if event.response and event.response.usage and metadata is not None:
                         usage = event.response.usage
@@ -221,7 +192,6 @@ class GrokProvider:
                         citations, _ = self._extract_citations_from_response(event.response)
                         if citations:
                             metadata["citations"] = citations
-                            self._mark_search_executed(metadata, "citations")
 
         except AuthenticationError as e:
             logger.error(f"Authentication failed: {e}")
@@ -300,7 +270,6 @@ class GrokProvider:
             citations, _ = self._extract_citations_from_response(response)
             if citations:
                 metadata["citations"] = citations
-                self._mark_search_executed(metadata, "citations")
 
             logger.info(
                 f"Response: {metadata['usage']['total_tokens']} tokens, "
