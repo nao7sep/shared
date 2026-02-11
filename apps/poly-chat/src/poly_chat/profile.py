@@ -306,22 +306,6 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             "type": "text",
             "content": DEFAULT_ASSISTANT_SYSTEM_PROMPT,
         },
-        "ai_limits": {
-            "default": {
-                "max_output_tokens": None,
-                "search_max_output_tokens": None,
-            },
-            "providers": {
-                "claude": {
-                    "max_output_tokens": None,
-                    "search_max_output_tokens": None,
-                }
-            },
-            "helper": {
-                "max_output_tokens": None,
-                "search_max_output_tokens": None,
-            },
-        },
         "chats_dir": "~/poly-chat/chats",
         "logs_dir": "~/poly-chat/logs",
         "api_keys": {
@@ -355,6 +339,22 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
                 "type": "env",
                 "key": "DEEPSEEK_API_KEY"
             }
+        },
+        "ai_limits": {
+            "default": {
+                "max_output_tokens": None,
+                "search_max_output_tokens": None,
+            },
+            "providers": {
+                "claude": {
+                    "max_output_tokens": None,
+                    "search_max_output_tokens": None,
+                }
+            },
+            "helper": {
+                "max_output_tokens": None,
+                "search_max_output_tokens": None,
+            },
         },
     }
 

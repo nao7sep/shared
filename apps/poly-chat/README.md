@@ -258,22 +258,6 @@ When search is enabled, AI responses include a "Sources:" section with citation 
     "type": "text",
     "content": "You are a helpful assistant."
   },
-  "ai_limits": {
-    "default": {
-      "max_output_tokens": null,
-      "search_max_output_tokens": null
-    },
-    "providers": {
-      "claude": {
-        "max_output_tokens": null,
-        "search_max_output_tokens": null
-      }
-    },
-    "helper": {
-      "max_output_tokens": null,
-      "search_max_output_tokens": null
-    }
-  },
   "chats_dir": "~/poly-chat/chats",
   "logs_dir": "~/poly-chat/logs",
   "api_keys": {
@@ -290,6 +274,22 @@ When search is enabled, AI responses include a "Sources:" section with citation 
       "type": "json",
       "path": "~/.secrets/api-keys.json",
       "key": "gemini"
+    }
+  },
+  "ai_limits": {
+    "default": {
+      "max_output_tokens": null,
+      "search_max_output_tokens": null
+    },
+    "providers": {
+      "claude": {
+        "max_output_tokens": null,
+        "search_max_output_tokens": null
+      }
+    },
+    "helper": {
+      "max_output_tokens": null,
+      "search_max_output_tokens": null
     }
   }
 }
