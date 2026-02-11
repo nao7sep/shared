@@ -25,10 +25,9 @@ from tenacity import (
 from ..message_formatter import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
-    DEEPSEEK_RETRY_ATTEMPTS,
-    DEEPSEEK_RETRY_MIN_SEC,
-    DEEPSEEK_RETRY_MULTIPLIER,
+    RETRY_BACKOFF_INITIAL_SEC,
     RETRY_BACKOFF_MAX_SEC,
+    STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
 from .types import AIResponseMetadata
@@ -91,14 +90,13 @@ class DeepSeekProvider:
         retry=retry_if_exception_type(
             (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError, APIStatusError)
         ),
-        # DeepSeek 503 errors can last 30-60s during peak load
-        # Aggressive exponential backoff: 1s, 2s, 4s, 8s... up to 60s
+        # Use shared exponential backoff policy across providers.
         wait=wait_exponential(
-            multiplier=DEEPSEEK_RETRY_MULTIPLIER,
-            min=DEEPSEEK_RETRY_MIN_SEC,
+            multiplier=RETRY_BACKOFF_INITIAL_SEC,
+            min=RETRY_BACKOFF_INITIAL_SEC,
             max=RETRY_BACKOFF_MAX_SEC,
         ),
-        stop=stop_after_attempt(DEEPSEEK_RETRY_ATTEMPTS),  # More attempts for 503 issues
+        stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _create_chat_completion(

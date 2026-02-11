@@ -12,11 +12,11 @@ from google.genai.errors import (
 from ..message_formatter import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
-    GEMINI_RETRY_ATTEMPTS,
-    GEMINI_RETRY_EXP_BASE,
-    GEMINI_RETRY_INITIAL_DELAY_SEC,
-    GEMINI_RETRY_JITTER,
-    GEMINI_RETRY_MAX_DELAY_SEC,
+    RETRY_BACKOFF_EXP_BASE,
+    RETRY_BACKOFF_INITIAL_SEC,
+    RETRY_BACKOFF_JITTER,
+    RETRY_BACKOFF_MAX_SEC,
+    STANDARD_RETRY_ATTEMPTS,
 )
 from .tools import gemini_web_search_tools
 from .types import AIResponseMetadata
@@ -40,11 +40,11 @@ class GeminiProvider:
 
         # Configure retry policy for transient errors
         retry_policy = types.HttpRetryOptions(
-            attempts=GEMINI_RETRY_ATTEMPTS,
-            initial_delay=GEMINI_RETRY_INITIAL_DELAY_SEC,
-            exp_base=GEMINI_RETRY_EXP_BASE,
-            jitter=GEMINI_RETRY_JITTER,
-            max_delay=GEMINI_RETRY_MAX_DELAY_SEC,
+            attempts=STANDARD_RETRY_ATTEMPTS,
+            initial_delay=RETRY_BACKOFF_INITIAL_SEC,
+            exp_base=RETRY_BACKOFF_EXP_BASE,
+            jitter=RETRY_BACKOFF_JITTER,
+            max_delay=RETRY_BACKOFF_MAX_SEC,
             http_status_codes=[429, 503, 504],  # Only retry on these codes
         )
 

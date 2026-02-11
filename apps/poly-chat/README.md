@@ -295,43 +295,6 @@ When search is enabled, AI responses include a "Sources:" section with citation 
 }
 ```
 
-### AI Request Limits (Optional)
-
-`ai_limits` lets you control output token budgets centrally.
-
-- Precedence:
-  - `ai_limits.default`
-  - `ai_limits.providers.<provider>`
-  - `ai_limits.helper` (helper-only requests like `/title`, `/summary`, `/safe`)
-- Allowed keys:
-  - `max_output_tokens`
-  - `search_max_output_tokens`
-- Values must be positive integers or `null`.
-- `null` means "leave that limit unset in profile config."
-- `search_max_output_tokens` is used when `/search` is ON; otherwise `max_output_tokens` is used.
-- Limits are applied for normal assistant requests and helper requests (`/title`, `/summary`, `/safe`).
-- Claude requires `max_tokens`; when resolved `max_output_tokens` is unset, PolyChat applies a fallback default of `4096`.
-
-### Inline System Prompt Behavior
-
-- If profile `system_prompt` is inline text (`{"type":"text","content":"..."}`), `/system` and `/status` show an inline prompt indicator without revealing content.
-- Inline profile prompts are read-only at runtime.
-- To change prompt behavior, switch to a file-based prompt with `/system <path>`, or use `/system default` to restore profile default.
-
-### Path Mapping
-
-- `~` or `~/...` → User home directory
-- `@` or `@/...` → App root directory (where pyproject.toml is)
-- Absolute paths → Used as-is
-- Relative paths without prefix → **Error** (to avoid ambiguity)
-
-### Timeout Behavior
-
-- `timeout` in profile (or `/timeout`) is the base read timeout in seconds.
-- Base timeout is applied to AI provider `read` timeout.
-- When `/search` is ON, AI provider read timeout is automatically multiplied by `3`.
-- `0` means no timeout (wait forever).
-
 ### Required Directories
 
 The profile requires two directory paths:
@@ -377,6 +340,13 @@ Both directories are created automatically if they don't exist.
 }
 ```
 
+### Path Mapping
+
+- `~` or `~/...` → User home directory
+- `@` or `@/...` → App root directory (where pyproject.toml is)
+- Absolute paths → Used as-is
+- Relative paths without prefix → **Error** (to avoid ambiguity)
+
 ### System Prompts
 
 System prompts are stored in `system-prompts/` directory. Built-in prompts:
@@ -401,6 +371,36 @@ You can create custom prompts and reference them:
   "system_prompt": "@/system-prompts/my-custom-prompt.txt"
 }
 ```
+
+### Inline System Prompt Behavior
+
+- If profile `system_prompt` is inline text (`{"type":"text","content":"..."}`), `/system` and `/status` show an inline prompt indicator without revealing content.
+- Inline profile prompts are read-only at runtime.
+- To change prompt behavior, switch to a file-based prompt with `/system <path>`, or use `/system default` to restore profile default.
+
+### AI Request Limits (Optional)
+
+`ai_limits` lets you control output token budgets centrally.
+
+- Precedence:
+  - `ai_limits.default`
+  - `ai_limits.providers.<provider>`
+  - `ai_limits.helper` (helper-only requests like `/title`, `/summary`, `/safe`)
+- Allowed keys:
+  - `max_output_tokens`
+  - `search_max_output_tokens`
+- Values must be positive integers or `null`.
+- `null` means "leave that limit unset in profile config."
+- `search_max_output_tokens` is used when `/search` is ON; otherwise `max_output_tokens` is used.
+- Limits are applied for normal assistant requests and helper requests (`/title`, `/summary`, `/safe`).
+- Claude requires `max_tokens`; when resolved `max_output_tokens` is unset, PolyChat applies a fallback default of `4096`.
+
+### Timeout Behavior
+
+- `timeout` in profile (or `/timeout`) is the base read timeout in seconds.
+- Base timeout is applied to AI provider `read` timeout.
+- When `/search` is ON, AI provider read timeout is automatically multiplied by `3`.
+- `0` means no timeout (wait forever).
 
 ## Windows & One-File Packaging Notes
 
