@@ -398,6 +398,33 @@ class TestRetryModeManagement:
         assert attempt["user_msg"] == "new question"
         assert attempt["assistant_msg"] == "new answer"
 
+    def test_get_latest_retry_attempt_id(self):
+        """Most recently added retry attempt ID should be returned."""
+        manager = SessionManager(
+            profile={},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+        )
+
+        manager.enter_retry_mode([{"role": "user", "content": "base"}])
+        first_id = manager.add_retry_attempt("q1", "a1")
+        latest_id = manager.add_retry_attempt("q2", "a2")
+
+        assert first_id != latest_id
+        assert manager.get_latest_retry_attempt_id() == latest_id
+
+    def test_get_latest_retry_attempt_id_empty(self):
+        """No retry attempts should return None."""
+        manager = SessionManager(
+            profile={},
+            current_ai="claude",
+            current_model="claude-haiku-4-5",
+        )
+
+        manager.enter_retry_mode([{"role": "user", "content": "base"}])
+
+        assert manager.get_latest_retry_attempt_id() is None
+
     def test_add_retry_attempt_without_mode_raises_error(self):
         """Test that adding retry attempt outside retry mode raises error."""
         manager = SessionManager(

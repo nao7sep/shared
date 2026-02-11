@@ -341,11 +341,7 @@ class RuntimeCommandsMixin:
             return "Last message is not an assistant response or error. Nothing to retry."
 
         # Freeze context and target so /apply <hex_id> can replace the original message.
-        ai_messages = chat.get_messages_for_ai(chat_data)
-        if last_msg["role"] == "assistant":
-            retry_context = ai_messages[:-1]
-        else:
-            retry_context = ai_messages
+        retry_context = chat.get_retry_context_for_last_interaction(chat_data)
         self.manager.enter_retry_mode(
             retry_context,
             target_index=len(messages) - 1,
@@ -356,7 +352,7 @@ class RuntimeCommandsMixin:
         """Apply current retry attempt and exit retry mode.
 
         Args:
-            args: Retry candidate hex ID
+            args: Retry candidate hex ID, or empty/'last' for most recent attempt
 
         Returns:
             Special signal for REPL loop to handle
@@ -365,9 +361,14 @@ class RuntimeCommandsMixin:
         if not self.manager.retry_mode:
             return "Not in retry mode"
 
-        retry_hex_id = args.strip().lower()
-        if not retry_hex_id:
-            return "Usage: /apply <hex_id>"
+        normalized_args = args.strip().lower()
+        if normalized_args in {"", "last"}:
+            retry_hex_id = self.manager.get_latest_retry_attempt_id()
+            if not retry_hex_id:
+                return "No retry attempts available yet"
+            return CommandSignal(kind="apply_retry", value=retry_hex_id)
+
+        retry_hex_id = normalized_args
         if not hex_id.is_hex_id(retry_hex_id):
             return f"Invalid hex ID: {args.strip()}"
 

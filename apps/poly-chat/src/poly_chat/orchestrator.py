@@ -172,7 +172,7 @@ class ChatOrchestrator:
         )
 
         return ContinueAction(
-            message=f"Created new chat: {new_chat_path}",
+            message=f"Created and opened new chat: {new_chat_path}",
             chat_path=new_chat_path,
             chat_data=new_chat_data,
         )
@@ -302,8 +302,26 @@ class ChatOrchestrator:
         if target_index is None or target_index < 0 or target_index >= len(messages):
             return PrintAction(message="Retry target is no longer valid")
 
-        existing_hex_id = messages[target_index].get("hex_id")
-        replaced_message = {
+        replace_start = target_index
+        if target_index > 0 and messages[target_index - 1].get("role") == "user":
+            replace_start = target_index - 1
+
+        existing_user_hex_id = (
+            messages[replace_start].get("hex_id")
+            if replace_start != target_index
+            else None
+        )
+        existing_assistant_hex_id = messages[target_index].get("hex_id")
+
+        replaced_user_message = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "role": "user",
+            "content": text_to_lines(retry_attempt["user_msg"]),
+        }
+        if isinstance(existing_user_hex_id, str):
+            replaced_user_message["hex_id"] = existing_user_hex_id
+
+        replaced_assistant_message = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "role": "assistant",
             "model": self.manager.current_model,
@@ -311,10 +329,14 @@ class ChatOrchestrator:
         }
         citations = retry_attempt.get("citations")
         if citations:
-            replaced_message["citations"] = citations
-        if isinstance(existing_hex_id, str):
-            replaced_message["hex_id"] = existing_hex_id
-        messages[target_index] = replaced_message
+            replaced_assistant_message["citations"] = citations
+        if isinstance(existing_assistant_hex_id, str):
+            replaced_assistant_message["hex_id"] = existing_assistant_hex_id
+
+        messages[replace_start : target_index + 1] = [
+            replaced_user_message,
+            replaced_assistant_message,
+        ]
 
         # Save chat and exit retry mode
         if current_chat_path:
@@ -438,11 +460,12 @@ class ChatOrchestrator:
             retry_context = self.manager.get_retry_context()
         except ValueError:
             # Not in retry mode yet, freeze context
-            all_messages = chat.get_messages_for_ai(chat_data)
-            if all_messages and all_messages[-1]["role"] == "assistant":
-                self.manager.enter_retry_mode(all_messages[:-1])
-            else:
-                self.manager.enter_retry_mode(all_messages)
+            retry_context = chat.get_retry_context_for_last_interaction(chat_data)
+            target_index = len(chat_data.get("messages", [])) - 1
+            self.manager.enter_retry_mode(
+                retry_context,
+                target_index=target_index if target_index >= 0 else None,
+            )
             retry_context = self.manager.get_retry_context()
 
         # Prepare temporary messages

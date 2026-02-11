@@ -63,7 +63,9 @@ Chat File Management:
 
 Chat Control:
   /retry            Enter retry mode (collect candidate responses)
-  /apply <hex_id>   Apply one retry candidate and exit retry mode
+  /apply            Apply latest retry candidate and exit retry mode
+  /apply last       Apply latest retry candidate and exit retry mode
+  /apply <hex_id>   Apply a specific retry candidate and exit retry mode
   /cancel           Abort retry and keep original response
   /secret           Show current secret mode state
   /secret on/off    Enable/disable secret mode explicitly

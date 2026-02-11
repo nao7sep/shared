@@ -278,3 +278,36 @@ def get_messages_for_ai(
         messages = messages[-max_messages:]
 
     return messages
+
+
+def get_retry_context_for_last_interaction(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Get retry context excluding the interaction currently being retried.
+
+    Rules:
+    - If the last chat message is assistant, drop the trailing user+assistant pair.
+    - If the last chat message is error, drop the trailing user (failed turn).
+    - Otherwise, return current AI-visible messages unchanged.
+    """
+    ai_messages = get_messages_for_ai(data)
+    all_messages = data.get("messages", []) if isinstance(data, dict) else []
+
+    if not all_messages or not ai_messages:
+        return ai_messages
+
+    last_role = all_messages[-1].get("role")
+
+    if last_role == "assistant":
+        if (
+            len(ai_messages) >= 2
+            and ai_messages[-1].get("role") == "assistant"
+            and ai_messages[-2].get("role") == "user"
+        ):
+            return ai_messages[:-2]
+        if ai_messages[-1].get("role") == "assistant":
+            return ai_messages[:-1]
+        return ai_messages
+
+    if last_role == "error" and ai_messages[-1].get("role") == "user":
+        return ai_messages[:-1]
+
+    return ai_messages

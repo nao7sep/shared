@@ -486,6 +486,19 @@ class MetadataCommandsMixin:
         if updated_at:
             updated_local = self._to_local_time(updated_at, "%Y-%m-%d %H:%M")
 
+        assistant_fields = [
+            ("Assistant:", f"{self.manager.current_ai} ({self.manager.current_model})"),
+            ("Helper:", f"{self.manager.helper_ai} ({self.manager.helper_model})"),
+            ("System Prompt:", system_prompt_display),
+            ("Timeout:", timeout_display),
+            ("Input Mode:", self.manager.input_mode),
+        ]
+        assistant_label_width = max(len(label) for label, _ in assistant_fields)
+        assistant_lines = [
+            f"{label:<{assistant_label_width}} {value}"
+            for label, value in assistant_fields
+        ]
+
         output = [
             "Session Status",
             "━" * 60,
@@ -500,11 +513,7 @@ class MetadataCommandsMixin:
             f"Updated:      {updated_local}",
             "",
             "Assistant",
-            f"Assistant:    {self.manager.current_ai} ({self.manager.current_model})",
-            f"Helper:       {self.manager.helper_ai} ({self.manager.helper_model})",
-            f"System Prompt:{' ' if system_prompt_display != '(none)' else ''}{system_prompt_display}",
-            f"Timeout:      {timeout_display}",
-            f"Input Mode:   {self.manager.input_mode}",
+            *assistant_lines,
             "",
             "Modes",
             f"Secret Mode:   {'ON' if self.manager.secret_mode else 'OFF'}",

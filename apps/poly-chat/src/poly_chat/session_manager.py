@@ -566,6 +566,12 @@ class SessionManager:
         """Get one retry attempt by runtime hex ID."""
         return self._state.retry_attempts.get(retry_hex_id)
 
+    def get_latest_retry_attempt_id(self) -> Optional[str]:
+        """Get the most recently generated retry attempt hex ID."""
+        if not self._state.retry_attempts:
+            return None
+        return next(reversed(self._state.retry_attempts))
+
     def get_retry_target_index(self) -> Optional[int]:
         """Get the chat message index that /apply should replace."""
         return self._state.retry_target_index

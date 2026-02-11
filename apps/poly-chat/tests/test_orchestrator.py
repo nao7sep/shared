@@ -124,7 +124,7 @@ class TestNewChatSignal:
             assert isinstance(action, ContinueAction)
             assert action.chat_path == "/test/new-chat.json"
             assert action.chat_data == {"messages": []}
-            assert "Created new chat" in action.message
+            assert "Created and opened new chat" in action.message
 
     @pytest.mark.asyncio
     async def test_new_chat_without_current_chat(self, orchestrator):
@@ -280,11 +280,15 @@ class TestRetryModeSignals:
         assert isinstance(action, PrintAction)
         assert f"Applied retry [{retry_hex_id}]" == action.message
 
-        # Should replace only the target message, preserving its hex_id
-        updated = sample_chat_data["messages"][1]
-        assert updated["role"] == "assistant"
-        assert updated["content"] == ["Retry answer"]
-        assert updated.get("hex_id") == original_hex_id
+        # Should replace retried turn with retry user + selected assistant response.
+        assert len(sample_chat_data["messages"]) == 2
+        updated_user = sample_chat_data["messages"][0]
+        updated_assistant = sample_chat_data["messages"][1]
+        assert updated_user["role"] == "user"
+        assert updated_user["content"] == ["Retry question"]
+        assert updated_assistant["role"] == "assistant"
+        assert updated_assistant["content"] == ["Retry answer"]
+        assert updated_assistant.get("hex_id") == original_hex_id
 
         # Should exit retry mode
         assert orchestrator.manager.retry_mode is False
@@ -311,9 +315,44 @@ class TestRetryModeSignals:
             )
 
         assert isinstance(action, PrintAction)
+        assert sample_chat_data["messages"][0]["content"] == ["Retry question"]
         assert sample_chat_data["messages"][1]["citations"] == [
             {"url": "https://example.com", "title": "Example"}
         ]
+
+    @pytest.mark.asyncio
+    async def test_apply_retry_replaces_failed_user_error_turn(self, orchestrator):
+        """Applying retry after an error should replace failed user+error with user+assistant."""
+        chat_data = {
+            "metadata": {},
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hi"},
+                {"role": "user", "content": "broken request"},
+                {"role": "error", "content": "timeout"},
+            ],
+        }
+        orchestrator.manager.switch_chat("/test/chat.json", chat_data)
+        orchestrator.manager.enter_retry_mode(
+            [{"role": "user", "content": "hello"}, {"role": "assistant", "content": "hi"}],
+            target_index=3,
+        )
+        retry_hex_id = orchestrator.manager.add_retry_attempt("try again", "done")
+
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
+            action = await orchestrator.handle_command_response(
+                CommandSignal(kind="apply_retry", value=retry_hex_id),
+                current_chat_path="/test/chat.json",
+                current_chat_data=chat_data,
+            )
+
+        assert isinstance(action, PrintAction)
+        assert len(chat_data["messages"]) == 4
+        assert chat_data["messages"][2]["role"] == "user"
+        assert chat_data["messages"][2]["content"] == ["try again"]
+        assert chat_data["messages"][3]["role"] == "assistant"
+        assert chat_data["messages"][3]["model"] == orchestrator.manager.current_model
+        assert chat_data["messages"][3]["content"] == ["done"]
 
     @pytest.mark.asyncio
     async def test_apply_retry_when_not_in_retry_mode(self, orchestrator):
@@ -465,6 +504,44 @@ class TestRegularMessages:
             )
 
             mock_save.assert_called_once()
+
+
+class TestRetryModeMessages:
+    """Test retry-mode message preparation."""
+
+    @pytest.mark.asyncio
+    async def test_retry_mode_send_excludes_retried_user_assistant_pair(self, orchestrator):
+        chat_data = {
+            "metadata": {},
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hello!"},
+                {"role": "user", "content": "nice to meet you"},
+                {"role": "assistant", "content": "nice to meet you too!"},
+            ],
+        }
+        orchestrator.manager.switch_chat("/test/chat.json", chat_data)
+        orchestrator.manager.enter_retry_mode(
+            [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hello!"},
+            ],
+            target_index=3,
+        )
+
+        action = await orchestrator.handle_user_message(
+            "what did i just say?",
+            "/test/chat.json",
+            chat_data,
+        )
+
+        assert isinstance(action, SendAction)
+        assert action.mode == "retry"
+        assert action.messages == [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "hello!"},
+            {"role": "user", "content": "what did i just say?"},
+        ]
 
 
 class TestSessionManagerIntegration:
