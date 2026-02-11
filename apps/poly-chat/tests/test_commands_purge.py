@@ -185,16 +185,15 @@ async def test_purge_no_messages(command_handler_purge, mock_session_manager_pur
 
 
 @pytest.mark.asyncio
-async def test_purge_keeps_existing_hex_id_set(command_handler_purge, mock_session_manager_purge):
-    """Test that purge leaves in-memory ID set available for uniqueness tracking."""
+async def test_purge_cleans_up_hex_ids(command_handler_purge, mock_session_manager_purge):
+    """Test that purge removes hex IDs from the in-memory set."""
     handler = command_handler_purge
 
     await handler.purge_messages("a3f")
 
-    # Existing set remains available for future uniqueness checks
     hex_id_set = mock_session_manager_purge.hex_id_set
 
-    assert "a3f" in hex_id_set
+    assert "a3f" not in hex_id_set
 
 
 @pytest.mark.asyncio

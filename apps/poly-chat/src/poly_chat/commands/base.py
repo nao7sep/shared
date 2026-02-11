@@ -181,7 +181,7 @@ class CommandHandlerBaseMixin:
             try:
                 mapped = profile.map_path(path)
             except ValueError as e:
-                raise ValueError(f"Invalid path: {path} ({e})")
+                raise ValueError(f"Invalid path: {path}")
 
             mapped_path = Path(mapped)
             if mapped_path.exists():

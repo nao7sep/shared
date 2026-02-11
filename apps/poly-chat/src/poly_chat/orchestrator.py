@@ -609,10 +609,10 @@ class ChatOrchestrator:
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
-
-        # For retry and secret modes, just show error (don't save)
-        if assistant_hex_id:
+        elif assistant_hex_id:
+            # For retry and secret modes, just release hex ID (don't save)
             self.manager.release_hex_id(assistant_hex_id)
+
         return PrintAction(message=f"\nError: {error}")
 
     async def handle_user_cancel(

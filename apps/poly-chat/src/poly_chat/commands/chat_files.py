@@ -8,6 +8,7 @@ from ..chat_manager import (
     generate_chat_filename,
     rename_chat,
 )
+from ..logging_utils import sanitize_error_message
 from .types import CommandResult, CommandSignal
 
 
@@ -81,7 +82,7 @@ class ChatFileCommandsMixin:
         try:
             load_chat(selected_path)
         except Exception as e:
-            return f"Error loading chat: {e}"
+            return f"Error loading chat: {sanitize_error_message(str(e))}"
 
         # Signal to REPL to switch chat.
         return CommandSignal(kind="open_chat", chat_path=selected_path)
@@ -153,7 +154,7 @@ class ChatFileCommandsMixin:
                     return f"Renamed: {Path(selected_path).name} → {Path(new_path).name}"
 
             except Exception as e:
-                return f"Error renaming chat: {e}"
+                return f"Error renaming chat: {sanitize_error_message(str(e))}"
 
         if len(parts) < 2:
             return "Usage: /rename <chat_name|path|current> <new_name>"
@@ -183,7 +184,7 @@ class ChatFileCommandsMixin:
             return f"Renamed: {old_path.name} → {Path(new_path).name}"
 
         except Exception as e:
-            return f"Error renaming chat: {e}"
+            return f"Error renaming chat: {sanitize_error_message(str(e))}"
 
     async def delete_chat_command(self, args: str) -> CommandResult:
         """Delete a chat file.
@@ -244,4 +245,4 @@ class ChatFileCommandsMixin:
                 return f"Deleted: {Path(selected_path).name}"
 
         except Exception as e:
-            return f"Error deleting chat: {e}"
+            return f"Error deleting chat: {sanitize_error_message(str(e))}"

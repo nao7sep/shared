@@ -45,11 +45,14 @@ def map_path(path: str) -> str:
         Absolute path string
 
     Raises:
-        ValueError: If path is relative without special prefix
+        ValueError: If path is relative without special prefix, or escapes boundary
     """
     # Handle tilde (home directory)
     if path.startswith("~/"):
-        return str(Path.home() / path[2:])
+        resolved = (Path.home() / path[2:]).resolve()
+        if not str(resolved).startswith(str(Path.home().resolve())):
+            raise ValueError(f"Path escapes home directory: {path}")
+        return str(resolved)
     elif path == "~":
         return str(Path.home())
 
@@ -57,14 +60,17 @@ def map_path(path: str) -> str:
     elif path.startswith("@/"):
         # App root is where pyproject.toml is (poly-chat/)
         app_root = Path(__file__).parent.parent.parent
-        return str(app_root / path[2:])
+        resolved = (app_root / path[2:]).resolve()
+        if not str(resolved).startswith(str(app_root.resolve())):
+            raise ValueError(f"Path escapes app directory: {path}")
+        return str(resolved)
     elif path == "@":
         app_root = Path(__file__).parent.parent.parent
         return str(app_root)
 
     # Absolute path - use as-is
     elif Path(path).is_absolute():
-        return str(Path(path))
+        return str(Path(path).resolve())
 
     # Relative path without prefix - ERROR
     else:

@@ -84,7 +84,7 @@ class MetadataCommandsMixin:
         # Take first few messages for context (to keep it efficient)
         context_messages = messages[:10] if len(messages) > 10 else messages
         context_text = "\n".join([
-            f"{msg['role']}: {msg.get('content', '')[:200]}"
+            f"{msg['role']}: {self._message_content_to_text(msg.get('content', ''))}".rstrip()[:200]
             for msg in context_messages
         ])
 
@@ -169,7 +169,7 @@ class MetadataCommandsMixin:
 
         # Take all messages for full context (summarize everything)
         context_text = "\n".join([
-            f"{msg['role']}: {msg.get('content', '')}"
+            f"{msg['role']}: {self._message_content_to_text(msg.get('content', ''))}"
             for msg in messages
         ])
 

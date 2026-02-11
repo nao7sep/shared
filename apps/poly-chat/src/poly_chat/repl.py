@@ -165,6 +165,13 @@ async def repl_loop(
 
     async def execute_send_action(action: SendAction) -> None:
         """Execute a prepared send action from orchestrator."""
+        # Derive effective chat_path/chat_data from action first,
+        # falling back to REPL closure variables as default.
+        # This prevents stale-closure bugs when the REPL loop
+        # reassigns these locals (e.g. on ContinueAction).
+        effective_path = action.chat_path if action.chat_path is not None else chat_path
+        effective_data = action.chat_data if action.chat_data is not None else chat_data
+
         use_search = (
             action.search_enabled
             if action.search_enabled is not None
@@ -173,14 +180,14 @@ async def repl_loop(
         use_thinking = manager.thinking_mode
         provider_instance, error = validate_and_get_provider(
             manager,
-            chat_path=chat_path,
+            chat_path=effective_path,
             search=use_search,
             thinking=use_thinking,
         )
         if error:
             await orchestrator.rollback_pre_send_failure(
-                chat_path=chat_path,
-                chat_data=chat_data,
+                chat_path=effective_path,
+                chat_data=effective_data,
                 mode=action.mode or "normal",
                 assistant_hex_id=action.assistant_hex_id,
             )
@@ -212,7 +219,7 @@ async def repl_loop(
                 provider_name=manager.current_ai,
                 profile=manager.profile,
                 mode=effective_request_mode,
-                chat_path=chat_path,
+                chat_path=effective_path,
                 search=use_search,
                 thinking=use_thinking,
             )
@@ -255,26 +262,37 @@ async def repl_loop(
                 )
                 try:
                     enriched, changed = await asyncio.wait_for(
-                        asyncio.shield(enrich_task), timeout=grace_timeout
+                        enrich_task, timeout=grace_timeout
                     )
                     if changed:
                         citations = enriched
                 except asyncio.TimeoutError:
                     print("\n[Downloading and saving cited pages...]", flush=True)
+                    enrich_task = asyncio.create_task(
+                        enrich_citation_titles(
+                            citations,
+                            pages_dir=pages_dir,
+                            timeout_sec=page_fetch_read_timeout,
+                        )
+                    )
                     try:
                         enriched, changed = await asyncio.wait_for(
-                            asyncio.shield(enrich_task),
+                            enrich_task,
                             timeout=max(0.0, total_timeout - grace_timeout),
                         )
                         if changed:
                             citations = enriched
                     except asyncio.TimeoutError:
                         enrich_task.cancel()
+                        logging.warning("Citation enrichment timed out after %.1fs", total_timeout)
                         print("[Page download timed out; showing available sources.]")
                     except Exception:
+                        enrich_task.cancel()
+                        logging.exception("Citation enrichment failed during extended timeout")
                         print("[Page download failed; showing available sources.]")
                 except Exception:
-                    pass
+                    enrich_task.cancel()
+                    logging.exception("Citation enrichment failed during grace period")
 
             if citations:
                 metadata["citations"] = citations
@@ -317,8 +335,8 @@ async def repl_loop(
             # Handle successful response
             result = await orchestrator.handle_ai_response(
                 response_text,
-                chat_path,
-                chat_data,
+                effective_path,
+                effective_data,
                 action.mode or "normal",
                 user_input=action.retry_user_input,
                 assistant_hex_id=action.assistant_hex_id,
@@ -332,9 +350,9 @@ async def repl_loop(
 
         except KeyboardInterrupt:
             cancel_result = await orchestrator.handle_user_cancel(
-                chat_data,
+                effective_data,
                 action.mode or "normal",
-                chat_path=chat_path,
+                chat_path=effective_path,
                 assistant_hex_id=action.assistant_hex_id,
             )
             print(cancel_result.message)
@@ -344,8 +362,8 @@ async def repl_loop(
         except Exception as e:
             error_result = await orchestrator.handle_ai_error(
                 e,
-                chat_path,
-                chat_data,
+                effective_path,
+                effective_data,
                 action.mode or "normal",
                 assistant_hex_id=action.assistant_hex_id,
             )

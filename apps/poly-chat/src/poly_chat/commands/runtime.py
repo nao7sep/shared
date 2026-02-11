@@ -297,8 +297,8 @@ class RuntimeCommandsMixin:
                     system_prompt_content = f.read().strip()
             except FileNotFoundError:
                 raise ValueError(f"System prompt file not found: {system_prompt_mapped_path}")
-            except Exception as e:
-                raise ValueError(f"Could not read system prompt file: {e}")
+            except Exception:
+                raise ValueError(f"Could not read system prompt file: {system_prompt_mapped_path}")
 
             # Update chat metadata with ORIGINAL path (not mapped)
             update_metadata(chat_data, system_prompt=args)
@@ -584,6 +584,11 @@ class RuntimeCommandsMixin:
             if not await self._confirm_yes("Type 'yes' to confirm rewind: "):
                 return "Rewind cancelled"
 
+            # Clean up hex IDs for all messages that will be deleted
+            messages = chat["messages"]
+            for i in range(len(messages) - 1, index - 1, -1):
+                self.manager.remove_message_hex_id(i)
+
             count = delete_message_and_following(chat, index)
 
             await self._mark_chat_dirty_if_open()
@@ -605,7 +610,10 @@ class RuntimeCommandsMixin:
         if not args.strip():
             return "Usage: /purge <hex_id> [hex_id2 hex_id3 ...]"
 
-        chat = self.manager.chat
+        chat = self._require_open_chat(need_messages=True)
+        if chat is None:
+            return "No chat is currently open"
+
         messages = chat["messages"]
 
         if not messages:
@@ -636,7 +644,8 @@ class RuntimeCommandsMixin:
         # Delete messages
         deleted_count = 0
         for msg_index, _hid in indices_to_delete:
-            # Delete the message
+            # Clean up hex ID before deleting
+            self.manager.remove_message_hex_id(msg_index)
             del messages[msg_index]
 
             deleted_count += 1
