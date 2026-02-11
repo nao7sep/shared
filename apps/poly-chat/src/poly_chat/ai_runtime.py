@@ -10,7 +10,6 @@ from .logging_utils import (
     extract_http_error_context,
     estimate_message_chars,
     log_event,
-    sanitize_error_message,
 )
 
 from .ai.openai_provider import OpenAIProvider
@@ -21,7 +20,6 @@ from .ai.perplexity_provider import PerplexityProvider
 from .ai.mistral_provider import MistralProvider
 from .ai.deepseek_provider import DeepSeekProvider
 from .ai.types import AIResponseMetadata
-from .ai.limits import resolve_profile_limits, select_max_output_tokens
 from .timeouts import resolve_ai_read_timeout, resolve_profile_timeout
 
 ProviderInstance = (
@@ -100,10 +98,6 @@ async def send_message_to_ai(
         Tuple of (response_stream, metadata) where response_stream is an async
         generator that yields response chunks.
     """
-    resolved_provider_name = (
-        provider_name
-        or provider_instance.__class__.__name__.removesuffix("Provider").lower()
-    )
     provider_label = provider_name or provider_instance.__class__.__name__
     log_event(
         "ai_request",
@@ -121,9 +115,6 @@ async def send_message_to_ai(
     try:
         # Create metadata dict that provider can populate with usage info
         metadata: AIResponseMetadata = {"model": model, "started": started}
-        limits = resolve_profile_limits(profile, resolved_provider_name)
-        max_output_tokens = select_max_output_tokens(limits, search=search)
-        thinking_budget_tokens = limits.get("thinking_budget_tokens")
 
         # Pass metadata to provider so it can populate usage after streaming
         send_kwargs: dict[str, object] = {
@@ -135,10 +126,6 @@ async def send_message_to_ai(
             "thinking": thinking,
             "metadata": metadata,
         }
-        if max_output_tokens is not None:
-            send_kwargs["max_output_tokens"] = max_output_tokens
-        if thinking_budget_tokens is not None:
-            send_kwargs["thinking_budget_tokens"] = thinking_budget_tokens
 
         response_stream = provider_instance.send_message(**send_kwargs)
 
@@ -156,7 +143,7 @@ async def send_message_to_ai(
             chat_file=chat_path,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
-            error=sanitize_error_message(str(e)),
+            error=str(e),
             **http_context,
         )
         logging.error(
@@ -197,7 +184,6 @@ def validate_and_get_provider(
     try:
         api_key = load_api_key(provider_name, key_config)
     except Exception as e:
-        sanitized = sanitize_error_message(str(e))
         http_context = extract_http_error_context(e)
         log_event(
             "provider_validation_error",
@@ -207,7 +193,7 @@ def validate_and_get_provider(
             phase="key_load_failed",
             chat_file=chat_path,
             error_type=type(e).__name__,
-            error=sanitized,
+            error=str(e),
             **http_context,
         )
         logging.error("API key loading error: %s", e, exc_info=True)
@@ -240,7 +226,6 @@ def validate_and_get_provider(
             timeout_sec=effective_timeout,
         )
     except Exception as e:
-        sanitized = sanitize_error_message(str(e))
         http_context = extract_http_error_context(e)
         log_event(
             "provider_validation_error",
@@ -250,7 +235,7 @@ def validate_and_get_provider(
             phase="provider_init_failed",
             chat_file=chat_path,
             error_type=type(e).__name__,
-            error=sanitized,
+            error=str(e),
             **http_context,
         )
         logging.error("Provider initialization error: %s", e, exc_info=True)

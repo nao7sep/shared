@@ -732,3 +732,75 @@ please search the web to confirm this is a good workaround.
 i once suggested to use only file names for some log messages because the format was jsonl at that time. now we are using plaintext. so, we should use full/absolute paths. for chat_file, system_prompt_path, etc. also, key to system prompt file can be just system_prompt, which would be more consistent with keys in profile file and chat history file. there may be other things that should be in full/absolute paths. please look for them.
 
 also, httpx logs dont contain much information. should we show headers app has received from the server? sometimes, headers contain vital information for debugging.
+
+---
+
+please double check what _field_max_len limits. if it limits what is written to log files, we dont need this limit. log files can be as large as they need to be.
+
+please look for other embedded limits in this app.
+
+---
+
+you implemented sanitization on log files. that is unnecessary. if somebody has access to log files, they most probably have access to much more on the computer. log files will never be published.
+
+---
+
+please also remove following limits;:
+
+Log argument summarization limits:
+- apps/poly-chat/src/poly_chat/logging_utils.py:403 (max_len=160)
+- apps/poly-chat/src/poly_chat/logging_utils.py:438 (max_len=100 for command args)
+
+Safety-check formatting limit:
+- apps/poly-chat/src/poly_chat/commands/metadata.py:300 (message content truncated to 500 for helper prompt)
+
+Title generation context limits:
+- apps/poly-chat/src/poly_chat/commands/metadata.py:85 (first 10 messages)
+- apps/poly-chat/src/poly_chat/commands/metadata.py:87 (200 chars per message)
+
+do we have limits on summarization context as well?
+
+ais can handle long contexts and, for each interaction, we still send the whole chat history. so, limiting context for tasks such as title/summary generation and safety check is not logical.
+
+please double check: what else do we limit?
+
+---
+
+let's keep:
+
+History display limits (UI/display only):
+
+- Default /history shows last 10:
+  - apps/poly-chat/src/poly_chat/commands/metadata.py:322
+- History preview truncates each message to 100 chars:
+  - apps/poly-chat/src/poly_chat/commands/metadata.py:398
+
+Timeouts/retries:
+- Central timeout/retry constants:
+  - apps/poly-chat/src/poly_chat/timeouts.py:12
+- Citation redirect timeout/concurrency:
+  - apps/poly-chat/src/poly_chat/citations.py:237
+  - apps/poly-chat/src/poly_chat/citations.py:238
+
+Prompt-level brevity constraints (output style, not context):
+- Summary asks for one paragraph:
+  - apps/poly-chat/src/poly_chat/prompts.py:29
+- Safety prompt asks one-line descriptions:
+  - apps/poly-chat/src/poly_chat/prompts.py:46
+
+BUT please move all timeouts from citations.py to timeouts.py.
+
+then, please look for any more timeouts that are not in timeouts.py.
+
+let's remove:
+
+AI output/thinking token limits (optional/profile-driven):
+- Forwarded in normal AI runtime:
+  - apps/poly-chat/src/poly_chat/ai_runtime.py:124
+- Forwarded in helper tasks (/title, /summary, /safe):
+  - apps/poly-chat/src/poly_chat/helper_ai.py:94
+
+Claude fallback output cap:
+- If no configured max, uses max_tokens=8192:
+  - apps/poly-chat/src/poly_chat/ai/claude_provider.py:166
+  - apps/poly-chat/src/poly_chat/ai/claude_provider.py:288

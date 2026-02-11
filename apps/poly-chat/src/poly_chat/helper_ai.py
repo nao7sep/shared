@@ -38,12 +38,10 @@ async def invoke_helper_ai(
     # Import here to avoid circular dependency
     from .keys.loader import load_api_key
     from .ai_runtime import get_provider_instance
-    from .ai.limits import resolve_profile_limits, select_max_output_tokens
 
     from .logging_utils import (
         extract_http_error_context,
         log_event,
-        sanitize_error_message,
         estimate_message_chars,
     )
 
@@ -70,7 +68,6 @@ async def invoke_helper_ai(
     try:
         api_key = load_api_key(helper_ai, key_config)
     except Exception as e:
-        sanitized = sanitize_error_message(str(e))
         log_event(
             "helper_ai_error",
             level=logging.ERROR,
@@ -79,7 +76,7 @@ async def invoke_helper_ai(
             model=helper_model,
             latency_ms=0.0,
             error_type=type(e).__name__,
-            error=sanitized,
+            error=str(e),
         )
         logging.error(
             "Helper AI API key loading failed (provider=%s, model=%s): %s",
@@ -92,9 +89,6 @@ async def invoke_helper_ai(
 
     # Get provider instance (cached when a session manager/state is provided)
     provider_instance = get_provider_instance(helper_ai, api_key, session=session)
-    limits = resolve_profile_limits(profile, helper_ai, helper=True)
-    max_output_tokens = select_max_output_tokens(limits, search=False)
-    thinking_budget_tokens = limits.get("thinking_budget_tokens")
 
     # Send request (non-streaming for simplicity)
     started = time.perf_counter()
@@ -114,10 +108,6 @@ async def invoke_helper_ai(
             "model": helper_model,
             "system_prompt": system_prompt,
         }
-        if max_output_tokens is not None:
-            request_kwargs["max_output_tokens"] = max_output_tokens
-        if thinking_budget_tokens is not None:
-            request_kwargs["thinking_budget_tokens"] = thinking_budget_tokens
 
         response_text, metadata = await provider_instance.get_full_response(**request_kwargs)
 
@@ -141,7 +131,6 @@ async def invoke_helper_ai(
         return response_text.strip()
 
     except Exception as e:
-        sanitized = sanitize_error_message(str(e))
         http_context = extract_http_error_context(e)
         log_event(
             "helper_ai_error",
@@ -151,7 +140,7 @@ async def invoke_helper_ai(
             model=helper_model,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
-            error=sanitized,
+            error=str(e),
             **http_context,
         )
         logging.error(

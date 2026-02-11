@@ -22,17 +22,6 @@ _LOG_PATH_FIELDS = {
     "system_prompt_path",
 }
 
-_REDACTED_HEADER_VALUE = "[REDACTED_HEADER]"
-_SENSITIVE_RESPONSE_HEADERS = {
-    "authorization",
-    "proxy-authorization",
-    "cookie",
-    "set-cookie",
-    "x-api-key",
-    "api-key",
-}
-
-
 def sanitize_error_message(error_msg: str) -> str:
     """Sanitize error messages to remove sensitive information."""
     sanitized = re.sub(r"sk-[A-Za-z0-9]{10,}", "[REDACTED_API_KEY]", error_msg)
@@ -257,17 +246,9 @@ class StructuredTextFormatter(logging.Formatter):
         # Emit a blank line between entries without adding extra trailing lines.
         self._first_entry = True
 
-    def _format_value(self, value: Any, max_len: int = 400) -> str:
-        value_str = sanitize_error_message(str(value))
-        if len(value_str) > max_len:
-            value_str = value_str[: max_len - 3] + "..."
+    def _format_value(self, value: Any) -> str:
+        value_str = str(value)
         return value_str.replace("\n", "\\n")
-
-    def _field_max_len(self, key: str) -> int:
-        """Return per-field log truncation limits (display only, not runtime limits)."""
-        if key == "http_response_headers":
-            return 12000
-        return 400
 
     def _ordered_keys(self, event_name: str, data: dict[str, Any]) -> list[str]:
         preferred = self.EVENT_KEY_ORDER.get(event_name, ["ts", "level", "logger"])
@@ -296,14 +277,14 @@ class StructuredTextFormatter(logging.Formatter):
             base.update(parsed)
         else:
             base["event"] = "log"
-            base["message"] = sanitize_error_message(message)
+            base["message"] = message
 
         event_name = str(base.pop("event", "log"))
         lines = [f"=== {event_name} ==="]
 
         ordered_keys = self._ordered_keys(event_name, base)
         for key in ordered_keys:
-            lines.append(f"{key}: {self._format_value(base[key], max_len=self._field_max_len(key))}")
+            lines.append(f"{key}: {self._format_value(base[key])}")
 
         if record.exc_info:
             lines.append("traceback:")
@@ -348,7 +329,7 @@ def _resolve_log_path(path_value: str) -> str:
 
 
 def sanitize_response_headers(headers: Any) -> dict[str, str]:
-    """Return response headers safe for logs."""
+    """Return response headers for logs."""
     if headers is None:
         return {}
 
@@ -364,11 +345,7 @@ def sanitize_response_headers(headers: Any) -> dict[str, str]:
     for raw_key, raw_value in items:
         key = str(raw_key)
         value = str(raw_value)
-        lowered = key.lower()
-        if lowered in _SENSITIVE_RESPONSE_HEADERS or "token" in lowered or "secret" in lowered:
-            sanitized[key] = _REDACTED_HEADER_VALUE
-        else:
-            sanitized[key] = sanitize_error_message(value)
+        sanitized[key] = value
     return sanitized
 
 
@@ -408,43 +385,18 @@ def extract_http_error_context(error: Exception) -> dict[str, Any]:
     return context
 
 
-def summarize_text(text: Any, max_len: int = 160) -> str:
-    """Return a short, redacted summary for logs."""
+def summarize_text(text: Any) -> str:
+    """Return normalized summary text for logs."""
     if text is None:
         return ""
-    normalized = " ".join(str(text).split())
-    redacted = sanitize_error_message(normalized)
-    if len(redacted) <= max_len:
-        return redacted
-    return redacted[: max_len - 3] + "..."
+    return " ".join(str(text).split())
 
 
-def summarize_command_args(command: str, args: str) -> str:
-    """Summarize command args while avoiding sensitive/free-form text leakage."""
-    safe_preview_commands = {
-        "open",
-        "switch",
-        "close",
-        "new",
-        "rename",
-        "delete",
-        "model",
-        "helper",
-        "timeout",
-        "system",
-        "history",
-        "show",
-        "safe",
-        "input",
-        "status",
-        "title",
-        "summary",
-    }
+def summarize_command_args(_command: str, args: str) -> str:
+    """Summarize command args for logs."""
     if not args.strip():
         return ""
-    if command in safe_preview_commands:
-        return summarize_text(args, max_len=100)
-    return "[redacted]"
+    return summarize_text(args)
 
 
 def estimate_message_chars(messages: list[dict]) -> int:

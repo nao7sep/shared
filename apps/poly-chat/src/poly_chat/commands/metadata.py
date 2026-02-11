@@ -81,11 +81,9 @@ class MetadataCommandsMixin:
         if not messages:
             return "No messages in chat to generate title from"
 
-        # Take first few messages for context (to keep it efficient)
-        context_messages = messages[:10] if len(messages) > 10 else messages
         context_text = "\n".join([
-            f"{msg['role']}: {self._message_content_to_text(msg.get('content', ''))}".rstrip()[:200]
-            for msg in context_messages
+            f"{msg['role']}: {self._message_content_to_text(msg.get('content', ''))}".rstrip()
+            for msg in messages
         ])
 
         prompt_messages = [{
@@ -297,7 +295,7 @@ class MetadataCommandsMixin:
 
             content = self._message_content_to_text(content_parts)
 
-            formatted.append(f"{hex_label}{role.upper()}: {content[:500]}")  # Truncate very long messages
+            formatted.append(f"{hex_label}{role.upper()}: {content}")
 
         return "\n\n".join(formatted)
 

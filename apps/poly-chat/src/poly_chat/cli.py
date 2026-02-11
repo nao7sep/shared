@@ -149,7 +149,7 @@ def main() -> None:
             level=logging.ERROR,
             reason="fatal_error",
             error_type=type(e).__name__,
-            error=sanitize_error_message(str(e)),
+            error=str(e),
             uptime_ms=round((time.perf_counter() - app_started) * 1000, 1),
         )
         logging.error("Fatal error: %s", e, exc_info=True)

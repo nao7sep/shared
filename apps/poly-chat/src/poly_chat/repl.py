@@ -37,7 +37,7 @@ from .citations import (
 )
 from .commands import CommandHandler
 from .ui.interaction import ThreadedConsoleInteraction
-from .logging_utils import log_event, sanitize_error_message, summarize_command_args
+from .logging_utils import log_event, summarize_command_args
 from .streaming import display_streaming_response
 from .timeouts import (
     resolve_profile_timeout,
@@ -386,7 +386,7 @@ async def repl_loop(
                         command=command_name,
                         args_summary=summarize_command_args(command_name, command_args),
                         error_type=type(e).__name__,
-                        error=sanitize_error_message(str(e)),
+                        error=str(e),
                         chat_file=chat_path,
                     )
                     print(f"Error: {e}")
@@ -399,7 +399,7 @@ async def repl_loop(
                         command=command_name,
                         args_summary=summarize_command_args(command_name, command_args),
                         error_type=type(e).__name__,
-                        error=sanitize_error_message(str(e)),
+                        error=str(e),
                         chat_file=chat_path,
                     )
                     logging.error(
