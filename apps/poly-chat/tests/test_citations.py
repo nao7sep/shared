@@ -31,6 +31,23 @@ def test_normalize_citations_sets_missing_or_invalid_values_to_none():
     ]
 
 
+def test_normalize_citations_drops_host_like_title_when_in_url():
+    citations = [
+        {
+            "title": "nodewave.io",
+            "url": "https://www.nodewave.io/blog/top-ai-models-2026-guide-compare-choose-deploy",
+        }
+    ]
+    result = citation_utils.normalize_citations(citations)
+    assert result == [
+        {
+            "number": 1,
+            "title": None,
+            "url": "https://www.nodewave.io/blog/top-ai-models-2026-guide-compare-choose-deploy",
+        }
+    ]
+
+
 def test_normalize_citations_keeps_vertex_redirect_url_for_later_resolution():
     citations = [
         {
@@ -99,3 +116,28 @@ async def test_resolve_vertex_citation_urls_sets_unresolved_vertex_url_to_none(m
     )
     result = await citation_utils.resolve_vertex_citation_urls(citations)
     assert result == [{"number": 1, "title": "Final", "url": None}]
+
+
+@pytest.mark.asyncio
+async def test_resolve_vertex_citation_urls_drops_host_like_title_after_resolution(monkeypatch):
+    async def fake_http(client, url):
+        return "https://www.nodewave.io/blog/top-ai-models-2026-guide-compare-choose-deploy"
+
+    monkeypatch.setattr(citation_utils, "_resolve_vertex_via_http", fake_http)
+
+    citations = citation_utils.normalize_citations(
+        [
+            {
+                "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/opaque",
+                "title": "nodewave.io",
+            }
+        ]
+    )
+    result = await citation_utils.resolve_vertex_citation_urls(citations)
+    assert result == [
+        {
+            "number": 1,
+            "title": None,
+            "url": "https://www.nodewave.io/blog/top-ai-models-2026-guide-compare-choose-deploy",
+        }
+    ]

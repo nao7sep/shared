@@ -10,6 +10,7 @@ import httpx
 from .timeouts import CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC
 
 _NUMERIC_TITLE_RE = re.compile(r"^\s*\d+\s*$")
+_HOST_LIKE_TITLE_RE = re.compile(r"^[a-z0-9-]+(?:\.[a-z0-9-]+)+$")
 _VERTEX_HOST_SUFFIX = "vertexaisearch.cloud.google.com"
 _VERTEX_PATH_HINT = "grounding-api-redirect"
 _VERTEX_REDIRECT_QUERY_KEYS = (
@@ -53,6 +54,59 @@ def _clean_title(value: object) -> str | None:
     if _NUMERIC_TITLE_RE.match(title):
         return None
     return title
+
+
+def _normalize_host(host: str | None) -> str | None:
+    if not host:
+        return None
+    normalized = host.strip().lower()
+    if normalized.startswith("www."):
+        normalized = normalized[4:]
+    if ":" in normalized:
+        normalized = normalized.split(":", 1)[0]
+    if not normalized:
+        return None
+    return normalized
+
+
+def _domain_like_title(title: str | None) -> str | None:
+    if not title:
+        return None
+    candidate = title.strip().lower().rstrip("/")
+    if not candidate:
+        return None
+    if candidate.startswith("http://") or candidate.startswith("https://"):
+        candidate = urlparse(candidate).netloc.lower()
+    candidate = _normalize_host(candidate)
+    if not candidate:
+        return None
+    if not _HOST_LIKE_TITLE_RE.fullmatch(candidate):
+        return None
+    return candidate
+
+
+def _is_host_like_title_for_url(title: str | None, url: str | None) -> bool:
+    if not title or not url:
+        return False
+    if not _is_valid_http_url(url):
+        return False
+
+    candidate = _domain_like_title(title)
+    if not candidate:
+        return False
+
+    parsed = urlparse(url)
+    host = _normalize_host(parsed.netloc)
+    if not host:
+        return False
+
+    if candidate == host:
+        return True
+    if host.endswith(f".{candidate}"):
+        return True
+    if candidate.endswith(f".{host}"):
+        return True
+    return False
 
 
 def _looks_like_vertex_redirect(url: str) -> bool:
@@ -101,6 +155,8 @@ def _dedupe_and_number(citations: list[dict[str, object]]) -> list[dict[str, obj
     for citation in citations:
         url = citation.get("url") if isinstance(citation.get("url"), str) else None
         title = citation.get("title") if isinstance(citation.get("title"), str) else None
+        if _is_host_like_title_for_url(title, url):
+            title = None
         normalized_key = _normalized_url_key(url)
         key = (
             normalized_key.lower() if isinstance(normalized_key, str) else None,
