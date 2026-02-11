@@ -100,7 +100,6 @@ async def invoke_helper_ai(
         search=False,
     )
     max_output_tokens = resolved_limits.get("max_output_tokens")
-    thinking_budget_tokens = resolved_limits.get("thinking_budget_tokens")
     log_event(
         "helper_ai_request",
         level=logging.INFO,
@@ -111,7 +110,6 @@ async def invoke_helper_ai(
         input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
         max_output_tokens=max_output_tokens,
-        thinking_budget_tokens=thinking_budget_tokens,
     )
     try:
         request_kwargs: dict[str, Any] = {
@@ -121,8 +119,6 @@ async def invoke_helper_ai(
         }
         if max_output_tokens is not None:
             request_kwargs["max_output_tokens"] = max_output_tokens
-        if thinking_budget_tokens is not None:
-            request_kwargs["thinking_budget_tokens"] = thinking_budget_tokens
 
         response_text, metadata = await provider_instance.get_full_response(**request_kwargs)
 

@@ -261,20 +261,17 @@ When search is enabled, AI responses include a "Sources:" section with citation 
   "ai_limits": {
     "default": {
       "max_output_tokens": null,
-      "search_max_output_tokens": null,
-      "thinking_budget_tokens": null
+      "search_max_output_tokens": null
     },
     "providers": {
       "claude": {
         "max_output_tokens": null,
-        "search_max_output_tokens": null,
-        "thinking_budget_tokens": null
+        "search_max_output_tokens": null
       }
     },
     "helper": {
       "max_output_tokens": null,
-      "search_max_output_tokens": null,
-      "thinking_budget_tokens": null
+      "search_max_output_tokens": null
     }
   },
   "chats_dir": "~/poly-chat/chats",
@@ -300,7 +297,7 @@ When search is enabled, AI responses include a "Sources:" section with citation 
 
 ### AI Request Limits (Optional)
 
-`ai_limits` lets you control output/thinking budgets centrally.
+`ai_limits` lets you control output token budgets centrally.
 
 - Precedence:
   - `ai_limits.default`
@@ -309,11 +306,9 @@ When search is enabled, AI responses include a "Sources:" section with citation 
 - Allowed keys:
   - `max_output_tokens`
   - `search_max_output_tokens`
-  - `thinking_budget_tokens`
 - Values must be positive integers or `null`.
 - `null` means "leave that limit unset in profile config."
 - `search_max_output_tokens` is used when `/search` is ON; otherwise `max_output_tokens` is used.
-- `thinking_budget_tokens` is currently applied for Claude thinking mode.
 - Limits are applied for normal assistant requests and helper requests (`/title`, `/summary`, `/safe`).
 - Claude requires `max_tokens`; when resolved `max_output_tokens` is unset, PolyChat applies a fallback default of `4096`.
 

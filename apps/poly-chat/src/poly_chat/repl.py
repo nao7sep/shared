@@ -174,12 +174,10 @@ async def repl_loop(
             if action.search_enabled is not None
             else manager.search_mode
         )
-        use_thinking = manager.thinking_mode
         provider_instance, error = validate_and_get_provider(
             manager,
             chat_path=effective_path,
             search=use_search,
-            thinking=use_thinking,
         )
         if error:
             await orchestrator.rollback_pre_send_failure(
@@ -218,7 +216,6 @@ async def repl_loop(
                 mode=effective_request_mode,
                 chat_path=effective_path,
                 search=use_search,
-                thinking=use_thinking,
             )
             thought_chunks: list[str] = []
             thought_header_printed = False

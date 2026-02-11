@@ -17,7 +17,6 @@ def test_resolve_profile_limits_merges_default_provider_and_helper():
             "providers": {
                 "claude": {
                     "max_output_tokens": 800,
-                    "thinking_budget_tokens": 4000,
                 }
             },
             "helper": {
@@ -31,11 +30,9 @@ def test_resolve_profile_limits_merges_default_provider_and_helper():
 
     assert interactive["max_output_tokens"] == 800
     assert interactive["search_max_output_tokens"] == 1200
-    assert interactive["thinking_budget_tokens"] == 4000
 
     assert helper["max_output_tokens"] == 300
     assert helper["search_max_output_tokens"] == 1200
-    assert helper["thinking_budget_tokens"] == 4000
 
 
 def test_resolve_profile_limits_ignores_invalid_values():
@@ -44,7 +41,6 @@ def test_resolve_profile_limits_ignores_invalid_values():
             "default": {
                 "max_output_tokens": 0,
                 "search_max_output_tokens": -1,
-                "thinking_budget_tokens": True,
             }
         }
     }
@@ -52,7 +48,6 @@ def test_resolve_profile_limits_ignores_invalid_values():
     limits = resolve_profile_limits(profile, "openai")
     assert limits["max_output_tokens"] is None
     assert limits["search_max_output_tokens"] is None
-    assert limits["thinking_budget_tokens"] is None
 
 
 def test_select_max_output_tokens_prefers_search_override():
@@ -78,7 +73,6 @@ def test_resolve_request_limits_applies_claude_fallback_when_unset():
     limits = resolve_request_limits(profile={}, provider="claude", search=False)
 
     assert limits["max_output_tokens"] == 4096
-    assert "thinking_budget_tokens" not in limits
 
 
 def test_resolve_request_limits_applies_helper_overrides():
@@ -87,7 +81,6 @@ def test_resolve_request_limits_applies_helper_overrides():
             "default": {"max_output_tokens": 1000},
             "helper": {
                 "max_output_tokens": 250,
-                "thinking_budget_tokens": 700,
             },
         }
     }
@@ -100,4 +93,3 @@ def test_resolve_request_limits_applies_helper_overrides():
     )
 
     assert limits["max_output_tokens"] == 250
-    assert limits["thinking_budget_tokens"] == 700

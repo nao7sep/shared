@@ -64,11 +64,10 @@ def resolve_ai_read_timeout(
     profile_timeout_sec: int | float,
     *,
     search: bool = False,
-    thinking: bool = False,
 ) -> int | float:
     """Resolve AI-provider read timeout.
 
-    When search or thinking mode is enabled, timeout is multiplied by
+    When search is enabled, timeout is multiplied by
     ``AI_MODE_TIMEOUT_MULTIPLIER``.
     """
     timeout_sec = _normalize_timeout_value(
@@ -76,7 +75,7 @@ def resolve_ai_read_timeout(
     )
     if timeout_sec <= 0:
         return timeout_sec
-    if search or thinking:
+    if search:
         scaled = float(timeout_sec) * float(AI_MODE_TIMEOUT_MULTIPLIER)
         if scaled.is_integer():
             return int(scaled)

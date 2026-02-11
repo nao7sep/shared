@@ -26,12 +26,10 @@ async def test_send_message_to_ai_omits_limit_kwargs_when_unset():
             provider_name="openai",
             profile={},
             search=False,
-            thinking=False,
         )
 
     kwargs = provider.send_message.call_args.kwargs
     assert "max_output_tokens" not in kwargs
-    assert "thinking_budget_tokens" not in kwargs
 
 
 @pytest.mark.asyncio
@@ -45,7 +43,6 @@ async def test_send_message_to_ai_applies_profile_limits():
             "providers": {
                 "claude": {
                     "search_max_output_tokens": 2000,
-                    "thinking_budget_tokens": 3000,
                 }
             },
         }
@@ -59,12 +56,10 @@ async def test_send_message_to_ai_applies_profile_limits():
             provider_name="claude",
             profile=profile,
             search=True,
-            thinking=True,
         )
 
     kwargs = provider.send_message.call_args.kwargs
     assert kwargs["max_output_tokens"] == 2000
-    assert kwargs["thinking_budget_tokens"] == 3000
 
 
 @pytest.mark.asyncio
@@ -80,43 +75,58 @@ async def test_send_message_to_ai_applies_claude_fallback_limit_when_unset():
             provider_name="claude",
             profile={},
             search=False,
-            thinking=False,
         )
 
     kwargs = provider.send_message.call_args.kwargs
     assert kwargs["max_output_tokens"] == 4096
-    assert "thinking_budget_tokens" not in kwargs
 
 
-def _build_session(timeout: int | float = 30) -> SessionState:
-    return SessionState(
-        current_ai="openai",
-        current_model="gpt-5-mini",
-        helper_ai="openai",
-        helper_model="gpt-5-mini",
-        profile={
-            "timeout": timeout,
-            "api_keys": {"openai": {"type": "direct", "value": "test-key"}},
+def _build_session(
+    timeout: int | float = 30,
+    *,
+    provider: str = "openai",
+    model: str = "gpt-5-mini",
+    ai_limits: dict | None = None,
+) -> SessionState:
+    profile = {
+        "timeout": timeout,
+        "api_keys": {
+            provider: {"type": "direct", "value": "test-key"},
         },
+    }
+    if ai_limits is not None:
+        profile["ai_limits"] = ai_limits
+
+    return SessionState(
+        current_ai=provider,
+        current_model=model,
+        helper_ai=provider,
+        helper_model=model,
+        profile=profile,
         chat={},
     )
 
 
 @pytest.mark.parametrize(
-    ("search", "thinking", "expected_timeout"),
+    ("provider_name", "search", "expected_timeout"),
     [
-        (False, False, 30),
-        (True, False, 90),
-        (False, True, 90),
-        (True, True, 90),
+        ("openai", False, 30),
+        ("openai", True, 90),
+        ("claude", False, 30),
+        ("claude", True, 90),
     ],
 )
 def test_validate_and_get_provider_applies_mode_timeout_multiplier(
+    provider_name: str,
     search: bool,
-    thinking: bool,
     expected_timeout: int,
 ):
-    session = _build_session(timeout=30)
+    model = "claude-haiku-4-5" if provider_name == "claude" else "gpt-5-mini"
+    session = _build_session(
+        timeout=30,
+        provider=provider_name,
+        model=model,
+    )
     captured: dict[str, int | float] = {}
 
     def fake_get_provider_instance(
@@ -135,13 +145,12 @@ def test_validate_and_get_provider_applies_mode_timeout_multiplier(
                 "poly_chat.ai_runtime.get_provider_instance",
                 side_effect=fake_get_provider_instance,
             ):
-                provider, error = validate_and_get_provider(
+                provider_instance, error = validate_and_get_provider(
                     session,
                     search=search,
-                    thinking=thinking,
                 )
 
-    assert provider is not None
+    assert provider_instance is not None
     assert error is None
     assert captured["timeout"] == expected_timeout
 
@@ -169,7 +178,6 @@ def test_validate_and_get_provider_keeps_zero_timeout_without_multiplier():
                 provider, error = validate_and_get_provider(
                     session,
                     search=True,
-                    thinking=True,
                 )
 
     assert provider is not None

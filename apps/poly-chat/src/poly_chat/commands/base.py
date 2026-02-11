@@ -158,12 +158,6 @@ class CommandHandlerBaseMixin:
             self.manager.search_mode = False
             notices.append(f"Search mode auto-disabled: {provider_name} does not support search.")
 
-        if self.manager.thinking_mode and not models.provider_supports_thinking(provider_name):
-            self.manager.thinking_mode = False
-            notices.append(
-                f"Thinking mode auto-disabled: {provider_name} does not support thinking."
-            )
-
         return notices
 
     def _resolve_chat_path_arg(self, raw_path: str, chats_dir: str) -> str:

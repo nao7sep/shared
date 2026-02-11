@@ -233,28 +233,23 @@ async def test_helper_unknown_name_returns_no_match(command_handler, mock_sessio
 @pytest.mark.asyncio
 async def test_model_switch_reconciles_incompatible_modes(command_handler, mock_session_manager):
     mock_session_manager.search_mode = True
-    mock_session_manager.thinking_mode = True
 
     result = await command_handler.set_model("mistral-large-latest")
 
     assert result.startswith("Switched to mistral (mistral-large-latest)")
     assert "Search mode auto-disabled" in result
-    assert "Thinking mode auto-disabled" in result
     assert mock_session_manager.search_mode is False
-    assert mock_session_manager.thinking_mode is False
 
 
 @pytest.mark.asyncio
 async def test_model_switch_preserves_supported_mode(command_handler, mock_session_manager):
     mock_session_manager.search_mode = True
-    mock_session_manager.thinking_mode = True
 
     result = await command_handler.set_model("gpt-5-mini")
 
     assert result.startswith("Switched to openai (gpt-5-mini)")
-    assert "Thinking mode auto-disabled" in result
+    assert "Search mode auto-disabled" not in result
     assert mock_session_manager.search_mode is True
-    assert mock_session_manager.thinking_mode is False
 
 
 @pytest.mark.asyncio

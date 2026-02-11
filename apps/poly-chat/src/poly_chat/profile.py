@@ -15,7 +15,6 @@ from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 _AI_LIMIT_KEYS = {
     "max_output_tokens",
     "search_max_output_tokens",
-    "thinking_budget_tokens",
 }
 
 
@@ -311,19 +310,16 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             "default": {
                 "max_output_tokens": None,
                 "search_max_output_tokens": None,
-                "thinking_budget_tokens": None,
             },
             "providers": {
                 "claude": {
                     "max_output_tokens": None,
                     "search_max_output_tokens": None,
-                    "thinking_budget_tokens": None,
                 }
             },
             "helper": {
                 "max_output_tokens": None,
                 "search_max_output_tokens": None,
-                "thinking_budget_tokens": None,
             },
         },
         "chats_dir": "~/poly-chat/chats",

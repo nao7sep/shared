@@ -72,7 +72,6 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
         "ai_limits": {
             "helper": {
                 "max_output_tokens": 123,
-                "thinking_budget_tokens": 456,
             }
         },
     }
@@ -94,5 +93,4 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
         model="claude-haiku-4-5",
         system_prompt=None,
         max_output_tokens=123,
-        thinking_budget_tokens=456,
     )

@@ -114,7 +114,6 @@ async def send_message_to_ai(
     mode: str = "normal",
     chat_path: Optional[str] = None,
     search: bool = False,
-    thinking: bool = False,
 ) -> tuple[AsyncIterator[str], AIResponseMetadata]:
     """Send message to AI and get streaming response.
 
@@ -131,7 +130,6 @@ async def send_message_to_ai(
         search=search,
     )
     max_output_tokens = resolved_limits.get("max_output_tokens")
-    thinking_budget_tokens = resolved_limits.get("thinking_budget_tokens")
     log_event(
         "ai_request",
         level=logging.INFO,
@@ -143,7 +141,6 @@ async def send_message_to_ai(
         input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
         max_output_tokens=max_output_tokens,
-        thinking_budget_tokens=thinking_budget_tokens,
     )
 
     started = time.perf_counter()
@@ -158,13 +155,10 @@ async def send_message_to_ai(
             "system_prompt": system_prompt,
             "stream": True,
             "search": search,
-            "thinking": thinking,
             "metadata": metadata,
         }
         if max_output_tokens is not None:
             send_kwargs["max_output_tokens"] = max_output_tokens
-        if thinking_budget_tokens is not None:
-            send_kwargs["thinking_budget_tokens"] = thinking_budget_tokens
 
         response_stream = provider_instance.send_message(**send_kwargs)
 
@@ -201,7 +195,6 @@ def validate_and_get_provider(
     chat_path: Optional[str] = None,
     *,
     search: bool = False,
-    thinking: bool = False,
 ) -> tuple[Optional[ProviderInstance], Optional[str]]:
     """Validate API key and get provider instance."""
     provider_name = session.current_ai
@@ -256,7 +249,6 @@ def validate_and_get_provider(
         effective_timeout = resolve_ai_read_timeout(
             profile_timeout,
             search=search,
-            thinking=thinking,
         )
         provider_instance = get_provider_instance(
             provider_name,

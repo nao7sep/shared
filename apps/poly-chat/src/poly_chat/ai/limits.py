@@ -1,4 +1,4 @@
-"""Centralized optional AI response/thinking limits.
+"""Centralized optional AI response limits.
 
 Resolved precedence order:
 1. ``ai_limits.default``
@@ -24,7 +24,6 @@ class AIRequestLimits(TypedDict, total=False):
 
     max_output_tokens: int | None
     search_max_output_tokens: int | None
-    thinking_budget_tokens: int | None
 
 
 def _normalize_optional_limit(raw_value: Any) -> int | None:
@@ -46,7 +45,6 @@ def _read_limit_block(config: Mapping[str, Any] | None) -> AIRequestLimits:
     for key in (
         "max_output_tokens",
         "search_max_output_tokens",
-        "thinking_budget_tokens",
     ):
         if key in config:
             limits[key] = _normalize_optional_limit(config.get(key))
@@ -136,13 +134,7 @@ def resolve_request_limits(
     if max_output_tokens is None:
         max_output_tokens = default_max_output_tokens_for_provider(provider)
 
-    thinking_budget_tokens = _normalize_optional_limit(
-        profile_limits.get("thinking_budget_tokens")
-    )
-
     resolved: AIRequestLimits = {}
     if max_output_tokens is not None:
         resolved["max_output_tokens"] = max_output_tokens
-    if thinking_budget_tokens is not None:
-        resolved["thinking_budget_tokens"] = thinking_budget_tokens
     return resolved
