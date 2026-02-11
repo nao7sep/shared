@@ -29,6 +29,7 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
+from .tools import claude_web_search_tools
 from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
@@ -166,7 +167,7 @@ class ClaudeProvider:
                 kwargs["system"] = system_prompt
 
             if search:
-                kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
+                kwargs["tools"] = claude_web_search_tools()
 
             if thinking:
                 thinking_config = {"type": "enabled"}
@@ -283,7 +284,7 @@ class ClaudeProvider:
                 kwargs["max_tokens"] = max_output_tokens
 
             if search:
-                kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
+                kwargs["tools"] = claude_web_search_tools()
             if thinking:
                 thinking_config = {"type": "enabled"}
                 if thinking_budget_tokens is not None:

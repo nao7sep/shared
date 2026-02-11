@@ -18,6 +18,7 @@ from ..timeouts import (
     GEMINI_RETRY_JITTER,
     GEMINI_RETRY_MAX_DELAY_SEC,
 )
+from .tools import gemini_web_search_tools
 from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
@@ -119,7 +120,7 @@ class GeminiProvider:
                 return
 
             # Build config with system instruction and tools if provided
-            tools = [types.Tool(google_search=types.GoogleSearch())] if search else None
+            tools = gemini_web_search_tools(types) if search else None
             config_kwargs: dict[str, object] = {
                 "system_instruction": system_prompt if system_prompt else None,
                 "tools": tools,
@@ -233,7 +234,7 @@ class GeminiProvider:
                 return "", {"model": model, "usage": {}}
 
             # Build config with system instruction and tools if provided
-            tools = [types.Tool(google_search=types.GoogleSearch())] if search else None
+            tools = gemini_web_search_tools(types) if search else None
             config_kwargs: dict[str, object] = {
                 "system_instruction": system_prompt if system_prompt else None,
                 "tools": tools,

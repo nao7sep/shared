@@ -31,6 +31,7 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
+from .tools import openai_web_search_tools
 from .types import AIResponseMetadata
 
 logger = logging.getLogger(__name__)
@@ -129,9 +130,8 @@ class OpenAIProvider:
             "input": input_items,
             "stream": stream,
         }
-        tools = [{"type": "web_search_preview"}] if search else None
-        if tools is not None:
-            kwargs["tools"] = tools
+        if search:
+            kwargs["tools"] = openai_web_search_tools()
         if max_output_tokens is not None:
             kwargs["max_output_tokens"] = max_output_tokens
         return await self.client.responses.create(**kwargs)
