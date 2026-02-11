@@ -4,6 +4,7 @@ import logging
 
 from .. import hex_id
 from ..chat import get_messages_for_ai
+from ..message_formatter import lines_to_text
 from ..prompts import (
     SAFETY_CHECK_SYSTEM_PROMPT,
     build_safety_check_prompt,
@@ -448,7 +449,11 @@ class MetadataCommandsMixin:
         else:
             role_display = role.capitalize()
 
-        content = self._message_content_to_text(content_parts)
+        # Preserve line breaks for full message display
+        if isinstance(content_parts, list):
+            content = lines_to_text(content_parts)
+        else:
+            content = str(content_parts)
 
         # Build output
         output = [

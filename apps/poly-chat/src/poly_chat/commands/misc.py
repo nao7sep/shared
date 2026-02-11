@@ -100,9 +100,7 @@ Safety:
 
 Other:
   /help             Show this help
-  /exit, /quit      Exit PolyChat
-
-Note: Use '--' to delete/clear values (e.g., /title --, /summary --)"""
+  /exit, /quit      Exit PolyChat"""
 
     async def exit_app(self, args: str) -> CommandResult:
         """Exit the application.
