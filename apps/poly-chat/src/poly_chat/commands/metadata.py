@@ -477,7 +477,15 @@ class MetadataCommandsMixin:
 
         chat_title = metadata.get("title") or "(none)"
         chat_summary = metadata.get("summary") or "(none)"
-        system_prompt_display = metadata.get("system_prompt") or self.manager.system_prompt_path or "(none)"
+        chat_system_prompt = metadata.get("system_prompt")
+        if chat_system_prompt:
+            system_prompt_display = chat_system_prompt
+        elif self.manager.system_prompt_path:
+            system_prompt_display = self.manager.system_prompt_path
+        elif isinstance(self.manager.system_prompt, str) and self.manager.system_prompt.strip():
+            system_prompt_display = "inline profile prompt (content hidden)"
+        else:
+            system_prompt_display = "(none)"
 
         updated_local = "(unknown)"
         updated_at = metadata.get("updated_at")

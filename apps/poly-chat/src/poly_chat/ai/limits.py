@@ -13,6 +13,9 @@ from __future__ import annotations
 from typing import Any, Mapping, TypedDict
 
 
+DEFAULT_CLAUDE_MAX_OUTPUT_TOKENS = 4096
+
+
 class AIRequestLimits(TypedDict, total=False):
     """Resolved per-request limits consumed by providers.
 
@@ -95,3 +98,51 @@ def select_max_output_tokens(limits: Mapping[str, Any], *, search: bool) -> int 
         if search_limit is not None:
             return search_limit
     return _normalize_optional_limit(limits.get("max_output_tokens"))
+
+
+def default_max_output_tokens_for_provider(provider: str) -> int | None:
+    """Return provider-required fallback max output token cap, if any."""
+    if provider == "claude":
+        return DEFAULT_CLAUDE_MAX_OUTPUT_TOKENS
+    return None
+
+
+def claude_effective_max_output_tokens(max_output_tokens: Any) -> int:
+    """Return a valid Claude ``max_tokens`` value.
+
+    Anthropic requires ``max_tokens`` on message calls, so we always return a
+    concrete value even when no explicit limit is configured.
+    """
+    normalized = _normalize_optional_limit(max_output_tokens)
+    if normalized is not None:
+        return normalized
+    return DEFAULT_CLAUDE_MAX_OUTPUT_TOKENS
+
+
+def resolve_request_limits(
+    profile: Mapping[str, Any] | None,
+    provider: str,
+    *,
+    helper: bool = False,
+    search: bool = False,
+) -> AIRequestLimits:
+    """Resolve request-level limits for one provider invocation.
+
+    This applies profile precedence rules, mode-specific selection, and any
+    provider-required fallback defaults.
+    """
+    profile_limits = resolve_profile_limits(profile, provider, helper=helper)
+    max_output_tokens = select_max_output_tokens(profile_limits, search=search)
+    if max_output_tokens is None:
+        max_output_tokens = default_max_output_tokens_for_provider(provider)
+
+    thinking_budget_tokens = _normalize_optional_limit(
+        profile_limits.get("thinking_budget_tokens")
+    )
+
+    resolved: AIRequestLimits = {}
+    if max_output_tokens is not None:
+        resolved["max_output_tokens"] = max_output_tokens
+    if thinking_budget_tokens is not None:
+        resolved["thinking_budget_tokens"] = thinking_budget_tokens
+    return resolved

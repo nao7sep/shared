@@ -41,6 +41,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
         messages=[{"role": "user", "content": "Generate title"}],
         model="claude-haiku-4-5",
         system_prompt="Do task",
+        max_output_tokens=4096,
     )
     event_names = [call.args[0] for call in mock_log_event.call_args_list]
     assert "helper_ai_request" in event_names
@@ -63,7 +64,7 @@ async def test_invoke_helper_ai_missing_api_key_raises_value_error():
 
 
 @pytest.mark.asyncio
-async def test_invoke_helper_ai_ignores_helper_limits_when_configured():
+async def test_invoke_helper_ai_applies_helper_limits_when_configured():
     profile_data = {
         "api_keys": {
             "claude": {"type": "direct", "value": "test-key"},
@@ -92,4 +93,6 @@ async def test_invoke_helper_ai_ignores_helper_limits_when_configured():
         messages=[{"role": "user", "content": "Generate title"}],
         model="claude-haiku-4-5",
         system_prompt=None,
+        max_output_tokens=123,
+        thinking_budget_tokens=456,
     )

@@ -194,9 +194,9 @@ PolyChat defines the "last interaction" as one of:
 - `/timeout` - Show current timeout setting
 - `/timeout default` - Restore profile default timeout
 - `/timeout <secs>` - Set timeout (0 = wait forever)
-- `/system` - Show current system prompt
-- `/system --` - Remove system prompt from chat
-- `/system default` - Restore profile default system prompt
+- `/system` - Show current system prompt source (path or inline profile prompt)
+- `/system --` - Remove system prompt from chat (file-based only)
+- `/system default` - Restore profile default system prompt (inline or file-based)
 - `/system <path>` - Set system prompt path
 
 **Other:**
@@ -311,9 +311,17 @@ When search is enabled, AI responses include a "Sources:" section with citation 
   - `search_max_output_tokens`
   - `thinking_budget_tokens`
 - Values must be positive integers or `null`.
-- `null` means "do not send this limit to provider APIs."
+- `null` means "leave that limit unset in profile config."
 - `search_max_output_tokens` is used when `/search` is ON; otherwise `max_output_tokens` is used.
 - `thinking_budget_tokens` is currently applied for Claude thinking mode.
+- Limits are applied for normal assistant requests and helper requests (`/title`, `/summary`, `/safe`).
+- Claude requires `max_tokens`; when resolved `max_output_tokens` is unset, PolyChat applies a fallback default of `4096`.
+
+### Inline System Prompt Behavior
+
+- If profile `system_prompt` is inline text (`{"type":"text","content":"..."}`), `/system` and `/status` show an inline prompt indicator without revealing content.
+- Inline profile prompts are read-only at runtime.
+- To change prompt behavior, switch to a file-based prompt with `/system <path>`, or use `/system default` to restore profile default.
 
 ### Path Mapping
 

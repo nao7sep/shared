@@ -29,6 +29,7 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
+from .limits import claude_effective_max_output_tokens
 from .tools import claude_web_search_tools
 from .types import AIResponseMetadata
 
@@ -158,10 +159,8 @@ class ClaudeProvider:
             kwargs = {
                 "model": model,
                 "messages": formatted_messages,
+                "max_tokens": claude_effective_max_output_tokens(max_output_tokens),
             }
-
-            if max_output_tokens is not None:
-                kwargs["max_tokens"] = max_output_tokens
 
             if system_prompt:
                 kwargs["system"] = system_prompt
@@ -278,10 +277,8 @@ class ClaudeProvider:
             kwargs = {
                 "model": model,
                 "messages": formatted_messages,
+                "max_tokens": claude_effective_max_output_tokens(max_output_tokens),
             }
-
-            if max_output_tokens is not None:
-                kwargs["max_tokens"] = max_output_tokens
 
             if search:
                 kwargs["tools"] = claude_web_search_tools()

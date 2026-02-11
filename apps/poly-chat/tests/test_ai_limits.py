@@ -1,6 +1,10 @@
 """Tests for centralized AI limit resolution."""
 
-from poly_chat.ai.limits import resolve_profile_limits, select_max_output_tokens
+from poly_chat.ai.limits import (
+    resolve_profile_limits,
+    resolve_request_limits,
+    select_max_output_tokens,
+)
 
 
 def test_resolve_profile_limits_merges_default_provider_and_helper():
@@ -69,3 +73,31 @@ def test_select_max_output_tokens_returns_none_when_unset():
     assert select_max_output_tokens(limits, search=False) is None
     assert select_max_output_tokens(limits, search=True) is None
 
+
+def test_resolve_request_limits_applies_claude_fallback_when_unset():
+    limits = resolve_request_limits(profile={}, provider="claude", search=False)
+
+    assert limits["max_output_tokens"] == 4096
+    assert "thinking_budget_tokens" not in limits
+
+
+def test_resolve_request_limits_applies_helper_overrides():
+    profile = {
+        "ai_limits": {
+            "default": {"max_output_tokens": 1000},
+            "helper": {
+                "max_output_tokens": 250,
+                "thinking_budget_tokens": 700,
+            },
+        }
+    }
+
+    limits = resolve_request_limits(
+        profile=profile,
+        provider="openai",
+        helper=True,
+        search=False,
+    )
+
+    assert limits["max_output_tokens"] == 250
+    assert limits["thinking_budget_tokens"] == 700

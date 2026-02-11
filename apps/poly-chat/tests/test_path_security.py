@@ -69,6 +69,18 @@ def test_map_path_does_not_use_cwd():
         map_path("local-file.txt")
 
 
+def test_map_path_rejects_home_escape_sequences():
+    """Test that ~/.. cannot escape home boundary."""
+    with pytest.raises(ValueError, match="Path escapes home directory"):
+        map_path("~/../outside-home/file.txt")
+
+
+def test_map_path_rejects_app_escape_sequences():
+    """Test that @/.. cannot escape app boundary."""
+    with pytest.raises(ValueError, match="Path escapes app directory"):
+        map_path("@/../outside-app/file.txt")
+
+
 def test_all_valid_path_types():
     """Test all valid path types are handled correctly."""
     # Home directory paths

@@ -38,6 +38,7 @@ async def invoke_helper_ai(
     # Import here to avoid circular dependency
     from .keys.loader import load_api_key
     from .ai_runtime import get_provider_instance
+    from .ai.limits import resolve_request_limits
 
     from .logging_utils import (
         extract_http_error_context,
@@ -92,6 +93,14 @@ async def invoke_helper_ai(
 
     # Send request (non-streaming for simplicity)
     started = time.perf_counter()
+    resolved_limits = resolve_request_limits(
+        profile,
+        helper_ai,
+        helper=True,
+        search=False,
+    )
+    max_output_tokens = resolved_limits.get("max_output_tokens")
+    thinking_budget_tokens = resolved_limits.get("thinking_budget_tokens")
     log_event(
         "helper_ai_request",
         level=logging.INFO,
@@ -101,6 +110,8 @@ async def invoke_helper_ai(
         message_count=len(messages),
         input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
+        max_output_tokens=max_output_tokens,
+        thinking_budget_tokens=thinking_budget_tokens,
     )
     try:
         request_kwargs: dict[str, Any] = {
@@ -108,6 +119,10 @@ async def invoke_helper_ai(
             "model": helper_model,
             "system_prompt": system_prompt,
         }
+        if max_output_tokens is not None:
+            request_kwargs["max_output_tokens"] = max_output_tokens
+        if thinking_budget_tokens is not None:
+            request_kwargs["thinking_budget_tokens"] = thinking_budget_tokens
 
         response_text, metadata = await provider_instance.get_full_response(**request_kwargs)
 

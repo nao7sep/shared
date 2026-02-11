@@ -59,6 +59,18 @@ def test_map_path_relative_no_slash_error():
         map_path("file.txt")
 
 
+def test_map_path_rejects_home_directory_escape():
+    """Test that ~/.. escapes are rejected."""
+    with pytest.raises(ValueError, match="Path escapes home directory"):
+        map_path("~/../outside-home/file.txt")
+
+
+def test_map_path_rejects_app_directory_escape():
+    """Test that @/.. escapes are rejected."""
+    with pytest.raises(ValueError, match="Path escapes app directory"):
+        map_path("@/../outside-app/file.txt")
+
+
 def test_load_profile_nonexistent(tmp_path):
     """Test loading non-existent profile raises error."""
     profile_path = tmp_path / "nonexistent.json"
@@ -319,6 +331,21 @@ def test_validate_profile_timeout_not_number():
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
         "api_keys": {}
+    }
+
+    with pytest.raises(ValueError, match="'timeout' must be a number"):
+        validate_profile(profile)
+
+
+def test_validate_profile_timeout_bool_rejected():
+    """Test validation when timeout is boolean."""
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "timeout": True,
+        "chats_dir": "~/chats",
+        "logs_dir": "~/logs",
+        "api_keys": {},
     }
 
     with pytest.raises(ValueError, match="'timeout' must be a number"):
@@ -718,6 +745,9 @@ def test_create_profile_template_uses_inline_prompt_and_mixed_api_key_examples(t
     assert created_profile["ai_limits"]["default"]["max_output_tokens"] is None
     assert created_profile["ai_limits"]["default"]["search_max_output_tokens"] is None
     assert created_profile["ai_limits"]["default"]["thinking_budget_tokens"] is None
+    assert created_profile["ai_limits"]["helper"]["max_output_tokens"] is None
+    assert created_profile["ai_limits"]["helper"]["search_max_output_tokens"] is None
+    assert created_profile["ai_limits"]["helper"]["thinking_budget_tokens"] is None
     assert created_profile["api_keys"]["gemini"]["type"] == "json"
     assert created_profile["api_keys"]["grok"]["type"] == "direct"
     assert not (profile_path.parent / "api-keys.json").exists()

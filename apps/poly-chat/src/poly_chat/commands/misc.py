@@ -43,9 +43,9 @@ Configuration:
   /timeout          Show current timeout setting
   /timeout default  Restore to profile's default timeout
   /timeout <secs>   Set timeout in seconds (0 = wait forever)
-  /system           Show current system prompt path
-  /system --        Remove system prompt from chat
-  /system default   Restore to profile's default system prompt
+  /system           Show current system prompt source (path or inline profile prompt)
+  /system --        Remove system prompt from chat (file-based only)
+  /system default   Restore profile default system prompt (inline or file-based)
   /system <path>    Set system prompt (~/ for home, @/ for app root)
 
 Chat File Management:

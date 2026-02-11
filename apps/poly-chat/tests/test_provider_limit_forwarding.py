@@ -113,6 +113,29 @@ async def test_claude_get_full_response_uses_dated_web_search_tool_name():
 
 
 @pytest.mark.asyncio
+async def test_claude_get_full_response_applies_fallback_max_tokens():
+    provider = ClaudeProvider.__new__(ClaudeProvider)
+    provider.format_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])
+    provider._create_message = AsyncMock(
+        return_value=SimpleNamespace(
+            model="claude-haiku-4-5",
+            stop_reason="end_turn",
+            content=[],
+            usage=SimpleNamespace(input_tokens=1, output_tokens=2),
+        )
+    )
+
+    await provider.get_full_response(
+        messages=[{"role": "user", "content": "hi"}],
+        model="claude-haiku-4-5",
+        max_output_tokens=None,
+    )
+
+    kwargs = provider._create_message.await_args.kwargs
+    assert kwargs["max_tokens"] == 4096
+
+
+@pytest.mark.asyncio
 async def test_gemini_get_full_response_forwards_max_output_tokens(monkeypatch):
     provider = GeminiProvider.__new__(GeminiProvider)
     provider.format_messages = MagicMock(return_value=[{"role": "user", "parts": []}])

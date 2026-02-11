@@ -35,7 +35,7 @@ async def test_send_message_to_ai_omits_limit_kwargs_when_unset():
 
 
 @pytest.mark.asyncio
-async def test_send_message_to_ai_does_not_apply_profile_limits():
+async def test_send_message_to_ai_applies_profile_limits():
     provider = MagicMock()
     provider.send_message = MagicMock(return_value=_empty_stream())
 
@@ -63,7 +63,28 @@ async def test_send_message_to_ai_does_not_apply_profile_limits():
         )
 
     kwargs = provider.send_message.call_args.kwargs
-    assert "max_output_tokens" not in kwargs
+    assert kwargs["max_output_tokens"] == 2000
+    assert kwargs["thinking_budget_tokens"] == 3000
+
+
+@pytest.mark.asyncio
+async def test_send_message_to_ai_applies_claude_fallback_limit_when_unset():
+    provider = MagicMock()
+    provider.send_message = MagicMock(return_value=_empty_stream())
+
+    with patch("poly_chat.ai_runtime.log_event"):
+        await send_message_to_ai(
+            provider_instance=provider,
+            messages=[{"role": "user", "content": "hi"}],
+            model="claude-haiku-4-5",
+            provider_name="claude",
+            profile={},
+            search=False,
+            thinking=False,
+        )
+
+    kwargs = provider.send_message.call_args.kwargs
+    assert kwargs["max_output_tokens"] == 4096
     assert "thinking_budget_tokens" not in kwargs
 
 

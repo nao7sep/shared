@@ -19,6 +19,7 @@ from .ai.grok_provider import GrokProvider
 from .ai.perplexity_provider import PerplexityProvider
 from .ai.mistral_provider import MistralProvider
 from .ai.deepseek_provider import DeepSeekProvider
+from .ai.limits import resolve_request_limits
 from .ai.types import AIResponseMetadata
 from .timeouts import resolve_ai_read_timeout, resolve_profile_timeout
 
@@ -41,6 +42,29 @@ PROVIDER_CLASSES: dict[str, type] = {
     "mistral": MistralProvider,
     "deepseek": DeepSeekProvider,
 }
+
+
+def _provider_limit_key(
+    provider_name: Optional[str],
+    provider_instance: ProviderInstance,
+) -> str:
+    """Resolve provider registry key used by ai_limits."""
+    if provider_name:
+        return provider_name
+
+    class_name = provider_instance.__class__.__name__.lower()
+    for known_provider in (
+        "openai",
+        "claude",
+        "gemini",
+        "grok",
+        "perplexity",
+        "mistral",
+        "deepseek",
+    ):
+        if known_provider in class_name:
+            return known_provider
+    return class_name
 
 
 def get_provider_instance(
@@ -99,6 +123,15 @@ async def send_message_to_ai(
         generator that yields response chunks.
     """
     provider_label = provider_name or provider_instance.__class__.__name__
+    limit_provider = _provider_limit_key(provider_name, provider_instance)
+    resolved_limits = resolve_request_limits(
+        profile,
+        limit_provider,
+        helper=False,
+        search=search,
+    )
+    max_output_tokens = resolved_limits.get("max_output_tokens")
+    thinking_budget_tokens = resolved_limits.get("thinking_budget_tokens")
     log_event(
         "ai_request",
         level=logging.INFO,
@@ -109,6 +142,8 @@ async def send_message_to_ai(
         message_count=len(messages),
         input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
+        max_output_tokens=max_output_tokens,
+        thinking_budget_tokens=thinking_budget_tokens,
     )
 
     started = time.perf_counter()
@@ -126,6 +161,10 @@ async def send_message_to_ai(
             "thinking": thinking,
             "metadata": metadata,
         }
+        if max_output_tokens is not None:
+            send_kwargs["max_output_tokens"] = max_output_tokens
+        if thinking_budget_tokens is not None:
+            send_kwargs["thinking_budget_tokens"] = thinking_budget_tokens
 
         response_stream = provider_instance.send_message(**send_kwargs)
 

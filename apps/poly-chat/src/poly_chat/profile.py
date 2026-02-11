@@ -49,23 +49,29 @@ def map_path(path: str) -> str:
     """
     # Handle tilde (home directory)
     if path.startswith("~/"):
-        resolved = (Path.home() / path[2:]).resolve()
-        if not str(resolved).startswith(str(Path.home().resolve())):
+        home_dir = Path.home().resolve()
+        resolved = (home_dir / path[2:]).resolve()
+        try:
+            resolved.relative_to(home_dir)
+        except ValueError:
             raise ValueError(f"Path escapes home directory: {path}")
         return str(resolved)
     elif path == "~":
-        return str(Path.home())
+        return str(Path.home().resolve())
 
     # Handle @ (app root directory)
     elif path.startswith("@/"):
         # App root is where pyproject.toml is (poly-chat/)
         app_root = Path(__file__).parent.parent.parent
         resolved = (app_root / path[2:]).resolve()
-        if not str(resolved).startswith(str(app_root.resolve())):
+        app_root_resolved = app_root.resolve()
+        try:
+            resolved.relative_to(app_root_resolved)
+        except ValueError:
             raise ValueError(f"Path escapes app directory: {path}")
         return str(resolved)
     elif path == "@":
-        app_root = Path(__file__).parent.parent.parent
+        app_root = Path(__file__).parent.parent.parent.resolve()
         return str(app_root)
 
     # Absolute path - use as-is
@@ -184,7 +190,7 @@ def validate_profile(profile: dict[str, Any]) -> None:
     # Validate timeout if present
     if "timeout" in profile:
         timeout = profile["timeout"]
-        if not isinstance(timeout, (int, float)):
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
             raise ValueError("'timeout' must be a number")
         if timeout < 0:
             raise ValueError("'timeout' cannot be negative")
@@ -313,6 +319,11 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
                     "search_max_output_tokens": None,
                     "thinking_budget_tokens": None,
                 }
+            },
+            "helper": {
+                "max_output_tokens": None,
+                "search_max_output_tokens": None,
+                "thinking_budget_tokens": None,
             },
         },
         "chats_dir": "~/poly-chat/chats",

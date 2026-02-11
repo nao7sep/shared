@@ -41,3 +41,15 @@ async def test_show_status_system_prompt_none_has_readable_spacing(command_handl
     result = await command_handler.show_status("")
 
     assert "System Prompt: (none)" in result
+
+
+@pytest.mark.asyncio
+async def test_show_status_inline_system_prompt_is_hidden(command_handler, mock_session_manager):
+    mock_session_manager.chat["metadata"]["system_prompt"] = None
+    mock_session_manager.system_prompt_path = None
+    mock_session_manager.system_prompt = "Inline prompt content should never render"
+
+    result = await command_handler.show_status("")
+
+    assert "System Prompt: inline profile prompt (content hidden)" in result
+    assert "Inline prompt content should never render" not in result

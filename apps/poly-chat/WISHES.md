@@ -804,3 +804,13 @@ Claude fallback output cap:
 - If no configured max, uses max_tokens=8192:
   - apps/poly-chat/src/poly_chat/ai/claude_provider.py:166
   - apps/poly-chat/src/poly_chat/ai/claude_provider.py:288
+
+---
+
+if we need a fall back value for max_tokens in claude provider, please suggest a good default value hopefully based on info from anthropic official pages and implement it in limits.py, the centralized place for all ai-related limits.
+
+ai_limits should be fully implemented with null/none as default values. please update profile template and all relevant documentation. i still dont think i will use this feature, but we must at least provide an easily configurable template and ensure all values in there are parsed in the code. let's make the code more verifiable.
+
+when an inline system prompt is used, /system and /status should emit a proper message for the user to know an inline system prompt is used, but app should not display its content. inline system prompts are set only via profiles and cant be modified; they can only be switched to file-based ones. is that correct?
+
+as to your question: map_path should be stricter if that doesnt break any features.
