@@ -173,10 +173,11 @@ class StructuredTextFormatter(logging.Formatter):
             "model",
             "chat_file",
             "latency_ms",
-            "http_status",
             "http_method",
             "http_url",
-            "http_response_headers",
+            "http_version",
+            "http_status",
+            "http_reason",
             "error_type",
             "error",
         ],
@@ -210,10 +211,11 @@ class StructuredTextFormatter(logging.Formatter):
             "provider",
             "model",
             "latency_ms",
-            "http_status",
             "http_method",
             "http_url",
-            "http_response_headers",
+            "http_version",
+            "http_status",
+            "http_reason",
             "error_type",
             "error",
         ],
@@ -225,12 +227,31 @@ class StructuredTextFormatter(logging.Formatter):
             "model",
             "phase",
             "chat_file",
-            "http_status",
             "http_method",
             "http_url",
-            "http_response_headers",
+            "http_version",
+            "http_status",
+            "http_reason",
             "error_type",
             "error",
+        ],
+        "provider_log": [
+            "ts",
+            "level",
+            "provider",
+            "message",
+        ],
+        "provider_retry": [
+            "ts",
+            "level",
+            "provider",
+            "operation",
+            "attempt",
+            "sleep_sec",
+            "result",
+            "error_type",
+            "error",
+            "function",
         ],
         "httpx_request": [
             "ts",
@@ -346,27 +367,6 @@ def _resolve_log_path(path_value: str) -> str:
         return path_value
 
 
-def sanitize_response_headers(headers: Any) -> dict[str, str]:
-    """Return response headers for logs."""
-    if headers is None:
-        return {}
-
-    items: list[tuple[Any, Any]]
-    if hasattr(headers, "multi_items"):
-        items = list(headers.multi_items())
-    elif hasattr(headers, "items"):
-        items = list(headers.items())
-    else:
-        return {}
-
-    sanitized: dict[str, str] = {}
-    for raw_key, raw_value in items:
-        key = str(raw_key)
-        value = str(raw_value)
-        sanitized[key] = value
-    return sanitized
-
-
 def extract_http_error_context(error: Exception) -> dict[str, Any]:
     """Extract safe HTTP context from an exception when available."""
     context: dict[str, Any] = {}
@@ -376,12 +376,7 @@ def extract_http_error_context(error: Exception) -> dict[str, Any]:
     if request is None and response is not None:
         request = getattr(response, "request", None)
 
-    status = getattr(error, "status_code", None)
-    if status is None and response is not None:
-        status = getattr(response, "status_code", None)
-    if status is not None:
-        context["http_status"] = status
-
+    # Extract request info
     if request is not None:
         method = getattr(request, "method", None)
         if method:
@@ -390,15 +385,27 @@ def extract_http_error_context(error: Exception) -> dict[str, Any]:
         if url:
             context["http_url"] = str(url)
 
-    headers = None
+    # Extract response info
     if response is not None:
-        headers = getattr(response, "headers", None)
-    if headers is None:
-        headers = getattr(error, "headers", None)
-    if headers is not None:
-        sanitized_headers = sanitize_response_headers(headers)
-        if sanitized_headers:
-            context["http_response_headers"] = sanitized_headers
+        # HTTP version
+        version = getattr(response, "http_version", None)
+        if version:
+            context["http_version"] = str(version)
+
+        # Status code
+        status = getattr(response, "status_code", None)
+        if status is not None:
+            context["http_status"] = status
+
+        # Reason phrase
+        reason = getattr(response, "reason_phrase", None)
+        if reason:
+            context["http_reason"] = str(reason)
+    else:
+        # Fallback: try to get status from error directly
+        status = getattr(error, "status_code", None)
+        if status is not None:
+            context["http_status"] = status
 
     return context
 
@@ -440,6 +447,49 @@ def log_event(event: str, level: int = logging.INFO, **fields: Any) -> None:
             value = _resolve_log_path(value)
         payload[key] = _to_log_safe(value)
     logging.log(level, json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+
+
+def before_sleep_log_event(
+    *,
+    provider: str,
+    operation: str,
+    level: int = logging.WARNING,
+):
+    """Build a tenacity before_sleep callback that emits structured retry logs."""
+
+    def _callback(retry_state: Any) -> None:
+        try:
+            outcome = getattr(retry_state, "outcome", None)
+            next_action = getattr(retry_state, "next_action", None)
+            if outcome is None or next_action is None:
+                return
+
+            payload: dict[str, Any] = {
+                "provider": provider,
+                "operation": operation,
+                "attempt": getattr(retry_state, "attempt_number", None),
+                "sleep_sec": getattr(next_action, "sleep", None),
+            }
+
+            fn = getattr(retry_state, "fn", None)
+            if fn is not None:
+                payload["function"] = getattr(fn, "__name__", str(fn))
+
+            if getattr(outcome, "failed", False):
+                error = outcome.exception()
+                payload["result"] = "raised"
+                if error is not None:
+                    payload["error_type"] = type(error).__name__
+                    payload["error"] = str(error)
+            else:
+                payload["result"] = "returned"
+
+            log_event("provider_retry", level=level, **payload)
+        except Exception:
+            # Retry logging must never break request flow.
+            return
+
+    return _callback
 
 
 def build_run_log_path(logs_dir: str) -> str:

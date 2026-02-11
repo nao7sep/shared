@@ -9,6 +9,7 @@ from google.genai.errors import (
     ServerError,
 )
 
+from ..logging_utils import log_event
 from ..message_formatter import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
@@ -20,8 +21,6 @@ from ..timeouts import (
 )
 from .tools import gemini_web_search_tools
 from .types import AIResponseMetadata
-
-logger = logging.getLogger(__name__)
 
 
 class GeminiProvider:
@@ -136,15 +135,30 @@ class GeminiProvider:
                     if hasattr(candidate, "finish_reason") and candidate.finish_reason:
                         finish_reason = candidate.finish_reason
                         if finish_reason == "SAFETY":
-                            logger.warning("Response blocked by safety filter")
+                            log_event(
+                                "provider_log",
+                                level=logging.WARNING,
+                                provider="gemini",
+                                message="Response blocked by safety filter",
+                            )
                             yield "\n[Response was blocked by safety filter]"
                             return
                         elif finish_reason == "RECITATION":
-                            logger.warning("Response blocked due to recitation/copyright")
+                            log_event(
+                                "provider_log",
+                                level=logging.WARNING,
+                                provider="gemini",
+                                message="Response blocked due to recitation/copyright",
+                            )
                             yield "\n[Response was blocked due to copyright concerns]"
                             return
                         elif finish_reason == "MAX_TOKENS":
-                            logger.warning("Response truncated due to max tokens")
+                            log_event(
+                                "provider_log",
+                                level=logging.WARNING,
+                                provider="gemini",
+                                message="Response truncated due to max tokens",
+                            )
 
                 # Yield text content
                 if chunk.text:
@@ -175,21 +189,37 @@ class GeminiProvider:
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
             status_code = getattr(e, "status_code", "unknown")
-            logger.error(f"Client error ({status_code}): {e}")
+            message = f"Client error ({status_code}): {e}"
             if status_code == 400:
-                logger.error("Bad request - check message format and parameters")
+                message += " Bad request - check message format and parameters."
             elif status_code == 403:
-                logger.error("Permission denied - check API key and access")
+                message += " Permission denied - check API key and access."
             elif status_code == 429:
-                logger.error("Rate limit exceeded - retries exhausted")
+                message += " Rate limit exceeded - retries exhausted."
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="gemini",
+                message=message,
+            )
             raise
         except ServerError as e:
             # 500-599 errors - retry handled by SDK, but if all retries fail:
             status_code = getattr(e, "status_code", "unknown")
-            logger.error(f"Server error ({status_code}) after retries: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="gemini",
+                message=f"Server error ({status_code}) after retries: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="gemini",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise
 
     async def get_full_response(
@@ -245,13 +275,28 @@ class GeminiProvider:
                 finish_reason = getattr(candidate, "finish_reason", "STOP")
 
                 if finish_reason == "SAFETY":
-                    logger.warning("Response blocked by safety filter")
+                    log_event(
+                        "provider_log",
+                        level=logging.WARNING,
+                        provider="gemini",
+                        message="Response blocked by safety filter",
+                    )
                     content = "[Response was blocked by safety filter]"
                 elif finish_reason == "RECITATION":
-                    logger.warning("Response blocked due to recitation/copyright")
+                    log_event(
+                        "provider_log",
+                        level=logging.WARNING,
+                        provider="gemini",
+                        message="Response blocked due to recitation/copyright",
+                    )
                     content = "[Response was blocked due to copyright concerns]"
                 elif finish_reason == "MAX_TOKENS":
-                    logger.warning("Response truncated due to max tokens")
+                    log_event(
+                        "provider_log",
+                        level=logging.WARNING,
+                        provider="gemini",
+                        message="Response truncated due to max tokens",
+                    )
                     content = response.text if response.text else ""
                     content += "\n[Response was truncated due to token limit]"
                 else:
@@ -294,9 +339,14 @@ class GeminiProvider:
                     if citations:
                         metadata["citations"] = citations
 
-            logger.info(
-                f"Response: {metadata['usage']['total_tokens']} tokens, "
-                f"finish_reason={finish_reason}"
+            log_event(
+                "provider_log",
+                level=logging.INFO,
+                provider="gemini",
+                message=(
+                    f"Response: {metadata['usage']['total_tokens']} tokens, "
+                    f"finish_reason={finish_reason}"
+                ),
             )
 
             return content, metadata
@@ -304,19 +354,35 @@ class GeminiProvider:
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
             status_code = getattr(e, "status_code", "unknown")
-            logger.error(f"Client error ({status_code}): {e}")
+            message = f"Client error ({status_code}): {e}"
             if status_code == 400:
-                logger.error("Bad request - check message format and parameters")
+                message += " Bad request - check message format and parameters."
             elif status_code == 403:
-                logger.error("Permission denied - check API key and access")
+                message += " Permission denied - check API key and access."
             elif status_code == 429:
-                logger.error("Rate limit exceeded - retries exhausted")
+                message += " Rate limit exceeded - retries exhausted."
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="gemini",
+                message=message,
+            )
             raise
         except ServerError as e:
             # 500-599 errors - retry handled by SDK, but if all retries fail:
             status_code = getattr(e, "status_code", "unknown")
-            logger.error(f"Server error ({status_code}) after retries: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="gemini",
+                message=f"Server error ({status_code}) after retries: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="gemini",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise

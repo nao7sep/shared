@@ -19,9 +19,9 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential_jitter,
     retry_if_exception_type,
-    before_sleep_log,
 )
 
+from ..logging_utils import before_sleep_log_event, log_event
 from ..message_formatter import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
@@ -32,8 +32,6 @@ from ..timeouts import (
 )
 from .tools import grok_web_search_tools
 from .types import AIResponseMetadata
-
-logger = logging.getLogger(__name__)
 
 
 class GrokProvider:
@@ -79,7 +77,11 @@ class GrokProvider:
             max=RETRY_BACKOFF_MAX_SEC,
         ),
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
+        before_sleep=before_sleep_log_event(
+            provider="grok",
+            operation="_create_response",
+            level=logging.WARNING,
+        ),
     )
     async def _create_response(
         self,
@@ -194,10 +196,20 @@ class GrokProvider:
                             metadata["citations"] = citations
 
         except AuthenticationError as e:
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except BadRequestError as e:
-            logger.error(f"Bad request (check parameters, unsupported features): {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"Bad request (check parameters, unsupported features): {e}",
+            )
             raise
         except (
             APIConnectionError,
@@ -206,10 +218,20 @@ class GrokProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise
 
     async def get_full_response(
@@ -239,11 +261,21 @@ class GrokProvider:
             for item in getattr(response, "output", []) or []:
                 if hasattr(item, "status"):
                     if item.status == "incomplete":
-                        logger.warning("Response incomplete (may be truncated)")
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="grok",
+                            message="Response incomplete (may be truncated)",
+                        )
                         content += "\n[Response was truncated due to length limit]"
                         finish_status = "incomplete"
                     elif item.status == "failed":
-                        logger.warning("Response generation failed")
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="grok",
+                            message="Response generation failed",
+                        )
                         content = "[Response generation failed]"
                         finish_status = "failed"
 
@@ -271,17 +303,32 @@ class GrokProvider:
             if citations:
                 metadata["citations"] = citations
 
-            logger.info(
-                f"Response: {metadata['usage']['total_tokens']} tokens, "
-                f"status={finish_status}"
+            log_event(
+                "provider_log",
+                level=logging.INFO,
+                provider="grok",
+                message=(
+                    f"Response: {metadata['usage']['total_tokens']} tokens, "
+                    f"status={finish_status}"
+                ),
             )
             return content, metadata
 
         except AuthenticationError as e:
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except BadRequestError as e:
-            logger.error(f"Bad request (check parameters, unsupported features): {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"Bad request (check parameters, unsupported features): {e}",
+            )
             raise
         except (
             APIConnectionError,
@@ -290,8 +337,18 @@ class GrokProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="grok",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise

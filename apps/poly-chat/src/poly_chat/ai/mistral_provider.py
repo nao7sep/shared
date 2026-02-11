@@ -19,9 +19,9 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential_jitter,
     retry_if_exception_type,
-    before_sleep_log,
 )
 
+from ..logging_utils import before_sleep_log_event, log_event
 from ..message_formatter import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
@@ -31,8 +31,6 @@ from ..timeouts import (
     build_ai_httpx_timeout,
 )
 from .types import AIResponseMetadata
-
-logger = logging.getLogger(__name__)
 
 
 class MistralProvider:
@@ -80,7 +78,11 @@ class MistralProvider:
             max=RETRY_BACKOFF_MAX_SEC,
         ),
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
+        before_sleep=before_sleep_log_event(
+            provider="mistral",
+            operation="_create_chat_completion",
+            level=logging.WARNING,
+        ),
     )
     async def _create_chat_completion(
         self,
@@ -162,10 +164,15 @@ class MistralProvider:
                                 "completion_tokens": chunk.usage.completion_tokens,
                                 "total_tokens": chunk.usage.total_tokens,
                             }
-                        logger.info(
-                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
-                            f"{chunk.usage.completion_tokens} completion = "
-                            f"{chunk.usage.total_tokens} total tokens"
+                        log_event(
+                            "provider_log",
+                            level=logging.INFO,
+                            provider="mistral",
+                            message=(
+                                f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
+                                f"{chunk.usage.completion_tokens} completion = "
+                                f"{chunk.usage.total_tokens} total tokens"
+                            ),
                         )
                     continue
 
@@ -178,21 +185,48 @@ class MistralProvider:
                 if chunk.choices[0].finish_reason:
                     finish_reason = chunk.choices[0].finish_reason
                     if finish_reason == "length":
-                        logger.warning("Response truncated due to max_tokens limit")
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="mistral",
+                            message="Response truncated due to max_tokens limit",
+                        )
                     elif finish_reason == "content_filter":
-                        logger.warning("Response filtered due to content policy")
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="mistral",
+                            message="Response filtered due to content policy",
+                        )
                         yield "\n[Response was filtered due to content policy]"
 
         except UnprocessableEntityError as e:
             # 422 - Common with Mistral for config mismatches (e.g., stream_options)
-            logger.error(f"Unprocessable entity (422): {e}")
-            logger.error("Check for unsupported parameters like stream_options")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=(
+                    f"Unprocessable entity (422): {e}. "
+                    "Check for unsupported parameters like stream_options."
+                ),
+            )
             raise
         except AuthenticationError as e:
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except BadRequestError as e:
-            logger.error(f"Bad request (check parameters): {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"Bad request (check parameters): {e}",
+            )
             raise
         except (
             APIConnectionError,
@@ -201,10 +235,20 @@ class MistralProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise
 
     async def get_full_response(
@@ -236,10 +280,20 @@ class MistralProvider:
             # Check finish reason for edge cases
             finish_reason = response.choices[0].finish_reason
             if finish_reason == "length":
-                logger.warning("Response truncated due to max_tokens limit")
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="mistral",
+                    message="Response truncated due to max_tokens limit",
+                )
                 content += "\n[Response was truncated due to length limit]"
             elif finish_reason == "content_filter":
-                logger.warning("Response filtered due to content policy")
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="mistral",
+                    message="Response filtered due to content policy",
+                )
                 content = "[Response was filtered due to content policy]"
 
             # Extract metadata
@@ -255,23 +309,45 @@ class MistralProvider:
                 },
             }
 
-            logger.info(
-                f"Response: {metadata['usage']['total_tokens']} tokens, "
-                f"finish_reason={finish_reason}"
+            log_event(
+                "provider_log",
+                level=logging.INFO,
+                provider="mistral",
+                message=(
+                    f"Response: {metadata['usage']['total_tokens']} tokens, "
+                    f"finish_reason={finish_reason}"
+                ),
             )
 
             return content, metadata
 
         except UnprocessableEntityError as e:
             # 422 - Common with Mistral for config mismatches (e.g., stream_options)
-            logger.error(f"Unprocessable entity (422): {e}")
-            logger.error("Check for unsupported parameters like stream_options")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=(
+                    f"Unprocessable entity (422): {e}. "
+                    "Check for unsupported parameters like stream_options."
+                ),
+            )
             raise
         except AuthenticationError as e:
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except BadRequestError as e:
-            logger.error(f"Bad request (check parameters): {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"Bad request (check parameters): {e}",
+            )
             raise
         except (
             APIConnectionError,
@@ -280,8 +356,18 @@ class MistralProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="mistral",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise

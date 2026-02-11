@@ -18,9 +18,9 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential_jitter,
     retry_if_exception_type,
-    before_sleep_log,
 )
 
+from ..logging_utils import before_sleep_log_event, log_event
 from ..message_formatter import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
@@ -32,8 +32,6 @@ from ..timeouts import (
 from .limits import claude_effective_max_output_tokens
 from .tools import claude_web_search_tools
 from .types import AIResponseMetadata
-
-logger = logging.getLogger(__name__)
 
 
 class ClaudeProvider:
@@ -79,7 +77,11 @@ class ClaudeProvider:
             max=RETRY_BACKOFF_MAX_SEC,
         ),
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
+        before_sleep=before_sleep_log_event(
+            provider="claude",
+            operation="_create_message",
+            level=logging.WARNING,
+        ),
     )
     async def _create_message(self, **kwargs):
         """Create message with retry logic.
@@ -101,7 +103,11 @@ class ClaudeProvider:
             max=RETRY_BACKOFF_MAX_SEC,
         ),
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
+        before_sleep=before_sleep_log_event(
+            provider="claude",
+            operation="_create_message_stream",
+            level=logging.WARNING,
+        ),
     )
     async def _create_message_stream(self, **kwargs):
         """Create message stream with retry logic.
@@ -186,7 +192,12 @@ class ClaudeProvider:
                         metadata["citations"] = citations
 
                 if final_message.stop_reason == "max_tokens":
-                    logger.warning("Response truncated due to max_tokens limit")
+                    log_event(
+                        "provider_log",
+                        level=logging.WARNING,
+                        provider="claude",
+                        message="Response truncated due to max_tokens limit",
+                    )
                     yield "\n[Response was truncated due to token limit]"
                 elif final_message.stop_reason in ("end_turn", "pause_turn"):
                     # Normal completion or search pause
@@ -195,35 +206,75 @@ class ClaudeProvider:
         except APIStatusError as e:
             # Check for 529 - System overloaded (critical error)
             if e.status_code == 529:
-                logger.error(f"Anthropic system overloaded (529): {e}")
-                logger.error(
-                    "System is under heavy load. Consider implementing backoff or fallback."
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="claude",
+                    message=(
+                        f"Anthropic system overloaded (529): {e}. "
+                        "System is under heavy load; consider backoff or fallback."
+                    ),
                 )
             else:
-                logger.error(f"API status error ({e.status_code}): {e}")
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="claude",
+                    message=f"API status error ({e.status_code}): {e}",
+                )
             raise
         except RateLimitError as e:
             # 429 - Rate limit exceeded, SDK will retry but if all retries fail:
-            logger.error(f"Rate limit exceeded after retries: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Rate limit exceeded after retries: {e}",
+            )
             raise
         except BadRequestError as e:
             # 400 - Invalid request, don't retry
-            logger.error(f"Bad request: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Bad request: {e}",
+            )
             raise
         except AuthenticationError as e:
             # 401 - Invalid API key
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except PermissionDeniedError as e:
             # 403 - No access to resource
-            logger.error(f"Permission denied: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Permission denied: {e}",
+            )
             raise
         except (APIConnectionError, APITimeoutError, InternalServerError) as e:
             # Network/timeout/server errors - SDK will retry, but if all fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise
 
     async def get_full_response(
@@ -275,7 +326,12 @@ class ClaudeProvider:
             # Check stop reason for edge cases
             stop_reason = response.stop_reason
             if stop_reason == "max_tokens":
-                logger.warning("Response truncated due to max_tokens limit")
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="claude",
+                    message="Response truncated due to max_tokens limit",
+                )
                 content += "\n[Response was truncated due to token limit]"
 
             # Extract metadata
@@ -303,9 +359,14 @@ class ClaudeProvider:
                 if citations:
                     metadata["citations"] = citations
 
-            logger.info(
-                f"Response: {metadata['usage']['total_tokens']} tokens, "
-                f"stop_reason={stop_reason}"
+            log_event(
+                "provider_log",
+                level=logging.INFO,
+                provider="claude",
+                message=(
+                    f"Response: {metadata['usage']['total_tokens']} tokens, "
+                    f"stop_reason={stop_reason}"
+                ),
             )
 
             return content, metadata
@@ -313,33 +374,73 @@ class ClaudeProvider:
         except APIStatusError as e:
             # Check for 529 - System overloaded (critical error)
             if e.status_code == 529:
-                logger.error(f"Anthropic system overloaded (529): {e}")
-                logger.error(
-                    "System is under heavy load. Consider implementing backoff or fallback."
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="claude",
+                    message=(
+                        f"Anthropic system overloaded (529): {e}. "
+                        "System is under heavy load; consider backoff or fallback."
+                    ),
                 )
             else:
-                logger.error(f"API status error ({e.status_code}): {e}")
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="claude",
+                    message=f"API status error ({e.status_code}): {e}",
+                )
             raise
         except RateLimitError as e:
             # 429 - Rate limit exceeded, SDK will retry but if all retries fail:
-            logger.error(f"Rate limit exceeded after retries: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Rate limit exceeded after retries: {e}",
+            )
             raise
         except BadRequestError as e:
             # 400 - Invalid request, don't retry
-            logger.error(f"Bad request: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Bad request: {e}",
+            )
             raise
         except AuthenticationError as e:
             # 401 - Invalid API key
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except PermissionDeniedError as e:
             # 403 - No access to resource
-            logger.error(f"Permission denied: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Permission denied: {e}",
+            )
             raise
         except (APIConnectionError, APITimeoutError, InternalServerError) as e:
             # Network/timeout/server errors - SDK will retry, but if all fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="claude",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise

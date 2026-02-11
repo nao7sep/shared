@@ -18,9 +18,9 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential_jitter,
     retry_if_exception_type,
-    before_sleep_log,
 )
 
+from ..logging_utils import before_sleep_log_event, log_event
 from ..message_formatter import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
@@ -30,8 +30,6 @@ from ..timeouts import (
     build_ai_httpx_timeout,
 )
 from .types import AIResponseMetadata
-
-logger = logging.getLogger(__name__)
 
 
 class PerplexityProvider:
@@ -93,9 +91,14 @@ class PerplexityProvider:
             if formatted and formatted[-1]["role"] == new_msg["role"]:
                 # Merge content with double newline separator
                 formatted[-1]["content"] += "\n\n" + new_msg["content"]
-                logger.warning(
-                    f"Merged consecutive {new_msg['role']} messages for Perplexity API "
-                    f"(Perplexity requires strict role alternation)"
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="perplexity",
+                    message=(
+                        f"Merged consecutive {new_msg['role']} messages for Perplexity API "
+                        f"(Perplexity requires strict role alternation)"
+                    ),
                 )
             else:
                 formatted.append(new_msg)
@@ -151,7 +154,11 @@ class PerplexityProvider:
             max=RETRY_BACKOFF_MAX_SEC,
         ),
         stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
+        before_sleep=before_sleep_log_event(
+            provider="perplexity",
+            operation="_create_chat_completion",
+            level=logging.WARNING,
+        ),
     )
     async def _create_chat_completion(
         self,
@@ -232,10 +239,15 @@ class PerplexityProvider:
                                 "completion_tokens": chunk.usage.completion_tokens,
                                 "total_tokens": chunk.usage.total_tokens,
                             }
-                        logger.info(
-                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
-                            f"{chunk.usage.completion_tokens} completion = "
-                            f"{chunk.usage.total_tokens} total tokens"
+                        log_event(
+                            "provider_log",
+                            level=logging.INFO,
+                            provider="perplexity",
+                            message=(
+                                f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
+                                f"{chunk.usage.completion_tokens} completion = "
+                                f"{chunk.usage.total_tokens} total tokens"
+                            ),
                         )
                     # Extract citations/search results if available (final chunk without choices)
                     if metadata is not None:
@@ -259,21 +271,48 @@ class PerplexityProvider:
                         if citations:
                             metadata["citations"] = citations
                     if finish_reason == "length":
-                        logger.warning("Response truncated due to max_tokens limit")
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="perplexity",
+                            message="Response truncated due to max_tokens limit",
+                        )
                     elif finish_reason == "content_filter":
-                        logger.warning("Response filtered due to content policy")
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="perplexity",
+                            message="Response filtered due to content policy",
+                        )
                         yield "\n[Response was filtered due to content policy]"
 
         except APITimeoutError as e:
             # Special handling for timeouts - common with long search operations
-            logger.error(f"Timeout error (Perplexity search took too long): {e}")
-            logger.error("Consider increasing timeout for search-heavy models like sonar-pro")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=(
+                    f"Timeout error (Perplexity search took too long): {e}. "
+                    "Consider increasing timeout for search-heavy models like sonar-pro."
+                ),
+            )
             raise
         except AuthenticationError as e:
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except BadRequestError as e:
-            logger.error(f"Bad request (check parameters): {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"Bad request (check parameters): {e}",
+            )
             raise
         except (
             APIConnectionError,
@@ -281,10 +320,20 @@ class PerplexityProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise
 
     async def get_full_response(
@@ -316,10 +365,20 @@ class PerplexityProvider:
             # Check finish reason for edge cases
             finish_reason = response.choices[0].finish_reason
             if finish_reason == "length":
-                logger.warning("Response truncated due to max_tokens limit")
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="perplexity",
+                    message="Response truncated due to max_tokens limit",
+                )
                 content += "\n[Response was truncated due to length limit]"
             elif finish_reason == "content_filter":
-                logger.warning("Response filtered due to content policy")
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="perplexity",
+                    message="Response filtered due to content policy",
+                )
                 content = "[Response was filtered due to content policy]"
 
             citations = self._extract_citations(response)
@@ -340,25 +399,52 @@ class PerplexityProvider:
             # Add citations if available.
             if citations:
                 metadata["citations"] = citations
-                logger.info(f"Response included {len(citations)} citations")
+                log_event(
+                    "provider_log",
+                    level=logging.INFO,
+                    provider="perplexity",
+                    message=f"Response included {len(citations)} citations",
+                )
 
-            logger.info(
-                f"Response: {metadata['usage']['total_tokens']} tokens, "
-                f"finish_reason={finish_reason}"
+            log_event(
+                "provider_log",
+                level=logging.INFO,
+                provider="perplexity",
+                message=(
+                    f"Response: {metadata['usage']['total_tokens']} tokens, "
+                    f"finish_reason={finish_reason}"
+                ),
             )
 
             return content, metadata
 
         except APITimeoutError as e:
             # Special handling for timeouts - common with long search operations
-            logger.error(f"Timeout error (Perplexity search took too long): {e}")
-            logger.error("Consider increasing timeout for search-heavy models like sonar-pro")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=(
+                    f"Timeout error (Perplexity search took too long): {e}. "
+                    "Consider increasing timeout for search-heavy models like sonar-pro."
+                ),
+            )
             raise
         except AuthenticationError as e:
-            logger.error(f"Authentication failed: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"Authentication failed: {e}",
+            )
             raise
         except BadRequestError as e:
-            logger.error(f"Bad request (check parameters): {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"Bad request (check parameters): {e}",
+            )
             raise
         except (
             APIConnectionError,
@@ -366,8 +452,18 @@ class PerplexityProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            logger.error(f"API error after retries: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="perplexity",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
             raise
