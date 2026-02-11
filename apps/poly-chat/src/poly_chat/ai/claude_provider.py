@@ -162,8 +162,6 @@ class ClaudeProvider:
 
             if max_output_tokens is not None:
                 kwargs["max_tokens"] = max_output_tokens
-            else:
-                kwargs["max_tokens"] = 8192
 
             if system_prompt:
                 kwargs["system"] = system_prompt
@@ -284,8 +282,6 @@ class ClaudeProvider:
 
             if max_output_tokens is not None:
                 kwargs["max_tokens"] = max_output_tokens
-            else:
-                kwargs["max_tokens"] = 8192
 
             if search:
                 kwargs["tools"] = claude_web_search_tools()

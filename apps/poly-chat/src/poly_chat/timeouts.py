@@ -19,6 +19,7 @@ AI_HTTP_POOL_TIMEOUT_SEC = 5.0
 
 # Citation redirect resolution timeout.
 CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC = 5.0
+CITATION_REDIRECT_RESOLVE_CONCURRENCY = 4
 
 # Retry/backoff timing defaults.
 STANDARD_RETRY_ATTEMPTS = 4

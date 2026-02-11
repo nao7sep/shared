@@ -63,7 +63,7 @@ async def test_invoke_helper_ai_missing_api_key_raises_value_error():
 
 
 @pytest.mark.asyncio
-async def test_invoke_helper_ai_applies_helper_limits_when_configured():
+async def test_invoke_helper_ai_ignores_helper_limits_when_configured():
     profile_data = {
         "api_keys": {
             "claude": {"type": "direct", "value": "test-key"},
@@ -92,6 +92,4 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
         messages=[{"role": "user", "content": "Generate title"}],
         model="claude-haiku-4-5",
         system_prompt=None,
-        max_output_tokens=123,
-        thinking_budget_tokens=456,
     )

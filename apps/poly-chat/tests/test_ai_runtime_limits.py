@@ -35,7 +35,7 @@ async def test_send_message_to_ai_omits_limit_kwargs_when_unset():
 
 
 @pytest.mark.asyncio
-async def test_send_message_to_ai_applies_resolved_limits():
+async def test_send_message_to_ai_does_not_apply_profile_limits():
     provider = MagicMock()
     provider.send_message = MagicMock(return_value=_empty_stream())
 
@@ -63,8 +63,8 @@ async def test_send_message_to_ai_applies_resolved_limits():
         )
 
     kwargs = provider.send_message.call_args.kwargs
-    assert kwargs["max_output_tokens"] == 2000
-    assert kwargs["thinking_budget_tokens"] == 3000
+    assert "max_output_tokens" not in kwargs
+    assert "thinking_budget_tokens" not in kwargs
 
 
 def _build_session(timeout: int | float = 30) -> SessionState:

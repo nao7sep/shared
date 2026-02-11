@@ -7,7 +7,10 @@ import re
 from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
 import httpx
-from .timeouts import CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC
+from .timeouts import (
+    CITATION_REDIRECT_RESOLVE_CONCURRENCY,
+    CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC,
+)
 
 _NUMERIC_TITLE_RE = re.compile(r"^\s*\d+\s*$")
 _HOST_LIKE_TITLE_RE = re.compile(r"^[a-z0-9-]+(?:\.[a-z0-9-]+)+$")
@@ -235,7 +238,7 @@ async def resolve_vertex_citation_urls(
     citations: list[dict[str, object]],
     *,
     timeout_sec: float = CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC,
-    concurrency: int = 4,
+    concurrency: int = CITATION_REDIRECT_RESOLVE_CONCURRENCY,
 ) -> list[dict[str, object]]:
     """Resolve vertex redirect URLs to destination URLs.
 
