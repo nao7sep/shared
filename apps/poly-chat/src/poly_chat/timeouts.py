@@ -17,15 +17,8 @@ AI_HTTP_CONNECT_TIMEOUT_SEC = 10.0
 AI_HTTP_WRITE_TIMEOUT_SEC = 15.0
 AI_HTTP_POOL_TIMEOUT_SEC = 5.0
 
-# Citation/page fetch timeout buckets.
-PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC = 5.0
-PAGE_FETCH_CONNECT_TIMEOUT_SEC = 10.0
-PAGE_FETCH_WRITE_TIMEOUT_SEC = 10.0
-PAGE_FETCH_POOL_TIMEOUT_SEC = 5.0
-
-# Citation enrichment wait windows in REPL.
-CITATION_ENRICH_GRACE_TIMEOUT_SEC = 0.25
-CITATION_ENRICH_TOTAL_TIMEOUT_SEC = 6.0
+# Citation redirect resolution timeout.
+CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC = 5.0
 
 # Retry/backoff timing defaults.
 STANDARD_RETRY_ATTEMPTS = 4
@@ -102,19 +95,4 @@ def build_ai_httpx_timeout(read_timeout_sec: int | float) -> httpx.Timeout | Non
         read=timeout_sec,
         write=AI_HTTP_WRITE_TIMEOUT_SEC,
         pool=AI_HTTP_POOL_TIMEOUT_SEC,
-    )
-
-
-def build_page_fetch_httpx_timeout(read_timeout_sec: int | float) -> httpx.Timeout | None:
-    """Build httpx timeout config for page fetch operations."""
-    timeout_sec = _normalize_timeout_value(
-        read_timeout_sec, PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC
-    )
-    if timeout_sec <= 0:
-        return None
-    return httpx.Timeout(
-        connect=PAGE_FETCH_CONNECT_TIMEOUT_SEC,
-        read=timeout_sec,
-        write=PAGE_FETCH_WRITE_TIMEOUT_SEC,
-        pool=PAGE_FETCH_POOL_TIMEOUT_SEC,
     )

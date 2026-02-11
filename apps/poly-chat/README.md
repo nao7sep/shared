@@ -238,7 +238,7 @@ Where can I find current stock prices for AAPL?
 ```
 
 **Citations:**
-When search is enabled, AI responses will include a "Sources:" section at the end listing the URLs and titles of web pages used to generate the response. All cited pages are automatically downloaded and saved to your `pages_dir` for offline access and accurate title extraction.
+When search is enabled, AI responses include a "Sources:" section with citation titles and URLs reported by the provider. Citation records saved in chat history store only `number`, `title`, and `url` (with `null` for unavailable/invalid values).
 
 ## Configuration
 
@@ -279,7 +279,6 @@ When search is enabled, AI responses will include a "Sources:" section at the en
   },
   "chats_dir": "~/poly-chat/chats",
   "logs_dir": "~/poly-chat/logs",
-  "pages_dir": "~/poly-chat/pages",
   "api_keys": {
     "openai": {
       "type": "env",
@@ -326,16 +325,13 @@ When search is enabled, AI responses will include a "Sources:" section at the en
 ### Timeout Behavior
 
 - `timeout` in profile (or `/timeout`) is the base read timeout in seconds.
-- Base timeout is applied to:
-  - AI provider `read` timeout
-  - Citation page fetch `read` timeout
+- Base timeout is applied to AI provider `read` timeout.
 - When `/search` is ON, AI provider read timeout is automatically multiplied by `3`.
-- Page fetching is **not** multiplied by search mode.
 - `0` means no timeout (wait forever).
 
 ### Required Directories
 
-The profile requires three directory paths:
+The profile requires two directory paths:
 
 **`chats_dir`** - Where conversation history files are stored
 - Chat files are JSON format with `.json` extension
@@ -347,13 +343,8 @@ The profile requires three directory paths:
 - Structured plaintext format with contextual events
 - Includes AI requests/responses, commands, errors
 
-**`pages_dir`** - Where cited web pages are saved
-- All cited pages are automatically downloaded and saved
-- Filename format: `YYYY-MM-DD_HH-MM-SS_XX.html` (XX = citation number)
-- Titles are extracted from saved pages and used in citations
-- Enables offline access to sources and better title accuracy
 
-All three directories are created automatically if they don't exist.
+Both directories are created automatically if they don't exist.
 
 ### API Key Configuration
 

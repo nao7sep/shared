@@ -1,21 +1,34 @@
-"""Citation normalization and title enrichment helpers."""
+"""Citation normalization helpers."""
 
 from __future__ import annotations
 
 import asyncio
 import re
-from datetime import datetime
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
-from .page_fetcher import fetch_and_save_page, fetch_page_title
-from .timeouts import PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC
-
+import httpx
+from .timeouts import CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC
 
 _NUMERIC_TITLE_RE = re.compile(r"^\s*\d+\s*$")
+_VERTEX_HOST_SUFFIX = "vertexaisearch.cloud.google.com"
+_VERTEX_PATH_HINT = "grounding-api-redirect"
+_VERTEX_REDIRECT_QUERY_KEYS = (
+    "url",
+    "target_url",
+    "target",
+    "destination",
+    "dest",
+    "final_url",
+    "redirect",
+    "u",
+    "q",
+)
 
 
-def _normalized_url_key(url: str) -> str:
+def _normalized_url_key(url: str | None) -> str | None:
     """Build a dedupe key for URLs while preserving original URL output."""
+    if not url:
+        return None
     parsed = urlparse(url)
     return parsed._replace(fragment="").geturl().rstrip("/")
 
@@ -30,40 +43,85 @@ def _is_valid_http_url(url: str | None) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
-def _is_numeric_title(value: str | None) -> bool:
-    if not value or not isinstance(value, str):
-        return False
-    return _NUMERIC_TITLE_RE.match(value) is not None
+def _clean_title(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    title = value.strip()
+    if not title:
+        return None
+    # Providers sometimes return numeric placeholders (e.g. "1", "2").
+    if _NUMERIC_TITLE_RE.match(title):
+        return None
+    return title
 
 
-def _is_domain_like_title(value: str | None, url: str) -> bool:
-    if not value or not isinstance(value, str):
-        return False
+def _looks_like_vertex_redirect(url: str) -> bool:
     try:
-        host = urlparse(url).netloc.lower()
+        parsed = urlparse(url)
     except Exception:
         return False
-    if host.startswith("www."):
-        host = host[4:]
-    title = value.strip().lower()
-    return bool(host) and title in {host, host.split(":")[0]}
+    host = parsed.netloc.lower()
+    path = parsed.path.lower()
+    return host.endswith(_VERTEX_HOST_SUFFIX) or _VERTEX_PATH_HINT in path
 
 
-def _needs_title_enrichment(title: str | None, url: str) -> bool:
-    if title is None:
-        return True
-    stripped = title.strip()
-    if not stripped:
-        return True
-    if _is_numeric_title(stripped):
-        return True
-    if _is_domain_like_title(stripped, url):
-        return True
-    return False
+def _extract_redirect_from_vertex_url(url: str) -> str | None:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+
+    query = parse_qs(parsed.query, keep_blank_values=False)
+    for key in _VERTEX_REDIRECT_QUERY_KEYS:
+        for value in query.get(key, []):
+            candidate = unquote(value).strip()
+            if _is_valid_http_url(candidate):
+                return candidate
+
+    path_tail = unquote(parsed.path.rsplit("/", 1)[-1]).strip()
+    if _is_valid_http_url(path_tail):
+        return path_tail
+
+    return None
+
+
+def _clean_url(raw_url: object) -> str | None:
+    if not isinstance(raw_url, str):
+        return None
+    url = raw_url.strip()
+    if not url:
+        return None
+    return url if _is_valid_http_url(url) else None
+
+
+def _dedupe_and_number(citations: list[dict[str, object]]) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[tuple[str | None, str | None]] = set()
+
+    for citation in citations:
+        url = citation.get("url") if isinstance(citation.get("url"), str) else None
+        title = citation.get("title") if isinstance(citation.get("title"), str) else None
+        normalized_key = _normalized_url_key(url)
+        key = (
+            normalized_key.lower() if isinstance(normalized_key, str) else None,
+            title.lower() if isinstance(title, str) else None,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(
+            {
+                "number": len(deduped) + 1,
+                "title": title,
+                "url": url,
+            }
+        )
+
+    return deduped
 
 
 def normalize_citations(citations: object) -> list[dict[str, object]]:
-    """Normalize citation shape, key order, numbering, and deduplicate.
+    """Normalize citation shape, numbering, and deduplicate.
 
     Output dict key order is: number, title, url.
     """
@@ -71,147 +129,91 @@ def normalize_citations(citations: object) -> list[dict[str, object]]:
         return []
 
     normalized: list[dict[str, object]] = []
-    seen: set[tuple[str, str]] = set()
-
     for item in citations:
-        if not isinstance(item, dict):
+        if isinstance(item, dict):
+            raw_url = item.get("url", item.get("uri"))
+            raw_title = item.get("title")
+            normalized.append(
+                {
+                    "title": _clean_title(raw_title),
+                    "url": _clean_url(raw_url),
+                }
+            )
+        elif isinstance(item, str):
+            normalized.append(
+                {
+                    "title": None,
+                    "url": _clean_url(item),
+                }
+            )
+
+    return _dedupe_and_number(normalized)
+
+
+def _extract_location_header(response: httpx.Response) -> str | None:
+    location = response.headers.get("location")
+    if not location:
+        return None
+    candidate = location.strip()
+    if not candidate:
+        return None
+    # Handle relative redirect locations.
+    absolute = urljoin(str(response.request.url), candidate)
+    return absolute if _is_valid_http_url(absolute) else None
+
+
+async def _resolve_vertex_via_http(client: httpx.AsyncClient, url: str) -> str | None:
+    # GET first: vertex redirect endpoints commonly provide Location on GET.
+    for method in ("GET", "HEAD"):
+        try:
+            response = await client.request(method, url, follow_redirects=False)
+        except Exception:
             continue
-        raw_url = item.get("url")
-        raw_title = item.get("title")
-        if not isinstance(raw_url, str) or not raw_url.strip():
-            continue
-
-        url = raw_url.strip()
-        if not _is_valid_http_url(url):
-            continue
-
-        title = raw_title.strip() if isinstance(raw_title, str) and raw_title.strip() else None
-        key = (_normalized_url_key(url).lower(), (title or "").lower())
-        if key in seen:
-            continue
-        seen.add(key)
-        normalized.append({"title": title, "url": url})
-
-    for i, citation in enumerate(normalized, 1):
-        citation["number"] = i
-
-    # Preserve key order for json output readability.
-    return [
-        {
-            "number": c["number"],
-            "title": c.get("title"),
-            "url": c["url"],
-        }
-        for c in normalized
-    ]
+        resolved = _extract_location_header(response)
+        if resolved:
+            return resolved
+    return None
 
 
-def citations_need_enrichment(citations: list[dict[str, object]]) -> bool:
-    """Return True if any citation title appears missing/low quality."""
-    for citation in citations:
-        if not isinstance(citation, dict):
-            continue
-        url = citation.get("url")
-        title = citation.get("title")
-        if isinstance(url, str) and _is_valid_http_url(url):
-            if _needs_title_enrichment(title if isinstance(title, str) else None, url):
-                return True
-    return False
-
-
-async def enrich_citation_titles(
+async def resolve_vertex_citation_urls(
     citations: list[dict[str, object]],
     *,
-    concurrency: int = 3,
-    pages_dir: str | None = None,
-    timeout_sec: float = PAGE_FETCH_DEFAULT_READ_TIMEOUT_SEC,
-) -> tuple[list[dict[str, object]], bool]:
-    """Best-effort async title enrichment for low-quality/missing titles.
+    timeout_sec: float = CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC,
+    concurrency: int = 4,
+) -> list[dict[str, object]]:
+    """Resolve vertex redirect URLs to destination URLs.
 
-    When pages_dir is provided, ALL citations are downloaded and saved to disk.
-    Titles are extracted from the saved pages.
-
-    Args:
-        citations: List of citation dicts with url and title
-        concurrency: Max concurrent downloads
-        pages_dir: Optional directory to save all cited pages
-
-    Returns:
-        (updated_citations, changed)
+    Strategy:
+    1. Try HTTP request to fetch redirect Location header.
+    2. If that fails, extract target from the vertex URL itself.
     """
     if not citations:
-        return citations, False
+        return citations
 
     updated = [dict(c) for c in citations]
-    initial_all_numeric = all(
-        _is_numeric_title(c.get("title") if isinstance(c.get("title"), str) else None)
-        for c in updated
-        if isinstance(c, dict)
-    )
+    timeout = httpx.Timeout(timeout_sec)
+    semaphore = asyncio.Semaphore(max(1, concurrency))
 
-    sem = asyncio.Semaphore(max(1, concurrency))
-    successful_fetches = 0
-    changed = False
+    async with httpx.AsyncClient(timeout=timeout) as client:
 
-    # Generate timestamp once for all citations in this batch
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-    async def enrich_one(index: int, citation: dict[str, object]) -> None:
-        nonlocal successful_fetches, changed
-        url = citation.get("url")
-        title = citation.get("title")
-        if not isinstance(url, str) or not _is_valid_http_url(url):
-            return
-        existing_title = title if isinstance(title, str) else None
-
-        # When pages_dir is provided, ALWAYS download and save pages
-        if pages_dir:
-            try:
-                async with sem:
-                    citation_number = citation.get("number", index + 1)
-                    fetched_title, saved_path = await fetch_and_save_page(
-                        url,
-                        pages_dir,
-                        citation_number,
-                        timestamp,
-                        timeout_sec=timeout_sec,
-                    )
-                if fetched_title:
-                    successful_fetches += 1
-                    if fetched_title != existing_title:
-                        updated[index]["title"] = fetched_title
-                        changed = True
-            except Exception:
+        async def resolve_one(index: int, citation: dict[str, object]) -> None:
+            url = citation.get("url")
+            if not isinstance(url, str) or not _is_valid_http_url(url):
                 return
-        else:
-            # Legacy behavior: only enrich when needed
-            if not _needs_title_enrichment(existing_title, url):
+            if not _looks_like_vertex_redirect(url):
                 return
-            try:
-                async with sem:
-                    fetched = await fetch_page_title(url, timeout_sec=timeout_sec)
-            except Exception:
-                return
-            if fetched:
-                successful_fetches += 1
-                if fetched != existing_title:
-                    updated[index]["title"] = fetched
-                    changed = True
 
-    await asyncio.gather(
-        *(enrich_one(i, c) for i, c in enumerate(updated) if isinstance(c, dict))
-    )
+            async with semaphore:
+                resolved = await _resolve_vertex_via_http(client, url)
 
-    # If provider supplied only numeric placeholders and no enrichment succeeded,
-    # keep URLs and drop unusable numeric titles.
-    if initial_all_numeric and successful_fetches == 0:
-        for c in updated:
-            if isinstance(c.get("title"), str):
-                c["title"] = None
-                changed = True
+            if not resolved:
+                resolved = _extract_redirect_from_vertex_url(url)
 
-    # Rebuild numbering deterministically.
-    for i, c in enumerate(updated, 1):
-        c["number"] = i
-    reordered = [{"number": c.get("number"), "title": c.get("title"), "url": c.get("url")} for c in updated]
-    return reordered, changed
+            # If unresolved, vertex URL is considered unusable for history/citations.
+            updated[index]["url"] = resolved if _is_valid_http_url(resolved) else None
+
+        await asyncio.gather(
+            *(resolve_one(i, c) for i, c in enumerate(updated) if isinstance(c, dict))
+        )
+
+    return _dedupe_and_number(updated)

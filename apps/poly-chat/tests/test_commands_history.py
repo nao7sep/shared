@@ -54,7 +54,6 @@ def mock_session_manager_with_messages():
             "api_keys": {},
             "chats_dir": "/test/chats",
             "logs_dir": "/test/logs",
-            "pages_dir": "/test/pages",
             "timeout": 30,
         },
         current_ai="claude",

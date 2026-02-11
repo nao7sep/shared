@@ -28,7 +28,6 @@ def sample_profile(temp_dir):
         "system_prompt": "You are a helpful assistant.",
         "chats_dir": str(temp_dir / "chats"),
         "logs_dir": str(temp_dir / "logs"),
-        "pages_dir": "/test/pages",
         "api_keys": {
             "openai": {
                 "type": "env",
@@ -101,7 +100,6 @@ def mock_session_manager():
             "api_keys": {},
             "chats_dir": "/test/chats",
             "logs_dir": "/test/logs",
-            "pages_dir": "/test/pages",
             "timeout": 30,
         },
         current_ai="claude",

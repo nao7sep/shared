@@ -13,7 +13,6 @@ ChatOrchestrator for better separation of concerns and testability.
 
 import logging
 import time
-import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -34,15 +33,13 @@ from .orchestrator_types import (
 )
 from .citations import (
     normalize_citations,
-    enrich_citation_titles,
+    resolve_vertex_citation_urls,
 )
 from .commands import CommandHandler
 from .ui.interaction import ThreadedConsoleInteraction
 from .logging_utils import log_event, sanitize_error_message, summarize_command_args
 from .streaming import display_streaming_response
 from .timeouts import (
-    CITATION_ENRICH_GRACE_TIMEOUT_SEC,
-    CITATION_ENRICH_TOTAL_TIMEOUT_SEC,
     resolve_profile_timeout,
 )
 
@@ -246,53 +243,8 @@ async def repl_loop(
 
             citations = metadata.get("citations")
             citations = normalize_citations(citations)
-
-            # Always download and save pages when citations are present
             if citations:
-                grace_timeout = CITATION_ENRICH_GRACE_TIMEOUT_SEC
-                total_timeout = CITATION_ENRICH_TOTAL_TIMEOUT_SEC
-                page_fetch_read_timeout = resolve_profile_timeout(manager.profile)
-                pages_dir = manager.profile.get("pages_dir")
-                enrich_task = asyncio.create_task(
-                    enrich_citation_titles(
-                        citations,
-                        pages_dir=pages_dir,
-                        timeout_sec=page_fetch_read_timeout,
-                    )
-                )
-                try:
-                    enriched, changed = await asyncio.wait_for(
-                        enrich_task, timeout=grace_timeout
-                    )
-                    if changed:
-                        citations = enriched
-                except asyncio.TimeoutError:
-                    print("\n[Downloading and saving cited pages...]", flush=True)
-                    enrich_task = asyncio.create_task(
-                        enrich_citation_titles(
-                            citations,
-                            pages_dir=pages_dir,
-                            timeout_sec=page_fetch_read_timeout,
-                        )
-                    )
-                    try:
-                        enriched, changed = await asyncio.wait_for(
-                            enrich_task,
-                            timeout=max(0.0, total_timeout - grace_timeout),
-                        )
-                        if changed:
-                            citations = enriched
-                    except asyncio.TimeoutError:
-                        enrich_task.cancel()
-                        logging.warning("Citation enrichment timed out after %.1fs", total_timeout)
-                        print("[Page download timed out; showing available sources.]")
-                    except Exception:
-                        enrich_task.cancel()
-                        logging.exception("Citation enrichment failed during extended timeout")
-                        print("[Page download failed; showing available sources.]")
-                except Exception:
-                    enrich_task.cancel()
-                    logging.exception("Citation enrichment failed during grace period")
+                citations = await resolve_vertex_citation_urls(citations)
 
             if citations:
                 metadata["citations"] = citations

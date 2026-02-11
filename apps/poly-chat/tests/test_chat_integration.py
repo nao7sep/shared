@@ -119,7 +119,6 @@ def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
         "system_prompt": None,
         "chats_dir": str(temp_dir / "chats"),
         "logs_dir": str(temp_dir / "logs"),
-        "pages_dir": "/test/pages",
         "api_keys": api_keys
     }
 

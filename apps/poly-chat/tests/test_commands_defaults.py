@@ -28,7 +28,6 @@ def mock_session_manager_defaults():
             "api_keys": {},
             "chats_dir": "/test/chats",
             "logs_dir": "/test/logs",
-            "pages_dir": "/test/pages",
         },
         current_ai="openai",
         current_model="gpt-5-mini",

@@ -85,7 +85,6 @@ def test_load_profile_missing_required_field(tmp_path):
         "default_ai": "claude",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -97,7 +96,7 @@ def test_load_profile_missing_required_field(tmp_path):
 
 
 def test_load_profile_rejects_relative_dir_paths(tmp_path):
-    """chats/logs/pages dirs must use ~/, @/, or absolute paths."""
+    """chats/logs dirs must use ~/, @/, or absolute paths."""
     profile_path = tmp_path / "relative-dirs.json"
 
     profile_data = {
@@ -108,7 +107,6 @@ def test_load_profile_rejects_relative_dir_paths(tmp_path):
         "system_prompt": {"type": "text", "content": "hi"},
         "chats_dir": "chats",
         "logs_dir": "logs",
-        "pages_dir": "pages",
         "api_keys": {},
     }
 
@@ -136,7 +134,6 @@ def test_load_profile_valid(tmp_path):
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": str(chats_dir),
         "logs_dir": str(logs_dir),
-        "pages_dir": str(tmp_path / "pages"),
         "api_keys": {
             "claude": {
                 "type": "env",
@@ -168,7 +165,6 @@ def test_load_profile_maps_tilde_paths(tmp_path):
         "system_prompt": "~/system-prompt.txt",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -194,7 +190,6 @@ def test_load_profile_maps_at_paths(tmp_path):
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "@/chats",
         "logs_dir": "@/logs",
-        "pages_dir": "@/pages",
         "api_keys": {}
     }
 
@@ -221,7 +216,6 @@ def test_load_profile_maps_json_api_key_path(tmp_path):
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "json",
@@ -251,7 +245,6 @@ def test_load_profile_sets_default_timeout(tmp_path):
         "system_prompt": "@/system-prompts/default.txt",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -282,7 +275,6 @@ def test_validate_profile_models_not_dict():
         "models": ["claude", "openai"],  # Should be dict
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -297,7 +289,6 @@ def test_validate_profile_models_empty():
         "models": {},  # Empty
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -312,7 +303,6 @@ def test_validate_profile_default_ai_not_in_models():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -328,7 +318,6 @@ def test_validate_profile_timeout_not_number():
         "timeout": "30",  # Should be number
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -344,7 +333,6 @@ def test_validate_profile_timeout_negative():
         "timeout": -10,
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -360,7 +348,6 @@ def test_validate_profile_input_mode_valid():
         "input_mode": "quick",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
     validate_profile(profile)
@@ -377,7 +364,6 @@ def test_validate_profile_input_mode_invalid_value():
         "input_mode": "invalid-mode",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
     with pytest.raises(ValueError, match="'input_mode' must be 'quick' or 'compose'"):
@@ -392,7 +378,6 @@ def test_validate_profile_input_mode_invalid_type():
         "input_mode": 123,
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
     with pytest.raises(ValueError, match="'input_mode' must be a string"):
@@ -408,7 +393,6 @@ def test_validate_profile_timeout_zero_allowed():
         "input_mode": "quick",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {}
     }
 
@@ -423,7 +407,6 @@ def test_validate_profile_api_keys_not_dict():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": []  # Should be dict
     }
 
@@ -438,7 +421,6 @@ def test_validate_profile_api_key_config_not_dict():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": "sk-test-key"  # Should be dict
         }
@@ -455,7 +437,6 @@ def test_validate_profile_api_key_missing_type():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "key": "CLAUDE_API_KEY"
@@ -475,7 +456,6 @@ def test_validate_profile_api_key_env_missing_key():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "env"
@@ -495,7 +475,6 @@ def test_validate_profile_api_key_keychain_missing_service():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "keychain",
@@ -516,7 +495,6 @@ def test_validate_profile_api_key_keychain_missing_account():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "keychain",
@@ -537,7 +515,6 @@ def test_validate_profile_api_key_json_missing_path():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "json",
@@ -558,7 +535,6 @@ def test_validate_profile_api_key_json_missing_key():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "json",
@@ -579,7 +555,6 @@ def test_validate_profile_api_key_direct_missing_value():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "direct"
@@ -599,7 +574,6 @@ def test_validate_profile_api_key_unknown_type():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "unknown_type",
@@ -626,7 +600,6 @@ def test_validate_profile_valid_all_api_key_types():
         "input_mode": "quick",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {
             "claude": {
                 "type": "env",
@@ -659,7 +632,6 @@ def test_validate_profile_accepts_ai_limits_configuration():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {},
         "ai_limits": {
             "default": {
@@ -682,7 +654,6 @@ def test_validate_profile_rejects_invalid_ai_limits_shape():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {},
         "ai_limits": "invalid",
     }
@@ -697,7 +668,6 @@ def test_validate_profile_rejects_invalid_ai_limit_value():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {},
         "ai_limits": {
             "default": {"max_output_tokens": 0},
@@ -714,7 +684,6 @@ def test_validate_profile_rejects_unknown_ai_limit_key():
         "models": {"claude": "claude-haiku-4-5"},
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
-        "pages_dir": "~/pages",
         "api_keys": {},
         "ai_limits": {
             "default": {"foo": 123},

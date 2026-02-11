@@ -21,7 +21,6 @@ def session_manager():
         profile={
             "chats_dir": "/test/chats",
             "logs_dir": "/test/logs",
-            "pages_dir": "/test/pages",
         },
         current_ai="claude",
         current_model="claude-haiku-4-5",

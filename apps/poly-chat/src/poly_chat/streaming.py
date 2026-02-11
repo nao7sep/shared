@@ -92,10 +92,15 @@ def display_citations(citations: list[dict]) -> None:
     print()
     print("Sources:")
     for i, citation in enumerate(citations, 1):
-        title = citation.get("title", "")
-        url = citation.get("url", "")
+        number = citation.get("number", i)
+        title = citation.get("title")
+        url = citation.get("url")
         if title and url:
-            print(f"  [{i}] {title}")
+            print(f"  [{number}] {title}")
             print(f"      {url}")
         elif url:
-            print(f"  [{i}] {url}")
+            print(f"  [{number}] {url}")
+        elif title:
+            print(f"  [{number}] {title} (URL unavailable)")
+        else:
+            print(f"  [{number}] [source unavailable]")

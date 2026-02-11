@@ -679,3 +679,20 @@ thinking: False
 thinking_requested: False
 
 if search was executed, chat history gets citations and user sees them on the terminal.
+
+---
+
+page fetching on pages like the following failed:
+
+https://www.bloomberg.com/news/articles/2026-02-05/anthropic-updates-ai-model-to-field-more-complex-financial-research => 403 Forbidden
+https://en.wikipedia.org/wiki/Claude_(language_model) => 403 Too many requests
+
+with a set of good http headers, will this be better?
+
+i am starting to feel like i am over-engineering.
+
+in some real use cases, i do need the original text. in such cases, using an on-memory browser, rendering the actual page and taking a screenshot would be more beneficial.
+
+ok, let's completely remove title extraction, page fetching, etc. we'll only redirect from vertex urls to actual urls (because this header - we will very certainly receive).
+
+in citations of chat history, let's only save numbers, provided titles and (redirected-if-necessary) urls, where unavailable/seemingly-invalid values will be set to null explicitly.

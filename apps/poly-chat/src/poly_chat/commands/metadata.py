@@ -523,7 +523,6 @@ class MetadataCommandsMixin:
             "Paths",
             f"Chats Dir:    {profile_data.get('chats_dir', '(unknown)')}",
             f"Logs Dir:     {profile_data.get('logs_dir', '(unknown)')}",
-            f"Pages Dir:    {profile_data.get('pages_dir', '(unknown)')}",
             "━" * 60,
         ]
 

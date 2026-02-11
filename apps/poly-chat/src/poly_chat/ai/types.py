@@ -20,7 +20,7 @@ class Citation(TypedDict, total=False):
 
     number: int
     title: str | None
-    url: str
+    url: str | None
 
 
 class SearchResult(TypedDict, total=False):
