@@ -239,7 +239,7 @@ class StructuredTextFormatter(logging.Formatter):
         return value_str.replace("\n", "\\n")
 
     def _field_max_len(self, key: str) -> int:
-        """Allow larger payloads for search-related fields."""
+        """Return per-field log truncation limits (display only, not runtime limits)."""
         if key == "citation_urls":
             return 4000
         if key == "search_results":

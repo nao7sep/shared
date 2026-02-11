@@ -109,6 +109,76 @@ def get_provider_for_model(model: str) -> Optional[str]:
     return MODEL_TO_PROVIDER.get(model)
 
 
+def normalize_model_query(value: str) -> str:
+    """Normalize a model query by keeping only lowercase alphanumeric chars."""
+    return "".join(ch.lower() for ch in value if ch.isalnum())
+
+
+def _is_subsequence(pattern: str, target: str) -> bool:
+    """Return True when pattern chars appear in target in-order."""
+    if not pattern:
+        return False
+    index = 0
+    for ch in target:
+        if ch == pattern[index]:
+            index += 1
+            if index == len(pattern):
+                return True
+    return False
+
+
+def find_models_by_subsequence(
+    pattern: str,
+    *,
+    provider: Optional[str] = None,
+) -> List[str]:
+    """Find models whose normalized names contain pattern as subsequence."""
+    normalized_pattern = normalize_model_query(pattern)
+    if not normalized_pattern:
+        return []
+
+    if provider:
+        candidates = MODEL_REGISTRY.get(provider, [])
+    else:
+        candidates: List[str] = []
+        for provider_models in MODEL_REGISTRY.values():
+            candidates.extend(provider_models)
+
+    matches: List[str] = []
+    for model in candidates:
+        if _is_subsequence(normalized_pattern, normalize_model_query(model)):
+            matches.append(model)
+    return matches
+
+
+def resolve_model_candidates(
+    pattern: str,
+    *,
+    provider: Optional[str] = None,
+) -> List[str]:
+    """Resolve a model query to exact or fuzzy candidates.
+
+    Resolution order:
+    1. exact registry match (case-sensitive, then lowercase variant)
+    2. normalized subsequence matching across registry models
+    """
+    query = pattern.strip()
+    if not query:
+        return []
+
+    exact_provider = get_provider_for_model(query)
+    if exact_provider and (provider is None or exact_provider == provider):
+        return [query]
+
+    lowered = query.lower()
+    if lowered != query:
+        lowered_provider = get_provider_for_model(lowered)
+        if lowered_provider and (provider is None or lowered_provider == provider):
+            return [lowered]
+
+    return find_models_by_subsequence(query, provider=provider)
+
+
 def get_models_for_provider(provider: str) -> List[str]:
     """Get list of models for a given provider.
 

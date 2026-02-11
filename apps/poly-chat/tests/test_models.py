@@ -1,11 +1,12 @@
 """Tests for models module."""
-
-import pytest
 from poly_chat.models import (
     get_provider_for_model,
     get_models_for_provider,
     get_all_providers,
     get_all_models,
+    normalize_model_query,
+    find_models_by_subsequence,
+    resolve_model_candidates,
     resolve_provider_shortcut,
     get_provider_shortcut,
     PROVIDER_SHORTCUTS,
@@ -186,3 +187,28 @@ def test_no_duplicate_models():
 
     # Check for duplicates
     assert len(all_models) == len(set(all_models)), "Found duplicate models across providers"
+
+
+def test_normalize_model_query_keeps_alnum_only():
+    assert normalize_model_query("o4.6") == "o46"
+    assert normalize_model_query("CLAUDE-Opus-4-6") == "claudeopus46"
+    assert normalize_model_query("___") == ""
+
+
+def test_find_models_by_subsequence_supports_relaxed_queries():
+    matches = find_models_by_subsequence("op4")
+    assert "claude-opus-4-6" in matches
+
+    matches_with_dot = find_models_by_subsequence("o4.6")
+    assert "claude-opus-4-6" in matches_with_dot
+
+
+def test_resolve_model_candidates_prefers_exact_match():
+    assert resolve_model_candidates("claude-opus-4-6") == ["claude-opus-4-6"]
+
+
+def test_resolve_model_candidates_returns_multiple_for_ambiguous_query():
+    matches = resolve_model_candidates("g5")
+    assert len(matches) > 1
+    assert "gpt-5" in matches
+    assert "gpt-5-mini" in matches

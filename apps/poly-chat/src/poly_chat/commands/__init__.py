@@ -1,5 +1,6 @@
 """Command system façade for PolyChat."""
 
+from .. import models
 from ..chat import save_chat
 from ..helper_ai import invoke_helper_ai
 from .base import CommandHandlerBaseMixin
@@ -36,7 +37,7 @@ class CommandHandler(
         if not command:
             raise ValueError("Empty command")
 
-        if command in ["gpt", "gem", "cla", "grok", "perp", "mist", "deep"]:
+        if command in models.PROVIDER_SHORTCUTS:
             return self.switch_provider_shortcut(command)
 
         command_map = {

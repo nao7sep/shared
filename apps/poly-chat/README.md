@@ -119,10 +119,11 @@ Logs are written in a structured plaintext block format and include contextual e
 
 **Model Management:**
 - `/model` - Show available models for current provider
-- `/model <name>` - Switch to specified model
+- `/model <query>` - Switch model via exact or fuzzy match (provider auto-detected)
 - `/model default` - Restore profile default AI and model
 - `/helper` - Show current helper AI model
-- `/helper <model>` - Set helper AI model
+- `/helper <query>` - Set helper AI model via exact or fuzzy match
+- `/helper <shortcut>` - Set helper from provider shortcut (`gpt`, `gem`, `cla`, `grok`, `perp`, `mist`, `deep`)
 - `/helper default` - Restore helper AI from profile default
 
 **Chat File Management:**
@@ -195,6 +196,7 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/exit` or `/quit` - Exit PolyChat
 
 When commands show chat lists for selection (`/open`, `/switch`, `/rename`, `/delete`), "Last Updated" is shown in your local time.
+For `/model` and `/helper`, fuzzy matching normalizes names to alphanumeric characters and uses in-order subsequence matching (for example, `op4` or `o4.6` can match `claude-opus-4-6`). When multiple models match, PolyChat prompts you to choose by number.
 
 ### Web Search
 

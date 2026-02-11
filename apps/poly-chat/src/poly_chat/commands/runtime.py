@@ -7,11 +7,52 @@ from .types import CommandResult, CommandSignal
 
 
 class RuntimeCommandsMixin:
+    async def _choose_model_from_candidates(
+        self,
+        query: str,
+        candidates: list[str],
+    ) -> tuple[str | None, str | None]:
+        """Prompt user to select one model when multiple candidates match."""
+        prompt_lines = [f"Multiple models match '{query}':"]
+        for index, model_name in enumerate(candidates, start=1):
+            provider_name = models.get_provider_for_model(model_name) or "unknown"
+            prompt_lines.append(f"  {index}. {model_name} ({provider_name})")
+        prompt_lines.append("Select one by number (press Enter to cancel).")
+
+        answer = (await self._prompt_text("\n".join(prompt_lines) + "\nSelection: ")).strip()
+        if not answer:
+            return None, "Model selection cancelled."
+        if not answer.isdigit():
+            return None, "Invalid selection. Enter a number from the list."
+
+        selected_index = int(answer)
+        if selected_index < 1 or selected_index > len(candidates):
+            return None, f"Invalid selection. Choose a number between 1 and {len(candidates)}."
+
+        return candidates[selected_index - 1], None
+
+    async def _resolve_model_selection(self, query: str) -> tuple[str | None, str]:
+        """Resolve a model query to one selected model."""
+        candidates = models.resolve_model_candidates(query)
+        if not candidates:
+            return None, f"No model matches '{query}'."
+        if len(candidates) == 1:
+            return candidates[0], ""
+
+        selected_model, selection_error = await self._choose_model_from_candidates(
+            query, candidates
+        )
+        if selection_error:
+            return None, selection_error
+        if selected_model is None:
+            return None, "Model selection cancelled."
+        return selected_model, ""
+
     async def set_model(self, args: str) -> str:
         """Set the current model.
 
         Args:
-            args: Model name, "default" to revert to profile default, or empty to show list
+            args: Model query, "default" to revert to profile default, or empty to show list
 
         Returns:
             Confirmation message or model list
@@ -26,9 +67,9 @@ class RuntimeCommandsMixin:
 
         # Handle "default" - revert to profile's default
         if args == "default":
-            profile = self.manager.profile
-            default_ai = profile["default_ai"]
-            default_model = profile["models"][default_ai]
+            profile_data = self.manager.profile
+            default_ai = profile_data["default_ai"]
+            default_model = profile_data["models"][default_ai]
 
             self.manager.current_ai = default_ai
             self.manager.current_model = default_model
@@ -38,25 +79,33 @@ class RuntimeCommandsMixin:
                 return f"Reverted to profile default: {default_ai} ({default_model})\n" + "\n".join(notices)
             return f"Reverted to profile default: {default_ai} ({default_model})"
 
-        # Check if model exists and switch provider if needed
-        provider = models.get_provider_for_model(args)
-        if provider:
-            self.manager.current_ai = provider
-            self.manager.current_model = args
-            notices = self._reconcile_provider_modes(provider)
-            if notices:
-                return f"Switched to {provider} ({args})\n" + "\n".join(notices)
-            return f"Switched to {provider} ({args})"
-        else:
-            # Model not in registry, but allow it anyway (might be new)
-            self.manager.current_model = args
-            return f"Set model to {args} (provider: {self.manager.current_ai})"
+        query = args.strip()
+        selected_model, resolution_error = await self._resolve_model_selection(query)
+        if resolution_error:
+            return resolution_error
+        if selected_model is None:
+            return "Model selection cancelled."
+
+        provider = models.get_provider_for_model(selected_model)
+        if provider is None:
+            return f"No provider found for model '{selected_model}'."
+
+        self.manager.current_ai = provider
+        self.manager.current_model = selected_model
+
+        base_message = f"Switched to {provider} ({selected_model})"
+        if selected_model != query:
+            base_message += f" [matched from '{query}']"
+        notices = self._reconcile_provider_modes(provider)
+        if notices:
+            return base_message + "\n" + "\n".join(notices)
+        return base_message
 
     async def set_helper(self, args: str) -> str:
         """Set or show the helper AI model.
 
         Args:
-            args: Model name, 'default' to revert, or empty to show current
+            args: Model query/provider shortcut, 'default' to revert, or empty to show current
 
         Returns:
             Confirmation message or current helper
@@ -78,16 +127,44 @@ class RuntimeCommandsMixin:
 
             return f"Helper AI restored to profile default: {helper_ai_name} ({helper_model_name})"
 
-        # Otherwise, it's a model name - check if it exists
-        provider = models.get_provider_for_model(args)
-        if provider:
-            self.manager.helper_ai = provider
-            self.manager.helper_model = args
-            return f"Helper AI set to {provider} ({args})"
-        else:
-            # Model not in registry, but allow it anyway (might be new)
-            self.manager.helper_model = args
-            return f"Helper model set to {args} (provider: {self.manager.helper_ai})"
+        query = args.strip()
+        lowered = query.lower()
+
+        # Allow provider shortcuts (/helper gpt, /helper gem, etc.).
+        provider_shortcut = models.resolve_provider_shortcut(lowered)
+        if provider_shortcut is not None:
+            provider_model = self.manager.profile["models"].get(provider_shortcut)
+            if not provider_model:
+                return f"No model configured for {provider_shortcut} in profile"
+            self.manager.helper_ai = provider_shortcut
+            self.manager.helper_model = provider_model
+            return f"Helper AI set to {provider_shortcut} ({provider_model})"
+
+        if lowered in models.get_all_providers():
+            provider_model = self.manager.profile["models"].get(lowered)
+            if not provider_model:
+                return f"No model configured for {lowered} in profile"
+            self.manager.helper_ai = lowered
+            self.manager.helper_model = provider_model
+            return f"Helper AI set to {lowered} ({provider_model})"
+
+        selected_model, resolution_error = await self._resolve_model_selection(query)
+        if resolution_error:
+            return resolution_error
+        if selected_model is None:
+            return "Helper model selection cancelled."
+
+        provider = models.get_provider_for_model(selected_model)
+        if provider is None:
+            return f"No provider found for model '{selected_model}'."
+
+        self.manager.helper_ai = provider
+        self.manager.helper_model = selected_model
+
+        message = f"Helper AI set to {provider} ({selected_model})"
+        if selected_model != query:
+            message += f" [matched from '{query}']"
+        return message
 
     async def set_timeout(self, args: str) -> str:
         """Set or show the timeout setting.
