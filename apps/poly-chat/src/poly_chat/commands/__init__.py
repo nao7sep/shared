@@ -51,7 +51,6 @@ class CommandHandler(
             "cancel": self.cancel_retry,
             "secret": self.secret_mode_command,
             "search": self.search_mode_command,
-            "thinking": self.thinking_mode_command,
             "rewind": self.rewind_messages,
             "purge": self.purge_messages,
             "history": self.show_history,

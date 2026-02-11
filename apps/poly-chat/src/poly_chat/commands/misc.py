@@ -26,13 +26,13 @@ Provider Shortcuts:
 
 Model Management:
   /model            Show available models for current provider
-  /model <query>    Switch model via exact/fuzzy match (auto-detects provider)
   /model default    Restore to profile's default AI and model
+  /model <query>    Switch model via exact/fuzzy match (auto-detects provider)
   /helper           Show current helper AI model
+  /helper default   Restore to profile's default helper AI
   /helper <query>   Set helper via model query (exact/fuzzy)
   /helper <shortcut>
                     Set helper via provider shortcut (gpt/gem/cla/grok/perp/mist/deep)
-  /helper default   Restore to profile's default helper AI
                     Ambiguous matches prompt for numbered selection
 
 Configuration:
@@ -41,12 +41,12 @@ Configuration:
   /input compose    Enter inserts newline, Alt/Option+Enter sends
   /input default    Restore to profile default input mode
   /timeout          Show current timeout setting
-  /timeout <secs>   Set timeout in seconds (0 = wait forever)
   /timeout default  Restore to profile's default timeout
+  /timeout <secs>   Set timeout in seconds (0 = wait forever)
   /system           Show current system prompt path
-  /system <path>    Set system prompt (~/ for home, @/ for app root)
   /system --        Remove system prompt from chat
   /system default   Restore to profile's default system prompt
+  /system <path>    Set system prompt (~/ for home, @/ for app root)
 
 Chat File Management:
   /new [name]       Create new chat file
@@ -62,7 +62,8 @@ Chat File Management:
   /delete [name]    Delete a chat file (shows list if no name)
 
 Chat Control:
-  /retry            Enter retry mode (collect candidate responses)
+  /retry            Retry the last interaction (collect candidate responses)
+                    Last interaction: user+assistant, user+error, or trailing error
   /apply            Apply latest retry candidate and exit retry mode
   /apply last       Apply latest retry candidate and exit retry mode
   /apply <hex_id>   Apply a specific retry candidate and exit retry mode
@@ -71,29 +72,27 @@ Chat Control:
   /secret on/off    Enable/disable secret mode explicitly
   /search           Show current search mode state
   /search on/off    Enable/disable web search
-  /thinking         Show current thinking mode state
-  /thinking on/off  Enable/disable extended reasoning
+  /rewind           Delete the last full interaction (user+assistant/user+error), or trailing error
+  /rewind last      Delete the last full interaction (user+assistant/user+error), or trailing error
   /rewind <hex_id>  Delete that message and all following messages
-  /rewind turn      Delete the last full interaction (user+assistant/error)
-  /rewind last      Delete only the last message
   /purge <hex_id>   Delete specific message(s) (breaks context!)
   /purge <id> <id>  Delete multiple messages
 
 History:
   /history          Show last 10 messages
-  /history <n>      Show last n messages
   /history all      Show all messages
-  /history --errors Show only error messages
+  /history errors   Show only error messages
+  /history <n>      Show last n messages
   /show <hex_id>    Show full content of specific message
   /status           Show current profile/chat/session status
 
 Metadata:
   /title            Generate title using AI
-  /title <text>     Set chat title
   /title --         Clear title
+  /title <text>     Set chat title
   /summary          Generate summary using AI
-  /summary <text>   Set chat summary
   /summary --       Clear summary
+  /summary <text>   Set chat summary
 
 Safety:
   /safe             Check entire chat for unsafe content

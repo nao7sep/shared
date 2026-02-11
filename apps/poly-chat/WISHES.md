@@ -647,3 +647,35 @@ one more thing i would like to add is partial matching of model names. currently
 then, we can also update /helper to take "gpt", "gem", etc as a sub-command so that the command will be as easy as "/gpt". plus, if /helper too can do partial matches, i'll be using it like "/helper op4", which will again match "claude-opus-4-6".
 
 please implement these, add tests, run them and update readme.md, /help content and all relevant documentation.
+
+---
+
+i implemented "/apply last" and "/rewind last". "/rewind last" does exactly what "/rewind turn" did. then, i deleted /rewind turn" as the name was confusing.
+
+now if the chat history is like:
+
+older messages
+good user message
+good assistant message
+error message
+
+"/apply" and "/rewind last" should delete just the error message because that is most likely the result of a bad request.
+
+please look for similar situations where one interaction must mean 1) a pair of user + assistant messages or 2) a pair of user + error messages or 3) just one error message.
+
+---
+
+"/rewind" should work like "/rewind last". it's just a shorter way to write it like "/apply" works like "/apply last". liking the last message and wanting to apply it is a very common situation.
+
+let's completely remove "/thinking." i thought more ais would support this. if only claude supports it, i dont think i will really apply it; claude is smart enough by default.
+
+---
+
+from logs, let's remove things such as:
+
+search: False
+search_requested: False
+thinking: False
+thinking_requested: False
+
+if search was executed, chat history gets citations and user sees them on the terminal.

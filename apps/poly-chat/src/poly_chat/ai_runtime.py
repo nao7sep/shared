@@ -115,10 +115,6 @@ async def send_message_to_ai(
         message_count=len(messages),
         input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
-        search=search,
-        search_requested=search,
-        thinking=thinking,
-        thinking_requested=thinking,
     )
 
     started = time.perf_counter()

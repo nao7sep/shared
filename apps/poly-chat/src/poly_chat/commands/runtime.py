@@ -481,58 +481,11 @@ class RuntimeCommandsMixin:
 
         raise ValueError("Invalid argument. Use /search on or /search off")
 
-    async def thinking_mode_command(self, args: str) -> str:
-        """Show or set thinking mode (extended reasoning enabled).
-
-        Args:
-            args: Empty to show status or 'on'/'off' to toggle
-
-        Returns:
-            Status message
-        """
-        from ..models import provider_supports_thinking, THINKING_SUPPORTED_PROVIDERS
-
-        chat_data = self.manager.chat
-
-        if not chat_data or "messages" not in chat_data:
-            return "No chat is currently open"
-
-        normalized = args.strip().lower()
-
-        # No args - show current mode + supported providers
-        if not normalized:
-            status = "on" if self.manager.thinking_mode else "off"
-            providers = ", ".join(sorted(THINKING_SUPPORTED_PROVIDERS))
-            return f"Thinking mode: {status}\nSupported providers: {providers}"
-
-        # Explicit on
-        if normalized == "on":
-            if not provider_supports_thinking(self.manager.current_ai):
-                providers = ", ".join(sorted(THINKING_SUPPORTED_PROVIDERS))
-                return f"Thinking not supported for {self.manager.current_ai}. Supported: {providers}"
-            if self.manager.thinking_mode:
-                return "Thinking mode already on"
-            self.manager.thinking_mode = True
-            return "Thinking mode enabled"
-
-        # Explicit off
-        if normalized == "off":
-            if self.manager.thinking_mode:
-                self.manager.thinking_mode = False
-                return "Thinking mode disabled"
-            return "Thinking mode already off"
-
-        # Typo hint
-        if normalized in {"on/off", "on|off"}:
-            return "Use /thinking on or /thinking off"
-
-        raise ValueError("Invalid argument. Use /thinking on or /thinking off")
-
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting a target message and all following.
 
         Args:
-            args: Message hex ID, "last", or "turn" (last user+assistant/error pair)
+            args: Message hex ID, or empty/"last" (last user+assistant/user+error pair, or trailing error)
 
         Returns:
             Confirmation message
@@ -550,24 +503,34 @@ class RuntimeCommandsMixin:
 
         target = args.strip().lower()
         if not target:
-            raise ValueError("Usage: /rewind <hex_id|last|turn>")
+            target = "last"
 
         if target == "last":
-            index = len(messages) - 1
-        elif target == "turn":
-            if len(messages) < 2:
-                raise ValueError("No complete turn to delete")
             tail = messages[-1]
-            prev = messages[-2]
-            if tail.get("role") not in ("assistant", "error") or prev.get("role") != "user":
-                raise ValueError("Last interaction is not a complete user+assistant/error turn")
-            index = len(messages) - 2
+            tail_role = tail.get("role")
+
+            if tail_role == "error":
+                # If error follows a user message, treat it as one failed interaction.
+                if len(messages) >= 2 and messages[-2].get("role") == "user":
+                    index = len(messages) - 2
+                else:
+                    # Standalone trailing error (e.g., after a completed turn).
+                    index = len(messages) - 1
+            else:
+                if len(messages) < 2:
+                    raise ValueError("No complete turn to delete")
+                prev = messages[-2]
+                if tail_role != "assistant" or prev.get("role") != "user":
+                    raise ValueError(
+                        "Last interaction is not a complete user+assistant or user+error turn"
+                    )
+                index = len(messages) - 2
         elif hex_id.is_hex_id(target):
             index = hex_id.get_message_index(target, messages)
             if index is None:
                 raise ValueError(f"Hex ID '{target}' not found")
         else:
-            raise ValueError("Invalid target. Use a hex ID, 'last', or 'turn'")
+            raise ValueError("Invalid target. Use a hex ID or 'last'")
 
         try:
             # Get hex ID for display (if available)
@@ -575,9 +538,7 @@ class RuntimeCommandsMixin:
             if hex_display:
                 target_label = f"[{hex_display}]"
             elif target == "last":
-                target_label = "last message"
-            elif target == "turn":
-                target_label = "last turn"
+                target_label = "last error" if messages[index].get("role") == "error" else "last turn"
             else:
                 target_label = "selected target"
 

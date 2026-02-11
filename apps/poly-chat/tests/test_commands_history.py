@@ -146,10 +146,10 @@ async def test_history_all(command_handler_with_messages, mock_session_manager_w
 
 @pytest.mark.asyncio
 async def test_history_errors_only(command_handler_with_messages, mock_session_manager_with_messages):
-    """Test /history --errors shows only error messages."""
+    """Test /history errors shows only error messages."""
     handler = command_handler_with_messages
 
-    result = await handler.show_history("--errors")
+    result = await handler.show_history("errors")
 
     assert "Error Messages" in result
     assert "1 of 6 total messages" in result
@@ -162,7 +162,7 @@ async def test_history_errors_only(command_handler_with_messages, mock_session_m
 
 @pytest.mark.asyncio
 async def test_history_no_errors(command_handler_with_messages, mock_session_manager_with_messages):
-    """Test /history --errors when no errors exist."""
+    """Test /history errors when no errors exist."""
     # Remove error message
     mock_session_manager_with_messages.chat["messages"] = [
         msg for msg in mock_session_manager_with_messages.chat["messages"]
@@ -171,7 +171,7 @@ async def test_history_no_errors(command_handler_with_messages, mock_session_man
 
     handler = command_handler_with_messages
 
-    result = await handler.show_history("--errors")
+    result = await handler.show_history("errors")
 
     assert "No error messages found" in result
 

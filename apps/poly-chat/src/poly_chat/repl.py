@@ -322,8 +322,6 @@ async def repl_loop(
                 output_tokens=usage.get("completion_tokens"),
                 total_tokens=usage.get("total_tokens"),
                 citations=len(citations) if citations else None,
-                search=use_search,
-                search_requested=use_search,
                 search_executed=search_executed,
                 search_evidence=search_evidence,
                 citation_urls=[c.get("url") for c in citations if isinstance(c, dict) and c.get("url")] if citations else None,

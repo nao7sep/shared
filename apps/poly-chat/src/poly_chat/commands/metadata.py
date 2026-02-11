@@ -305,7 +305,7 @@ class MetadataCommandsMixin:
         """Show chat history.
 
         Args:
-            args: Optional: number, "all", or "--errors" to filter
+            args: Optional: number, "all", or "errors" to filter
 
         Returns:
             Formatted history display
@@ -326,7 +326,7 @@ class MetadataCommandsMixin:
         if args.strip():
             if args.strip() == "all":
                 show_all = True
-            elif args.strip() == "--errors":
+            elif args.strip() == "errors":
                 errors_only = True
             else:
                 try:
@@ -334,7 +334,7 @@ class MetadataCommandsMixin:
                     if limit <= 0:
                         return "Invalid number. Use a positive integer."
                 except ValueError:
-                    return f"Invalid argument: {args.strip()}. Use a number, 'all', or '--errors'"
+                    return f"Invalid argument: {args.strip()}. Use a number, 'all', or 'errors'"
 
         # Filter messages
         if errors_only:
@@ -518,7 +518,6 @@ class MetadataCommandsMixin:
             "Modes",
             f"Secret Mode:   {'ON' if self.manager.secret_mode else 'OFF'}",
             f"Search Mode:   {'ON' if self.manager.search_mode else 'OFF'}",
-            f"Thinking Mode: {'ON' if self.manager.thinking_mode else 'OFF'}",
             f"Retry Mode:    {'ON' if self.manager.retry_mode else 'OFF'}",
             "",
             "Paths",

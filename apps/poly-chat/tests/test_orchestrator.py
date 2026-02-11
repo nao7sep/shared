@@ -355,6 +355,42 @@ class TestRetryModeSignals:
         assert chat_data["messages"][3]["content"] == ["done"]
 
     @pytest.mark.asyncio
+    async def test_apply_retry_replaces_only_trailing_error_after_good_pair(self, orchestrator):
+        """Applying retry should treat trailing error as standalone and keep prior good pair."""
+        chat_data = {
+            "metadata": {},
+            "messages": [
+                {"role": "user", "content": "good user"},
+                {"role": "assistant", "content": "good assistant"},
+                {"role": "error", "content": "timeout"},
+            ],
+        }
+        orchestrator.manager.switch_chat("/test/chat.json", chat_data)
+        orchestrator.manager.enter_retry_mode(
+            [{"role": "user", "content": "good user"}, {"role": "assistant", "content": "good assistant"}],
+            target_index=2,
+        )
+        retry_hex_id = orchestrator.manager.add_retry_attempt("retry user", "retry answer")
+
+        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
+            action = await orchestrator.handle_command_response(
+                CommandSignal(kind="apply_retry", value=retry_hex_id),
+                current_chat_path="/test/chat.json",
+                current_chat_data=chat_data,
+            )
+
+        assert isinstance(action, PrintAction)
+        assert len(chat_data["messages"]) == 4
+        assert chat_data["messages"][0]["role"] == "user"
+        assert chat_data["messages"][0]["content"] == "good user"
+        assert chat_data["messages"][1]["role"] == "assistant"
+        assert chat_data["messages"][1]["content"] == "good assistant"
+        assert chat_data["messages"][2]["role"] == "user"
+        assert chat_data["messages"][2]["content"] == ["retry user"]
+        assert chat_data["messages"][3]["role"] == "assistant"
+        assert chat_data["messages"][3]["content"] == ["retry answer"]
+
+    @pytest.mark.asyncio
     async def test_apply_retry_when_not_in_retry_mode(self, orchestrator):
         """Test applying retry when not in retry mode."""
         action = await orchestrator.handle_command_response(

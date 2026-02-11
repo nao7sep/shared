@@ -143,36 +143,44 @@ Logs are written in a structured plaintext block format and include contextual e
 
 Delete operations always ask for confirmation and require typing `yes`.
 
+**What "Last Interaction" Means:**
+PolyChat defines the "last interaction" as one of:
+1. A trailing `user + assistant` pair
+2. A trailing `user + error` pair
+3. A standalone trailing `error`
+
+`/retry` retries the last interaction. `/rewind` and `/rewind last` delete the last interaction.
+
 **Chat Control:**
-- `/retry` - Enter retry mode and generate candidate responses
-- `/apply <hex_id>` - Apply one retry candidate and exit retry mode
+- `/retry` - Retry the last interaction and generate candidate responses
+- `/apply` - Apply latest retry candidate and exit retry mode
+- `/apply last` - Apply latest retry candidate and exit retry mode
+- `/apply <hex_id>` - Apply one retry candidate by ID and exit retry mode
 - `/cancel` - Abort retry and keep original response
 - `/secret` - Show current secret mode state
 - `/secret on|off` - Explicitly enable/disable secret mode
 - `/search` - Show current search mode state and supported providers
 - `/search on|off` - Enable/disable web search with inline citations
-- `/thinking` - Show current thinking mode state and supported providers
-- `/thinking on|off` - Enable/disable extended reasoning
+- `/rewind` - Delete last full interaction (user+assistant/user+error), or trailing error
+- `/rewind last` - Delete the last full interaction (user+assistant/user+error), or trailing error
 - `/rewind <hex_id>` - Delete that message and all following messages
-- `/rewind turn` - Delete the last full interaction (user+assistant/error)
-- `/rewind last` - Delete only the last message
 - `/purge <hex_id> [hex_id2 ...]` - Delete specific messages (breaks context)
 
 **History:**
 - `/history` - Show last 10 messages
-- `/history <n>` - Show last n messages
 - `/history all` - Show all messages
-- `/history --errors` - Show error messages only
+- `/history errors` - Show error messages only
+- `/history <n>` - Show last n messages
 - `/show <hex_id>` - Show full content of one message
 - `/status` - Show current profile/chat/session status
 
 **Metadata:**
 - `/title` - Generate title using AI
-- `/title <text>` - Set chat title
 - `/title --` - Clear title
+- `/title <text>` - Set chat title
 - `/summary` - Generate summary using AI
-- `/summary <text>` - Set chat summary
 - `/summary --` - Clear summary
+- `/summary <text>` - Set chat summary
 
 **Safety:**
 - `/safe` - Check entire chat for unsafe content
@@ -184,12 +192,12 @@ Delete operations always ask for confirmation and require typing `yes`.
 - `/input compose` - Enter inserts newline, Option/Alt+Enter sends
 - `/input default` - Restore profile default input mode
 - `/timeout` - Show current timeout setting
-- `/timeout <secs>` - Set timeout (0 = wait forever)
 - `/timeout default` - Restore profile default timeout
+- `/timeout <secs>` - Set timeout (0 = wait forever)
 - `/system` - Show current system prompt
-- `/system <path>` - Set system prompt path
 - `/system --` - Remove system prompt from chat
 - `/system default` - Restore profile default system prompt
+- `/system <path>` - Set system prompt path
 
 **Other:**
 - `/help` - Show all commands
@@ -321,8 +329,8 @@ When search is enabled, AI responses will include a "Sources:" section at the en
 - Base timeout is applied to:
   - AI provider `read` timeout
   - Citation page fetch `read` timeout
-- When `/search` or `/thinking` is ON, AI provider read timeout is automatically multiplied by `3`.
-- Page fetching is **not** multiplied by search/thinking mode.
+- When `/search` is ON, AI provider read timeout is automatically multiplied by `3`.
+- Page fetching is **not** multiplied by search mode.
 - `0` means no timeout (wait forever).
 
 ### Required Directories

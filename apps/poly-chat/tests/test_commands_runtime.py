@@ -162,6 +162,12 @@ async def test_secret_on_off_literal_gives_hint(command_handler):
 
 
 @pytest.mark.asyncio
+async def test_thinking_command_removed(command_handler):
+    with pytest.raises(ValueError, match="Unknown command: /thinking"):
+        await command_handler.execute_command("/thinking")
+
+
+@pytest.mark.asyncio
 async def test_model_unknown_name_returns_no_match(command_handler, mock_session_manager):
     mock_session_manager.current_ai = "claude"
     mock_session_manager.current_model = "claude-haiku-4-5"

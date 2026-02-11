@@ -132,5 +132,5 @@ def pending_error_guidance(*, compact: bool = False) -> str:
     return (
         "\n⚠️  Cannot continue: last interaction failed.\n"
         "Use /retry to rerun the same message.\n"
-        "Use /rewind to remove the failed turn."
+        "Use /rewind to remove the failed error/turn."
     )

@@ -137,8 +137,6 @@ class StructuredTextFormatter(logging.Formatter):
             "message_count",
             "input_chars",
             "has_system_prompt",
-            "search",
-            "search_requested",
             "system_prompt_path",
         ],
         "ai_response": [
@@ -153,8 +151,6 @@ class StructuredTextFormatter(logging.Formatter):
             "input_tokens",
             "output_tokens",
             "total_tokens",
-            "search",
-            "search_requested",
             "search_executed",
             "search_evidence",
             "citations",
