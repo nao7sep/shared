@@ -3,7 +3,7 @@ name = "tk"
 version = "0.1.0"
 description = "A quick CLI app to manage tasks"
 authors = ["nao7sep <nao7sep@gmail.com>"]
-license = "GPL-3.0"
+license = "MIT"
 readme = "README.md"
 packages = [{include = "tk", from = "src"}]
 
