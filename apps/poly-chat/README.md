@@ -483,6 +483,7 @@ poetry run mypy src/poly_chat
 - `prompts.py` - Centralized helper prompt templates
 - `keys/` - API key management (env vars, Keychain, JSON)
 - `ai/` - AI provider implementations
+- `ai/tools.py` - Centralized provider tool payload definitions
 - `ai/limits.py` - Optional request-limit resolution and precedence
 - `models.py` - Model registry and provider mapping
 - `commands/` - Command handler and command mixins
