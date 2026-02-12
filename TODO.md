@@ -1,23 +1,26 @@
 # TODO
 
-- check all existing tasks to draw a bigger picture. currently work is in bits
-- check all remaining tasks in paper notebook
 - read the claude code book on mcp, parallel development, sub-agents
-- hello world python gui apps using different packages
-- try mail/sms apis
 - write web app that just sends todo mail
-- learn different ways to split text into chunks for embedding
-- try deepl/google translation apis
-- try openai/google transcription apis
-- decide what to do with blog/x
-- blog + rag + ai consulting on international businesses, ai applications and parenting?
 - vocabulary development infrastructure for my daughter
-- still write app to zip-archive source code to separate vibe coding from code review
-- release tk
-- release poly-chat
-- review poly-chat and update readme.md
+- introduce tk (first python app, that nobody else will use)
+- introduce and release poly-chat
+- automate "recordings => transcription => context"
+- seek tools to read foreign language books
+- learn about github pages, automation
+- tackle https://www.darioamodei.com/essay/the-adolescence-of-technology
 
 ## History
+
+### 2026-02-12
+- ❌ check all existing tasks to draw a bigger picture. currently work is in bits => vibe management may work better. we finish what we want, when and while we want to
+- ✅ check all remaining tasks in paper notebook
+- ❌ hello world python gui apps using different packages => not interested. we'll learn what we need, when we need it
+- ❌ try mail/sms apis
+- ❌ learn different ways to split text into chunks for embedding
+- ❌ try deepl/google translation apis
+- ❌ try openai/google transcription apis
+- ✅ review poly-chat and update readme.md => first beta done
 
 ### 2026-02-09
 - ✅ review tk and update readme.md
