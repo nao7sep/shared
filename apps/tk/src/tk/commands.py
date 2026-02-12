@@ -1,659 +1,338 @@
-"""Command handlers for the tk CLI."""
+"""Business command logic for tk."""
 
-from typing import Any
+from collections import defaultdict
 from datetime import datetime, timezone
-import re
+from typing import Any
 
-from tk import profile, data, subjective_date, markdown
-
-
-def _sync_if_auto(session: dict[str, Any]) -> None:
-    """Regenerate TODO.md if auto_sync is enabled.
-
-    Args:
-        session: Current session state with profile and tasks
-    """
-    if session.get("profile", {}).get("auto_sync", True):
-        markdown.generate_todo(
-            session["tasks"]["tasks"],
-            session["profile"]["output_path"]
-        )
+from tk import data, markdown, profile, subjective_date
+from tk.session import Session
+from tk.validation import validate_date_format
 
 
-def cmd_new(profile_path: str, session: dict[str, Any]) -> str:
-    """Create new profile.
+def _sync_if_auto(session: Session) -> None:
+    """Regenerate TODO.md if auto_sync is enabled."""
+    prof = session.require_profile()
+    tasks_data = session.require_tasks()
 
-    Args:
-        profile_path: Path where to save the profile
-        session: Current session state (will be updated)
-
-    Returns:
-        Success message
-    """
-    profile.create_profile(profile_path)
-
-    # Reload profile to get properly mapped paths
-    prof = profile.load_profile(profile_path)
-    session["profile_path"] = profile_path
-    session["profile"] = prof
-
-    # Create empty tasks file
-    tasks_data = {"tasks": []}
-    data.save_tasks(prof["data_path"], tasks_data)
-    session["tasks"] = tasks_data
-
-    # Generate empty TODO.md
-    markdown.generate_todo([], prof["output_path"])
-
-    # Clear last_list
-    session["last_list"] = []
-
-    return f"Profile created: {profile_path}"
+    if prof.get("auto_sync", True):
+        markdown.generate_todo(tasks_data["tasks"], prof["output_path"])
 
 
-def cmd_add(session: dict[str, Any], text: str) -> str:
-    """Add new task.
-
-    Args:
-        session: Current session state
-        text: Task text
-
-    Returns:
-        Success message
-    """
-    if not text.strip():
-        raise ValueError("Task text cannot be empty")
-
-    # Clear last_list (not a number-based command, but changes state)
-    session["last_list"] = []
-
-    # Add task
-    data.add_task(session["tasks"], text)
-
-    # Save
-    data.save_tasks(session["profile"]["data_path"], session["tasks"])
-
-    # Regenerate TODO.md if auto_sync enabled
-    _sync_if_auto(session)
-
-    return "Task added."
+def get_default_subjective_date(session: Session) -> str:
+    """Get current subjective date for the active profile settings."""
+    prof = session.require_profile()
+    return subjective_date.get_current_subjective_date(
+        prof["timezone"],
+        prof["subjective_day_start"],
+    )
 
 
-def cmd_list(session: dict[str, Any]) -> str:
-    """List pending tasks.
+def list_pending_data(session: Session) -> dict[str, Any]:
+    """Return structured pending task data for presentation layers."""
+    tasks_data = session.require_tasks()
 
-    Args:
-        session: Current session state
-
-    Returns:
-        Formatted list of tasks
-
-    Updates session.last_list with [(display_num, array_index), ...]
-    """
-    all_tasks = session["tasks"]["tasks"]
-
-    # Find pending tasks and their indices
     pending_with_indices = [
-        (i, task) for i, task in enumerate(all_tasks) if task["status"] == "pending"
+        (i, task) for i, task in enumerate(tasks_data["tasks"]) if task["status"] == "pending"
     ]
-
-    # Sort by created_at ascending
     pending_with_indices.sort(key=lambda x: x[1]["created_at"])
 
-    if not pending_with_indices:
-        session["last_list"] = []
-        return "No pending tasks."
-
-    # Build output and last_list mapping
-    lines = []
-    last_list = []
-
-    # Calculate padding width based on total number of tasks
-    total_count = len(pending_with_indices)
-    num_width = len(str(total_count))
-
+    items = []
     for display_num, (array_index, task) in enumerate(pending_with_indices, start=1):
-        # Right-align the number for vertical alignment
-        padded_num = str(display_num).rjust(num_width)
-        lines.append(f"{padded_num}. {task['text']}")
-        last_list.append((display_num, array_index))
+        items.append({
+            "display_num": display_num,
+            "array_index": array_index,
+            "task": task,
+        })
 
-    session["last_list"] = last_list
-
-    return "\n".join(lines)
+    return {"items": items}
 
 
-def cmd_history(session: dict[str, Any], days: int | None = None, working_days: int | None = None, specific_date: str | None = None) -> str:
-    """List handled tasks (done or cancelled).
-
-    Args:
-        session: Current session state
-        days: Optional number of calendar days to show
-        working_days: Optional number of working days (days with tasks) to show
-        specific_date: Optional specific date (YYYY-MM-DD) to show
-
-    Returns:
-        Formatted list of handled tasks
-
-    Updates session.last_list with [(display_num, array_index), ...]
-    """
-    # Validate that only one filter is specified
-    filters_specified = sum([days is not None, working_days is not None, specific_date is not None])
+def list_history_data(
+    session: Session,
+    days: int | None = None,
+    working_days: int | None = None,
+    specific_date: str | None = None,
+) -> dict[str, Any]:
+    """Return structured handled task data for presentation layers."""
+    filters_specified = sum(
+        [days is not None, working_days is not None, specific_date is not None]
+    )
     if filters_specified > 1:
         raise ValueError("Cannot specify multiple filters (--days, --working-days, or specific_date)")
 
-    all_tasks = session["tasks"]["tasks"]
-
-    # Find handled tasks and their indices
+    tasks_data = session.require_tasks()
     handled_with_indices = [
-        (i, task) for i, task in enumerate(all_tasks) if task["status"] in ("done", "cancelled")
+        (i, task)
+        for i, task in enumerate(tasks_data["tasks"])
+        if task["status"] in ("done", "cancelled")
     ]
 
     if days is not None:
-        # Filter by subjective_date (last N calendar days)
-        from datetime import timedelta, date as date_type
+        from datetime import date as date_type, timedelta
 
-        # Get current subjective date
-        current_subjective = subjective_date.get_current_subjective_date(
-            session["profile"]["timezone"],
-            session["profile"]["subjective_day_start"]
-        )
+        current_subjective = get_default_subjective_date(session)
         today = date_type.fromisoformat(current_subjective)
         cutoff = today - timedelta(days=days - 1)
 
         handled_with_indices = [
-            (i, t) for i, t in handled_with_indices
+            (i, t)
+            for i, t in handled_with_indices
             if t.get("subjective_date") and t["subjective_date"] >= cutoff.isoformat()
         ]
 
     elif working_days is not None:
-        # Filter by last N working days (days that have handled tasks)
-        from collections import defaultdict
-
-        # Group tasks by subjective_date
-        by_date = defaultdict(list)
+        by_date: dict[str, list[tuple[int, dict[str, Any]]]] = defaultdict(list)
         for i, task in handled_with_indices:
             date_str = task.get("subjective_date")
             if date_str:
                 by_date[date_str].append((i, task))
 
-        # Get the N most recent dates with tasks
         sorted_dates = sorted(by_date.keys(), reverse=True)
         dates_to_include = sorted_dates[:working_days]
 
-        # Filter to only tasks from those dates
         handled_with_indices = [
-            (i, t) for i, t in handled_with_indices
+            (i, t)
+            for i, t in handled_with_indices
             if t.get("subjective_date") in dates_to_include
         ]
 
     elif specific_date is not None:
-        # Filter by specific date
         handled_with_indices = [
-            (i, t) for i, t in handled_with_indices
+            (i, t)
+            for i, t in handled_with_indices
             if t.get("subjective_date") == specific_date
         ]
 
-    if not handled_with_indices:
-        session["last_list"] = []
-        if days is not None:
-            return f"No handled tasks in last {days} days."
-        elif working_days is not None:
-            return f"No handled tasks in last {working_days} working days."
-        elif specific_date is not None:
-            return f"No handled tasks on {specific_date}."
-        else:
-            return "No handled tasks."
-
-    # Group by subjective_date (descending), sort within group by handled_at (ascending)
-    from collections import defaultdict
-    by_date = defaultdict(list)
-
-    for array_index, task in handled_with_indices:
-        date_str = task.get("subjective_date", "unknown")
-        by_date[date_str].append((array_index, task))
-
-    # Sort each group by handled_at
-    for date_str in by_date:
-        by_date[date_str].sort(key=lambda x: x[1].get("handled_at", ""))
-
-    # Sort dates descending
-    sorted_dates = sorted(by_date.keys(), reverse=True)
-
-    # Calculate total count for padding
-    total_count = sum(len(by_date[date_str]) for date_str in sorted_dates)
-    num_width = len(str(total_count))
-
-    # Build output
-    lines = []
-    last_list = []
+    groups = []
     display_num = 1
-
-    for idx, date_str in enumerate(sorted_dates):
-        lines.append(date_str)
-        for array_index, task in by_date[date_str]:
-            status_emoji = "✅" if task["status"] == "done" else "❌"
-            text = task["text"]
-            note = task.get("note")
-
-            # Right-align the number for vertical alignment
-            padded_num = str(display_num).rjust(num_width)
-
-            if note:
-                line = f"  {padded_num}. {status_emoji} {text} => {note}"
-            else:
-                line = f"  {padded_num}. {status_emoji} {text}"
-
-            lines.append(line)
-            last_list.append((display_num, array_index))
+    grouped = data.group_handled_tasks(handled_with_indices, include_unknown=True)
+    for date_str, date_items in grouped:
+        items = []
+        for array_index, task in date_items:
+            items.append({
+                "display_num": display_num,
+                "array_index": array_index,
+                "task": task,
+            })
             display_num += 1
 
-        # Add blank line between groups (not after the last one)
-        if idx < len(sorted_dates) - 1:
-            lines.append("")
+        groups.append({
+            "date": date_str,
+            "items": items,
+        })
 
-    session["last_list"] = last_list
-
-    return "\n".join(lines)
-
-
-def cmd_done(session: dict[str, Any], num: int, note: str | None = None, date_str: str | None = None) -> str:
-    """Mark task as done.
-
-    Args:
-        session: Current session state
-        num: Task number from last list/history
-        note: Optional note
-        date_str: Optional subjective date (YYYY-MM-DD)
-
-    Returns:
-        Success message
-    """
-    return _handle_task(session, num, "done", note, date_str)
-
-
-def cmd_cancel(session: dict[str, Any], num: int, note: str | None = None, date_str: str | None = None) -> str:
-    """Mark task as cancelled.
-
-    Args:
-        session: Current session state
-        num: Task number from last list/history
-        note: Optional note
-        date_str: Optional subjective date (YYYY-MM-DD)
-
-    Returns:
-        Success message
-    """
-    return _handle_task(session, num, "cancelled", note, date_str)
-
-
-def _handle_task(session: dict[str, Any], num: int, status: str, note: str | None, date_str: str | None) -> str:
-    """Helper to handle a task (done or cancelled).
-
-    Args:
-        session: Current session state
-        num: Task number from last list/history
-        status: "done" or "cancelled"
-        note: Optional note
-        date_str: Optional subjective date (YYYY-MM-DD)
-
-    Returns:
-        Success message
-    """
-    # Check last_list exists
-    if not session.get("last_list"):
-        raise ValueError("Run 'list' or 'history' first")
-
-    # Map num to array index
-    array_index = None
-    for display_num, idx in session["last_list"]:
-        if display_num == num:
-            array_index = idx
-            break
-
-    if array_index is None:
-        raise ValueError("Invalid task number")
-
-    # Get the task to show in confirmation
-    task = data.get_task_by_index(session["tasks"], array_index)
-    if not task:
-        raise ValueError("Task not found")
-
-    # Calculate subjective date
-    if date_str:
-        # Validate format
-        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-            raise ValueError("Invalid date format. Expected: YYYY-MM-DD")
-        subj_date = date_str
-    else:
-        # Calculate from current time
-        subj_date = subjective_date.get_current_subjective_date(
-            session["profile"]["timezone"],
-            session["profile"]["subjective_day_start"]
-        )
-
-    # Interactive confirmation and prompts
-    try:
-        print(f"Task: {task['text']}")
-        print(f"Will be marked as: {status}")
-        print(f"Subjective date: {subj_date}")
-        print("(Press Ctrl+C to cancel)")
-
-        # Prompt for note if not provided
-        if note is None:
-            note_input = input("Note (press Enter to skip): ").strip()
-            note = note_input if note_input else None
-
-        # Prompt for date override if not provided
-        if not date_str:
-            date_input = input(f"Date override (press Enter to use {subj_date}): ").strip()
-            if date_input:
-                if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_input):
-                    raise ValueError("Invalid date format. Expected: YYYY-MM-DD")
-                subj_date = date_input
-
-    except KeyboardInterrupt:
-        print()  # New line after ^C
-        session["last_list"] = []
-        return "Cancelled."
-
-    # Update task
-    now_utc = datetime.now(timezone.utc).isoformat()
-    updates = {
-        "status": status,
-        "handled_at": now_utc,
-        "subjective_date": subj_date,
-        "note": note
+    return {
+        "groups": groups,
+        "filters": {
+            "days": days,
+            "working_days": working_days,
+            "specific_date": specific_date,
+        },
     }
 
-    if not data.update_task(session["tasks"], array_index, **updates):
-        raise ValueError("Task not found")
 
-    # Save
-    data.save_tasks(session["profile"]["data_path"], session["tasks"])
+def extract_last_list_mapping(payload: dict[str, Any]) -> list[tuple[int, int]]:
+    """Build (display_num, array_index) mapping from list/history payloads."""
+    if "items" in payload:
+        return [(item["display_num"], item["array_index"]) for item in payload["items"]]
 
-    # Regenerate TODO.md if auto_sync enabled
+    mapping: list[tuple[int, int]] = []
+    for group in payload.get("groups", []):
+        mapping.extend((item["display_num"], item["array_index"]) for item in group["items"])
+    return mapping
+
+
+def cmd_init(profile_path: str, session: Session) -> str:
+    """Create a new profile and initialize session state."""
+    profile.create_profile(profile_path)
+
+    prof = profile.load_profile(profile_path)
+    session.profile_path = profile_path
+    session.profile = prof
+
+    tasks_data = {"tasks": []}
+    data.save_tasks(prof["data_path"], tasks_data)
+    session.tasks = tasks_data
+
+    markdown.generate_todo([], prof["output_path"])
+
+    return f"Profile created: {profile_path}"
+
+
+def cmd_add(session: Session, text: str) -> str:
+    """Add a new pending task."""
+    if not text.strip():
+        raise ValueError("Task text cannot be empty")
+
+    tasks_data = session.require_tasks()
+    prof = session.require_profile()
+
+    data.add_task(tasks_data, text)
+    data.save_tasks(prof["data_path"], tasks_data)
     _sync_if_auto(session)
 
-    # Clear last_list
-    session["last_list"] = []
+    return "Task added."
+
+
+def _handle_task(
+    session: Session,
+    array_index: int,
+    status: str,
+    note: str | None,
+    date_str: str | None,
+) -> str:
+    """Mark a task as handled."""
+    subj_date = date_str if date_str else get_default_subjective_date(session)
+    validate_date_format(subj_date)
+
+    tasks_data = session.require_tasks()
+    prof = session.require_profile()
+
+    now_utc = datetime.now(timezone.utc).isoformat()
+    updated = data.update_task(
+        tasks_data,
+        array_index,
+        status=status,
+        handled_at=now_utc,
+        subjective_date=subj_date,
+        note=note,
+    )
+    if not updated:
+        raise ValueError("Task not found")
+
+    data.save_tasks(prof["data_path"], tasks_data)
+    _sync_if_auto(session)
 
     return f"Task marked as {status}."
 
 
-def cmd_edit(session: dict[str, Any], num: int, text: str) -> str:
-    """Edit task text.
+def cmd_done(
+    session: Session,
+    array_index: int,
+    note: str | None = None,
+    date_str: str | None = None,
+) -> str:
+    """Mark a task as done."""
+    return _handle_task(session, array_index, "done", note, date_str)
 
-    Args:
-        session: Current session state
-        num: Task number from last list/history
-        text: New task text
 
-    Returns:
-        Success message
-    """
-    # Check last_list exists
-    if not session.get("last_list"):
-        raise ValueError("Run 'list' or 'history' first")
+def cmd_cancel(
+    session: Session,
+    array_index: int,
+    note: str | None = None,
+    date_str: str | None = None,
+) -> str:
+    """Mark a task as cancelled."""
+    return _handle_task(session, array_index, "cancelled", note, date_str)
 
+
+def cmd_edit(session: Session, array_index: int, text: str) -> str:
+    """Edit task text."""
     if not text.strip():
         raise ValueError("Task text cannot be empty")
 
-    # Map num to array index
-    array_index = None
-    for display_num, idx in session["last_list"]:
-        if display_num == num:
-            array_index = idx
-            break
+    tasks_data = session.require_tasks()
+    prof = session.require_profile()
 
-    if array_index is None:
-        raise ValueError("Invalid task number")
-
-    # Update task
-    if not data.update_task(session["tasks"], array_index, text=text):
+    if not data.update_task(tasks_data, array_index, text=text):
         raise ValueError("Task not found")
 
-    # Save
-    data.save_tasks(session["profile"]["data_path"], session["tasks"])
-
-    # Regenerate TODO.md if auto_sync enabled
+    data.save_tasks(prof["data_path"], tasks_data)
     _sync_if_auto(session)
-
-    # Clear last_list
-    session["last_list"] = []
 
     return "Task updated."
 
 
-def cmd_delete(session: dict[str, Any], num: int) -> str:
-    """Delete task permanently.
+def cmd_delete(session: Session, array_index: int, confirm: bool = False) -> str:
+    """Delete task permanently."""
+    tasks_data = session.require_tasks()
+    prof = session.require_profile()
 
-    Args:
-        session: Current session state
-        num: Task number from last list/history
-
-    Returns:
-        Success message
-    """
-    # Check last_list exists
-    if not session.get("last_list"):
-        raise ValueError("Run 'list' or 'history' first")
-
-    # Map num to array index
-    array_index = None
-    for display_num, idx in session["last_list"]:
-        if display_num == num:
-            array_index = idx
-            break
-
-    if array_index is None:
-        raise ValueError("Invalid task number")
-
-    # Get task for confirmation
-    task = data.get_task_by_index(session["tasks"], array_index)
-    if not task:
+    if not data.get_task_by_index(tasks_data, array_index):
         raise ValueError("Task not found")
 
-    # Confirm deletion
-    print(f"Task: {task['text']}")
-    print(f"Status: {task['status']}")
-    confirm = input("Delete permanently? (yes/N): ").strip().lower()
-    if confirm != "yes":
+    if not confirm:
         return "Deletion cancelled."
 
-    # Delete task
-    if not data.delete_task(session["tasks"], array_index):
+    if not data.delete_task(tasks_data, array_index):
         raise ValueError("Task not found")
 
-    # Save
-    data.save_tasks(session["profile"]["data_path"], session["tasks"])
-
-    # Regenerate TODO.md if auto_sync enabled
+    data.save_tasks(prof["data_path"], tasks_data)
     _sync_if_auto(session)
-
-    # Clear last_list
-    session["last_list"] = []
 
     return "Task deleted."
 
 
-def cmd_note(session: dict[str, Any], num: int, note: str | None = None) -> str:
-    """Set, update, or remove note on a task.
+def cmd_note(session: Session, array_index: int, note: str | None = None) -> str:
+    """Set, update, or remove note on a task."""
+    tasks_data = session.require_tasks()
+    prof = session.require_profile()
 
-    Args:
-        session: Current session state
-        num: Task number from last list/history
-        note: Note text (or None to remove)
-
-    Returns:
-        Success message
-    """
-    # Check last_list exists
-    if not session.get("last_list"):
-        raise ValueError("Run 'list' or 'history' first")
-
-    # Map num to array index
-    array_index = None
-    for display_num, idx in session["last_list"]:
-        if display_num == num:
-            array_index = idx
-            break
-
-    if array_index is None:
-        raise ValueError("Invalid task number")
-
-    # Update task note
-    if not data.update_task(session["tasks"], array_index, note=note):
-        raise ValueError("Task not found")
-
-    # Save
-    data.save_tasks(session["profile"]["data_path"], session["tasks"])
-
-    # Regenerate TODO.md if auto_sync enabled
-    _sync_if_auto(session)
-
-    # Clear last_list
-    session["last_list"] = []
-
-    if note:
-        return "Note updated."
-    else:
-        return "Note removed."
-
-
-def cmd_date(session: dict[str, Any], num: int, date_str: str) -> str:
-    """Change subjective handling date on a task.
-
-    Args:
-        session: Current session state
-        num: Task number from last list/history
-        date_str: Subjective date in YYYY-MM-DD format
-
-    Returns:
-        Success message
-    """
-    # Check last_list exists
-    if not session.get("last_list"):
-        raise ValueError("Run 'list' or 'history' first")
-
-    # Map num to array index
-    array_index = None
-    for display_num, idx in session["last_list"]:
-        if display_num == num:
-            array_index = idx
-            break
-
-    if array_index is None:
-        raise ValueError("Invalid task number")
-
-    # Get task to check if it's handled
-    task = data.get_task_by_index(session["tasks"], array_index)
+    task = data.get_task_by_index(tasks_data, array_index)
     if not task:
         raise ValueError("Task not found")
+    if task["status"] == "pending":
+        raise ValueError("Cannot set note on pending task. Mark it done or cancelled first.")
 
-    # Only allow changing date on handled tasks
+    if not data.update_task(tasks_data, array_index, note=note):
+        raise ValueError("Task not found")
+
+    data.save_tasks(prof["data_path"], tasks_data)
+    _sync_if_auto(session)
+
+    return "Note updated." if note else "Note removed."
+
+
+def cmd_date(session: Session, array_index: int, date_str: str) -> str:
+    """Change subjective handling date on a handled task."""
+    validate_date_format(date_str)
+
+    tasks_data = session.require_tasks()
+    prof = session.require_profile()
+
+    task = data.get_task_by_index(tasks_data, array_index)
+    if not task:
+        raise ValueError("Task not found")
     if task["status"] == "pending":
         raise ValueError("Cannot set date on pending task. Mark it done or cancelled first.")
 
-    # Validate date format
-    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-        raise ValueError("Invalid date format. Expected: YYYY-MM-DD")
-
-    # Update subjective_date
-    if not data.update_task(session["tasks"], array_index, subjective_date=date_str):
+    if not data.update_task(tasks_data, array_index, subjective_date=date_str):
         raise ValueError("Task not found")
 
-    # Save
-    data.save_tasks(session["profile"]["data_path"], session["tasks"])
-
-    # Regenerate TODO.md if auto_sync enabled
+    data.save_tasks(prof["data_path"], tasks_data)
     _sync_if_auto(session)
-
-    # Clear last_list
-    session["last_list"] = []
 
     return f"Subjective date updated to {date_str}."
 
 
-def cmd_sync(session: dict[str, Any]) -> str:
-    """Regenerate TODO.md from current data.
-
-    Args:
-        session: Current session state
-
-    Returns:
-        Success message
-    """
+def cmd_sync(session: Session) -> str:
+    """Regenerate TODO.md from current data."""
     from pathlib import Path
 
-    output_path = session["profile"]["output_path"]
-    markdown.generate_todo(session["tasks"]["tasks"], output_path)
+    prof = session.require_profile()
+    tasks_data = session.require_tasks()
 
-    # Clear last_list
-    session["last_list"] = []
+    output_path = prof["output_path"]
+    markdown.generate_todo(tasks_data["tasks"], output_path)
 
-    # Get filename for user-facing message
     filename = Path(output_path).name
-
     return f"{filename} regenerated."
 
 
-def cmd_today(session: dict[str, Any]) -> str:
-    """List tasks handled today.
-
-    Args:
-        session: Current session state
-
-    Returns:
-        Formatted list of handled tasks from today
-
-    Updates session.last_list with [(display_num, array_index), ...]
-    """
-    # Get current subjective date
-    current_subjective = subjective_date.get_current_subjective_date(
-        session["profile"]["timezone"],
-        session["profile"]["subjective_day_start"]
-    )
-
-    # Use cmd_history with specific_date
-    return cmd_history(session, specific_date=current_subjective)
+def cmd_today_data(session: Session) -> dict[str, Any]:
+    """Return history payload for current subjective date."""
+    return list_history_data(session, specific_date=get_default_subjective_date(session))
 
 
-def cmd_yesterday(session: dict[str, Any]) -> str:
-    """List tasks handled yesterday.
-
-    Args:
-        session: Current session state
-
-    Returns:
-        Formatted list of handled tasks from yesterday
-
-    Updates session.last_list with [(display_num, array_index), ...]
-    """
+def cmd_yesterday_data(session: Session) -> dict[str, Any]:
+    """Return history payload for yesterday's subjective date."""
     from datetime import date as date_type, timedelta
 
-    # Get yesterday's subjective date
-    current_subjective = subjective_date.get_current_subjective_date(
-        session["profile"]["timezone"],
-        session["profile"]["subjective_day_start"]
-    )
-    today = date_type.fromisoformat(current_subjective)
+    today = date_type.fromisoformat(get_default_subjective_date(session))
     yesterday = (today - timedelta(days=1)).isoformat()
-
-    # Use cmd_history with specific_date
-    return cmd_history(session, specific_date=yesterday)
+    return list_history_data(session, specific_date=yesterday)
 
 
-def cmd_recent(session: dict[str, Any]) -> str:
-    """List tasks from last 3 working days (including today).
-
-    Args:
-        session: Current session state
-
-    Returns:
-        Formatted list of handled tasks from last 3 working days
-
-    Updates session.last_list with [(display_num, array_index), ...]
-    """
-    # Use cmd_history with working_days=3
-    return cmd_history(session, working_days=3)
+def cmd_recent_data(session: Session) -> dict[str, Any]:
+    """Return history payload for last 3 working days."""
+    return list_history_data(session, working_days=3)

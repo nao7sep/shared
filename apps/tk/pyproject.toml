@@ -3,15 +3,23 @@ name = "tk"
 version = "0.1.0"
 description = "A quick CLI app to manage tasks"
 authors = ["nao7sep <nao7sep@gmail.com>"]
-license = "GPL-3.0"
+license = "MIT"
 readme = "README.md"
 packages = [{include = "tk", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
+tzlocal = "^5.3.1"
+tzdata = { version = "*", markers = "platform_system == 'Windows'" }
 
 [tool.poetry.scripts]
 tk = "tk.cli:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+pytest-mock = "^3.15.1"
+pytest-cov = "^7.0.0"
+freezegun = "^1.5.5"
 
 [build-system]
 requires = ["poetry-core"]

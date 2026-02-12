@@ -6,6 +6,38 @@ from typing import Any
 from datetime import datetime, timezone
 
 
+def validate_tasks_structure(data: dict[str, Any]) -> None:
+    """Validate tasks data structure and task schemas.
+
+    Args:
+        data: Tasks data structure to validate
+
+    Raises:
+        ValueError: If structure is invalid or tasks are malformed
+    """
+    if "tasks" not in data:
+        raise ValueError("Invalid tasks file structure: missing 'tasks' key")
+
+    if not isinstance(data["tasks"], list):
+        raise ValueError("Invalid tasks file structure: 'tasks' must be an array")
+
+    required_fields = {"text", "status", "created_at"}
+    valid_statuses = {"pending", "done", "cancelled"}
+
+    for i, task in enumerate(data["tasks"]):
+        if not isinstance(task, dict):
+            raise ValueError(f"Task {i} is not a valid object")
+
+        # Check required fields
+        missing = required_fields - set(task.keys())
+        if missing:
+            raise ValueError(f"Task {i} missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate status
+        if task["status"] not in valid_statuses:
+            raise ValueError(f"Task {i} has invalid status: {task['status']}")
+
+
 def load_tasks(path: str) -> dict[str, Any]:
     """Load tasks from JSON file.
 
@@ -31,9 +63,8 @@ def load_tasks(path: str) -> dict[str, Any]:
         with open(task_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Validate structure
-        if "tasks" not in data:
-            raise ValueError("Invalid tasks file structure")
+        # Validate structure and schema
+        validate_tasks_structure(data)
 
         return data
     except json.JSONDecodeError as e:
@@ -116,7 +147,18 @@ def update_task(data: dict[str, Any], index: int, **updates) -> bool:
 
     Returns:
         True if task was found and updated, False otherwise
+
+    Raises:
+        ValueError: If any update field is not a valid task field
     """
+    # Whitelist of allowed task fields
+    ALLOWED_FIELDS = {"text", "status", "handled_at", "subjective_date", "note"}
+
+    # Check for invalid fields
+    invalid_fields = set(updates.keys()) - ALLOWED_FIELDS
+    if invalid_fields:
+        raise ValueError(f"Invalid task fields: {', '.join(sorted(invalid_fields))}")
+
     task = get_task_by_index(data, index)
     if task is None:
         return False
@@ -141,3 +183,74 @@ def delete_task(data: dict[str, Any], index: int) -> bool:
         data["tasks"].pop(index)
         return True
     return False
+
+
+def group_tasks_for_display(tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    """Group and sort tasks for display layers.
+
+    Returns:
+        {
+            "pending": [tasks sorted by created_at asc],
+            "done": [(date, [tasks sorted by handled_at asc]), ...],
+            "cancelled": [(date, [tasks sorted by handled_at asc]), ...],
+        }
+    """
+    result: dict[str, Any] = {
+        "pending": [],
+        "done": [],
+        "cancelled": [],
+    }
+
+    for task in tasks:
+        if task["status"] == "pending":
+            result["pending"].append(task)
+
+    result["pending"].sort(key=lambda t: t["created_at"])
+
+    for status in ("done", "cancelled"):
+        handled_with_indices = [
+            (i, task)
+            for i, task in enumerate(tasks)
+            if task["status"] == status
+        ]
+        grouped = group_handled_tasks(handled_with_indices, include_unknown=True)
+        result[status] = [(date, [task for _, task in date_tasks]) for date, date_tasks in grouped]
+
+    return result
+
+
+def group_handled_tasks(
+    handled_with_indices: list[tuple[int, dict[str, Any]]],
+    *,
+    include_unknown: bool,
+) -> list[tuple[str, list[tuple[int, dict[str, Any]]]]]:
+    """Group handled tasks by subjective date and sort deterministically.
+
+    Sorting:
+    - dates descending
+    - tasks within date by handled_at ascending
+    """
+    grouped: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+
+    for array_index, task in handled_with_indices:
+        date = task.get("subjective_date")
+        if not date:
+            if not include_unknown:
+                continue
+            date = "unknown"
+
+        if date not in grouped:
+            grouped[date] = []
+        grouped[date].append((array_index, task))
+
+    for date in grouped:
+        grouped[date].sort(key=lambda x: x[1].get("handled_at", ""))
+
+    known = sorted(
+        [(date, items) for date, items in grouped.items() if date != "unknown"],
+        key=lambda x: x[0],
+        reverse=True,
+    )
+    if "unknown" in grouped:
+        known.append(("unknown", grouped["unknown"]))
+    return known

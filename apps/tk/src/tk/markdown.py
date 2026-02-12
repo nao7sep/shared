@@ -1,69 +1,9 @@
 """TODO.md generation from task data."""
 
-from typing import Any
 from pathlib import Path
+from typing import Any
 
-
-def sort_tasks(tasks: list[dict[str, Any]]) -> dict[str, Any]:
-    """Sort tasks into structure for rendering.
-
-    Args:
-        tasks: List of task dictionaries
-
-    Returns:
-        Dictionary with structure:
-        {
-            "pending": [tasks sorted by created_at asc],
-            "done": {
-                "2026-01-31": [tasks sorted by handled_at asc],
-                "2026-01-30": [tasks sorted by handled_at asc]
-            },
-            "cancelled": {
-                "2026-01-30": [tasks sorted by handled_at asc]
-            }
-        }
-
-    Sorting rules:
-    - Pending: by created_at ascending (oldest first)
-    - Done/Cancelled: grouped by subjective_date descending (newest date first),
-      within each date group sorted by handled_at ascending (earliest first)
-    """
-    result = {
-        "pending": [],
-        "done": {},
-        "cancelled": {}
-    }
-
-    for task in tasks:
-        status = task["status"]
-
-        if status == "pending":
-            result["pending"].append(task)
-        elif status in ("done", "cancelled"):
-            # Group by subjective date
-            date = task.get("subjective_date")
-            if date:  # Skip if no subjective_date (shouldn't happen)
-                if date not in result[status]:
-                    result[status][date] = []
-                result[status][date].append(task)
-
-    # Sort pending by created_at ascending
-    result["pending"].sort(key=lambda t: t["created_at"])
-
-    # Sort done/cancelled: dates descending, within date handled_at ascending
-    for status in ("done", "cancelled"):
-        # Sort each date group by handled_at ascending
-        for date in result[status]:
-            result[status][date].sort(key=lambda t: t.get("handled_at", ""))
-
-        # Convert to list of (date, tasks) sorted by date descending
-        result[status] = sorted(
-            result[status].items(),
-            key=lambda x: x[0],
-            reverse=True
-        )
-
-    return result
+from tk import data
 
 
 def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
@@ -91,7 +31,7 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     - Empty line after "## History"
     - File ends with empty line
     """
-    sorted_data = sort_tasks(tasks)
+    sorted_data = data.group_tasks_for_display(tasks)
     lines = ["# TODO", ""]
 
     # Pending section

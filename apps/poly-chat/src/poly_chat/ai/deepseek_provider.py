@@ -1,0 +1,452 @@
+"""DeepSeek provider implementation for PolyChat.
+
+Note: DeepSeek uses OpenAI-compatible API.
+"""
+
+import logging
+from typing import AsyncIterator
+from openai import (
+    APIConnectionError,
+    RateLimitError,
+    APITimeoutError,
+    InternalServerError,
+    BadRequestError,
+    AuthenticationError,
+    APIStatusError,
+)
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
+
+from ..logging_utils import before_sleep_log_event, log_event
+from ..message_formatter import lines_to_text
+from ..timeouts import (
+    DEFAULT_PROFILE_TIMEOUT_SEC,
+    RETRY_BACKOFF_INITIAL_SEC,
+    RETRY_BACKOFF_MAX_SEC,
+    STANDARD_RETRY_ATTEMPTS,
+    build_ai_httpx_timeout,
+)
+from .types import AIResponseMetadata
+
+
+class DeepSeekProvider:
+    """DeepSeek provider implementation.
+
+    DeepSeek uses OpenAI-compatible API.
+    """
+
+    def __init__(self, api_key: str, timeout: float = DEFAULT_PROFILE_TIMEOUT_SEC):
+        """Initialize DeepSeek provider.
+
+        Args:
+            api_key: DeepSeek API key
+            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
+        """
+        from openai import AsyncOpenAI
+
+        timeout_config = build_ai_httpx_timeout(timeout)
+
+        self.api_key = api_key
+        self.timeout = timeout
+
+        # DeepSeek has NO default retries in client - we handle explicitly
+        # 503 errors are common during peak times, need aggressive retries
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://api.deepseek.com",
+            timeout=timeout_config,
+            max_retries=0,  # We handle retries explicitly with tenacity
+        )
+
+    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+        """Convert chat format to DeepSeek format."""
+        formatted = []
+        for msg in chat_messages:
+            content = lines_to_text(msg["content"])
+            formatted.append({"role": msg["role"], "content": content})
+        return formatted
+
+    @retry(
+        retry=retry_if_exception_type(
+            (APIConnectionError, RateLimitError, APITimeoutError, InternalServerError, APIStatusError)
+        ),
+        # Use shared exponential backoff policy across providers.
+        wait=wait_exponential(
+            multiplier=RETRY_BACKOFF_INITIAL_SEC,
+            min=RETRY_BACKOFF_INITIAL_SEC,
+            max=RETRY_BACKOFF_MAX_SEC,
+        ),
+        stop=stop_after_attempt(STANDARD_RETRY_ATTEMPTS),
+        before_sleep=before_sleep_log_event(
+            provider="deepseek",
+            operation="_create_chat_completion",
+            level=logging.WARNING,
+        ),
+    )
+    async def _create_chat_completion(
+        self,
+        model: str,
+        messages: list[dict],
+        stream: bool,
+        max_output_tokens: int | None = None,
+    ):
+        """Create chat completion with aggressive retry logic for DeepSeek's 503 errors.
+
+        Args:
+            model: Model name
+            messages: Formatted messages
+            stream: Whether to stream
+            max_output_tokens: Optional output token cap
+
+        Returns:
+            API response
+        """
+        stream_options = {"include_usage": True} if stream else None
+        kwargs: dict[str, object] = {
+            "model": model,
+            "messages": messages,
+            "stream": stream,
+            "stream_options": stream_options,
+        }
+        if max_output_tokens is not None:
+            kwargs["max_tokens"] = max_output_tokens
+        return await self.client.chat.completions.create(**kwargs)
+
+    async def send_message(
+        self,
+        messages: list[dict],
+        model: str,
+        system_prompt: str | None = None,
+        stream: bool = True,
+        search: bool = False,
+        max_output_tokens: int | None = None,
+        metadata: AIResponseMetadata | None = None,
+    ) -> AsyncIterator[str]:
+        """Send message to DeepSeek and yield response chunks.
+
+        Args:
+            messages: Chat messages in PolyChat format
+            model: Model name
+            system_prompt: Optional system prompt
+            stream: Whether to stream the response
+            metadata: Optional dict to populate with usage info after streaming
+
+        Yields:
+            Response text chunks
+        """
+        try:
+            formatted_messages = self.format_messages(messages)
+
+            if system_prompt:
+                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+
+            # Create streaming request with aggressive retry logic
+            response = await self._create_chat_completion(
+                model=model,
+                messages=formatted_messages,
+                stream=stream,
+                max_output_tokens=max_output_tokens,
+            )
+
+            # Yield chunks
+            async for chunk in response:
+                # Check if this is a usage-only chunk (no choices)
+                if not chunk.choices:
+                    if chunk.usage:
+                        # Populate metadata with usage info if provided
+                        if metadata is not None:
+                            metadata["usage"] = {
+                                "prompt_tokens": chunk.usage.prompt_tokens,
+                                "completion_tokens": chunk.usage.completion_tokens,
+                                "total_tokens": chunk.usage.total_tokens,
+                            }
+                        log_event(
+                            "provider_log",
+                            level=logging.INFO,
+                            provider="deepseek",
+                            message=(
+                                f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
+                                f"{chunk.usage.completion_tokens} completion = "
+                                f"{chunk.usage.total_tokens} total tokens"
+                            ),
+                        )
+                        # Log reasoning tokens if present (R1/reasoning models)
+                        if hasattr(chunk.usage, "completion_tokens_details"):
+                            details = chunk.usage.completion_tokens_details
+                            if hasattr(details, "reasoning_tokens"):
+                                log_event(
+                                    "provider_log",
+                                    level=logging.INFO,
+                                    provider="deepseek",
+                                    message=f"Reasoning tokens: {details.reasoning_tokens}",
+                                )
+                    continue
+
+                # Check for content
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+
+                # Check finish reason for edge cases
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+                    if finish_reason == "length":
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="deepseek",
+                            message="Response truncated due to max_tokens limit",
+                        )
+                    elif finish_reason == "content_filter":
+                        log_event(
+                            "provider_log",
+                            level=logging.WARNING,
+                            provider="deepseek",
+                            message="Response filtered due to content policy",
+                        )
+                        yield "\n[Response was filtered due to content policy]"
+
+        except APIStatusError as e:
+            # DeepSeek-specific error handling
+            if e.status_code == 503:
+                # Most common DeepSeek error - server overloaded
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="deepseek",
+                    message=(
+                        f"DeepSeek server overloaded (503) after retries: {e}. "
+                        "Peak load on DeepSeek infrastructure; consider retry or fallback."
+                    ),
+                )
+            elif e.status_code == 402:
+                # Payment required - prepaid balance exhausted
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="deepseek",
+                    message=(
+                        f"DeepSeek account balance exhausted (402): {e}. "
+                        "Top up DeepSeek prepaid balance."
+                    ),
+                )
+            else:
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="deepseek",
+                    message=f"DeepSeek API error ({e.status_code}) after retries: {e}",
+                )
+            raise
+        except APITimeoutError as e:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=(
+                    f"Timeout error (reasoning model took too long): {e}. "
+                    "Consider increasing timeout for R1/reasoning models."
+                ),
+            )
+            raise
+        except BadRequestError as e:
+            # 400 often means reasoning_content was included in history
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"Bad request (check if reasoning_content in history): {e}",
+            )
+            raise
+        except AuthenticationError as e:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"Authentication failed: {e}",
+            )
+            raise
+        except (APIConnectionError, RateLimitError, InternalServerError) as e:
+            # These are handled by retry decorator, but if all retries fail:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
+            raise
+        except Exception as e:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
+            raise
+
+    async def get_full_response(
+        self,
+        messages: list[dict],
+        model: str,
+        system_prompt: str | None = None,
+        search: bool = False,
+        max_output_tokens: int | None = None,
+    ) -> tuple[str, dict]:
+        """Get full response from DeepSeek."""
+        try:
+            formatted_messages = self.format_messages(messages)
+
+            if system_prompt:
+                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+
+            # Create non-streaming request with aggressive retry logic
+            response = await self._create_chat_completion(
+                model=model,
+                messages=formatted_messages,
+                stream=False,
+                max_output_tokens=max_output_tokens,
+            )
+
+            # Extract response
+            content = response.choices[0].message.content or ""
+
+            # Check finish reason for edge cases
+            finish_reason = response.choices[0].finish_reason
+            if finish_reason == "length":
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="deepseek",
+                    message="Response truncated due to max_tokens limit",
+                )
+                content += "\n[Response was truncated due to length limit]"
+            elif finish_reason == "content_filter":
+                log_event(
+                    "provider_log",
+                    level=logging.WARNING,
+                    provider="deepseek",
+                    message="Response filtered due to content policy",
+                )
+                content = "[Response was filtered due to content policy]"
+
+            # Extract metadata
+            metadata = {
+                "model": response.model,
+                "finish_reason": finish_reason,
+                "usage": {
+                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+                    "completion_tokens": (
+                        response.usage.completion_tokens if response.usage else 0
+                    ),
+                    "total_tokens": response.usage.total_tokens if response.usage else 0,
+                },
+            }
+
+            # Add reasoning tokens if available (for cost tracking)
+            if response.usage and hasattr(response.usage, "completion_tokens_details"):
+                if hasattr(response.usage.completion_tokens_details, "reasoning_tokens"):
+                    metadata["usage"]["reasoning_tokens"] = (
+                        response.usage.completion_tokens_details.reasoning_tokens
+                    )
+                    log_event(
+                        "provider_log",
+                        level=logging.INFO,
+                        provider="deepseek",
+                        message=(
+                            f"Reasoning tokens used: {metadata['usage']['reasoning_tokens']}"
+                        ),
+                    )
+
+            log_event(
+                "provider_log",
+                level=logging.INFO,
+                provider="deepseek",
+                message=(
+                    f"Response: {metadata['usage']['total_tokens']} tokens, "
+                    f"finish_reason={finish_reason}"
+                ),
+            )
+
+            return content, metadata
+
+        except APIStatusError as e:
+            # DeepSeek-specific error handling
+            if e.status_code == 503:
+                # Most common DeepSeek error - server overloaded
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="deepseek",
+                    message=(
+                        f"DeepSeek server overloaded (503) after retries: {e}. "
+                        "Peak load on DeepSeek infrastructure; consider retry or fallback."
+                    ),
+                )
+            elif e.status_code == 402:
+                # Payment required - prepaid balance exhausted
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="deepseek",
+                    message=(
+                        f"DeepSeek account balance exhausted (402): {e}. "
+                        "Top up DeepSeek prepaid balance."
+                    ),
+                )
+            else:
+                log_event(
+                    "provider_log",
+                    level=logging.ERROR,
+                    provider="deepseek",
+                    message=f"DeepSeek API error ({e.status_code}) after retries: {e}",
+                )
+            raise
+        except APITimeoutError as e:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=(
+                    f"Timeout error (reasoning model took too long): {e}. "
+                    "Consider increasing timeout for R1/reasoning models."
+                ),
+            )
+            raise
+        except BadRequestError as e:
+            # 400 often means reasoning_content was included in history
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"Bad request (check if reasoning_content in history): {e}",
+            )
+            raise
+        except AuthenticationError as e:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"Authentication failed: {e}",
+            )
+            raise
+        except (APIConnectionError, RateLimitError, InternalServerError) as e:
+            # These are handled by retry decorator, but if all retries fail:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"API error after retries: {type(e).__name__}: {e}",
+            )
+            raise
+        except Exception as e:
+            log_event(
+                "provider_log",
+                level=logging.ERROR,
+                provider="deepseek",
+                message=f"Unexpected error: {type(e).__name__}: {e}",
+            )
+            raise
