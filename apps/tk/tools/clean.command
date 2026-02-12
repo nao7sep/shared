@@ -49,6 +49,26 @@ else
     echo "✓ No .pyc files found"
 fi
 
+# Remove .pytest_cache directory
+echo ""
+if [ -d ".pytest_cache" ]; then
+    echo "Removing .pytest_cache directory..."
+    rm -rf .pytest_cache
+    echo "✓ Removed .pytest_cache"
+else
+    echo "✓ No .pytest_cache directory found"
+fi
+
+# Remove .coverage file
+echo ""
+if [ -f ".coverage" ]; then
+    echo "Removing .coverage file..."
+    rm -f .coverage
+    echo "✓ Removed .coverage"
+else
+    echo "✓ No .coverage file found"
+fi
+
 echo ""
 echo "=== Cleanup Complete! ==="
 echo ""

@@ -69,6 +69,26 @@ else
     echo "✓ No .ruff_cache directory found"
 fi
 
+# Remove .mypy_cache directory
+echo ""
+if [ -d ".mypy_cache" ]; then
+    echo "Removing .mypy_cache directory..."
+    rm -rf .mypy_cache
+    echo "✓ Removed .mypy_cache"
+else
+    echo "✓ No .mypy_cache directory found"
+fi
+
+# Remove .claude directory
+echo ""
+if [ -d ".claude" ]; then
+    echo "Removing .claude directory..."
+    rm -rf .claude
+    echo "✓ Removed .claude"
+else
+    echo "✓ No .claude directory found"
+fi
+
 echo ""
 echo "=== Cleanup Complete! ==="
 echo ""
