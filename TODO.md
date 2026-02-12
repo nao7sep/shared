@@ -9,6 +9,7 @@
 - seek tools to read foreign language books
 - learn about github pages, automation
 - tackle https://www.darioamodei.com/essay/the-adolescence-of-technology
+- analyze page structures of https://openwebf.com/en
 
 ## History
 
