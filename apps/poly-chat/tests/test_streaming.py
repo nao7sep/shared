@@ -31,9 +31,10 @@ async def test_display_streaming_response_basic():
     stream = async_generator(chunks)
 
     with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
-        result = await display_streaming_response(stream)
+        result, first_token_time = await display_streaming_response(stream)
 
     assert result == "Hello World!"
+    assert first_token_time is not None  # Should have captured first token time
     output = mock_stdout.getvalue()
     assert "Hello World!" in output
 
@@ -45,9 +46,10 @@ async def test_display_streaming_response_with_prefix():
     stream = async_generator(chunks)
 
     with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
-        result = await display_streaming_response(stream, prefix="Assistant: ")
+        result, first_token_time = await display_streaming_response(stream, prefix="Assistant: ")
 
     assert result == "Test message"
+    assert first_token_time is not None
     output = mock_stdout.getvalue()
     assert "Assistant: " in output
     assert "Test message" in output
@@ -59,9 +61,10 @@ async def test_display_streaming_response_empty():
     stream = async_generator([])
 
     with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
-        result = await display_streaming_response(stream)
+        result, first_token_time = await display_streaming_response(stream)
 
     assert result == ""
+    assert first_token_time is None  # No tokens, so no first token time
 
 
 @pytest.mark.asyncio
@@ -70,9 +73,10 @@ async def test_display_streaming_response_single_chunk():
     stream = async_generator(["Single"])
 
     with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
-        result = await display_streaming_response(stream)
+        result, first_token_time = await display_streaming_response(stream)
 
     assert result == "Single"
+    assert first_token_time is not None
 
 
 @pytest.mark.asyncio
@@ -82,9 +86,10 @@ async def test_display_streaming_response_multiline():
     stream = async_generator(chunks)
 
     with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
-        result = await display_streaming_response(stream)
+        result, first_token_time = await display_streaming_response(stream)
 
     assert result == "Line 1\nLine 2\nLine 3"
+    assert first_token_time is not None
 
 
 @pytest.mark.asyncio
@@ -186,10 +191,11 @@ async def test_display_streaming_accumulation_correctness():
     stream = async_generator(chunks)
 
     with patch("sys.stdout", new_callable=StringIO):
-        result = await display_streaming_response(stream)
+        result, first_token_time = await display_streaming_response(stream)
 
     assert result == "abbcccddddeeeee"
     assert len(result) == sum(len(c) for c in chunks)
+    assert first_token_time is not None
 
 
 @pytest.mark.asyncio
@@ -202,6 +208,7 @@ async def test_accumulate_vs_display_same_result():
 
     stream2 = async_generator(chunks)
     with patch("sys.stdout", new_callable=StringIO):
-        result2 = await display_streaming_response(stream2)
+        result2, first_token_time = await display_streaming_response(stream2)
 
     assert result1 == result2
+    assert first_token_time is not None

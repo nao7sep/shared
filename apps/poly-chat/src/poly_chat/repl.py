@@ -217,7 +217,9 @@ async def repl_loop(
                 chat_path=effective_path,
                 search=use_search,
             )
-            response_text = await display_streaming_response(response_stream, prefix="")
+            response_text, first_token_time = await display_streaming_response(
+                response_stream, prefix=""
+            )
 
             # Display citations if present
             from .streaming import display_citations
@@ -232,8 +234,15 @@ async def repl_loop(
             if citations:
                 display_citations(citations)
 
-            # Calculate latency and log successful AI response
-            latency_ms = round((time.perf_counter() - metadata["started"]) * 1000, 1)
+            # Calculate latency metrics and log successful AI response
+            end_time = time.perf_counter()
+            latency_ms = round((end_time - metadata["started"]) * 1000, 1)
+
+            # Calculate time to first token (TTFT) if available
+            ttft_ms = None
+            if first_token_time is not None:
+                ttft_ms = round((first_token_time - metadata["started"]) * 1000, 1)
+
             usage = metadata.get("usage", {})
 
             log_event(
@@ -244,6 +253,7 @@ async def repl_loop(
                 model=manager.current_model,
                 chat_file=effective_path,
                 latency_ms=latency_ms,
+                ttft_ms=ttft_ms,
                 output_chars=len(response_text),
                 input_tokens=usage.get("prompt_tokens"),
                 output_tokens=usage.get("completion_tokens"),

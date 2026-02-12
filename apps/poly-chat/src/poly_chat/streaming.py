@@ -4,12 +4,13 @@ This module handles displaying streaming responses in real-time,
 accumulating the full response, and handling errors mid-stream.
 """
 
+import time
 from typing import AsyncIterator
 
 
 async def display_streaming_response(
     stream: AsyncIterator[str], prefix: str = ""
-) -> str:
+) -> tuple[str, float | None]:
     """Display streaming response in real-time and accumulate full text.
 
     Args:
@@ -17,13 +18,14 @@ async def display_streaming_response(
         prefix: Optional prefix to display before response (e.g., "Assistant: ")
 
     Returns:
-        Full accumulated response text
+        Tuple of (full accumulated response text, first token timestamp or None)
 
     Raises:
         KeyboardInterrupt: If user presses Ctrl-C during streaming
         Exception: If stream encounters error
     """
     accumulated = []
+    first_token_time = None
 
     try:
         # Print prefix if provided
@@ -32,6 +34,10 @@ async def display_streaming_response(
 
         # Stream and display chunks
         async for chunk in stream:
+            # Track time of first token
+            if first_token_time is None:
+                first_token_time = time.perf_counter()
+
             print(chunk, end="", flush=True)
             accumulated.append(chunk)
 
@@ -48,7 +54,7 @@ async def display_streaming_response(
         print(f"\n[Error during streaming: {e}]")
         raise
 
-    return "".join(accumulated)
+    return "".join(accumulated), first_token_time
 
 
 async def accumulate_stream(stream: AsyncIterator[str]) -> str:
