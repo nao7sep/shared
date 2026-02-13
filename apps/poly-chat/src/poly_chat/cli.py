@@ -7,13 +7,13 @@ import sys
 import time
 
 from . import chat, profile
-from .cli_paths import map_cli_path
 from .logging_utils import (
     build_run_log_path,
     log_event,
     sanitize_error_message,
     setup_logging,
 )
+from .path_mapping import map_path
 from .repl import repl_loop
 from .session_manager import SessionManager
 from .timeouts import resolve_profile_timeout
@@ -57,12 +57,15 @@ def main() -> None:
             print("Usage: pc init <profile-path>")
             sys.exit(1)
         try:
-            mapped_init_profile_path = map_cli_path(args.profile_path, "profile")
+            mapped_init_profile_path = map_path(args.profile_path)
             _, messages = profile.create_profile(mapped_init_profile_path)
             # Display status messages returned by create_profile
             for message in messages:
                 print(message)
             sys.exit(0)
+        except ValueError as e:
+            print(f"Error: Invalid profile path: {e}")
+            sys.exit(1)
         except Exception as e:
             print(f"Error creating profile: {e}")
             sys.exit(1)
@@ -73,9 +76,25 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        mapped_profile_path = map_cli_path(args.profile, "profile")
-        mapped_chat_path = map_cli_path(args.chat, "chat")
-        mapped_log_path = map_cli_path(args.log, "log")
+        # Map CLI path arguments
+        try:
+            mapped_profile_path = map_path(args.profile)
+        except ValueError as e:
+            raise ValueError(f"Invalid profile path: {e}")
+
+        mapped_chat_path = None
+        if args.chat:
+            try:
+                mapped_chat_path = map_path(args.chat)
+            except ValueError as e:
+                raise ValueError(f"Invalid chat path: {e}")
+
+        mapped_log_path = None
+        if args.log:
+            try:
+                mapped_log_path = map_path(args.log)
+            except ValueError as e:
+                raise ValueError(f"Invalid log path: {e}")
 
         profile_data = profile.load_profile(mapped_profile_path)
         effective_log_path = mapped_log_path or build_run_log_path(profile_data["logs_dir"])

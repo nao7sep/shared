@@ -4,13 +4,22 @@ import logging
 
 from .. import hex_id
 from ..chat import get_messages_for_ai
-from ..message_formatter import lines_to_text
+from ..message_formatter import (
+    lines_to_text,
+    format_messages_for_context,
+    format_message_content_only,
+    minify_and_truncate,
+)
 from ..prompts import (
     build_safety_check_prompt,
     build_summary_generation_prompt,
     build_title_generation_prompt,
 )
 from ..timeouts import resolve_profile_timeout
+
+# Display constants
+HISTORY_TRUNCATE_LENGTH = 100
+HISTORY_SEPARATOR_WIDTH = 60
 
 
 class MetadataCommandsMixin:
@@ -81,10 +90,11 @@ class MetadataCommandsMixin:
         if not messages:
             return "No messages in chat to generate title from"
 
-        context_text = "\n".join([
-            f"{msg['role']}: {self._message_content_to_text(msg.get('content', ''))}".rstrip()
-            for msg in messages
-        ])
+        context_text = format_messages_for_context(
+            messages,
+            separator_width=60,
+            include_role=True,
+        )
 
         prompt_messages = [{
             "role": "user",
@@ -169,10 +179,11 @@ class MetadataCommandsMixin:
             return "No messages in chat to generate summary from"
 
         # Take all messages for full context (summarize everything)
-        context_text = "\n".join([
-            f"{msg['role']}: {self._message_content_to_text(msg.get('content', ''))}"
-            for msg in messages
-        ])
+        context_text = format_messages_for_context(
+            messages,
+            separator_width=60,
+            include_role=True,
+        )
 
         prompt_messages = [{
             "role": "user",
@@ -235,11 +246,23 @@ class MetadataCommandsMixin:
                 return f"Invalid hex ID: {args.strip()}"
 
             msg = messages[msg_index]
-            content_to_check = self._format_message_for_safety_check([msg])
+            content_to_check = format_messages_for_context(
+                [msg],
+                separator_width=60,
+                include_role=True,
+                include_hex_id=True,
+                uppercase_role=True,
+            )
             scope = f"message [{args.strip()}]"
         else:
             # Check entire chat
-            content_to_check = self._format_message_for_safety_check(messages)
+            content_to_check = format_messages_for_context(
+                messages,
+                separator_width=60,
+                include_role=True,
+                include_hex_id=True,
+                uppercase_role=True,
+            )
             scope = "entire chat"
 
         # Create safety check prompt for helper AI
@@ -282,31 +305,6 @@ class MetadataCommandsMixin:
                 exc_info=True,
             )
             return f"Error performing safety check: {e}"
-
-    def _format_message_for_safety_check(self, messages: list[dict]) -> str:
-        """Format messages for safety checking.
-
-        Args:
-            messages: List of message dictionaries
-
-        Returns:
-            Formatted string with message content
-        """
-        formatted = []
-
-        for msg in messages:
-            role = msg.get("role", "unknown")
-            content_parts = msg.get("content", [])
-
-            # Get hex ID if available
-            hid = msg.get("hex_id")
-            hex_label = f"[{hid}] " if isinstance(hid, str) else ""
-
-            content = self._message_content_to_text(content_parts)
-
-            formatted.append(f"{hex_label}{role.upper()}: {content}")
-
-        return "\n\n".join(formatted)
 
     async def show_history(self, args: str) -> str:
         """Show chat history.
@@ -372,10 +370,10 @@ class MetadataCommandsMixin:
         else:
             output.append(f"Chat History (showing {len(display_messages)} of {total_count} messages)")
 
-        output.append("━" * 60)
-
-        # Messages
+        # Messages with separators
         for i, (msg_index, msg) in enumerate(display_messages):
+            output.append("━" * HISTORY_SEPARATOR_WIDTH)
+
             role = msg.get("role", "unknown")
             timestamp = msg.get("timestamp", "")
             content_parts = msg.get("content", [])
@@ -401,18 +399,14 @@ class MetadataCommandsMixin:
             else:
                 role_display = f"❓ {role.capitalize()}"
 
-            content = self._message_content_to_text(content_parts)
-
-            # Truncate long messages
-            if len(content) > 100:
-                content = content[:97] + "..."
+            # Get content preview (minified and truncated)
+            content_preview = minify_and_truncate(content_parts, HISTORY_TRUNCATE_LENGTH)
 
             output.append(f"[{hex_id}] {role_display} ({time_str})")
-            output.append(f"  {content}")
-            if i < len(display_messages) - 1:
-                output.append("")
+            output.append(f"  {content_preview}")
 
-        output.append("━" * 60)
+        # Final separator
+        output.append("━" * HISTORY_SEPARATOR_WIDTH)
 
         return "\n".join(output)
 
@@ -457,18 +451,13 @@ class MetadataCommandsMixin:
         else:
             role_display = role.capitalize()
 
-        # Preserve line breaks for full message display
-        if isinstance(content_parts, list):
-            content = lines_to_text(content_parts)
-        else:
-            content = str(content_parts)
+        # Format content with separators
+        formatted_content = format_message_content_only(content_parts, separator_width=60)
 
         # Build output
         output = [
             f"Message [{args.strip()}] - {role_display} ({time_str})",
-            "━" * 60,
-            content,
-            "━" * 60,
+            formatted_content,
         ]
 
         return "\n".join(output)

@@ -8,8 +8,6 @@ REQUIRED OUTPUT FORMAT:
 - Output only the title text, nothing else
 
 CONVERSATION:
----
 {CONTEXT}
----
 
 Generate the title now:

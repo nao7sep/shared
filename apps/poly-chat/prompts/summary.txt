@@ -11,8 +11,6 @@ REQUIRED OUTPUT FORMAT:
 - Output only the summary paragraph, nothing else
 
 CONVERSATION:
----
 {CONTEXT}
----
 
 Generate the summary paragraph now:

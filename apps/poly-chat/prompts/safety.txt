@@ -21,8 +21,6 @@ CATEGORIES:
 - HEALTH: medical information, health conditions, diagnoses, medical records
 
 CONTENT:
----
 {CONTENT}
----
 
 Perform the safety check now:
