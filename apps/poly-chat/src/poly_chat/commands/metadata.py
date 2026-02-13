@@ -6,9 +6,11 @@ from .. import hex_id
 from ..chat import get_messages_for_ai
 from ..message_formatter import (
     lines_to_text,
-    format_messages_for_context,
-    format_message_content_only,
-    minify_and_truncate,
+    format_for_ai_context,
+    format_for_safety_check,
+    format_for_show,
+    format_messages,
+    create_history_formatter,
 )
 from ..prompts import (
     build_safety_check_prompt,
@@ -90,11 +92,7 @@ class MetadataCommandsMixin:
         if not messages:
             return "No messages in chat to generate title from"
 
-        context_text = format_messages_for_context(
-            messages,
-            separator_width=60,
-            include_role=True,
-        )
+        context_text = format_for_ai_context(messages)
 
         prompt_messages = [{
             "role": "user",
@@ -179,11 +177,7 @@ class MetadataCommandsMixin:
             return "No messages in chat to generate summary from"
 
         # Take all messages for full context (summarize everything)
-        context_text = format_messages_for_context(
-            messages,
-            separator_width=60,
-            include_role=True,
-        )
+        context_text = format_for_ai_context(messages)
 
         prompt_messages = [{
             "role": "user",
@@ -246,23 +240,11 @@ class MetadataCommandsMixin:
                 return f"Invalid hex ID: {args.strip()}"
 
             msg = messages[msg_index]
-            content_to_check = format_messages_for_context(
-                [msg],
-                separator_width=60,
-                include_role=True,
-                include_hex_id=True,
-                uppercase_role=True,
-            )
+            content_to_check = format_for_safety_check([msg])
             scope = f"message [{args.strip()}]"
         else:
             # Check entire chat
-            content_to_check = format_messages_for_context(
-                messages,
-                separator_width=60,
-                include_role=True,
-                include_hex_id=True,
-                uppercase_role=True,
-            )
+            content_to_check = format_for_safety_check(messages)
             scope = "entire chat"
 
         # Create safety check prompt for helper AI
@@ -364,49 +346,27 @@ class MetadataCommandsMixin:
 
         # Header
         if errors_only:
-            output.append(f"Error Messages ({len(display_messages)} of {total_count} total messages)")
+            header = f"Error Messages ({len(display_messages)} of {total_count} total messages)"
         elif show_all:
-            output.append(f"Chat History (all {total_count} messages)")
+            header = f"Chat History (all {total_count} messages)"
         else:
-            output.append(f"Chat History (showing {len(display_messages)} of {total_count} messages)")
+            header = f"Chat History (showing {len(display_messages)} of {total_count} messages)"
 
-        # Messages with separators
-        for i, (msg_index, msg) in enumerate(display_messages):
-            output.append("━" * HISTORY_SEPARATOR_WIDTH)
+        output.append(header)
 
-            role = msg.get("role", "unknown")
-            timestamp = msg.get("timestamp", "")
-            content_parts = msg.get("content", [])
+        # Format messages using history formatter
+        history_formatter = create_history_formatter(
+            self._to_local_time,
+            HISTORY_TRUNCATE_LENGTH
+        )
 
-            # Get hex ID
-            hex_id = msg.get("hex_id", "???")
+        formatted_messages = format_messages(
+            [msg for _, msg in display_messages],
+            history_formatter,
+            HISTORY_SEPARATOR_WIDTH
+        )
 
-            if timestamp:
-                time_str = self._to_local_time(timestamp, "%Y-%m-%d %H:%M")
-                if time_str == "unknown":
-                    time_str = timestamp[:16] if len(timestamp) >= 16 else timestamp
-            else:
-                time_str = "unknown"
-
-            # Role emoji
-            if role == "user":
-                role_display = "👤 User"
-            elif role == "assistant":
-                model = msg.get("model", "unknown")
-                role_display = f"🤖 Assistant/{model}"
-            elif role == "error":
-                role_display = "❌ Error"
-            else:
-                role_display = f"❓ {role.capitalize()}"
-
-            # Get content preview (minified and truncated)
-            content_preview = minify_and_truncate(content_parts, HISTORY_TRUNCATE_LENGTH)
-
-            output.append(f"[{hex_id}] {role_display} ({time_str})")
-            output.append(f"  {content_preview}")
-
-        # Final separator
-        output.append("━" * HISTORY_SEPARATOR_WIDTH)
+        output.append(formatted_messages)
 
         return "\n".join(output)
 
@@ -452,7 +412,7 @@ class MetadataCommandsMixin:
             role_display = role.capitalize()
 
         # Format content with separators
-        formatted_content = format_message_content_only(content_parts, separator_width=60)
+        formatted_content = format_for_show([msg])
 
         # Build output
         output = [

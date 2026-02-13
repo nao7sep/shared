@@ -3,10 +3,17 @@
 This module handles conversion between multiline text and line arrays,
 with proper trimming of leading/trailing whitespace-only lines while
 preserving empty lines within content.
+
+It also provides formatters for displaying messages in various contexts.
 """
 
 import re
+from typing import Callable
 
+
+# ============================================================================
+# Basic text conversion
+# ============================================================================
 
 def text_to_lines(text: str) -> list[str]:
     """Convert multiline text to line array with trimming.
@@ -18,14 +25,14 @@ def text_to_lines(text: str) -> list[str]:
         List of lines with leading/trailing whitespace-only lines removed
 
     Algorithm:
-    1. Split by \\n
+    1. Split by \n
     2. Find first non-whitespace-only line
     3. Find last non-whitespace-only line
     4. Return lines in that range
     5. Preserve empty lines within content as ""
 
     Example:
-        Input: "\\n\\nFirst line\\n\\nSecond line\\n\\n"
+        Input: "\n\nFirst line\n\nSecond line\n\n"
         Output: ["First line", "", "Second line"]
     """
     lines = text.split("\n")
@@ -57,110 +64,60 @@ def lines_to_text(lines: list[str]) -> str:
         lines: List of lines
 
     Returns:
-        Joined text with \\n
+        Joined text with \n
     """
     return "\n".join(lines)
 
 
-def format_messages_for_context(
+# ============================================================================
+# Core formatting function
+# ============================================================================
+
+def format_messages(
     messages: list[dict],
+    message_formatter: Callable[[dict], str],
     separator_width: int = 60,
-    include_role: bool = True,
-    include_hex_id: bool = False,
-    uppercase_role: bool = False,
 ) -> str:
-    """Format messages with separator lines for AI context.
+    """Format messages with separators using custom formatter.
 
     Args:
-        messages: List of message dictionaries
-        separator_width: Width of separator line (default 60)
-        include_role: Include role prefix on first line of each message
-        include_hex_id: Include [hex_id] before role (for safety checks)
-        uppercase_role: Use UPPERCASE for role names
+        messages: List of message dicts (can be empty)
+        message_formatter: Function that converts one message dict → one string
+        separator_width: Width of separator lines
 
     Returns:
-        Formatted string with separator-delimited messages
+        Formatted string with separators between messages
 
-    Format:
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        user: first line of message
-        continuation line
-        last line
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        assistant: first line
-        ...
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Example:
+        def my_formatter(msg):
+            return f"{msg['role']}: {msg['content']}"
+
+        result = format_messages(messages, my_formatter)
     """
     separator = "━" * separator_width
-    formatted_parts = []
+    parts = []
 
     for msg in messages:
-        # Add separator before each message
-        formatted_parts.append(separator)
+        parts.append(separator)
+        parts.append(message_formatter(msg))
 
-        # Get message components
-        role = msg.get("role", "unknown")
-        if uppercase_role:
-            role = role.upper()
-
-        content_parts = msg.get("content", [])
-        if isinstance(content_parts, list):
-            content = lines_to_text(content_parts)
-        else:
-            content = str(content_parts)
-
-        # Build message line(s)
-        if include_role:
-            if include_hex_id:
-                hex_id = msg.get("hex_id", "")
-                hex_prefix = f"[{hex_id}] " if hex_id else ""
-                first_line = f"{hex_prefix}{role}: {content}"
-            else:
-                first_line = f"{role}: {content}"
-            formatted_parts.append(first_line)
-        else:
-            formatted_parts.append(content)
-
-    # Add final separator after all messages
-    formatted_parts.append(separator)
-
-    return "\n".join(formatted_parts)
+    parts.append(separator)
+    return "\n".join(parts)
 
 
-def format_message_content_only(
-    content: str | list[str],
-    separator_width: int = 60,
-) -> str:
-    """Format single message content with separators (for /show command).
+# ============================================================================
+# Utility functions
+# ============================================================================
 
-    Args:
-        content: Message content as string or list of lines
-        separator_width: Width of separator line (default 60)
-
-    Returns:
-        Formatted string with separator-delimited content
-
-    Format:
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        message content line 1
-        message content line 2
-        ...
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    """
-    separator = "━" * separator_width
-
+def _get_content_text(msg: dict) -> str:
+    """Extract content from message as text."""
+    content = msg.get("content", [])
     if isinstance(content, list):
-        content_text = lines_to_text(content)
-    else:
-        content_text = str(content)
-
-    return f"{separator}\n{content_text}\n{separator}"
+        return lines_to_text(content)
+    return str(content)
 
 
-def minify_and_truncate(
-    content: str | list[str],
-    max_length: int,
-) -> str:
+def minify_and_truncate(content: str | list[str], max_length: int) -> str:
     """Minify whitespace and truncate content for preview display.
 
     Args:
@@ -186,3 +143,123 @@ def minify_and_truncate(
         return minified[:max_length - 3] + "..."
 
     return minified
+
+
+# ============================================================================
+# Built-in message formatters
+# ============================================================================
+
+def format_message_for_ai_context(msg: dict) -> str:
+    """Format one message for AI context (title/summary generation).
+
+    Args:
+        msg: Message dict with 'role' and 'content'
+
+    Returns:
+        Formatted string: "role: content"
+    """
+    role = msg.get("role", "unknown")
+    content = _get_content_text(msg)
+    return f"{role}: {content}"
+
+
+def format_message_for_safety_check(msg: dict) -> str:
+    """Format one message for safety check.
+
+    Args:
+        msg: Message dict with 'role', 'hex_id', and 'content'
+
+    Returns:
+        Formatted string: "[hex_id] ROLE: content"
+    """
+    role = msg.get("role", "unknown").upper()
+    hex_id = msg.get("hex_id", "")
+    content = _get_content_text(msg)
+    hex_prefix = f"[{hex_id}] " if hex_id else ""
+    return f"{hex_prefix}{role}: {content}"
+
+
+def format_message_for_show(msg: dict) -> str:
+    """Format one message for /show command (content only).
+
+    Args:
+        msg: Message dict with 'content'
+
+    Returns:
+        Formatted string: "content"
+    """
+    return _get_content_text(msg)
+
+
+def create_history_formatter(
+    timestamp_formatter: Callable[[str, str], str],
+    truncate_length: int = 100,
+) -> Callable[[dict], str]:
+    """Create a history message formatter with custom timestamp formatting.
+
+    Args:
+        timestamp_formatter: Function (timestamp, format_str) -> formatted_string
+        truncate_length: Max content length before truncation
+
+    Returns:
+        Message formatter function for /history display
+
+    Example:
+        formatter = create_history_formatter(self._to_local_time, 100)
+        formatted = format_messages(messages, formatter, 60)
+    """
+    def format_one_message(msg: dict) -> str:
+        """Format one message for history display.
+
+        Returns: "[hex] 👤 Role (time)\n  content..."
+        """
+        hex_id = msg.get("hex_id", "???")
+        role = msg.get("role", "unknown")
+        timestamp = msg.get("timestamp", "")
+
+        # Emoji role display
+        if role == "user":
+            role_display = "👤 User"
+        elif role == "assistant":
+            model = msg.get("model", "unknown")
+            role_display = f"🤖 Assistant/{model}"
+        elif role == "error":
+            role_display = "❌ Error"
+        else:
+            role_display = f"❓ {role.capitalize()}"
+
+        # Format timestamp
+        if timestamp:
+            time_str = timestamp_formatter(timestamp, "%Y-%m-%d %H:%M")
+            if time_str == "unknown":
+                time_str = timestamp[:16] if len(timestamp) >= 16 else timestamp
+        else:
+            time_str = "unknown"
+
+        # Content preview
+        content = msg.get("content", [])
+        content_preview = minify_and_truncate(content, truncate_length)
+
+        header = f"[{hex_id}] {role_display} ({time_str})"
+        return f"{header}\n  {content_preview}"
+
+    return format_one_message
+
+
+# ============================================================================
+# Convenience wrappers
+# ============================================================================
+
+def format_for_ai_context(messages: list[dict]) -> str:
+    """Format messages for AI context (title/summary)."""
+    return format_messages(messages, format_message_for_ai_context)
+
+
+def format_for_safety_check(messages: list[dict]) -> str:
+    """Format messages for safety check."""
+    return format_messages(messages, format_message_for_safety_check)
+
+
+def format_for_show(messages: list[dict]) -> str:
+    """Format messages for /show."""
+    return format_messages(messages, format_message_for_show)

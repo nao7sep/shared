@@ -67,8 +67,8 @@ def load_profile(path: str) -> dict[str, Any]:
         ValueError: If profile structure is invalid
         json.JSONDecodeError: If JSON is malformed
     """
-    # Expand ~ if present
-    profile_path = Path(path).expanduser().resolve()
+    # Path should already be mapped by caller (cli.py uses map_path)
+    profile_path = Path(path).resolve()
 
     if not profile_path.exists():
         raise FileNotFoundError(
@@ -227,7 +227,8 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
     Returns:
         Tuple of (created profile dictionary, list of status messages for display)
     """
-    profile_path = Path(path).expanduser().resolve()
+    # Path should already be mapped by caller (cli.py uses map_path)
+    profile_path = Path(path).resolve()
 
     # Create directory if needed
     profile_path.parent.mkdir(parents=True, exist_ok=True)
