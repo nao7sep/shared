@@ -814,3 +814,11 @@ ai_limits should be fully implemented with null/none as default values. please u
 when an inline system prompt is used, /system and /status should emit a proper message for the user to know an inline system prompt is used, but app should not display its content. inline system prompts are set only via profiles and cant be modified; they can only be switched to file-based ones. is that correct?
 
 as to your question: map_path should be stricter if that doesnt break any features.
+
+---
+
+let's extract title/summary generation and safety check prompts from prompts.py as text files: "title.txt", "summary.txt" and "safety.txt" in prompts directory. then let's rename system-prompts directory to prompts/system. then, let's add paths to the 3 prompt files in the profile, right after system prompt path. let's also completely remove support for inline system prompt. that will make things more consistent and a lot simpler.
+
+then, let's make a new module for path mapping. once logging utils module was using profile module to map paths. that was a bad hack.
+
+when code is cleaner, let's prepare to distribute the app via pypi. let's also make sure the app will run on mac and windows at least, via pypi.

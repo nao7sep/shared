@@ -16,6 +16,14 @@ def temp_dir():
 @pytest.fixture
 def sample_profile(temp_dir):
     """Create sample profile for testing."""
+    # Create prompt files
+    prompts_dir = temp_dir / "prompts"
+    prompts_dir.mkdir()
+    (prompts_dir / "system.txt").write_text("You are a helpful assistant.")
+    (prompts_dir / "title.txt").write_text("Create a title:\n{CONTEXT}")
+    (prompts_dir / "summary.txt").write_text("Summarize:\n{CONTEXT}")
+    (prompts_dir / "safety.txt").write_text("Check safety:\n{CONTENT}")
+
     profile = {
         "default_ai": "claude",
         "models": {
@@ -25,7 +33,10 @@ def sample_profile(temp_dir):
         },
         "timeout": 30,
         "input_mode": "quick",
-        "system_prompt": "You are a helpful assistant.",
+        "system_prompt": str(prompts_dir / "system.txt"),
+        "title_prompt": str(prompts_dir / "title.txt"),
+        "summary_prompt": str(prompts_dir / "summary.txt"),
+        "safety_prompt": str(prompts_dir / "safety.txt"),
         "chats_dir": str(temp_dir / "chats"),
         "logs_dir": str(temp_dir / "logs"),
         "api_keys": {
@@ -95,12 +106,15 @@ def mock_session_manager():
     manager = SessionManager(
         profile={
             "default_ai": "claude",
-            "input_mode": "quick",
             "models": {"claude": "claude-haiku-4-5", "openai": "gpt-5-mini"},
-            "api_keys": {},
+            "timeout": 30,
+            "input_mode": "quick",
+            "title_prompt": "/test/prompts/title.txt",
+            "summary_prompt": "/test/prompts/summary.txt",
+            "safety_prompt": "/test/prompts/safety.txt",
             "chats_dir": "/test/chats",
             "logs_dir": "/test/logs",
-            "timeout": 30,
+            "api_keys": {},
         },
         current_ai="claude",
         current_model="claude-haiku-4-5",

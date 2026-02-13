@@ -63,45 +63,6 @@ async def test_system_show_prefers_chat_unmapped_path(command_handler, mock_sess
 
 
 @pytest.mark.asyncio
-async def test_system_show_reports_inline_profile_prompt_without_content(
-    command_handler, mock_session_manager
-):
-    mock_session_manager.profile["system_prompt"] = {
-        "type": "text",
-        "content": "Top secret inline prompt",
-    }
-    mock_session_manager.system_prompt = "Top secret inline prompt"
-    mock_session_manager.system_prompt_path = None
-    mock_session_manager.chat["metadata"]["system_prompt"] = None
-
-    result = await command_handler.set_system_prompt("")
-
-    assert "inline profile prompt" in result
-    assert "content hidden" in result
-    assert "Top secret inline prompt" not in result
-
-
-@pytest.mark.asyncio
-async def test_system_remove_rejects_inline_profile_prompt(
-    command_handler, mock_session_manager
-):
-    mock_session_manager.profile["system_prompt"] = {
-        "type": "text",
-        "content": "Top secret inline prompt",
-    }
-    mock_session_manager.system_prompt = "Top secret inline prompt"
-    mock_session_manager.system_prompt_path = None
-    mock_session_manager.chat["metadata"]["system_prompt"] = None
-
-    result = await command_handler.set_system_prompt("--")
-
-    assert result == (
-        "Inline profile system prompt is read-only. "
-        "Use /system <path> to switch to a file-based prompt."
-    )
-
-
-@pytest.mark.asyncio
 async def test_secret_off_when_already_off(command_handler, mock_session_manager):
     result = await command_handler.secret_mode_command("off")
     assert result == "Secret mode already off"

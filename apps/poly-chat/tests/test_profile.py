@@ -116,7 +116,6 @@ def test_load_profile_rejects_relative_dir_paths(tmp_path):
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": 30,
         "input_mode": "quick",
-        "system_prompt": {"type": "text", "content": "hi"},
         "chats_dir": "chats",
         "logs_dir": "logs",
         "api_keys": {},
@@ -143,7 +142,7 @@ def test_load_profile_valid(tmp_path):
         },
         "timeout": 30,
         "input_mode": "quick",
-        "system_prompt": "@/system-prompts/default.txt",
+        "system_prompt": "@/prompts/system/default.txt",
         "chats_dir": str(chats_dir),
         "logs_dir": str(logs_dir),
         "api_keys": {
@@ -199,7 +198,7 @@ def test_load_profile_maps_at_paths(tmp_path):
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": 30,
         "input_mode": "quick",
-        "system_prompt": "@/system-prompts/default.txt",
+        "system_prompt": "@/prompts/system/default.txt",
         "chats_dir": "@/chats",
         "logs_dir": "@/logs",
         "api_keys": {}
@@ -225,7 +224,7 @@ def test_load_profile_maps_json_api_key_path(tmp_path):
         "models": {"claude": "claude-haiku-4-5"},
         "timeout": 30,
         "input_mode": "quick",
-        "system_prompt": "@/system-prompts/default.txt",
+        "system_prompt": "@/prompts/system/default.txt",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
         "api_keys": {
@@ -254,7 +253,7 @@ def test_load_profile_sets_default_timeout(tmp_path):
     profile_data = {
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
-        "system_prompt": "@/system-prompts/default.txt",
+        "system_prompt": "@/prompts/system/default.txt",
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
         "api_keys": {}
@@ -721,16 +720,16 @@ def test_validate_profile_rejects_unknown_ai_limit_key():
         validate_profile(profile)
 
 
-def test_create_profile_template_uses_inline_prompt_and_mixed_api_key_examples(tmp_path):
+def test_create_profile_template_uses_file_prompts_and_mixed_api_key_examples(tmp_path):
     """Generated template should be directly useful and avoid companion API-key files."""
     profile_path = tmp_path / "poly-chat-profile.json"
 
     created_profile, _messages = create_profile(str(profile_path))
 
-    assert created_profile["system_prompt"] == {
-        "type": "text",
-        "content": "You are a helpful assistant."
-    }
+    assert created_profile["system_prompt"] == "@/prompts/system/default.txt"
+    assert created_profile["title_prompt"] == "@/prompts/title.txt"
+    assert created_profile["summary_prompt"] == "@/prompts/summary.txt"
+    assert created_profile["safety_prompt"] == "@/prompts/safety.txt"
     assert created_profile["chats_dir"] == "~/poly-chat/chats"
     assert created_profile["logs_dir"] == "~/poly-chat/logs"
     assert created_profile["api_keys"]["openai"] == {

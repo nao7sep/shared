@@ -1,13 +1,14 @@
 """Profile management for PolyChat.
 
-This module handles loading, validating, and creating user profiles,
-as well as path mapping for special prefixes (~, @).
+This module handles loading, validating, and creating user profiles.
+Path mapping is handled by the path_mapping module.
 """
 
 import json
 from pathlib import Path
 from typing import Any
 
+from .path_mapping import map_path
 from .prompts import DEFAULT_ASSISTANT_SYSTEM_PROMPT
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 
@@ -32,58 +33,6 @@ def _validate_limit_block(block: dict[str, Any], *, context: str) -> None:
             raise ValueError(
                 f"ai_limits.{key} in {context} must be a positive integer or null"
             )
-
-
-def map_path(path: str) -> str:
-    """Map path with special prefixes to absolute path.
-
-    Args:
-        path: Path to map (can have ~, @, or be absolute)
-
-    Returns:
-        Absolute path string
-
-    Raises:
-        ValueError: If path is relative without special prefix, or escapes boundary
-    """
-    # Handle tilde (home directory)
-    if path.startswith("~/"):
-        home_dir = Path.home().resolve()
-        resolved = (home_dir / path[2:]).resolve()
-        try:
-            resolved.relative_to(home_dir)
-        except ValueError:
-            raise ValueError(f"Path escapes home directory: {path}")
-        return str(resolved)
-    elif path == "~":
-        return str(Path.home().resolve())
-
-    # Handle @ (app root directory)
-    elif path.startswith("@/"):
-        # App root is where pyproject.toml is (poly-chat/)
-        app_root = Path(__file__).parent.parent.parent
-        resolved = (app_root / path[2:]).resolve()
-        app_root_resolved = app_root.resolve()
-        try:
-            resolved.relative_to(app_root_resolved)
-        except ValueError:
-            raise ValueError(f"Path escapes app directory: {path}")
-        return str(resolved)
-    elif path == "@":
-        app_root = Path(__file__).parent.parent.parent.resolve()
-        return str(app_root)
-
-    # Absolute path - use as-is
-    elif Path(path).is_absolute():
-        return str(Path(path).resolve())
-
-    # Relative path without prefix - ERROR
-    else:
-        raise ValueError(
-            f"Relative paths without prefix are not supported: {path}\n"
-            f"Use '~/' for home directory, '@/' for app directory, "
-            f"or provide absolute path"
-        )
 
 
 def map_system_prompt_path(system_prompt_path: str | None) -> str | None:
@@ -142,10 +91,10 @@ def load_profile(path: str) -> dict[str, Any]:
     profile["chats_dir"] = map_path(profile["chats_dir"])
     profile["logs_dir"] = map_path(profile["logs_dir"])
 
-    # Map system_prompt if it's a path (string)
-    if isinstance(profile.get("system_prompt"), str):
-        profile["system_prompt"] = map_path(profile["system_prompt"])
-    # If it's a dict with type="text", leave as-is
+    # Map all prompt paths
+    for prompt_key in ["system_prompt", "title_prompt", "summary_prompt", "safety_prompt"]:
+        if prompt_key in profile and isinstance(profile[prompt_key], str):
+            profile[prompt_key] = map_path(profile[prompt_key])
 
     # Map API key paths (for type="json")
     for provider, key_config in profile.get("api_keys", {}).items():
@@ -289,6 +238,7 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
     ]
 
     # Create profile structure
+    # Key order: default_ai, models, timeout, input_mode, prompts, directories, api_keys, ai_limits
     profile = {
         "default_ai": "claude",
         "models": {
@@ -302,10 +252,10 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
         },
         "timeout": DEFAULT_PROFILE_TIMEOUT_SEC,
         "input_mode": "quick",
-        "system_prompt": {
-            "type": "text",
-            "content": DEFAULT_ASSISTANT_SYSTEM_PROMPT,
-        },
+        "system_prompt": "@/prompts/system/default.txt",
+        "title_prompt": "@/prompts/title.txt",
+        "summary_prompt": "@/prompts/summary.txt",
+        "safety_prompt": "@/prompts/safety.txt",
         "chats_dir": "~/poly-chat/chats",
         "logs_dir": "~/poly-chat/logs",
         "api_keys": {

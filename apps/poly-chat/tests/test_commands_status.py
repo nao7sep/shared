@@ -6,7 +6,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_show_status_assistant_fields_align_values(command_handler, mock_session_manager):
     """Assistant section values should begin in the same column."""
-    mock_session_manager.chat["metadata"]["system_prompt"] = "@/system-prompts/default.txt"
+    mock_session_manager.chat["metadata"]["system_prompt"] = "@/prompts/system/default.txt"
 
     result = await command_handler.show_status("")
 
@@ -43,13 +43,3 @@ async def test_show_status_system_prompt_none_has_readable_spacing(command_handl
     assert "System Prompt: (none)" in result
 
 
-@pytest.mark.asyncio
-async def test_show_status_inline_system_prompt_is_hidden(command_handler, mock_session_manager):
-    mock_session_manager.chat["metadata"]["system_prompt"] = None
-    mock_session_manager.system_prompt_path = None
-    mock_session_manager.system_prompt = "Inline prompt content should never render"
-
-    result = await command_handler.show_status("")
-
-    assert "System Prompt: inline profile prompt (content hidden)" in result
-    assert "Inline prompt content should never render" not in result

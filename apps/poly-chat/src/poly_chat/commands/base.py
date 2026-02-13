@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
-from .. import models, profile
+from .. import models
+from ..path_mapping import map_path
 from ..chat import update_metadata
 from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort
 
@@ -156,7 +157,7 @@ class CommandHandlerBaseMixin:
         """Resolve chat path argument to an absolute file path.
 
         Supports:
-        - mapped paths (`~/...`, `@/...`, absolute), resolved via profile.map_path
+        - mapped paths (`~/...`, `@/...`, absolute), resolved via path_mapping
         - bare names/relative paths resolved under chats_dir (with traversal protection)
         """
         path = raw_path.strip()
@@ -165,7 +166,7 @@ class CommandHandlerBaseMixin:
         # Use shared path mapping for mapped/absolute forms.
         if path.startswith("~/") or path.startswith("@/") or Path(path).is_absolute():
             try:
-                mapped = profile.map_path(path)
+                mapped = map_path(path)
             except ValueError as e:
                 raise ValueError(f"Invalid path: {path}")
 

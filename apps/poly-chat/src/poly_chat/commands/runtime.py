@@ -239,33 +239,15 @@ class RuntimeCommandsMixin:
         if chat_data is None:
             return "No chat is currently open"
 
-        inline_profile_prompt_active = (
-            isinstance(self.manager.profile.get("system_prompt"), dict)
-            and isinstance(self.manager.system_prompt, str)
-            and bool(self.manager.system_prompt.strip())
-            and self.manager.system_prompt_path is None
-            and not chat_data["metadata"].get("system_prompt")
-        )
-
         # No args - show current system prompt path (prefer chat metadata/raw path)
         if not args:
             current_path = chat_data["metadata"].get("system_prompt") or self.manager.system_prompt_path
             if current_path:
                 return f"Current system prompt: {current_path}"
-            if inline_profile_prompt_active:
-                return (
-                    "Current system prompt: inline profile prompt "
-                    "(content hidden, read-only; use /system <path> to switch)"
-                )
             return "No system prompt set for this chat"
 
         # '--' - remove system prompt
         if args == "--":
-            if inline_profile_prompt_active:
-                return (
-                    "Inline profile system prompt is read-only. "
-                    "Use /system <path> to switch to a file-based prompt."
-                )
             update_metadata(chat_data, system_prompt=None)
             # Also update session state
             self.manager.system_prompt = None

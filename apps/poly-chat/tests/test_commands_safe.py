@@ -34,19 +34,22 @@ def mock_session_manager_safe():
     manager = SessionManager(
         profile={
             "default_ai": "claude",
-            "input_mode": "quick",
             "models": {
                 "claude": "claude-haiku-4-5",
             },
+            "timeout": 30,
+            "input_mode": "quick",
+            "title_prompt": "/test/prompts/title.txt",
+            "summary_prompt": "/test/prompts/summary.txt",
+            "safety_prompt": "/test/prompts/safety.txt",
+            "chats_dir": "/test/chats",
+            "logs_dir": "/test/logs",
             "api_keys": {
                 "claude": {
                     "type": "direct",
                     "value": "test-key"
                 }
             },
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-            "timeout": 30,
         },
         current_ai="claude",
         current_model="claude-haiku-4-5",
@@ -99,8 +102,10 @@ async def test_safe_command_full_chat(command_handler_safe, mock_session_manager
     """Test /safe command checking entire chat."""
     handler = command_handler_safe
 
-    # Mock the invoke_helper_ai function
-    with patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+    # Mock prompt loading and helper AI
+    with patch("poly_chat.prompts._load_prompt_from_path") as mock_load_prompt, \
+         patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+        mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.return_value = """PII: ⚠ Found: name "John Doe" in message
 CREDENTIALS: ⚠ Found: potential API key in message
 PROPRIETARY: ✓ None
@@ -125,7 +130,9 @@ async def test_safe_command_specific_message(command_handler_safe, mock_session_
     """Test /safe command checking specific message by hex ID."""
     handler = command_handler_safe
 
-    with patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+    with patch("poly_chat.prompts._load_prompt_from_path") as mock_load_prompt, \
+         patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+        mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.return_value = """PII: ⚠ Found: name "John Doe"
 CREDENTIALS: ✓ None
 PROPRIETARY: ✓ None
@@ -156,7 +163,9 @@ async def test_safe_command_error_handling(command_handler_safe, mock_session_ma
     """Test /safe command error handling."""
     handler = command_handler_safe
 
-    with patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+    with patch("poly_chat.prompts._load_prompt_from_path") as mock_load_prompt, \
+         patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+        mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.side_effect = Exception("API error")
 
         result = await handler.check_safety("")

@@ -36,8 +36,8 @@ poetry run pc init ~/my-profile.json
 This creates a template file:
 - Profile JSON at the path you provide
 
-The generated profile template uses home-based paths (`~/poly-chat/...`) and an inline default system prompt (no `@/...` paths), which is safer for Windows and one-file packaging.
-It also includes mixed API-key configuration examples (`env`, `keychain`, `json`, `direct`) so you can pick the style you want.
+The generated profile template uses home-based paths (`~/poly-chat/...`) for directories and app root paths (`@/prompts/...`) for built-in prompt files.
+It also includes mixed API-key configuration examples (`env`, `keychain`, `json`) so you can pick the style you want.
 Then edit the template values (models, paths, and `api_keys`) before running PolyChat.
 
 ### 2. Start PolyChat
@@ -194,9 +194,9 @@ PolyChat defines the "last interaction" as one of:
 - `/timeout` - Show current timeout setting
 - `/timeout default` - Restore profile default timeout
 - `/timeout <secs>` - Set timeout (0 = wait forever)
-- `/system` - Show current system prompt source (path or inline profile prompt)
-- `/system --` - Remove system prompt from chat (file-based only)
-- `/system default` - Restore profile default system prompt (inline or file-based)
+- `/system` - Show current system prompt path
+- `/system --` - Remove system prompt from chat
+- `/system default` - Restore profile default system prompt
 - `/system <path>` - Set system prompt path
 
 **Other:**
@@ -254,10 +254,10 @@ When search is enabled, AI responses include a "Sources:" section with citation 
   },
   "timeout": 30,
   "input_mode": "quick",
-  "system_prompt": {
-    "type": "text",
-    "content": "You are a helpful assistant."
-  },
+  "system_prompt": "@/prompts/system/default.txt",
+  "title_prompt": "@/prompts/title.txt",
+  "summary_prompt": "@/prompts/summary.txt",
+  "safety_prompt": "@/prompts/safety.txt",
   "chats_dir": "~/poly-chat/chats",
   "logs_dir": "~/poly-chat/logs",
   "api_keys": {
@@ -342,41 +342,75 @@ Both directories are created automatically if they don't exist.
 
 ### Path Mapping
 
-- `~` or `~/...` → User home directory
-- `@` or `@/...` → App root directory (where pyproject.toml is)
-- Absolute paths → Used as-is
-- Relative paths without prefix → **Error** (to avoid ambiguity)
+PolyChat supports special path prefixes for portability across platforms:
 
-### System Prompts
+**`~` or `~/...`** → User home directory
+- macOS/Linux: `/Users/username/` or `/home/username/`
+- Windows: `C:\Users\YourName\`
+- Example: `~/poly-chat/chats/` → `/Users/username/poly-chat/chats/`
 
-System prompts are stored in `system-prompts/` directory. Built-in prompts:
+**`@` or `@/...`** → App root directory
+- Points to the project directory (contains `pyproject.toml`)
+- Example: `@/prompts/title.txt` → `/path/to/poly-chat/prompts/title.txt`
+- Useful for accessing project prompts and resources
+
+**Absolute paths** → Used as-is
+- Example: `/usr/local/poly-chat/` or `C:\Program Files\poly-chat\`
+
+**Relative paths without prefix** → **Error** (rejected to avoid ambiguity)
+
+### Prompts and Customization
+
+PolyChat uses file-based prompts for all AI interactions. Prompts are configured in your profile and can be customized by pointing to different files.
+
+#### Built-in Prompts
+
+Built-in prompts are located in the `prompts/` directory:
+
+**System Prompts** (`prompts/system/`):
 - `default.txt` - Balanced, helpful assistant
 - `critic.txt` - Critical thinking, challenges assumptions
 - `helpful.txt` - Warm, encouraging tone
 - `concise.txt` - Brief, to-the-point responses
 
-You can also use inline prompt text in profile JSON:
+**Helper Prompts** (`prompts/`):
+- `title.txt` - Chat title generation template (uses `{CONTEXT}` placeholder)
+- `summary.txt` - Chat summary generation template (uses `{CONTEXT}` placeholder)
+- `safety.txt` - Safety check template (uses `{CONTENT}` placeholder)
+
+#### Profile Configuration
+
+All prompts are configured in your profile as file paths:
+
 ```json
 {
-  "system_prompt": {
-    "type": "text",
-    "content": "You are a helpful assistant."
-  }
+  "system_prompt": "@/prompts/system/default.txt",
+  "title_prompt": "@/prompts/title.txt",
+  "summary_prompt": "@/prompts/summary.txt",
+  "safety_prompt": "@/prompts/safety.txt"
 }
 ```
 
-You can create custom prompts and reference them:
+#### Customization
+
+To customize prompts:
+
+1. Copy a prompt file to a location of your choice
+2. Edit the content as needed
+3. Update your profile to point to the custom file:
+
 ```json
 {
-  "system_prompt": "@/system-prompts/my-custom-prompt.txt"
+  "system_prompt": "~/my-prompts/custom-system.txt",
+  "title_prompt": "~/my-prompts/custom-title.txt"
 }
 ```
 
-### Inline System Prompt Behavior
+**Template placeholders:**
+- `{CONTEXT}` - Replaced with conversation context (title/summary prompts)
+- `{CONTENT}` - Replaced with content to analyze (safety prompt)
 
-- If profile `system_prompt` is inline text (`{"type":"text","content":"..."}`), `/system` and `/status` show an inline prompt indicator without revealing content.
-- Inline profile prompts are read-only at runtime.
-- To change prompt behavior, switch to a file-based prompt with `/system <path>`, or use `/system default` to restore profile default.
+Changes to prompt files take effect immediately for new messages (no restart needed).
 
 ### AI Request Limits (Optional)
 
@@ -402,16 +436,6 @@ You can create custom prompts and reference them:
 - When `/search` is ON, AI provider read timeout is automatically multiplied by `3`.
 - `0` means no timeout (wait forever).
 
-## Windows & One-File Packaging Notes
-
-These are practical notes if you package PolyChat as a single-file Windows executable:
-
-- Profile templates generated by `pc init` avoid `@/...` paths by default.
-- `@/...` paths are still supported in source/dev usage, but can be unreliable in one-file packaged mode.
-- Keep profile paths explicit (`~/...` or absolute paths) when packaging.
-- Use `env` or `json` API-key modes for predictable cross-platform behavior; Keychain config is macOS-specific.
-- Terminal key behavior can differ by host (for example `Alt+Enter` handling), so verify in your target Windows terminal.
-
 ## Chat History Format
 
 Chat history files are stored as JSON with git-friendly formatting:
@@ -421,7 +445,7 @@ Chat history files are stored as JSON with git-friendly formatting:
   "metadata": {
     "title": "Business Strategy 2026",
     "summary": "Long-term planning discussion",
-    "system_prompt": "@/system-prompts/default.txt",
+    "system_prompt": "@/prompts/system/default.txt",
     "created_at": "2026-02-02T10:00:00.123456Z",
     "updated_at": "2026-02-02T15:30:45.789012Z"
   },
@@ -454,6 +478,14 @@ Note: `system_prompt` is used in both profile and chat history metadata.
 
 Messages are stored as line arrays for better git diffs and readability.
 
+## License
+
+See LICENSE file for details.
+
+## Contributing
+
+Contributions welcome! Please follow the existing code style and add tests for new features.
+
 ## Development
 
 ### Running Tests
@@ -474,30 +506,3 @@ poetry run ruff check .
 ```bash
 poetry run mypy src/poly_chat
 ```
-
-## Architecture
-
-- `profile.py` - Profile management and path mapping
-- `session_manager.py` - Unified runtime session state, timeout/cache control
-- `timeouts.py` - Central timeout policy and mode-aware timeout helpers
-- `chat.py` - Chat history data management
-- `message_formatter.py` - Line array formatting
-- `prompts.py` - Centralized helper prompt templates
-- `keys/` - API key management (env vars, Keychain, JSON)
-- `ai/` - AI provider implementations
-- `ai/tools.py` - Centralized provider tool payload definitions
-- `ai/limits.py` - Optional request-limit resolution and precedence
-- `models.py` - Model registry and provider mapping
-- `commands/` - Command handler and command mixins
-- `streaming.py` - Streaming response handling
-- `repl.py` - Interactive REPL loop
-- `orchestrator.py` - Chat flow orchestration and persistence decisions
-- `cli.py` - CLI bootstrap and app startup
-
-## License
-
-See LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please follow the existing code style and add tests for new features.

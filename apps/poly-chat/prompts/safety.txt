@@ -1,0 +1,28 @@
+Analyze this content for safety issues including personal information, secrets, financial data, confidential information, offensive content, and health information.
+
+REQUIRED OUTPUT FORMAT:
+Use this exact format for your response:
+
+PERSONAL: [✓ None | ⚠ Found: brief description]
+SECRETS: [✓ None | ⚠ Found: brief description]
+FINANCIAL: [✓ None | ⚠ Found: brief description]
+CONFIDENTIAL: [✓ None | ⚠ Found: brief description]
+OFFENSIVE: [✓ None | ⚠ Found: brief description]
+HEALTH: [✓ None | ⚠ Found: brief description]
+
+Keep descriptions brief (one line max). For found items, mention location if checking multiple messages.
+
+CATEGORIES:
+- PERSONAL: names, emails, phone numbers, addresses, social security numbers
+- SECRETS: passwords, API keys, tokens, access keys, credentials
+- FINANCIAL: credit card numbers, bank accounts, financial data
+- CONFIDENTIAL: proprietary business data, trade secrets, internal documents
+- OFFENSIVE: hate speech, discriminatory language, explicit content
+- HEALTH: medical information, health conditions, diagnoses, medical records
+
+CONTENT:
+---
+{CONTENT}
+---
+
+Perform the safety check now:

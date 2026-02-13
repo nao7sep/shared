@@ -357,15 +357,12 @@ def _resolve_log_path(path_value: str) -> str:
     if not value:
         return path_value
     try:
-        if value.startswith("@/") or value == "@":
-            app_root = Path(__file__).parent.parent.parent.resolve()
-            if value == "@":
-                return str(app_root)
-            return str((app_root / value[2:]).resolve())
-        if value.startswith("~/") or value == "~":
-            return str(Path(value).expanduser().resolve())
-        return str(Path(value).expanduser().resolve())
+        from .path_mapping import map_path
+
+        # Use path_mapping for all special prefixes (~, @) and absolute paths
+        return map_path(value)
     except Exception:
+        # If path mapping fails, return original value
         return path_value
 
 

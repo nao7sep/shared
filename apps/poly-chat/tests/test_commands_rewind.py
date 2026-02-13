@@ -40,11 +40,11 @@ def rewind_manager():
         profile={
             "default_ai": "claude",
             "models": {"claude": "claude-haiku-4-5"},
+            "timeout": 30,
             "input_mode": "quick",
-            "api_keys": {},
             "chats_dir": "/test/chats",
             "logs_dir": "/test/logs",
-            "timeout": 30,
+            "api_keys": {},
         },
         current_ai="claude",
         current_model="claude-haiku-4-5",

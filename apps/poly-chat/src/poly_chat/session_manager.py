@@ -468,9 +468,6 @@ class SessionManager:
                     raise ValueError(f"Could not load system prompt: {e}") from e
                 warning = f"Could not load system prompt: {e}"
 
-        elif isinstance(prompt_config, dict):
-            system_prompt = prompt_config.get("content")
-
         return system_prompt, system_prompt_path, warning
 
     # ===================================================================

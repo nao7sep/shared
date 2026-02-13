@@ -74,15 +74,6 @@ class TestSessionManagerCreation:
 class TestSystemPromptLoading:
     """Test SessionManager system prompt loading."""
 
-    def test_load_system_prompt_from_inline_content(self):
-        profile_data = {"system_prompt": {"type": "text", "content": "Inline prompt"}}
-
-        prompt, prompt_path, warning = SessionManager.load_system_prompt(profile_data)
-
-        assert prompt == "Inline prompt"
-        assert prompt_path is None
-        assert warning is None
-
     def test_load_system_prompt_from_file(self, tmp_path):
         prompt_file = tmp_path / "prompt.txt"
         prompt_file.write_text("Prompt from file\n", encoding="utf-8")
@@ -316,7 +307,7 @@ class TestChatManagement:
             profile={},
             current_ai="claude",
             current_model="claude-haiku-4-5",
-            system_prompt_path="@/system-prompts/default.txt",
+            system_prompt_path="@/prompts/system/default.txt",
         )
 
         new_chat = {
@@ -324,7 +315,7 @@ class TestChatManagement:
             "messages": [],
         }
         manager.switch_chat("/path/to/new.json", new_chat)
-        assert manager.chat["metadata"]["system_prompt"] == "@/system-prompts/default.txt"
+        assert manager.chat["metadata"]["system_prompt"] == "@/prompts/system/default.txt"
 
     def test_close_chat(self):
         """Test closing current chat."""

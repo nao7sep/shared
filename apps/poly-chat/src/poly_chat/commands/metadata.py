@@ -6,7 +6,6 @@ from .. import hex_id
 from ..chat import get_messages_for_ai
 from ..message_formatter import lines_to_text
 from ..prompts import (
-    SAFETY_CHECK_SYSTEM_PROMPT,
     build_safety_check_prompt,
     build_summary_generation_prompt,
     build_title_generation_prompt,
@@ -89,7 +88,10 @@ class MetadataCommandsMixin:
 
         prompt_messages = [{
             "role": "user",
-            "content": build_title_generation_prompt(context_text),
+            "content": build_title_generation_prompt(
+                context_text,
+                self.manager.profile.get("title_prompt")
+            ),
         }]
 
         # Invoke helper AI
@@ -174,7 +176,10 @@ class MetadataCommandsMixin:
 
         prompt_messages = [{
             "role": "user",
-            "content": build_summary_generation_prompt(context_text),
+            "content": build_summary_generation_prompt(
+                context_text,
+                self.manager.profile.get("summary_prompt")
+            ),
         }]
 
         # Invoke helper AI
@@ -240,7 +245,10 @@ class MetadataCommandsMixin:
         # Create safety check prompt for helper AI
         prompt_messages = [{
             "role": "user",
-            "content": build_safety_check_prompt(content_to_check),
+            "content": build_safety_check_prompt(
+                content_to_check,
+                self.manager.profile.get("safety_prompt")
+            ),
         }]
 
         # Invoke helper AI
@@ -250,7 +258,7 @@ class MetadataCommandsMixin:
                 self.manager.helper_model,
                 self.manager.profile,
                 prompt_messages,
-                SAFETY_CHECK_SYSTEM_PROMPT,
+                None,
                 task="safety_check",
             )
 
@@ -487,8 +495,6 @@ class MetadataCommandsMixin:
             system_prompt_display = chat_system_prompt
         elif self.manager.system_prompt_path:
             system_prompt_display = self.manager.system_prompt_path
-        elif isinstance(self.manager.system_prompt, str) and self.manager.system_prompt.strip():
-            system_prompt_display = "inline profile prompt (content hidden)"
         else:
             system_prompt_display = "(none)"
 

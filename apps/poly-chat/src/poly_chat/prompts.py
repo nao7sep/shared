@@ -1,65 +1,77 @@
 """Centralized AI prompt templates."""
 
 from __future__ import annotations
+from pathlib import Path
+from typing import Optional
 
 
 DEFAULT_ASSISTANT_SYSTEM_PROMPT = "You are a helpful assistant."
 
 
-def build_title_generation_prompt(context_text: str) -> str:
-    """Build helper prompt for title generation."""
-    return (
-        "You will create a descriptive title for a conversation.\n\n"
-        "REQUIRED OUTPUT FORMAT:\n"
-        "- Write in whichever language dominates the conversation\n"
-        "- Use neutral voice - do not use 'you' or 'your' or address the reader\n"
-        "- Plain text only - no markdown, no visual formatting, no quotation marks\n"
-        "- Do not include labels like 'Title:' or 'Here is'\n"
-        "- Output ONLY the title text, nothing else\n\n"
-        "CONVERSATION:\n"
-        "---\n"
-        f"{context_text}\n"
-        "---\n\n"
-        "Generate the title now:"
-    )
+def _load_prompt_from_path(prompt_path: Optional[str], prompt_type: str = "prompt") -> str:
+    """Load prompt content from a file path.
+
+    Args:
+        prompt_path: Absolute path to prompt file (should already be mapped)
+        prompt_type: Type of prompt for error messages (e.g., "title", "summary")
+
+    Returns:
+        Prompt content
+
+    Raises:
+        FileNotFoundError: If prompt file doesn't exist
+        ValueError: If prompt_path is None
+    """
+    if prompt_path is None:
+        raise ValueError(
+            f"{prompt_type}_prompt not configured in profile. "
+            f"Add '{prompt_type}_prompt' path to your profile configuration."
+        )
+
+    prompt_file = Path(prompt_path)
+    if not prompt_file.exists():
+        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+
+    return prompt_file.read_text(encoding="utf-8")
 
 
-def build_summary_generation_prompt(context_text: str) -> str:
-    """Build helper prompt for summary generation."""
-    return (
-        "You will summarize the subject matter and key points of a conversation.\n\n"
-        "REQUIRED OUTPUT FORMAT:\n"
-        "- Write in whichever language dominates the conversation\n"
-        "- Focus on the topics and ideas, not the back-and-forth exchange\n"
-        "- Write in neutral third-person voice\n"
-        "- CRITICAL: Do not use 'you', 'your', or address the reader in any way\n"
-        "- Write as one cohesive paragraph of plain text\n"
-        "- NO formatting: no headings, bullets, markdown, or lists\n"
-        "- NO labels: do not start with 'Summary:', 'Here is', or similar phrases\n"
-        "- Output ONLY the summary paragraph, nothing else\n\n"
-        "CONVERSATION:\n"
-        "---\n"
-        f"{context_text}\n"
-        "---\n\n"
-        "Generate the summary paragraph now:"
-    )
+def build_title_generation_prompt(context_text: str, prompt_path: Optional[str]) -> str:
+    """Build helper prompt for title generation.
+
+    Args:
+        context_text: Conversation context
+        prompt_path: Path to title prompt template (already mapped)
+
+    Returns:
+        Complete prompt with context substituted
+    """
+    template = _load_prompt_from_path(prompt_path, prompt_type="title")
+    return template.replace("{CONTEXT}", context_text)
 
 
-SAFETY_CHECK_SYSTEM_PROMPT = (
-    "You are a safety analyzer. Check the provided content for:\n"
-    "1. PII (Personally Identifiable Information) - names, emails, phone numbers, addresses, SSN, etc.\n"
-    "2. Credentials - API keys, passwords, tokens, access keys, secrets\n"
-    "3. Proprietary Information - confidential business data, trade secrets\n"
-    "4. Offensive Content - hate speech, discriminatory language, explicit content\n\n"
-    "Respond ONLY in this exact format:\n"
-    "PII: [\u2713 None | \u26a0 Found: brief description]\n"
-    "CREDENTIALS: [\u2713 None | \u26a0 Found: brief description]\n"
-    "PROPRIETARY: [\u2713 None | \u26a0 Found: brief description]\n"
-    "OFFENSIVE: [\u2713 None | \u26a0 Found: brief description]\n\n"
-    "Keep descriptions brief (one line max). For found items, mention location if checking multiple messages."
-)
+def build_summary_generation_prompt(context_text: str, prompt_path: Optional[str]) -> str:
+    """Build helper prompt for summary generation.
+
+    Args:
+        context_text: Conversation context
+        prompt_path: Path to summary prompt template (already mapped)
+
+    Returns:
+        Complete prompt with context substituted
+    """
+    template = _load_prompt_from_path(prompt_path, prompt_type="summary")
+    return template.replace("{CONTEXT}", context_text)
 
 
-def build_safety_check_prompt(content_to_check: str) -> str:
-    """Build helper prompt for safety checks."""
-    return f"Check this content for safety issues:\n\n{content_to_check}"
+def build_safety_check_prompt(content_to_check: str, prompt_path: Optional[str]) -> str:
+    """Build helper prompt for safety checks.
+
+    Args:
+        content_to_check: Content to analyze
+        prompt_path: Path to safety prompt template (already mapped)
+
+    Returns:
+        Complete prompt with content substituted
+    """
+    template = _load_prompt_from_path(prompt_path, prompt_type="safety")
+    return template.replace("{CONTENT}", content_to_check)

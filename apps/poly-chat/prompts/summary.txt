@@ -1,0 +1,18 @@
+Summarize the subject matter and key points of this conversation.
+
+REQUIRED OUTPUT FORMAT:
+- Write in whichever language dominates the conversation
+- Focus on the topics and ideas, not the back-and-forth exchange
+- Write in neutral third-person voice
+- Do not use 'you', 'your', or address the reader in any way
+- Write as one cohesive paragraph of plain text
+- No formatting: no headings, bullets, markdown, or lists
+- No labels: do not start with 'Summary:', 'Here is', or similar phrases
+- Output only the summary paragraph, nothing else
+
+CONVERSATION:
+---
+{CONTEXT}
+---
+
+Generate the summary paragraph now:
