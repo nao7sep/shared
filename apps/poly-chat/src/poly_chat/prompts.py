@@ -9,26 +9,28 @@ DEFAULT_ASSISTANT_SYSTEM_PROMPT = "You are a helpful assistant."
 def build_title_generation_prompt(context_text: str) -> str:
     """Build helper prompt for title generation."""
     return (
-        "Generate a short, descriptive title for this conversation.\n\n"
+        "Create a descriptive title that captures what this conversation is about.\n\n"
         f"{context_text}\n\n"
-        "Output requirements:\n"
-        "- Use the dominant conversation language.\n"
-        "- One line only.\n"
-        "- Plain text only (no markdown, no bullets, no code fences, no quotes).\n"
-        "- Output only the title."
+        "Requirements:\n"
+        "- Write in whichever language dominates the conversation\n"
+        "- Plain text only - no formatting, punctuation marks for structure, or quotation marks\n"
+        "- Do not include labels like 'Title:' or 'Here is'\n"
+        "- Return just the title itself, nothing else"
     )
 
 
 def build_summary_generation_prompt(context_text: str) -> str:
     """Build helper prompt for summary generation."""
     return (
-        "Generate a concise summary of this conversation.\n\n"
+        "Write a summary that explains what this conversation is about - like an introduction to the topic being discussed.\n\n"
         f"{context_text}\n\n"
-        "Output requirements:\n"
-        "- Use the dominant conversation language.\n"
-        "- One paragraph only.\n"
-        "- Plain text only (no markdown, no bullets, no headings, no code fences).\n"
-        "- Output only the summary paragraph."
+        "Requirements:\n"
+        "- Write in whichever language dominates the conversation\n"
+        "- Describe the subject matter and key points, not the conversation flow\n"
+        "- One cohesive paragraph\n"
+        "- Plain text only - no formatting, headings, or bullets\n"
+        "- Do not include labels like 'Summary:' or 'Here is'\n"
+        "- Return just the summary itself, nothing else"
     )
 
 
