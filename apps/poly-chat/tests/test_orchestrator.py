@@ -513,10 +513,8 @@ class TestRegularMessages:
         assert "/secret" not in action.message
 
     @pytest.mark.asyncio
-    async def test_regular_message_saves_when_chat_dirty(self, orchestrator, sample_chat_data):
-        """Regular command responses should flush dirty chat changes."""
-        orchestrator.manager.mark_chat_dirty()
-
+    async def test_regular_message_saves_chat(self, orchestrator, sample_chat_data):
+        """Regular command responses should save chat changes."""
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
                 "Updated title",
@@ -526,18 +524,6 @@ class TestRegularMessages:
 
             assert isinstance(action, PrintAction)
             assert action.message == "Updated title"
-            mock_save.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_regular_message_skips_save_when_not_dirty(self, orchestrator, sample_chat_data):
-        """Regular command responses should not save unless dirty."""
-        with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
-            await orchestrator.handle_command_response(
-                "No state mutation",
-                current_chat_path="/test/chat.json",
-                current_chat_data=sample_chat_data,
-            )
-
             mock_save.assert_called_once()
 
 
@@ -644,7 +630,6 @@ class TestCancelHandling:
             assert isinstance(action, PrintAction)
             assert chat_data["messages"] == []
             mock_save.assert_awaited_once_with(
-                force=True,
                 chat_path="/test/chat.json",
                 chat_data=chat_data,
             )
@@ -690,7 +675,6 @@ class TestPreSendValidationRollback:
             assert len(chat_data["messages"]) == 1
             assert chat_data["messages"][-1]["role"] == "assistant"
             mock_save.assert_awaited_once_with(
-                force=True,
                 chat_path="/test/chat.json",
                 chat_data=chat_data,
             )

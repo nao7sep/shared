@@ -147,21 +147,21 @@ class ChatOrchestrator:
         # Save current chat before switching
         if current_chat_path and current_chat_data:
             await self.manager.save_current_chat(
-                force=True,
                 chat_path=current_chat_path,
                 chat_data=current_chat_data,
             )
 
         # Load new chat
         new_chat_data = chat.load_chat(new_chat_path)
+
+        # Update session manager (updates metadata with system_prompt)
+        self.manager.switch_chat(new_chat_path, new_chat_data)
+
+        # Save the chat (now includes system_prompt metadata)
         await self.manager.save_current_chat(
-            force=True,
             chat_path=new_chat_path,
             chat_data=new_chat_data,
         )
-
-        # Update session manager
-        self.manager.switch_chat(new_chat_path, new_chat_data)
 
         log_event(
             "chat_switch",
@@ -188,7 +188,6 @@ class ChatOrchestrator:
         # Save current chat before switching
         if current_chat_path and current_chat_data:
             await self.manager.save_current_chat(
-                force=True,
                 chat_path=current_chat_path,
                 chat_data=current_chat_data,
             )
@@ -222,7 +221,6 @@ class ChatOrchestrator:
         # Save current chat before closing
         if current_chat_path and current_chat_data:
             await self.manager.save_current_chat(
-                force=True,
                 chat_path=current_chat_path,
                 chat_data=current_chat_data,
             )
@@ -341,7 +339,6 @@ class ChatOrchestrator:
         # Save chat and exit retry mode
         if current_chat_path:
             await self.manager.save_current_chat(
-                force=True,
                 chat_path=current_chat_path,
                 chat_data=current_chat_data,
             )
@@ -551,7 +548,6 @@ class ChatOrchestrator:
                     new_msg_index = len(chat_data["messages"]) - 1
                     self.manager.assign_message_hex_id(new_msg_index)
             await self.manager.save_current_chat(
-                force=True,
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
@@ -582,7 +578,6 @@ class ChatOrchestrator:
 
         self.manager.pop_message(-1, chat_data)
         await self.manager.save_current_chat(
-            force=True,
             chat_path=chat_path,
             chat_data=chat_data,
         )
@@ -626,7 +621,6 @@ class ChatOrchestrator:
             new_msg_index = len(chat_data["messages"]) - 1
             self.manager.assign_message_hex_id(new_msg_index)
             await self.manager.save_current_chat(
-                force=True,
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
@@ -659,7 +653,6 @@ class ChatOrchestrator:
             if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
                 self.manager.pop_message(-1, chat_data)
             await self.manager.save_current_chat(
-                force=True,
                 chat_path=chat_path,
                 chat_data=chat_data,
             )

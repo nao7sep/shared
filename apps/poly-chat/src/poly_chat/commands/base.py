@@ -39,13 +39,6 @@ class CommandHandlerBaseMixin:
             return None
         return chat_data
 
-    async def _mark_chat_dirty_if_open(self) -> None:
-        """Mark current chat as dirty when a chat file is active."""
-        chat_path = self.manager.chat_path
-        chat_data = self.manager.chat
-        if chat_path and isinstance(chat_data, dict):
-            self.manager.mark_chat_dirty()
-
     async def _prompt_text(self, prompt: str) -> str:
         """Prompt user for input through injected interaction adapter."""
         return await self.interaction.prompt_text(prompt)
@@ -74,7 +67,6 @@ class CommandHandlerBaseMixin:
         if chat_data is None:
             return
         update_metadata(chat_data, **metadata_updates)
-        await self._mark_chat_dirty_if_open()
 
     @staticmethod
     def _to_local_time(timestamp: str, format_str: str) -> str:

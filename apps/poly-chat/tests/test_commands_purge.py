@@ -118,7 +118,6 @@ async def test_purge_single_message(command_handler_purge, mock_session_manager_
     # Verify message was deleted
     messages = mock_session_manager_purge.chat["messages"]
     assert len(messages) == 3
-    assert mock_session_manager_purge.chat_dirty is True
 
 
 @pytest.mark.asyncio
@@ -136,7 +135,6 @@ async def test_purge_multiple_messages(command_handler_purge, mock_session_manag
     # Verify messages were deleted
     messages = mock_session_manager_purge.chat["messages"]
     assert len(messages) == 2
-    assert mock_session_manager_purge.chat_dirty is True
 
 
 @pytest.mark.asyncio
@@ -193,15 +191,6 @@ async def test_purge_cleans_up_hex_ids(command_handler_purge, mock_session_manag
     hex_id_set = mock_session_manager_purge.hex_id_set
 
     assert "a3f" not in hex_id_set
-
-
-@pytest.mark.asyncio
-async def test_purge_marks_chat_dirty(command_handler_purge, mock_session_manager_purge):
-    """Test that purge marks chat dirty for orchestrator persistence."""
-    handler = command_handler_purge
-
-    await handler.purge_messages("a3f")
-    assert mock_session_manager_purge.chat_dirty is True
 
 
 @pytest.mark.asyncio

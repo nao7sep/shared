@@ -30,7 +30,6 @@ class SessionState:
     secret_mode: bool = False
     secret_base_messages: list = field(default_factory=list)
     search_mode: bool = False
-    chat_dirty: bool = False
     hex_id_set: set[str] = field(default_factory=set)
     _provider_cache: dict[tuple[str, str, int | float | None], Any] = field(
         default_factory=dict

@@ -271,8 +271,6 @@ class RuntimeCommandsMixin:
             self.manager.system_prompt = None
             self.manager.system_prompt_path = None
 
-            await self._mark_chat_dirty_if_open()
-
             return "System prompt removed from chat"
 
         # 'default' - restore profile default
@@ -299,8 +297,6 @@ class RuntimeCommandsMixin:
             self.manager.system_prompt = system_prompt_content
             self.manager.system_prompt_path = system_prompt_path
 
-            await self._mark_chat_dirty_if_open()
-
             if system_prompt_path is None and system_prompt_content:
                 return "System prompt restored to inline profile default (content hidden)"
             return "System prompt restored to profile default"
@@ -325,8 +321,6 @@ class RuntimeCommandsMixin:
             # Update session state
             self.manager.system_prompt = system_prompt_content
             self.manager.system_prompt_path = args
-
-            await self._mark_chat_dirty_if_open()
 
             return f"System prompt set to: {args}"
 
@@ -572,7 +566,6 @@ class RuntimeCommandsMixin:
 
             count = delete_message_and_following(chat, index)
 
-            await self._mark_chat_dirty_if_open()
             if hex_display:
                 return f"Deleted {count} message(s) from [{hex_display}] onwards"
             return f"Deleted {count} message(s)"
@@ -630,8 +623,6 @@ class RuntimeCommandsMixin:
             del messages[msg_index]
 
             deleted_count += 1
-
-        await self._mark_chat_dirty_if_open()
 
         # Build confirmation message
         deleted_ids = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))

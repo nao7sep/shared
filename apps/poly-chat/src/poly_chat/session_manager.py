@@ -235,11 +235,6 @@ class SessionManager:
         self._state.search_mode = bool(value)
 
     @property
-    def chat_dirty(self) -> bool:
-        """Whether current chat has unsaved command-driven changes."""
-        return self._state.chat_dirty
-
-    @property
     def message_hex_ids(self) -> dict[int, str]:
         """Message hex IDs (index → hex_id)."""
         messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
@@ -295,7 +290,6 @@ class SessionManager:
             "retry_mode": self._state.retry_mode,
             "secret_mode": self._state.secret_mode,
             "search_mode": self._state.search_mode,
-            "chat_dirty": self._state.chat_dirty,
             "message_hex_ids": self.message_hex_ids,
             "hex_id_set": self._state.hex_id_set,
         }
@@ -319,7 +313,6 @@ class SessionManager:
         # Update chat data
         self._state.chat = chat_data
         self._state.chat_path = chat_path
-        self._state.chat_dirty = False
 
         # Keep older chats aligned with active session system prompt metadata.
         metadata = chat_data.get("metadata") if isinstance(chat_data, dict) else None
@@ -342,7 +335,6 @@ class SessionManager:
         """Close current chat and clear related state."""
         self._state.chat = {}
         self._state.chat_path = None
-        self._state.chat_dirty = False
         self._state.hex_id_set.clear()
         self._clear_chat_scoped_state()
 
@@ -366,10 +358,6 @@ class SessionManager:
     def clear_chat_scoped_state(self) -> None:
         """Public wrapper to clear retry/secret state."""
         self._clear_chat_scoped_state()
-
-    def mark_chat_dirty(self) -> None:
-        """Mark current chat as needing persistence."""
-        self._state.chat_dirty = True
 
     @staticmethod
     def _normalize_timeout(value: Any) -> int | float:
@@ -413,14 +401,12 @@ class SessionManager:
     async def save_current_chat(
         self,
         *,
-        force: bool = False,
         chat_path: Optional[str] = None,
         chat_data: Optional[dict[str, Any]] = None,
     ) -> bool:
         """Persist current chat state.
 
         Args:
-            force: Persist even when chat_dirty is False.
             chat_path: Optional explicit path override.
             chat_data: Optional explicit chat data override.
 
@@ -433,13 +419,9 @@ class SessionManager:
         if not path or not isinstance(data, dict):
             return False
 
-        if not force and not self._state.chat_dirty:
-            return False
-
         from . import chat as chat_module
 
         await chat_module.save_chat(path, data)
-        self._state.chat_dirty = False
         return True
 
     @staticmethod
