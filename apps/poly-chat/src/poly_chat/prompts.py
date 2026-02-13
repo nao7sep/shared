@@ -9,28 +9,39 @@ DEFAULT_ASSISTANT_SYSTEM_PROMPT = "You are a helpful assistant."
 def build_title_generation_prompt(context_text: str) -> str:
     """Build helper prompt for title generation."""
     return (
-        "Create a descriptive title that captures what this conversation is about.\n\n"
-        f"{context_text}\n\n"
-        "Requirements:\n"
+        "You will create a descriptive title for a conversation.\n\n"
+        "REQUIRED OUTPUT FORMAT:\n"
         "- Write in whichever language dominates the conversation\n"
-        "- Plain text only - no formatting, punctuation marks for structure, or quotation marks\n"
+        "- Use neutral voice - do not use 'you' or 'your' or address the reader\n"
+        "- Plain text only - no markdown, no visual formatting, no quotation marks\n"
         "- Do not include labels like 'Title:' or 'Here is'\n"
-        "- Return just the title itself, nothing else"
+        "- Output ONLY the title text, nothing else\n\n"
+        "CONVERSATION:\n"
+        "---\n"
+        f"{context_text}\n"
+        "---\n\n"
+        "Generate the title now:"
     )
 
 
 def build_summary_generation_prompt(context_text: str) -> str:
     """Build helper prompt for summary generation."""
     return (
-        "Write a summary that explains what this conversation is about - like an introduction to the topic being discussed.\n\n"
-        f"{context_text}\n\n"
-        "Requirements:\n"
+        "You will summarize the subject matter and key points of a conversation.\n\n"
+        "REQUIRED OUTPUT FORMAT:\n"
         "- Write in whichever language dominates the conversation\n"
-        "- Describe the subject matter and key points, not the conversation flow\n"
-        "- One cohesive paragraph\n"
-        "- Plain text only - no formatting, headings, or bullets\n"
-        "- Do not include labels like 'Summary:' or 'Here is'\n"
-        "- Return just the summary itself, nothing else"
+        "- Focus on the topics and ideas, not the back-and-forth exchange\n"
+        "- Write in neutral third-person voice\n"
+        "- CRITICAL: Do not use 'you', 'your', or address the reader in any way\n"
+        "- Write as one cohesive paragraph of plain text\n"
+        "- NO formatting: no headings, bullets, markdown, or lists\n"
+        "- NO labels: do not start with 'Summary:', 'Here is', or similar phrases\n"
+        "- Output ONLY the summary paragraph, nothing else\n\n"
+        "CONVERSATION:\n"
+        "---\n"
+        f"{context_text}\n"
+        "---\n\n"
+        "Generate the summary paragraph now:"
     )
 
 
