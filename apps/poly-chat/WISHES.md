@@ -822,3 +822,57 @@ let's extract title/summary generation and safety check prompts from prompts.py 
 then, let's make a new module for path mapping. once logging utils module was using profile module to map paths. that was a bad hack.
 
 when code is cleaner, let's prepare to distribute the app via pypi. let's also make sure the app will run on mac and windows at least, via pypi.
+
+---
+
+one of the things i have noticed while reviewing code is that context for title/summary generation and that for safety check are generated differently while they serve the same purpose. and, their formats are quite similar to the one for /history. yet, borderlines are used for /history and /show only; for title/summary generation and safety check, multiline message arent clearly separated. this is a significant refactoring opportunity. most likely, ais will work more accurately with borderline-separated contexts.
+
+let's search once again for path mapping logics. i quickly looked for them by myself while considering single file distribution that would need some platform detection code. over time, i added different kinds of paths that needed to be mapped and then removed inline system prompt support. i think it's time to truly centralize path related things. this will increase maintainability significantly.
+
+/history contains a lot of limits. by default, it shows up to 10 messages. each message is truncated to 100 chars. each borderline is 60 chars. are there limits like these in other modules? i am very seriously considering releasing this app via pypi. i honestly dont think a lot of people will need this app, but i would like to show some professionalism by at least centralizing literals/constants (including the borderline char), leaving room for implementing customization logics later.
+
+we should also take a look at /status and /help as these generate formatted output. i dont think we'll gain much by making a commandline table to auto-generate /help content and a part of readme.md. the app is small. ais can still read the codebase and maintain both /help content and readme.md in one shot. but we should at least think what can be done at this moment.
+
+currently, we have default, helpful, concise, critic system prompts. they were generated merely as placeholders. i forgot to work on them. each system prompt should represents a persona, that is highly distinct from the others. what personas would you suggest?
+
+---
+
+are windows absolute paths supported? they need to be. if a given path is a windows absolute path, we dont need to map it. please check one last time to make sure ~ and @ are handled well on and for windows too.
+
+i see ".poly-chat-history" in code. what does this do?
+
+let's use another character as a borderline char. app currently uses ━. we cant expect every western font contains this glyph. terminal output may vary.
+
+you separated formatters with borderline-ish comments. that is unusual. we should not do this. if we have to separate code into sections with borderlines, we should separate the module into multiple modules. or, we can omit the separators if they dont add much value to the code.
+
+yesterday, we deleted cli_paths or something. the decision was right because the module contained just one method that wasnt used anywhere else. but we did it wrong. the method had a point as a helper method. it only should have been moved to the caller module as a private helper method. can we still do it? the method we deleted was merely for converting a general error to one with a specific error message, right?
+
+let's make/use a separate module for separator width, history truncate length, hex id collision retry limit, etc. ai providers too had retries. do we have separate constants for them?
+
+does /help content use borderlines? surely, i can check that in 2 seconds, but i am becoming increasingly lazy. also, by asking ais, i usually notice more things. sadly, ais totally outpower my instinct.
+
+for /status, we should use a standard borderline generating/returning method/property that we should define in the formatter module. borderlines should be consistent everywhere in this app.
+
+/open and some other commands generate a table with fixed column widths, borderlines, etc, right? what should we do with them?
+
+the personas sound interesting. let's do it.
+
+---
+
+we need to support ~\ and @\ for windows. that is why we need to centralize path-related things. one exceptional quick logic to handle paths is often a source of bugs at runtime. let's really centralize everything-everything.
+
+so, .poly-chat-history is a file in user directory for repl command history. is there a convention that the file name must be exactly like this? like, dot + app name + history. if not, we should put it in a directory: ~/.poly-chat. will this work both on mac and windows?
+
+any other embedded paths or keys or things like these that i may not have noticed?
+
+let's use a hyphen as a separator. = is more visible, but ais dont really "see" them. and i feel hyphens are more commonly used.
+
+---
+
+do we use the right directory separator in paths depending on the platform?
+
+your _resolve_chat_path_arg contains a logic to detect ~/, ~\, @/, @\ by itself. this is a path-related logic and should be in path_mapping, which probably should be renamed to path_utils.
+
+---
+
+let's consider alternative icons for /history. the user / assistant icons look kind of similar.

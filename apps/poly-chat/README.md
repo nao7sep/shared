@@ -369,9 +369,14 @@ Built-in prompts are located in the `prompts/` directory:
 
 **System Prompts** (`prompts/system/`):
 - `default.txt` - Balanced, helpful assistant
-- `critic.txt` - Critical thinking, challenges assumptions
-- `helpful.txt` - Warm, encouraging tone
-- `concise.txt` - Brief, to-the-point responses
+- `socrates.txt` - Socratic questioning, teaches through inquiry
+- `spark.txt` - Creative brainstorming, energetic ideation
+- `razor.txt` - Ultra-concise, direct answers
+- `devil.txt` - Devil's advocate, challenges assumptions
+- `strategist.txt` - Strategic planning, systems thinking
+- `scholar.txt` - Comprehensive research, authoritative depth
+
+See `prompts/system/README.md` for detailed persona descriptions.
 
 **Helper Prompts** (`prompts/`):
 - `title.txt` - Chat title generation template (uses `{CONTEXT}` placeholder)
