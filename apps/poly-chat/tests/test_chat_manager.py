@@ -143,7 +143,7 @@ def test_format_chat_info_with_title():
     assert "[1]" in formatted
     assert "test-chat.json" in formatted
     assert "My Important Chat" in formatted
-    assert "(42 msgs," in formatted
+    assert "| 42 msgs |" in formatted
     # Check date is present (time will vary by timezone, so just check date part)
     assert "2026-02-08" in formatted
 
@@ -160,8 +160,9 @@ def test_format_chat_info_no_title():
     formatted = format_chat_info(chat, 5)
 
     assert "[5]" in formatted
-    assert "(no title)" in formatted
-    assert "(0 msgs, unknown)" in formatted
+    assert "(no title)" not in formatted
+    assert "| 0 msgs | unknown" in formatted
+    assert "\n" not in formatted
     assert "unknown" in formatted
 
 

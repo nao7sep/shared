@@ -4,7 +4,13 @@ import logging
 
 from .. import hex_id
 from ..chat import get_messages_for_ai
-from ..message_formatter import (
+from ..constants import (
+    DATETIME_FORMAT_FULL,
+    DATETIME_FORMAT_SHORT,
+    HISTORY_DEFAULT_LIMIT,
+    MESSAGE_PREVIEW_LENGTH,
+)
+from ..text_formatting import (
     lines_to_text,
     format_for_ai_context,
     format_for_safety_check,
@@ -353,7 +359,7 @@ class MetadataCommandsMixin:
         # Format messages using history formatter
         history_formatter = create_history_formatter(
             self._to_local_time,
-            HISTORY_TRUNCATE_LENGTH
+            MESSAGE_PREVIEW_LENGTH
         )
 
         formatted_messages = format_messages(

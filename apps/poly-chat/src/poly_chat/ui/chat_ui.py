@@ -41,8 +41,6 @@ def prompt_chat_selection(
 
     for i, chat in enumerate(chats, 1):
         print(format_chat_info(chat, i))
-        if i < len(chats):
-            print()
 
     print(make_borderline())
 

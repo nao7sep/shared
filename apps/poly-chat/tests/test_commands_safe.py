@@ -185,14 +185,14 @@ async def test_format_message_for_safety_check(command_handler_safe, mock_sessio
 
     formatted = format_messages(messages, format_message_for_safety_check)
 
-    assert "USER: Test message 1" in formatted
-    assert "ASSISTANT: Test message 2" in formatted
+    assert "user: Test message 1" in formatted
+    assert "assistant: Test message 2" in formatted
     assert "=" * 80 in formatted
 
 
 @pytest.mark.asyncio
 async def test_format_message_with_hex_ids(command_handler_safe, mock_session_manager_safe):
-    """Test message formatting includes hex IDs."""
+    """Safety formatting should not include hex IDs."""
     from poly_chat.text_formatting import format_for_safety_check
 
     # Use messages with hex IDs from session
@@ -200,7 +200,6 @@ async def test_format_message_with_hex_ids(command_handler_safe, mock_session_ma
 
     formatted = format_for_safety_check(messages)
 
-    # Should include hex ID in format
-    assert "[a3f]" in formatted
-    assert "USER:" in formatted
+    assert "[a3f]" not in formatted
+    assert "user:" in formatted
     assert "=" * 80 in formatted

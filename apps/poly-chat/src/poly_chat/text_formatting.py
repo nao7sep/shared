@@ -2,9 +2,15 @@
 
 from datetime import datetime, timezone
 from typing import Any, Callable
+import unicodedata
 import re
 
-from .constants import BORDERLINE_CHAR, BORDERLINE_WIDTH, DATETIME_FORMAT_SHORT
+from .constants import (
+    BORDERLINE_CHAR,
+    BORDERLINE_WIDTH,
+    DATETIME_FORMAT_SHORT,
+    TRUNCATE_SEARCH_RADIUS,
+)
 
 
 # ============================================================================
@@ -48,6 +54,19 @@ def minify_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def _is_truncate_boundary(character: str) -> bool:
+    """Return True when character is a Unicode separator or punctuation."""
+    return bool(character) and unicodedata.category(character).startswith(("Z", "P"))
+
+
+def _rewind_boundary_run_start(text: str, index: int) -> int:
+    """Return start index of a contiguous boundary run ending at index."""
+    run_start = index
+    while run_start - 1 >= 0 and _is_truncate_boundary(text[run_start - 1]):
+        run_start -= 1
+    return run_start
+
+
 def truncate_text(text: str, max_length: int, suffix: str = "...") -> str:
     """Truncate text to max_length with suffix when needed."""
     if max_length <= 0:
@@ -59,7 +78,29 @@ def truncate_text(text: str, max_length: int, suffix: str = "...") -> str:
     if len(suffix) >= max_length:
         return suffix[:max_length]
 
-    return text[: max_length - len(suffix)] + suffix
+    target = max_length - len(suffix)
+    search_radius = max(1, TRUNCATE_SEARCH_RADIUS)
+
+    # Prefer cutting near the target at a semantic boundary.
+    cut_index = target
+    backward_start = max(1, target - search_radius)
+    backward_end = min(len(text) - 1, target + search_radius)
+
+    for i in range(target, backward_start - 1, -1):
+        if _is_truncate_boundary(text[i]):
+            cut_index = _rewind_boundary_run_start(text, i)
+            break
+    else:
+        for i in range(target + 1, backward_end + 1):
+            if _is_truncate_boundary(text[i]):
+                cut_index = i
+                break
+
+    truncated = text[:cut_index].rstrip()
+    if not truncated:
+        truncated = text[:target]
+
+    return truncated + suffix
 
 
 # ============================================================================
@@ -109,11 +150,7 @@ def format_message_for_ai_context(msg: dict) -> str:
 
 def format_message_for_safety_check(msg: dict) -> str:
     """Format one message for safety check."""
-    role = msg.get("role", "unknown").upper()
-    hex_id = msg.get("hex_id", "")
-    content = _get_content_text(msg)
-    hex_prefix = f"[{hex_id}] " if hex_id else ""
-    return f"{hex_prefix}{role}: {content}"
+    return format_message_for_ai_context(msg)
 
 
 def format_message_for_show(msg: dict) -> str:
@@ -198,12 +235,14 @@ def _format_updated_time(updated_at: object) -> str:
 def format_chat_list_item(chat: dict[str, Any], index: int) -> str:
     """Format one chat record for interactive list display."""
     filename = str(chat.get("filename", "(unknown)"))
-    title = chat.get("title") or "(no title)"
+    title = chat.get("title")
     msg_count = int(chat.get("message_count", 0) or 0)
     updated = _format_updated_time(chat.get("updated_at"))
 
-    header = f"[{index}] {filename} ({msg_count} msgs, {updated})"
-    return f"{header}\n    {title}"
+    header = f"[{index}] {filename} | {msg_count} msgs | {updated}"
+    if isinstance(title, str) and title.strip():
+        return f"{header}\n    {title}"
+    return header
 
 
 # ============================================================================

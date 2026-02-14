@@ -47,6 +47,19 @@ BUILTIN_PROMPT_SAFETY = "@/prompts/safety.txt"
 BORDERLINE_CHAR = "="
 BORDERLINE_WIDTH = 80
 
+# Search radius for smart text truncation
+TRUNCATE_SEARCH_RADIUS = 10
+
+# ============================================================================
+# History command
+# ============================================================================
+
+# Default number of messages shown by /history
+HISTORY_DEFAULT_LIMIT = 10
+
+# Default preview length for one-line truncated text displays
+MESSAGE_PREVIEW_LENGTH = 100
+
 # ============================================================================
 # Date/time formats
 # ============================================================================

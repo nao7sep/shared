@@ -1,7 +1,6 @@
 """Tests for text_formatting module."""
 
-import pytest
-from poly_chat.text_formatting import text_to_lines, lines_to_text
+from poly_chat.text_formatting import lines_to_text, text_to_lines, truncate_text
 
 
 def test_text_to_lines_simple():
@@ -73,3 +72,33 @@ def test_roundtrip():
     lines = text_to_lines(original)
     result = lines_to_text(lines)
     assert result == original
+
+
+def test_truncate_text_prefers_separator_near_cut_point():
+    """Truncate should prefer semantic separators around target length."""
+    result = truncate_text("Alpha beta gamma delta", 14)
+    assert result == "Alpha beta..."
+
+
+def test_truncate_text_fallback_hard_cut():
+    """Truncate should fall back to hard cut when separators are unavailable."""
+    result = truncate_text("abcdefghijklmno", 10)
+    assert result == "abcdefg..."
+
+
+def test_truncate_text_uses_unicode_punctuation_boundaries():
+    """Unicode punctuation should be treated as semantic cut points."""
+    result = truncate_text("alpha beta、gamma delta", 15)
+    assert result == "alpha beta..."
+
+
+def test_truncate_text_uses_boundary_run_start_on_left_search():
+    """When boundary is at/before force cut, cut at run start."""
+    result = truncate_text("Alpha, beta gamma", 8)
+    assert result == "Alpha..."
+
+
+def test_truncate_text_uses_first_boundary_on_right_search():
+    """If no left boundary is found, use the first right boundary as-is."""
+    result = truncate_text("AlphaBeta,  gamma", 11)
+    assert result == "AlphaBeta..."
