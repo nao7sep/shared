@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
 from .. import models
-from ..path_mapping import map_path
+from ..constants import CHAT_FILE_EXTENSION
+from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
 from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort
 
@@ -157,22 +158,27 @@ class CommandHandlerBaseMixin:
         """Resolve chat path argument to an absolute file path.
 
         Supports:
-        - mapped paths (`~/...`, `@/...`, absolute), resolved via path_mapping
+        - mapped paths (`~/...`, `@/...`, absolute), resolved via path_utils
         - bare names/relative paths resolved under chats_dir (with traversal protection)
         """
         path = raw_path.strip()
         chats_dir_resolved = Path(chats_dir).resolve()
 
-        # Use shared path mapping for mapped/absolute forms.
-        if path.startswith("~/") or path.startswith("@/") or Path(path).is_absolute():
-            try:
-                mapped = map_path(path)
-            except ValueError as e:
-                raise ValueError(f"Invalid path: {path}")
+        has_mapped_prefix = has_home_path_prefix(path) or has_app_path_prefix(path)
 
+        # Resolve mapped prefixes first.
+        if has_mapped_prefix:
+            mapped = map_path(path)
             mapped_path = Path(mapped)
             if mapped_path.exists():
                 return str(mapped_path)
+            raise ValueError(f"Chat not found: {path}")
+
+        # Handle native absolute paths directly (no prefix mapping needed).
+        if Path(path).is_absolute():
+            absolute_path = Path(path).resolve()
+            if absolute_path.exists():
+                return str(absolute_path)
             raise ValueError(f"Chat not found: {path}")
 
         # Relative name/path under chats_dir with traversal protection.
@@ -182,8 +188,8 @@ class CommandHandlerBaseMixin:
         except ValueError:
             raise ValueError(f"Invalid path: {path} (outside chats directory)")
 
-        if not candidate.exists() and not path.endswith(".json"):
-            candidate = (Path(chats_dir) / f"{path}.json").resolve()
+        if not candidate.exists() and not path.endswith(CHAT_FILE_EXTENSION):
+            candidate = (Path(chats_dir) / f"{path}{CHAT_FILE_EXTENSION}").resolve()
             try:
                 candidate.relative_to(chats_dir_resolved)
             except ValueError:

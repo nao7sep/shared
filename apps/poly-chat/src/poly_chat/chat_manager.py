@@ -9,6 +9,9 @@ from pathlib import Path, PureWindowsPath
 from datetime import datetime
 from typing import Optional, Any
 
+from .constants import APP_NAME, CHAT_FILE_EXTENSION, DATETIME_FORMAT_FILENAME
+from .path_utils import has_app_path_prefix, has_home_path_prefix, map_path
+
 
 def _is_windows_absolute_path(path: str) -> bool:
     """Return True for Windows absolute paths on any platform."""
@@ -32,7 +35,7 @@ def list_chats(chats_dir: str) -> list[dict[str, Any]]:
 
     chat_files = []
 
-    for file_path in chats_path.glob("*.json"):
+    for file_path in chats_path.glob(f"*{CHAT_FILE_EXTENSION}"):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -75,11 +78,11 @@ def generate_chat_filename(chats_dir: str, name: Optional[str] = None) -> str:
     if name:
         # Sanitize name
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
-        base = f"{safe_name}.json"
+        base = f"{safe_name}{CHAT_FILE_EXTENSION}"
     else:
         # Use timestamp: poly-chat_YYYY-MM-DD_HH-MM-SS.json
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        base = f"poly-chat_{timestamp}.json"
+        timestamp = datetime.now().strftime(DATETIME_FORMAT_FILENAME)
+        base = f"{APP_NAME}_{timestamp}{CHAT_FILE_EXTENSION}"
 
     candidate = Path(chats_dir) / base
 
@@ -89,9 +92,9 @@ def generate_chat_filename(chats_dir: str, name: Optional[str] = None) -> str:
         stem = candidate.stem
         while candidate.exists():
             if name:
-                candidate = Path(chats_dir) / f"{stem}_{counter}.json"
+                candidate = Path(chats_dir) / f"{stem}_{counter}{CHAT_FILE_EXTENSION}"
             else:
-                candidate = Path(chats_dir) / f"poly-chat_{timestamp}_{counter}.json"
+                candidate = Path(chats_dir) / f"{APP_NAME}_{timestamp}_{counter}{CHAT_FILE_EXTENSION}"
             counter += 1
 
     return str(candidate)
@@ -123,10 +126,11 @@ def rename_chat(old_path: str, new_name: str, chats_dir: str) -> str:
     is_native_absolute = Path(new_name).is_absolute()
     is_windows_absolute = _is_windows_absolute_path(new_name)
     is_absolute = is_native_absolute or is_windows_absolute
+    is_mapped_path = has_home_path_prefix(new_name) or has_app_path_prefix(new_name)
     is_path_like = (
         "/" in new_name
         or "\\" in new_name
-        or new_name.startswith("~")
+        or is_mapped_path
         or is_absolute
     )
 
@@ -137,8 +141,13 @@ def rename_chat(old_path: str, new_name: str, chats_dir: str) -> str:
                 f"Invalid path: {new_name} (Windows absolute paths are not supported on this platform)"
             )
 
-        new_file = Path(new_name).expanduser()
-        if is_absolute:
+        # Use map_path for supported mapped prefixes (~, @), otherwise expanduser.
+        if is_mapped_path:
+            new_file = Path(map_path(new_name))
+        else:
+            new_file = Path(new_name).expanduser()
+
+        if is_absolute or is_mapped_path:
             new_file = new_file.resolve()
         else:
             new_file = (Path(chats_dir) / new_name).resolve()
@@ -148,8 +157,8 @@ def rename_chat(old_path: str, new_name: str, chats_dir: str) -> str:
                 raise ValueError(f"Invalid path: {new_name} (outside chats directory)")
     else:
         # Just filename - put in chats_dir
-        if not new_name.endswith(".json"):
-            new_name = f"{new_name}.json"
+        if not new_name.endswith(CHAT_FILE_EXTENSION):
+            new_name = f"{new_name}{CHAT_FILE_EXTENSION}"
         new_file = (Path(chats_dir) / new_name).resolve()
 
         # Security check: Ensure resolved path is within chats_dir

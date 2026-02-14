@@ -1,39 +1,14 @@
 """Chat UI presentation and interaction functions."""
 
-from datetime import datetime, timezone
 from typing import Any, Optional
 
 from ..chat_manager import list_chats
+from ..text_formatting import format_chat_list_item, make_borderline
 
 
 def format_chat_info(chat: dict[str, Any], index: int) -> str:
-    """Format chat info for display in list.
-
-    Args:
-        chat: Chat dict from list_chats()
-        index: Index in list (1-based for display)
-
-    Returns:
-        Formatted string for display
-    """
-    filename = chat["filename"]
-    title = chat["title"] or "(no title)"
-    msg_count = chat["message_count"]
-
-    # Format updated time
-    if chat["updated_at"]:
-        try:
-            dt = datetime.fromisoformat(chat["updated_at"].replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                # Internal timestamps are UTC; assume UTC if tz is missing.
-                dt = dt.replace(tzinfo=timezone.utc)
-            updated = dt.astimezone().strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            updated = "unknown"
-    else:
-        updated = "unknown"
-
-    return f"{index:3}. {filename:40} | {title:30} | {msg_count:3} msgs | {updated}"
+    """Format one chat record for display in list."""
+    return format_chat_list_item(chat, index)
 
 
 def prompt_chat_selection(
@@ -62,14 +37,14 @@ def prompt_chat_selection(
 
     # Display list
     print(f"\nAvailable chats in: {chats_dir}")
-    print("=" * 100)
-    print(f"     {'Filename':<40} | {'Title':<30} | Messages | Last Updated")
-    print("-" * 100)
+    print(make_borderline())
 
     for i, chat in enumerate(chats, 1):
         print(format_chat_info(chat, i))
+        if i < len(chats):
+            print()
 
-    print("=" * 100)
+    print(make_borderline())
 
     # Prompt for selection
     if allow_cancel:

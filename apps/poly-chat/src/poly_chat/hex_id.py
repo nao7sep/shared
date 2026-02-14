@@ -8,6 +8,8 @@ change on each app run.
 import random
 from typing import Any, Set
 
+from .constants import HEX_ID_MAX_ATTEMPTS
+
 
 def generate_hex_id(existing_ids: Set[str], min_digits: int = 3) -> str:
     """Generate unique hex ID.
@@ -28,7 +30,7 @@ def generate_hex_id(existing_ids: Set[str], min_digits: int = 3) -> str:
     - 4 digits: 65,536 unique IDs
     """
     digits = min_digits
-    max_attempts = 3
+    max_attempts = HEX_ID_MAX_ATTEMPTS
 
     while True:
         for _ in range(max_attempts):

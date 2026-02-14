@@ -140,10 +140,10 @@ def test_format_chat_info_with_title():
 
     formatted = format_chat_info(chat, 1)
 
-    assert "  1." in formatted
+    assert "[1]" in formatted
     assert "test-chat.json" in formatted
     assert "My Important Chat" in formatted
-    assert "42 msgs" in formatted
+    assert "(42 msgs," in formatted
     # Check date is present (time will vary by timezone, so just check date part)
     assert "2026-02-08" in formatted
 
@@ -159,9 +159,9 @@ def test_format_chat_info_no_title():
 
     formatted = format_chat_info(chat, 5)
 
-    assert "  5." in formatted
+    assert "[5]" in formatted
     assert "(no title)" in formatted
-    assert "  0 msgs" in formatted
+    assert "(0 msgs, unknown)" in formatted
     assert "unknown" in formatted
 
 
@@ -281,6 +281,31 @@ def test_rename_chat_with_full_path(tmp_path):
     assert not old_file.exists()
     assert Path(new_path).exists()
     assert str(new_full_path) == new_path
+
+
+def test_rename_chat_supports_app_mapped_path(tmp_path, monkeypatch):
+    """Mapped @/ paths are resolved via path_utils.map_path."""
+    old_file = tmp_path / "old.json"
+    old_file.write_text("{}")
+
+    mapped_dir = tmp_path / "mapped"
+    mapped_dir.mkdir()
+    mapped_target = mapped_dir / "renamed.json"
+
+    called = {}
+
+    def fake_map_path(path: str) -> str:
+        called["path"] = path
+        return str(mapped_target)
+
+    monkeypatch.setattr("poly_chat.chat_manager.map_path", fake_map_path)
+
+    new_path = rename_chat(str(old_file), "@/renamed.json", str(tmp_path))
+
+    assert called["path"] == "@/renamed.json"
+    assert Path(new_path).exists()
+    assert str(mapped_target) == new_path
+    assert not old_file.exists()
 
 
 def test_rename_chat_rejects_windows_absolute_path_on_non_windows(tmp_path):

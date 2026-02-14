@@ -1,0 +1,63 @@
+"""Central constants for PolyChat.
+
+This module consolidates configuration constants and magic numbers.
+"""
+
+# ============================================================================
+# Application identity
+# ============================================================================
+
+APP_NAME = "poly-chat"
+APP_DISPLAY_NAME = "PolyChat"
+
+# ============================================================================
+# File extensions
+# ============================================================================
+
+CHAT_FILE_EXTENSION = ".json"
+PROFILE_FILE_EXTENSION = ".json"
+LOG_FILE_EXTENSION = ".log"
+PROMPT_FILE_EXTENSION = ".txt"
+
+# ============================================================================
+# Default directories and paths
+# ============================================================================
+
+# User data directory (created in home directory)
+USER_DATA_DIR = f"~/.{APP_NAME}"
+
+# REPL command history file
+REPL_HISTORY_FILE = f"{USER_DATA_DIR}/history"
+
+# Default directories for profile template
+DEFAULT_CHATS_DIR = f"{USER_DATA_DIR}/chats"
+DEFAULT_LOGS_DIR = f"{USER_DATA_DIR}/logs"
+
+# Built-in prompt paths (relative to app root)
+BUILTIN_PROMPT_SYSTEM_DEFAULT = "@/prompts/system/default.txt"
+BUILTIN_PROMPT_TITLE = "@/prompts/title.txt"
+BUILTIN_PROMPT_SUMMARY = "@/prompts/summary.txt"
+BUILTIN_PROMPT_SAFETY = "@/prompts/safety.txt"
+
+# ============================================================================
+# Display formatting
+# ============================================================================
+
+# Unified borderline style for chat context and REPL banners.
+BORDERLINE_CHAR = "="
+BORDERLINE_WIDTH = 80
+
+# ============================================================================
+# Date/time formats
+# ============================================================================
+
+DATETIME_FORMAT_FULL = "%Y-%m-%d %H:%M:%S"
+DATETIME_FORMAT_SHORT = "%Y-%m-%d %H:%M"
+DATETIME_FORMAT_FILENAME = "%Y-%m-%d_%H-%M-%S"
+
+# ============================================================================
+# Hex ID generation
+# ============================================================================
+
+# Maximum attempts to generate unique hex ID before giving up
+HEX_ID_MAX_ATTEMPTS = 3

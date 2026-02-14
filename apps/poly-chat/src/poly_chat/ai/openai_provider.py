@@ -23,7 +23,7 @@ from tenacity import (
 )
 
 from ..logging_utils import before_sleep_log_event, log_event
-from ..message_formatter import lines_to_text
+from ..text_formatting import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,

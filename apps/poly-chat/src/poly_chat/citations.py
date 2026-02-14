@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from urllib.parse import parse_qs, unquote, urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from .timeouts import (
@@ -16,17 +16,6 @@ _NUMERIC_TITLE_RE = re.compile(r"^\s*\d+\s*$")
 _HOST_LIKE_TITLE_RE = re.compile(r"^[a-z0-9-]+(?:\.[a-z0-9-]+)+$")
 _VERTEX_HOST_SUFFIX = "vertexaisearch.cloud.google.com"
 _VERTEX_PATH_HINT = "grounding-api-redirect"
-_VERTEX_REDIRECT_QUERY_KEYS = (
-    "url",
-    "target_url",
-    "target",
-    "destination",
-    "dest",
-    "final_url",
-    "redirect",
-    "u",
-    "q",
-)
 
 
 def _normalized_url_key(url: str | None) -> str | None:
@@ -120,26 +109,6 @@ def _looks_like_vertex_redirect(url: str) -> bool:
     host = parsed.netloc.lower()
     path = parsed.path.lower()
     return host.endswith(_VERTEX_HOST_SUFFIX) or _VERTEX_PATH_HINT in path
-
-
-def _extract_redirect_from_vertex_url(url: str) -> str | None:
-    try:
-        parsed = urlparse(url)
-    except Exception:
-        return None
-
-    query = parse_qs(parsed.query, keep_blank_values=False)
-    for key in _VERTEX_REDIRECT_QUERY_KEYS:
-        for value in query.get(key, []):
-            candidate = unquote(value).strip()
-            if _is_valid_http_url(candidate):
-                return candidate
-
-    path_tail = unquote(parsed.path.rsplit("/", 1)[-1]).strip()
-    if _is_valid_http_url(path_tail):
-        return path_tail
-
-    return None
 
 
 def _clean_url(raw_url: object) -> str | None:
@@ -240,11 +209,10 @@ async def resolve_vertex_citation_urls(
     timeout_sec: float = CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC,
     concurrency: int = CITATION_REDIRECT_RESOLVE_CONCURRENCY,
 ) -> list[dict[str, object]]:
-    """Resolve vertex redirect URLs to destination URLs.
+    """Resolve vertex redirect URLs to destination URLs via HTTP redirect headers.
 
-    Strategy:
-    1. Try HTTP request to fetch redirect Location header.
-    2. If that fails, extract target from the vertex URL itself.
+    Vertex URLs contain base64-encoded data and require an HTTP request
+    to resolve to the actual destination URL.
     """
     if not citations:
         return citations
@@ -264,9 +232,6 @@ async def resolve_vertex_citation_urls(
 
             async with semaphore:
                 resolved = await _resolve_vertex_via_http(client, url)
-
-            if not resolved:
-                resolved = _extract_redirect_from_vertex_url(url)
 
             # If unresolved, vertex URL is considered unusable for history/citations.
             updated[index]["url"] = resolved if _is_valid_http_url(resolved) else None

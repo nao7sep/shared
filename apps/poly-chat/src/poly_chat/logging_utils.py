@@ -7,6 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from .constants import APP_NAME, DATETIME_FORMAT_FILENAME, LOG_FILE_EXTENSION
+
 
 _LOG_PATH_FIELDS = {
     "profile_file",
@@ -357,9 +359,9 @@ def _resolve_log_path(path_value: str) -> str:
     if not value:
         return path_value
     try:
-        from .path_mapping import map_path
+        from .path_utils import map_path
 
-        # Use path_mapping for all special prefixes (~, @) and absolute paths
+        # Use path_utils for all special prefixes (~, @) and absolute paths
         return map_path(value)
     except Exception:
         # If path mapping fails, return original value
@@ -496,13 +498,13 @@ def build_run_log_path(logs_dir: str) -> str:
     logs_dir_path = Path(logs_dir)
     logs_dir_path.mkdir(parents=True, exist_ok=True)
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    base_name = f"poly-chat_{timestamp}"
-    candidate = logs_dir_path / f"{base_name}.log"
+    timestamp = datetime.now().strftime(DATETIME_FORMAT_FILENAME)
+    base_name = f"{APP_NAME}_{timestamp}"
+    candidate = logs_dir_path / f"{base_name}{LOG_FILE_EXTENSION}"
 
     suffix = 1
     while candidate.exists():
-        candidate = logs_dir_path / f"{base_name}_{suffix}.log"
+        candidate = logs_dir_path / f"{base_name}_{suffix}{LOG_FILE_EXTENSION}"
         suffix += 1
 
     return str(candidate)

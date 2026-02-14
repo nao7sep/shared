@@ -111,7 +111,7 @@ async def test_history_default_last_10(command_handler_with_messages, mock_sessi
     assert "showing 6 of 6 messages" in result
     assert "[a3f]" in result
     assert "[f6a]" in result
-    assert "👤 User" in result
+    assert "🍼 User" in result
     assert "🤖 Assistant" in result
     assert "❌ Error" in result
 
@@ -218,7 +218,7 @@ async def test_history_truncates_long_messages(command_handler_with_messages, mo
 async def test_history_no_extra_blank_line_before_footer(command_handler_with_messages):
     """History output should not have a blank line right before footer divider."""
     result = await command_handler_with_messages.show_history("")
-    assert "\n\n" + ("━" * 60) not in result
+    assert "\n\n" + ("=" * 80) not in result
 
 
 @pytest.mark.asyncio
@@ -251,7 +251,7 @@ async def test_show_message_valid_hex_id(command_handler_with_messages, mock_ses
     assert "Message [a3f]" in result
     assert "User" in result
     assert "Hello, how are you?" in result
-    assert "━" in result
+    assert "=" * 80 in result
 
 
 @pytest.mark.asyncio

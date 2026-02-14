@@ -13,10 +13,31 @@ from .logging_utils import (
     sanitize_error_message,
     setup_logging,
 )
-from .path_mapping import map_path
+from .path_utils import map_path
 from .repl import repl_loop
 from .session_manager import SessionManager
 from .timeouts import resolve_profile_timeout
+
+
+def _map_cli_arg(path: str | None, arg_name: str) -> str | None:
+    """Map CLI path argument with descriptive error messages.
+
+    Args:
+        path: Path string or None
+        arg_name: Argument name for error messages (e.g., "profile", "chat", "log")
+
+    Returns:
+        Mapped absolute path, or None if input was None
+
+    Raises:
+        ValueError: With descriptive message including arg_name
+    """
+    if path is None:
+        return None
+    try:
+        return map_path(path)
+    except ValueError as e:
+        raise ValueError(f"Invalid {arg_name} path: {e}")
 
 
 def main() -> None:
@@ -57,14 +78,14 @@ def main() -> None:
             print("Usage: pc init <profile-path>")
             sys.exit(1)
         try:
-            mapped_init_profile_path = map_path(args.profile_path)
+            mapped_init_profile_path = _map_cli_arg(args.profile_path, "profile")
             _, messages = profile.create_profile(mapped_init_profile_path)
             # Display status messages returned by create_profile
             for message in messages:
                 print(message)
             sys.exit(0)
         except ValueError as e:
-            print(f"Error: Invalid profile path: {e}")
+            print(f"Error: {e}")
             sys.exit(1)
         except Exception as e:
             print(f"Error creating profile: {e}")
@@ -77,24 +98,9 @@ def main() -> None:
 
     try:
         # Map CLI path arguments
-        try:
-            mapped_profile_path = map_path(args.profile)
-        except ValueError as e:
-            raise ValueError(f"Invalid profile path: {e}")
-
-        mapped_chat_path = None
-        if args.chat:
-            try:
-                mapped_chat_path = map_path(args.chat)
-            except ValueError as e:
-                raise ValueError(f"Invalid chat path: {e}")
-
-        mapped_log_path = None
-        if args.log:
-            try:
-                mapped_log_path = map_path(args.log)
-            except ValueError as e:
-                raise ValueError(f"Invalid log path: {e}")
+        mapped_profile_path = _map_cli_arg(args.profile, "profile")
+        mapped_chat_path = _map_cli_arg(args.chat, "chat")
+        mapped_log_path = _map_cli_arg(args.log, "log")
 
         profile_data = profile.load_profile(mapped_profile_path)
         effective_log_path = mapped_log_path or build_run_log_path(profile_data["logs_dir"])

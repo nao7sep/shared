@@ -1,7 +1,7 @@
-"""Tests for message_formatter module."""
+"""Tests for text_formatting module."""
 
 import pytest
-from poly_chat.message_formatter import text_to_lines, lines_to_text
+from poly_chat.text_formatting import text_to_lines, lines_to_text
 
 
 def test_text_to_lines_simple():

@@ -19,18 +19,28 @@ def get_app_root() -> Path:
         Path to app root directory
     """
     # Find pyproject.toml directory by going up from this file's location
-    # This file is at: src/poly_chat/path_mapping.py
+    # This file is at: src/poly_chat/path_utils.py
     # App root is 3 levels up
     return Path(__file__).parent.parent.parent
+
+
+def has_home_path_prefix(path: str) -> bool:
+    """Return True when path uses the supported home prefix forms."""
+    return path == "~" or path.startswith("~/") or path.startswith("~\\")
+
+
+def has_app_path_prefix(path: str) -> bool:
+    """Return True when path uses the supported app-root prefix forms."""
+    return path == "@" or path.startswith("@/") or path.startswith("@\\")
 
 
 def map_path(path: str) -> str:
     """Map path with special prefixes to absolute path.
 
-    Supports special prefixes:
-    - ~/... → expands to user home directory
-    - @/... → expands to app root directory
-    - Absolute paths → used as-is
+    Supports special prefixes (with / or \\ for Windows compatibility):
+    - ~/... or ~\\... → expands to user home directory
+    - @/... or @\\... → expands to app root directory
+    - Absolute paths → used as-is (C:\\, C:/, /usr/local, etc.)
     - Relative paths without prefix → Error
 
     Args:
@@ -43,44 +53,57 @@ def map_path(path: str) -> str:
         ValueError: If path is relative without special prefix, or escapes boundary
 
     Examples:
-        >>> map_path("~/chats/my-chat.json")
+        >>> map_path("~/chats/my-chat.json")  # Unix
         '/Users/username/chats/my-chat.json'
+
+        >>> map_path("~\\chats\\my-chat.json")  # Windows
+        'C:\\Users\\username\\chats\\my-chat.json'
 
         >>> map_path("@/prompts/title.txt")
         '/path/to/poly-chat/prompts/title.txt'
 
-        >>> map_path("/usr/local/data/profile.json")
+        >>> map_path("/usr/local/data/profile.json")  # Unix
         '/usr/local/data/profile.json'
+
+        >>> map_path("C:\\Users\\data\\profile.json")  # Windows
+        'C:\\Users\\data\\profile.json'
 
         >>> map_path("relative/path.json")
         ValueError: Relative paths without prefix are not supported
     """
     # Handle tilde (home directory)
-    if path.startswith("~/"):
+    # Support both ~/ and ~\ for Windows compatibility
+    if has_home_path_prefix(path):
+        if path == "~":
+            return str(Path.home().resolve())
+
         home_dir = Path.home().resolve()
-        resolved = (home_dir / path[2:]).resolve()
+        suffix = path[2:]  # Everything after ~/ or ~\
+        resolved = (home_dir / suffix).resolve()
         try:
             resolved.relative_to(home_dir)
         except ValueError:
             raise ValueError(f"Path escapes home directory: {path}")
         return str(resolved)
-    elif path == "~":
-        return str(Path.home().resolve())
 
     # Handle @ (app root directory)
-    elif path.startswith("@/"):
+    # Support both @/ and @\ for Windows compatibility
+    elif has_app_path_prefix(path):
+        if path == "@":
+            return str(get_app_root())
+
         app_root = get_app_root()
-        resolved = (app_root / path[2:]).resolve()
+        suffix = path[2:]  # Everything after @/ or @\
+        resolved = (app_root / suffix).resolve()
         app_root_resolved = app_root.resolve()
         try:
             resolved.relative_to(app_root_resolved)
         except ValueError:
             raise ValueError(f"Path escapes app directory: {path}")
         return str(resolved)
-    elif path == "@":
-        return str(get_app_root())
 
     # Absolute path - use as-is
+    # Works for both Unix (/usr/local) and Windows (C:\, C:/)
     elif Path(path).is_absolute():
         return str(Path(path).resolve())
 

@@ -83,28 +83,6 @@ async def test_resolve_vertex_citation_urls_prefers_http_resolution(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_resolve_vertex_citation_urls_falls_back_to_query(monkeypatch):
-    async def fake_http(client, url):
-        return None
-
-    monkeypatch.setattr(citation_utils, "_resolve_vertex_via_http", fake_http)
-
-    citations = citation_utils.normalize_citations(
-        [
-            {
-                "url": (
-                    "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
-                    "?url=https%3A%2F%2Fexample.com%2Fresearch"
-                ),
-                "title": "Research",
-            }
-        ]
-    )
-    result = await citation_utils.resolve_vertex_citation_urls(citations)
-    assert result == [{"number": 1, "title": "Research", "url": "https://example.com/research"}]
-
-
-@pytest.mark.asyncio
 async def test_resolve_vertex_citation_urls_sets_unresolved_vertex_url_to_none(monkeypatch):
     async def fake_http(client, url):
         return None

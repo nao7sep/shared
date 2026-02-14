@@ -730,8 +730,8 @@ def test_create_profile_template_uses_file_prompts_and_mixed_api_key_examples(tm
     assert created_profile["title_prompt"] == "@/prompts/title.txt"
     assert created_profile["summary_prompt"] == "@/prompts/summary.txt"
     assert created_profile["safety_prompt"] == "@/prompts/safety.txt"
-    assert created_profile["chats_dir"] == "~/poly-chat/chats"
-    assert created_profile["logs_dir"] == "~/poly-chat/logs"
+    assert created_profile["chats_dir"] == "~/.poly-chat/chats"
+    assert created_profile["logs_dir"] == "~/.poly-chat/logs"
     assert created_profile["api_keys"]["openai"] == {
         "type": "env",
         "key": "OPENAI_API_KEY",

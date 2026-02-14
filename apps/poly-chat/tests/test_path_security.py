@@ -3,6 +3,7 @@
 import pytest
 from pathlib import Path
 from poly_chat.profile import map_path
+from poly_chat.path_utils import has_app_path_prefix, has_home_path_prefix
 
 
 def test_map_path_rejects_relative_paths():
@@ -132,3 +133,21 @@ def test_edge_cases():
     # Current directory explicit
     with pytest.raises(ValueError):
         map_path("./file")
+
+
+def test_has_home_path_prefix_supports_unix_and_windows_forms():
+    """Home prefix checks support bare, Unix, and Windows forms."""
+    assert has_home_path_prefix("~")
+    assert has_home_path_prefix("~/docs/file.txt")
+    assert has_home_path_prefix("~\\docs\\file.txt")
+    assert not has_home_path_prefix("~alice/docs")
+    assert not has_home_path_prefix("/tmp/~")
+
+
+def test_has_app_path_prefix_supports_unix_and_windows_forms():
+    """App prefix checks support bare, Unix, and Windows forms."""
+    assert has_app_path_prefix("@")
+    assert has_app_path_prefix("@/prompts/system.txt")
+    assert has_app_path_prefix("@\\prompts\\system.txt")
+    assert not has_app_path_prefix("@alice/prompts")
+    assert not has_app_path_prefix("/tmp/@")

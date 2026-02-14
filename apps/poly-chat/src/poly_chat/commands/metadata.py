@@ -11,6 +11,7 @@ from ..message_formatter import (
     format_for_show,
     format_messages,
     create_history_formatter,
+    make_borderline,
 )
 from ..prompts import (
     build_safety_check_prompt,
@@ -18,11 +19,6 @@ from ..prompts import (
     build_title_generation_prompt,
 )
 from ..timeouts import resolve_profile_timeout
-
-# Display constants
-HISTORY_TRUNCATE_LENGTH = 100
-HISTORY_SEPARATOR_WIDTH = 60
-
 
 class MetadataCommandsMixin:
     async def _invoke_helper_ai(
@@ -270,9 +266,9 @@ class MetadataCommandsMixin:
             # Format output
             output = [
                 f"Safety Check Results ({scope}):",
-                "━" * 40,
+                make_borderline(),
                 result.strip(),
-                "━" * 40,
+                make_borderline(),
             ]
 
             return "\n".join(output)
@@ -308,7 +304,7 @@ class MetadataCommandsMixin:
         # Parse arguments
         show_all = False
         errors_only = False
-        limit = 10  # Default: last 10 messages
+        limit = HISTORY_DEFAULT_LIMIT
 
         if args.strip():
             if args.strip() == "all":
@@ -363,7 +359,6 @@ class MetadataCommandsMixin:
         formatted_messages = format_messages(
             [msg for _, msg in display_messages],
             history_formatter,
-            HISTORY_SEPARATOR_WIDTH
         )
 
         output.append(formatted_messages)
@@ -398,7 +393,7 @@ class MetadataCommandsMixin:
         content_parts = msg.get("content", [])
 
         if timestamp and timestamp != "unknown":
-            time_str = self._to_local_time(timestamp, "%Y-%m-%d %H:%M:%S")
+            time_str = self._to_local_time(timestamp, DATETIME_FORMAT_FULL)
             if time_str == "unknown":
                 time_str = timestamp
         else:
@@ -411,7 +406,7 @@ class MetadataCommandsMixin:
         else:
             role_display = role.capitalize()
 
-        # Format content with separators
+        # Format content with borderlines
         formatted_content = format_for_show([msg])
 
         # Build output
@@ -450,7 +445,7 @@ class MetadataCommandsMixin:
         updated_local = "(unknown)"
         updated_at = metadata.get("updated_at")
         if updated_at:
-            updated_local = self._to_local_time(updated_at, "%Y-%m-%d %H:%M")
+            updated_local = self._to_local_time(updated_at, DATETIME_FORMAT_SHORT)
 
         assistant_fields = [
             ("Assistant:", f"{self.manager.current_ai} ({self.manager.current_model})"),
@@ -467,7 +462,7 @@ class MetadataCommandsMixin:
 
         output = [
             "Session Status",
-            "━" * 60,
+            make_borderline(),
             f"Profile File: {profile_path}",
             f"Chat File:    {chat_path or '(none)'}",
             f"Log File:     {log_file or '(none)'}",
@@ -489,7 +484,7 @@ class MetadataCommandsMixin:
             "Paths",
             f"Chats Dir:    {profile_data.get('chats_dir', '(unknown)')}",
             f"Logs Dir:     {profile_data.get('logs_dir', '(unknown)')}",
-            "━" * 60,
+            make_borderline(),
         ]
 
         return "\n".join(output)

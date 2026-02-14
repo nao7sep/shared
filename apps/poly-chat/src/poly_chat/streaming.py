@@ -85,28 +85,3 @@ def print_with_prefix(text: str, prefix: str = ""):
         print(f"{prefix}{text}")
     else:
         print(text)
-
-
-def display_citations(citations: list[dict]) -> None:
-    """Display search citations after response.
-
-    Args:
-        citations: List of citation dicts with "url" and optional "title" keys
-    """
-    if not citations:
-        return
-    print()
-    print("Sources:")
-    for i, citation in enumerate(citations, 1):
-        number = citation.get("number", i)
-        title = citation.get("title")
-        url = citation.get("url")
-        if title and url:
-            print(f"  [{number}] {title}")
-            print(f"      {url}")
-        elif url:
-            print(f"  [{number}] {url}")
-        elif title:
-            print(f"  [{number}] {title} (URL unavailable)")
-        else:
-            print(f"  [{number}] [source unavailable]")

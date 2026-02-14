@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 import aiofiles
 
-from .message_formatter import text_to_lines
+from .text_formatting import text_to_lines
 
 
 REQUIRED_METADATA_KEYS = (

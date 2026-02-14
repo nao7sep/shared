@@ -11,7 +11,7 @@ from typing import Optional
 from .session_manager import SessionManager
 from . import chat
 from .logging_utils import log_event
-from .message_formatter import text_to_lines
+from .text_formatting import text_to_lines
 from .commands.types import CommandResult, CommandSignal
 from .orchestrator_types import (
     ActionMode,

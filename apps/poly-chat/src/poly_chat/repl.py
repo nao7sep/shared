@@ -36,9 +36,11 @@ from .citations import (
     resolve_vertex_citation_urls,
 )
 from .commands import CommandHandler
+from .constants import BORDERLINE_CHAR, BORDERLINE_WIDTH
 from .ui.interaction import ThreadedConsoleInteraction
 from .logging_utils import log_event, summarize_command_args
 from .streaming import display_streaming_response
+from .text_formatting import format_citation_list
 from .timeouts import (
     resolve_profile_timeout,
 )
@@ -128,7 +130,16 @@ async def repl_loop(
     def _(event):
         event.current_buffer.validate_and_handle()
 
-    history_file = Path.home() / ".poly-chat-history"
+    # REPL command history file
+    from .constants import REPL_HISTORY_FILE
+    from .path_utils import map_path
+
+    history_file_path = map_path(REPL_HISTORY_FILE)
+
+    # Ensure parent directory exists
+    history_file = Path(history_file_path)
+    history_file.parent.mkdir(parents=True, exist_ok=True)
+
     prompt_session = PromptSession(
         history=FileHistory(str(history_file)),
         key_bindings=kb,
@@ -140,9 +151,11 @@ async def repl_loop(
         if provider in profile_data.get("api_keys", {}):
             configured_ais.append(f"{provider} ({model})")
 
-    print("=" * 70)
+    borderline = BORDERLINE_CHAR * BORDERLINE_WIDTH
+
+    print(borderline)
     print("PolyChat - Multi-AI CLI Chat Tool")
-    print("=" * 70)
+    print(borderline)
     print(f"Current Provider: {manager.current_ai}")
     print(f"Current Model:    {manager.current_model}")
     print(f"Configured AIs:   {', '.join(configured_ais)}")
@@ -157,7 +170,7 @@ async def repl_loop(
         print("Input Mode:       compose (Enter inserts new line • Option/Alt+Enter sends)")
     print("Ctrl+J also sends in both modes")
     print("Type /help for commands • Ctrl+D to exit")
-    print("=" * 70)
+    print(borderline)
     print()
 
     async def execute_send_action(action: SendAction) -> None:
@@ -221,9 +234,6 @@ async def repl_loop(
                 response_stream, prefix=""
             )
 
-            # Display citations if present
-            from .streaming import display_citations
-
             citations = metadata.get("citations")
             citations = normalize_citations(citations)
             if citations:
@@ -232,7 +242,8 @@ async def repl_loop(
             if citations:
                 metadata["citations"] = citations
             if citations:
-                display_citations(citations)
+                for line in format_citation_list(citations):
+                    print(line)
 
             # Calculate latency metrics and log successful AI response
             end_time = time.perf_counter()
@@ -303,7 +314,7 @@ async def repl_loop(
             if has_pending_error(chat_data) and not manager.retry_mode:
                 print(pending_error_guidance(compact=True))
             elif manager.retry_mode:
-                print("[🔄 RETRY MODE - Use /apply to accept, /cancel to abort]")
+                print("[♻️ RETRY MODE - Use /apply to accept, /cancel to abort]")
             elif manager.secret_mode:
                 print("[🔒 SECRET MODE - Messages not saved to history]")
 

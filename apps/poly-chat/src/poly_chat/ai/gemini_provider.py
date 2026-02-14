@@ -10,7 +10,7 @@ from google.genai.errors import (
 )
 
 from ..logging_utils import log_event
-from ..message_formatter import lines_to_text
+from ..text_formatting import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_EXP_BASE,

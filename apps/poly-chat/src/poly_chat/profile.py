@@ -1,14 +1,23 @@
 """Profile management for PolyChat.
 
 This module handles loading, validating, and creating user profiles.
-Path mapping is handled by the path_mapping module.
+Path mapping is handled by the path_utils module.
 """
 
 import json
 from pathlib import Path
 from typing import Any
 
-from .path_mapping import map_path
+from .constants import (
+    APP_NAME,
+    BUILTIN_PROMPT_SYSTEM_DEFAULT,
+    BUILTIN_PROMPT_TITLE,
+    BUILTIN_PROMPT_SUMMARY,
+    BUILTIN_PROMPT_SAFETY,
+    DEFAULT_CHATS_DIR,
+    DEFAULT_LOGS_DIR,
+)
+from .path_utils import map_path
 from .prompts import DEFAULT_ASSISTANT_SYSTEM_PROMPT
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 
@@ -253,12 +262,12 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
         },
         "timeout": DEFAULT_PROFILE_TIMEOUT_SEC,
         "input_mode": "quick",
-        "system_prompt": "@/prompts/system/default.txt",
-        "title_prompt": "@/prompts/title.txt",
-        "summary_prompt": "@/prompts/summary.txt",
-        "safety_prompt": "@/prompts/safety.txt",
-        "chats_dir": "~/poly-chat/chats",
-        "logs_dir": "~/poly-chat/logs",
+        "system_prompt": BUILTIN_PROMPT_SYSTEM_DEFAULT,
+        "title_prompt": BUILTIN_PROMPT_TITLE,
+        "summary_prompt": BUILTIN_PROMPT_SUMMARY,
+        "safety_prompt": BUILTIN_PROMPT_SAFETY,
+        "chats_dir": DEFAULT_CHATS_DIR,
+        "logs_dir": DEFAULT_LOGS_DIR,
         "api_keys": {
             "openai": {
                 "type": "env",
@@ -266,7 +275,7 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
             },
             "claude": {
                 "type": "keychain",
-                "service": "poly-chat",
+                "service": APP_NAME,
                 "account": "claude-api-key"
             },
             "gemini": {
