@@ -1,49 +1,50 @@
 # System Prompt Personas
 
-PolyChat offers distinct AI personas, each with a unique communication style and approach.
+PolyChat offers distinct AI personas, each with a radically different communication style. No names, no introductions—just pure behavioral differences you'll recognize instantly.
 
 ## Available Personas
 
-### 📚 **default** (Default)
-Execution-first generalist. Gives clear recommendations and practical next steps.
-- **Use when**: You want the best default for most tasks
-- **Style**: Direct, pragmatic, outcome-oriented
+### 📚 **Default**
+Action-first generalist. Leads with answers, ends with next steps.
+- **Use when**: You want decisive recommendations and practical execution
+- **Style**: Direct, executable, no fence-sitting
+- **Example**: "Use PostgreSQL. It handles your scale and has the ecosystem. Next: install with `brew install postgresql`"
 
-### 🎭 **socrates**
-Teaches through Socratic questioning. Guides you to discover insights yourself.
-- **Use when**: You want to develop critical thinking
-- **Style**: Question-led, reflective, diagnostic
-- **Example**: Responds to questions with clarifying questions that expose assumptions
+### 🎭 **Socrates**
+Only asks questions. Never gives direct answers. Relentlessly interrogative.
+- **Use when**: You want to clarify your own thinking through inquiry
+- **Style**: Pure question mode, exposes assumptions, reveals contradictions
+- **Example**: "What are you actually trying to achieve? What happens if that assumption is wrong? How would you know if you succeeded?"
 
-### ⚡ **spark**
-High-novelty ideation engine. Explores bold options and unconventional connections.
-- **Use when**: You need creative ideation or fresh perspectives
-- **Style**: Divergent, imaginative, possibility-driven
-- **Example**: Generates multiple creative alternatives with vivid language
+### ⚡ **Spark**
+Wild creativity engine. Generates 4-6 unexpected options with vivid metaphors.
+- **Use when**: You need unconventional ideas and lateral thinking
+- **Style**: "What if...?", cross-domain analogies, absurd-but-viable suggestions
+- **Example**: "Think of your database like a library vs a warehouse vs a bazaar. What if you treated writes like composting—slow accumulation then sudden transformation?"
 
-### 🔪 **razor**
-Ultra-concise and direct. Cuts through noise, no fluff.
+### 🔪 **Razor**
+Maximum compression. One sentence when possible. Fragments acceptable.
 - **Use when**: You need quick, precise answers without elaboration
-- **Style**: Minimal, compressed, high-signal
-- **Example**: One-sentence answers, bullet points, numbered lists
+- **Style**: No preamble, no pleasantries, stops immediately after answering
+- **Example**: "PostgreSQL. Use `brew install postgresql`."
 
-### 😈 **devil**
-Constructive red team. Stress-tests ideas and exposes failure modes.
-- **Use when**: You need critical review or want to find flaws
-- **Style**: Skeptical, adversarial, risk-first
-- **Example**: Points out downsides, worst-case scenarios, and blind spots
+### 😈 **Devil**
+Everything fails. Starts with what's wrong. Brutally critical, then grudgingly helpful.
+- **Use when**: You need aggressive red-teaming and failure mode analysis
+- **Style**: Adversarial, risk-obsessed, "This fails when...", never sugarcoats
+- **Example**: "This fails when traffic spikes and your connection pool saturates. You're assuming consistent latency but ignoring retry storms. Fix: Add circuit breakers and..."
 
-### ♟️ **strategist**
-Systems thinker focused on long-term planning and frameworks.
-- **Use when**: You need structured planning or strategic analysis
-- **Style**: Systems-level, phased, framework-driven
-- **Example**: Breaks goals into milestones, considers dependencies and time horizons
+### ♟️ **Strategist**
+Systems thinking with frameworks. Always structures as: Objective → Constraints → Options → Roadmap.
+- **Use when**: You need phased planning and strategic analysis
+- **Style**: Consultant-speak, time horizons (Now/Next/Later), dependencies explicit
+- **Example**: "The critical path here is... Three strategic options: 1) Quick win... 2) Platform play... Roadmap: Now (0-3mo): Setup. Next (3-12mo): Scale..."
 
-### 🎓 **scholar**
-Evidence-driven and rigorous. Prioritizes depth, precision, and uncertainty clarity.
-- **Use when**: You need depth, accuracy, and thorough exploration
-- **Style**: Analytical, qualified, evidence-centered
-- **Example**: Multi-angle analysis with context, nuances, and proper qualifications
+### 🎓 **Scholar**
+Academic rigor. Structured sections: Context, Evidence, Analysis, Competing Views, Conclusion.
+- **Use when**: You need thorough, nuanced exploration with explicit uncertainty
+- **Style**: Hedged language ("suggests", "appears to"), multiple perspectives, peer-reviewed tone
+- **Example**: "The evidence suggests PostgreSQL, however alternative interpretations include... This assumes workload patterns remain stable, which may not hold if..."
 
 ## How to Use
 
@@ -54,9 +55,16 @@ Set persona in your profile configuration:
 }
 ```
 
-Or switch per-chat using the `/system` command:
+Or switch per-chat using the `/system` command with shorthand names:
 ```
-/system @/prompts/system/spark.txt
+/system razor
+/system socrates
+/system spark
+```
+
+Or use full paths:
+```
+/system @/prompts/system/devil.txt
 ```
 
 ## Design Philosophy

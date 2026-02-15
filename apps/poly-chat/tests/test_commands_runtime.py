@@ -63,6 +63,39 @@ async def test_system_show_prefers_chat_unmapped_path(command_handler, mock_sess
 
 
 @pytest.mark.asyncio
+async def test_system_persona_name_shortcut(command_handler, mock_session_manager, tmp_path):
+    """Test that /system razor maps to @/prompts/system/razor.txt"""
+    # Create a temporary razor.txt in the expected location
+    from poly_chat import path_utils
+    from pathlib import Path
+    
+    # Initialize system_prompt in metadata (normally done when chat is created)
+    mock_session_manager.chat["metadata"]["system_prompt"] = None
+    
+    # Mock the app root to point to our tmp directory
+    app_root = tmp_path / "app"
+    prompts_dir = app_root / "prompts" / "system"
+    prompts_dir.mkdir(parents=True)
+    
+    razor_file = prompts_dir / "razor.txt"
+    razor_file.write_text("Test razor persona prompt")
+    
+    # Temporarily patch the app root - it should return a Path object
+    original_get_app_root = path_utils.get_app_root
+    path_utils.get_app_root = lambda: Path(str(app_root))
+    
+    try:
+        result = await command_handler.set_system_prompt("razor")
+        
+        assert result == "System prompt set to: razor persona"
+        assert mock_session_manager.system_prompt == "Test razor persona prompt"
+        assert mock_session_manager.system_prompt_path == "@/prompts/system/razor.txt"
+        assert mock_session_manager.chat["metadata"]["system_prompt"] == "@/prompts/system/razor.txt"
+    finally:
+        path_utils.get_app_root = original_get_app_root
+
+
+@pytest.mark.asyncio
 async def test_secret_off_when_already_off(command_handler, mock_session_manager):
     result = await command_handler.secret_mode_command("off")
     assert result == "Secret mode already off"

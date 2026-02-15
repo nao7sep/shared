@@ -45,7 +45,8 @@ Configuration:
   /system             Show current system prompt path
   /system --          Remove system prompt from chat
   /system default     Restore profile default system prompt
-  /system <path>      Set system prompt (~/ for home, @/ for app root)
+  /system <name>      Set system prompt by persona name (e.g., razor, socrates)
+  /system <path>      Set system prompt by path (~/ for home, @/ for app root)
 
 Chat File Management:
   /new [name]         Create new chat file

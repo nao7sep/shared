@@ -231,7 +231,8 @@ class RuntimeCommandsMixin:
         """Set or show system prompt path for current chat session.
 
         Args:
-            args: Path to system prompt file, '--' to remove, 'default' to restore, or empty to show
+            args: Path to system prompt file, '--' to remove, 'default' to restore,
+                  persona name (e.g., 'razor', 'socrates'), or empty to show
 
         Returns:
             Confirmation message
@@ -283,6 +284,27 @@ class RuntimeCommandsMixin:
             if system_prompt_path is None and system_prompt_content:
                 return "System prompt restored to inline profile default (content hidden)"
             return "System prompt restored to profile default"
+
+        # Check if it's a persona name shortcut (e.g., 'razor', 'socrates')
+        # Try to map to @/prompts/system/{name}.txt
+        if "/" not in args and not args.startswith("@") and not args.startswith("~"):
+            persona_path = f"@/prompts/system/{args}.txt"
+            try:
+                # Try to map and validate the path
+                mapped_path = profile.map_system_prompt_path(persona_path)
+                # Check if file exists
+                with open(mapped_path, "r", encoding="utf-8") as f:
+                    system_prompt_content = f.read().strip()
+                
+                # Success! Use the persona path
+                update_metadata(chat_data, system_prompt=persona_path)
+                self.manager.system_prompt = system_prompt_content
+                self.manager.system_prompt_path = persona_path
+                
+                return f"System prompt set to: {args} persona"
+            except (ValueError, FileNotFoundError, OSError):
+                # Not a valid persona name, fall through to error at end
+                raise ValueError(f"Unknown persona: {args}")
 
         # Otherwise, it's a path - validate and set it
         try:

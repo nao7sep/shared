@@ -197,7 +197,8 @@ PolyChat defines the "last interaction" as one of:
 - `/system` - Show current system prompt path
 - `/system --` - Remove system prompt from chat
 - `/system default` - Restore profile default system prompt
-- `/system <path>` - Set system prompt path
+- `/system <name>` - Set system prompt by persona name (e.g., `razor`, `socrates`)
+- `/system <path>` - Set system prompt by path
 
 **Other:**
 - `/help` - Show all commands

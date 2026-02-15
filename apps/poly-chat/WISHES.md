@@ -876,3 +876,7 @@ your _resolve_chat_path_arg contains a logic to detect ~/, ~\, @/, @\ by itself.
 ---
 
 let's consider alternative icons for /history. the user / assistant icons look kind of similar.
+
+---
+
+let's update /system so that persona name alone can change the system prompt. we have distinct builtin personas. things like "/system razor" too should work. please update tests, /help content and readme.md too.
