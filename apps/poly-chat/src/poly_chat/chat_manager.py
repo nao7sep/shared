@@ -147,7 +147,7 @@ def rename_chat(old_path: str, new_name: str, chats_dir: str) -> str:
         else:
             new_file = Path(new_name).expanduser()
 
-        if is_absolute or is_mapped_path:
+        if is_absolute:
             new_file = new_file.resolve()
         else:
             new_file = (Path(chats_dir) / new_name).resolve()

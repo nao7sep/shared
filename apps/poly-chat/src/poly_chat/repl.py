@@ -36,7 +36,13 @@ from .citations import (
     resolve_vertex_citation_urls,
 )
 from .commands import CommandHandler
-from .constants import BORDERLINE_CHAR, BORDERLINE_WIDTH
+from .constants import (
+    BORDERLINE_CHAR,
+    BORDERLINE_WIDTH,
+    EMOJI_MODE_RETRY,
+    EMOJI_MODE_SECRET,
+    REPL_HISTORY_FILE,
+)
 from .ui.interaction import ThreadedConsoleInteraction
 from .logging_utils import log_event, summarize_command_args
 from .streaming import display_streaming_response
@@ -314,9 +320,9 @@ async def repl_loop(
             if has_pending_error(chat_data) and not manager.retry_mode:
                 print(pending_error_guidance(compact=True))
             elif manager.retry_mode:
-                print("[♻️ RETRY MODE - Use /apply to accept, /cancel to abort]")
+                print(f"{EMOJI_MODE_RETRY} RETRY MODE - Use /apply to accept, /cancel to abort")
             elif manager.secret_mode:
-                print("[🔒 SECRET MODE - Messages not saved to history]")
+                print(f"{EMOJI_MODE_SECRET} SECRET MODE - Messages not saved to history")
 
             user_input = await prompt_session.prompt_async(
                 "",

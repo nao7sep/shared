@@ -8,15 +8,15 @@ change on each app run.
 import random
 from typing import Any, Set
 
-from .constants import HEX_ID_MAX_ATTEMPTS
+from .constants import HEX_ID_MAX_ATTEMPTS, HEX_ID_MIN_DIGITS
 
 
-def generate_hex_id(existing_ids: Set[str], min_digits: int = 3) -> str:
+def generate_hex_id(existing_ids: Set[str], min_digits: int = HEX_ID_MIN_DIGITS) -> str:
     """Generate unique hex ID.
 
     Args:
         existing_ids: Set of already used hex IDs (will be modified)
-        min_digits: Minimum number of hex digits (default: 3)
+        min_digits: Minimum number of hex digits (default: HEX_ID_MIN_DIGITS)
 
     Returns:
         Unique hex ID string (e.g., "a3f", "b2c", "1a4f")
@@ -51,7 +51,7 @@ def is_hex_id(value: str) -> bool:
         value: String to check
 
     Returns:
-        True if value is a valid hex ID format (3+ hex digits)
+        True if value is a valid hex ID format (HEX_ID_MIN_DIGITS+ hex digits)
     """
     if not value:
         return False
@@ -60,8 +60,8 @@ def is_hex_id(value: str) -> bool:
     if any(c.isspace() for c in value):
         return False
 
-    # Must be at least 3 characters
-    if len(value) < 3:
+    # Must be at least HEX_ID_MIN_DIGITS characters
+    if len(value) < HEX_ID_MIN_DIGITS:
         return False
 
     # Must be all hex digits

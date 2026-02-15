@@ -1,10 +1,11 @@
-"""Session state container and shared state utilities for PolyChat."""
+"""Application state management."""
 
 import math
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from . import hex_id
+from .constants import EMOJI_WARNING
 
 
 @dataclass
@@ -125,10 +126,10 @@ def has_pending_error(chat_data: dict) -> bool:
 def pending_error_guidance(*, compact: bool = False) -> str:
     """Return user guidance when a chat has a pending error."""
     if compact:
-        return "[⚠️  PENDING ERROR - Use /retry or /rewind]"
+        return f"[{EMOJI_WARNING} PENDING ERROR - Use /retry or /rewind]"
 
     return (
-        "\n⚠️  Cannot continue: last interaction failed.\n"
+        f"\n{EMOJI_WARNING} Cannot continue: last interaction failed.\n"
         "Use /retry to rerun the same message.\n"
         "Use /rewind to remove the failed error/turn."
     )

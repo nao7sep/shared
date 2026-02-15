@@ -7,6 +7,7 @@ import sys
 import time
 
 from . import chat, profile
+from .constants import DISPLAY_UNKNOWN
 from .logging_utils import (
     build_run_log_path,
     log_event,
@@ -129,11 +130,11 @@ def main() -> None:
             chats_dir=profile_data.get("chats_dir"),
             logs_dir=profile_data.get("logs_dir"),
             assistant_provider=profile_data.get("default_ai"),
-            assistant_model=profile_data.get("models", {}).get(profile_data.get("default_ai", ""), "(unknown)"),
+            assistant_model=profile_data.get("models", {}).get(profile_data.get("default_ai", ""), DISPLAY_UNKNOWN),
             helper_provider=profile_data.get("default_helper_ai", profile_data.get("default_ai")),
             helper_model=profile_data.get("models", {}).get(
                 profile_data.get("default_helper_ai", profile_data.get("default_ai", "")),
-                "(unknown)",
+                DISPLAY_UNKNOWN,
             ),
             input_mode=profile_data.get("input_mode", "quick"),
             timeout=resolve_profile_timeout(profile_data),

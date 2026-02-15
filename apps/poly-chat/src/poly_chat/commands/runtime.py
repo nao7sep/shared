@@ -2,6 +2,7 @@
 
 from .. import chat, hex_id, models, profile
 from ..chat import delete_message_and_following, update_metadata
+from ..constants import DISPLAY_UNKNOWN
 from ..timeouts import resolve_profile_timeout
 from .types import CommandResult, CommandSignal
 
@@ -15,7 +16,7 @@ class RuntimeCommandsMixin:
         """Prompt user to select one model when multiple candidates match."""
         prompt_lines = [f"Multiple models match '{query}':"]
         for index, model_name in enumerate(candidates, start=1):
-            provider_name = models.get_provider_for_model(model_name) or "unknown"
+            provider_name = models.get_provider_for_model(model_name) or DISPLAY_UNKNOWN
             prompt_lines.append(f"  {index}. {model_name} ({provider_name})")
         prompt_lines.append("Select one by number (press Enter to cancel).")
 

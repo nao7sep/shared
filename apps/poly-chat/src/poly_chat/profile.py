@@ -18,7 +18,6 @@ from .constants import (
     DEFAULT_LOGS_DIR,
 )
 from .path_utils import map_path
-from .prompts import DEFAULT_ASSISTANT_SYSTEM_PROMPT
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 
 

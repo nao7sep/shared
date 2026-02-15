@@ -9,6 +9,7 @@ from google.genai.errors import (
     ServerError,
 )
 
+from ..constants import DISPLAY_UNKNOWN
 from ..logging_utils import log_event
 from ..text_formatting import lines_to_text
 from ..timeouts import (
@@ -188,7 +189,7 @@ class GeminiProvider:
 
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
-            status_code = getattr(e, "status_code", "unknown")
+            status_code = getattr(e, "status_code", DISPLAY_UNKNOWN)
             message = f"Client error ({status_code}): {e}"
             if status_code == 400:
                 message += " Bad request - check message format and parameters."
@@ -205,7 +206,7 @@ class GeminiProvider:
             raise
         except ServerError as e:
             # 500-599 errors - retry handled by SDK, but if all retries fail:
-            status_code = getattr(e, "status_code", "unknown")
+            status_code = getattr(e, "status_code", DISPLAY_UNKNOWN)
             log_event(
                 "provider_log",
                 level=logging.ERROR,
@@ -353,7 +354,7 @@ class GeminiProvider:
 
         except ClientError as e:
             # 400-499 errors - don't retry, these are client-side issues
-            status_code = getattr(e, "status_code", "unknown")
+            status_code = getattr(e, "status_code", DISPLAY_UNKNOWN)
             message = f"Client error ({status_code}): {e}"
             if status_code == 400:
                 message += " Bad request - check message format and parameters."
@@ -370,7 +371,7 @@ class GeminiProvider:
             raise
         except ServerError as e:
             # 500-599 errors - retry handled by SDK, but if all retries fail:
-            status_code = getattr(e, "status_code", "unknown")
+            status_code = getattr(e, "status_code", DISPLAY_UNKNOWN)
             log_event(
                 "provider_log",
                 level=logging.ERROR,

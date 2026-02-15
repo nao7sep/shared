@@ -9,6 +9,12 @@ from .constants import (
     BORDERLINE_CHAR,
     BORDERLINE_WIDTH,
     DATETIME_FORMAT_SHORT,
+    DISPLAY_MISSING_HEX_ID,
+    DISPLAY_UNKNOWN,
+    EMOJI_ROLE_ASSISTANT,
+    EMOJI_ROLE_ERROR,
+    EMOJI_ROLE_UNKNOWN,
+    EMOJI_ROLE_USER,
     TRUNCATE_SEARCH_RADIUS,
 )
 
@@ -55,20 +61,93 @@ def minify_text(text: str) -> str:
 
 
 def _is_truncate_boundary(character: str) -> bool:
-    """Return True when character is a Unicode separator or punctuation."""
+    """Return True when character is a Unicode separator or punctuation.
+    
+    Uses Unicode categories to identify good truncation boundaries:
+    - Z* categories (separators): spaces, line breaks, paragraph breaks
+      - Zs: Space Separator (regular space, non-breaking space, etc.)
+      - Zl: Line Separator
+      - Zp: Paragraph Separator
+    - P* categories (punctuation): periods, commas, colons, etc.
+      - Pc: Connector Punctuation (underscore, etc.)
+      - Pd: Dash Punctuation (hyphen, em dash, etc.)
+      - Ps: Open Punctuation (opening bracket, paren, etc.)
+      - Pe: Close Punctuation (closing bracket, paren, etc.)
+      - Pi: Initial Punctuation (opening quote, etc.)
+      - Pf: Final Punctuation (closing quote, etc.)
+      - Po: Other Punctuation (period, comma, colon, etc.)
+    
+    These are good places to truncate text because breaking at
+    separators/punctuation maintains readability.
+    """
     return bool(character) and unicodedata.category(character).startswith(("Z", "P"))
 
 
-def _rewind_boundary_run_start(text: str, index: int) -> int:
-    """Return start index of a contiguous boundary run ending at index."""
-    run_start = index
-    while run_start - 1 >= 0 and _is_truncate_boundary(text[run_start - 1]):
-        run_start -= 1
-    return run_start
+def _find_truncate_position(text: str, target: int, search_radius: int) -> int | None:
+    """Find the best position to truncate text near the target.
+    
+    Searches backward from target within search_radius for a word boundary.
+    When found, rewinds past any trailing boundaries to avoid cutting at
+    "word... " (returns position after "word").
+    
+    Args:
+        text: Text to search in
+        target: Ideal truncation position
+        search_radius: How far to search backward from target
+        
+    Returns:
+        Best truncation position, or None if no good boundary found
+        
+    Example:
+        text = "Hello world, this is neat"
+        target = 15  # Points to 'i' in "this"
+        search_radius = 5
+        # Searches positions 10-15, finds space at 12
+        # Rewinds past comma at 11 (also a boundary)
+        # Returns 11 (cuts at "Hello world", comma removed)
+    """
+    search_start = max(0, target - search_radius)
+    
+    for pos in range(target, search_start - 1, -1):
+        if pos < len(text) and _is_truncate_boundary(text[pos]):
+            # Found a boundary! Rewind past any trailing boundaries
+            # This handles "word,  " -> cuts at "word"
+            while pos > 0 and _is_truncate_boundary(text[pos - 1]):
+                pos -= 1
+            return pos if pos > 0 else None
+    
+    return None
 
 
 def truncate_text(text: str, max_length: int, suffix: str = "...") -> str:
-    """Truncate text to max_length with suffix when needed."""
+    """Truncate text to max_length, preferring to break at word boundaries.
+    
+    Strategy:
+    1. If text fits, return as-is
+    2. Calculate target position (max_length - suffix length)
+    3. Search backward within radius for a word boundary
+    4. If found, break there (after stripping trailing boundaries)
+    5. If not found, break exactly at target
+    6. Add suffix
+    
+    Args:
+        text: Text to truncate
+        max_length: Maximum length including suffix
+        suffix: String to append when truncating (default "...")
+        
+    Returns:
+        Truncated text with suffix, or original text if it fits
+        
+    Examples:
+        >>> truncate_text("Hello world", 100)
+        "Hello world"
+        
+        >>> truncate_text("Hello world this is long", 15)
+        "Hello world..."
+        
+        >>> truncate_text("NoSpacesHereAtAll", 10)
+        "NoSpace..."
+    """
     if max_length <= 0:
         return ""
 
@@ -79,27 +158,21 @@ def truncate_text(text: str, max_length: int, suffix: str = "...") -> str:
         return suffix[:max_length]
 
     target = max_length - len(suffix)
-    search_radius = max(1, TRUNCATE_SEARCH_RADIUS)
-
-    # Prefer cutting near the target at a semantic boundary.
-    cut_index = target
-    backward_start = max(1, target - search_radius)
-    backward_end = min(len(text) - 1, target + search_radius)
-
-    for i in range(target, backward_start - 1, -1):
-        if _is_truncate_boundary(text[i]):
-            cut_index = _rewind_boundary_run_start(text, i)
-            break
+    
+    # Try to find a good break point near target
+    break_pos = _find_truncate_position(text, target, TRUNCATE_SEARCH_RADIUS)
+    
+    if break_pos is not None:
+        # Found a good boundary
+        truncated = text[:break_pos].rstrip()
     else:
-        for i in range(target + 1, backward_end + 1):
-            if _is_truncate_boundary(text[i]):
-                cut_index = i
-                break
-
-    truncated = text[:cut_index].rstrip()
+        # No good boundary found, break at target
+        truncated = text[:target].rstrip()
+    
+    # Edge case: if rstrip removed everything, use target without stripping
     if not truncated:
         truncated = text[:target]
-
+    
     return truncated + suffix
 
 
@@ -143,7 +216,7 @@ def _get_content_text(msg: dict) -> str:
 
 def format_message_for_ai_context(msg: dict) -> str:
     """Format one message for AI context (title/summary generation)."""
-    role = msg.get("role", "unknown")
+    role = msg.get("role", DISPLAY_UNKNOWN)
     content = _get_content_text(msg)
     return f"{role}: {content}"
 
@@ -166,26 +239,25 @@ def create_history_formatter(
 
     def format_one_message(msg: dict) -> str:
         """Format one message for history display."""
-        hex_id = msg.get("hex_id", "???")
-        role = msg.get("role", "unknown")
+        hex_id = msg.get("hex_id", DISPLAY_MISSING_HEX_ID)
+        role = msg.get("role", DISPLAY_UNKNOWN)
         timestamp = msg.get("timestamp", "")
 
         if role == "user":
-            role_display = "🍼 User"
+            role_display = f"{EMOJI_ROLE_USER} User"
         elif role == "assistant":
-            model = msg.get("model", "unknown")
-            role_display = f"🤖 Assistant/{model}"
+            model = msg.get("model", DISPLAY_UNKNOWN)
+            role_display = f"{EMOJI_ROLE_ASSISTANT} Assistant/{model}"
         elif role == "error":
-            role_display = "❌ Error"
+            role_display = f"{EMOJI_ROLE_ERROR} Error"
         else:
-            role_display = f"❓ {role.capitalize()}"
+            role_display = f"{EMOJI_ROLE_UNKNOWN} {role.capitalize()}"
 
         if timestamp:
             time_str = timestamp_formatter(timestamp, DATETIME_FORMAT_SHORT)
-            if time_str == "unknown":
-                time_str = timestamp[:16] if len(timestamp) >= 16 else timestamp
+            # If formatter returns DISPLAY_UNKNOWN, keep it as is
         else:
-            time_str = "unknown"
+            time_str = DISPLAY_UNKNOWN
 
         content = msg.get("content", [])
         if isinstance(content, list):
@@ -222,19 +294,19 @@ def format_for_show(messages: list[dict]) -> str:
 def _format_updated_time(updated_at: object) -> str:
     """Format ISO timestamp for chat list display."""
     if not isinstance(updated_at, str) or not updated_at:
-        return "unknown"
+        return DISPLAY_UNKNOWN
     try:
         dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.astimezone().strftime(DATETIME_FORMAT_SHORT)
     except Exception:
-        return "unknown"
+        return DISPLAY_UNKNOWN
 
 
 def format_chat_list_item(chat: dict[str, Any], index: int) -> str:
     """Format one chat record for interactive list display."""
-    filename = str(chat.get("filename", "(unknown)"))
+    filename = str(chat.get("filename", DISPLAY_UNKNOWN))
     title = chat.get("title")
     msg_count = int(chat.get("message_count", 0) or 0)
     updated = _format_updated_time(chat.get("updated_at"))

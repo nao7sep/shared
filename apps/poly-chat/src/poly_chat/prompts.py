@@ -5,9 +5,6 @@ from pathlib import Path
 from typing import Optional
 
 
-DEFAULT_ASSISTANT_SYSTEM_PROMPT = "You are a helpful assistant."
-
-
 def _load_prompt_from_path(prompt_path: Optional[str], prompt_type: str = "prompt") -> str:
     """Load prompt content from a file path.
 

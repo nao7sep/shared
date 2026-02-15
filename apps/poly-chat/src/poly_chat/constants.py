@@ -50,6 +50,11 @@ BORDERLINE_WIDTH = 80
 # Search radius for smart text truncation
 TRUNCATE_SEARCH_RADIUS = 10
 
+# Display fallbacks for missing/invalid data
+DISPLAY_UNKNOWN = "unknown"        # For timestamps, roles, models, status codes
+DISPLAY_NONE = "none"              # For intentionally empty/null values
+DISPLAY_MISSING_HEX_ID = "???"    # For missing message hex IDs
+
 # ============================================================================
 # History command
 # ============================================================================
@@ -72,5 +77,25 @@ DATETIME_FORMAT_FILENAME = "%Y-%m-%d_%H-%M-%S"
 # Hex ID generation
 # ============================================================================
 
+# Minimum number of hex digits for message IDs
+HEX_ID_MIN_DIGITS = 3
+
 # Maximum attempts to generate unique hex ID before giving up
 HEX_ID_MAX_ATTEMPTS = 3
+
+# ============================================================================
+# Display Emojis
+# ============================================================================
+
+# Role display emojis (used in /history command)
+EMOJI_ROLE_USER = "🍼"
+EMOJI_ROLE_ASSISTANT = "🚀"
+EMOJI_ROLE_ERROR = "❌"
+EMOJI_ROLE_UNKNOWN = "🃏"
+
+# Mode banner emojis (REPL status indicators)
+EMOJI_MODE_RETRY = "♻️"
+EMOJI_MODE_SECRET = "🔒"
+
+# State indicator emojis
+EMOJI_WARNING = "⚠️"

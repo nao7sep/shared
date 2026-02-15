@@ -7,6 +7,8 @@ from ..chat import get_messages_for_ai
 from ..constants import (
     DATETIME_FORMAT_FULL,
     DATETIME_FORMAT_SHORT,
+    DISPLAY_NONE,
+    DISPLAY_UNKNOWN,
     HISTORY_DEFAULT_LIMIT,
     MESSAGE_PREVIEW_LENGTH,
 )
@@ -394,20 +396,19 @@ class MetadataCommandsMixin:
             return f"Invalid hex ID: {args.strip()}"
 
         msg = messages[msg_index]
-        role = msg.get("role", "unknown")
-        timestamp = msg.get("timestamp", "unknown")
+        role = msg.get("role", DISPLAY_UNKNOWN)
+        timestamp = msg.get("timestamp", "")
         content_parts = msg.get("content", [])
 
-        if timestamp and timestamp != "unknown":
+        if timestamp:
             time_str = self._to_local_time(timestamp, DATETIME_FORMAT_FULL)
-            if time_str == "unknown":
-                time_str = timestamp
+            # If formatter returns DISPLAY_UNKNOWN, keep it as is
         else:
-            time_str = "unknown"
+            time_str = DISPLAY_UNKNOWN
 
         # Role display
         if role == "assistant":
-            model = msg.get("model", "unknown")
+            model = msg.get("model", DISPLAY_UNKNOWN)
             role_display = f"Assistant ({model})"
         else:
             role_display = role.capitalize()
@@ -427,7 +428,7 @@ class MetadataCommandsMixin:
         """Show current session status and key paths."""
         profile_data = self.manager.profile
 
-        profile_path = self.manager.profile_path or "(unknown)"
+        profile_path = self.manager.profile_path or DISPLAY_UNKNOWN
         chat_path = self.manager.chat_path
         log_file = self.manager.log_file
 
@@ -438,17 +439,17 @@ class MetadataCommandsMixin:
         timeout = resolve_profile_timeout(profile_data)
         timeout_display = self.manager.format_timeout(timeout)
 
-        chat_title = metadata.get("title") or "(none)"
-        chat_summary = metadata.get("summary") or "(none)"
+        chat_title = metadata.get("title") or DISPLAY_NONE
+        chat_summary = metadata.get("summary") or DISPLAY_NONE
         chat_system_prompt = metadata.get("system_prompt")
         if chat_system_prompt:
             system_prompt_display = chat_system_prompt
         elif self.manager.system_prompt_path:
             system_prompt_display = self.manager.system_prompt_path
         else:
-            system_prompt_display = "(none)"
+            system_prompt_display = DISPLAY_NONE
 
-        updated_local = "(unknown)"
+        updated_local = DISPLAY_UNKNOWN
         updated_at = metadata.get("updated_at")
         if updated_at:
             updated_local = self._to_local_time(updated_at, DATETIME_FORMAT_SHORT)
@@ -470,8 +471,8 @@ class MetadataCommandsMixin:
             "Session Status",
             make_borderline(),
             f"Profile File: {profile_path}",
-            f"Chat File:    {chat_path or '(none)'}",
-            f"Log File:     {log_file or '(none)'}",
+            f"Chat File:    {chat_path or DISPLAY_NONE}",
+            f"Log File:     {log_file or DISPLAY_NONE}",
             "",
             "Chat",
             f"Chat Title:   {chat_title}",
@@ -483,13 +484,13 @@ class MetadataCommandsMixin:
             *assistant_lines,
             "",
             "Modes",
-            f"Secret Mode:   {'ON' if self.manager.secret_mode else 'OFF'}",
-            f"Search Mode:   {'ON' if self.manager.search_mode else 'OFF'}",
-            f"Retry Mode:    {'ON' if self.manager.retry_mode else 'OFF'}",
+            f"Secret Mode:  {'ON' if self.manager.secret_mode else 'OFF'}",
+            f"Search Mode:  {'ON' if self.manager.search_mode else 'OFF'}",
+            f"Retry Mode:   {'ON' if self.manager.retry_mode else 'OFF'}",
             "",
             "Paths",
-            f"Chats Dir:    {profile_data.get('chats_dir', '(unknown)')}",
-            f"Logs Dir:     {profile_data.get('logs_dir', '(unknown)')}",
+            f"Chats Dir:    {profile_data.get('chats_dir', DISPLAY_UNKNOWN)}",
+            f"Logs Dir:     {profile_data.get('logs_dir', DISPLAY_UNKNOWN)}",
             make_borderline(),
         ]
 

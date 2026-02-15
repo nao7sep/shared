@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
 from .. import models
-from ..constants import CHAT_FILE_EXTENSION
+from ..constants import CHAT_FILE_EXTENSION, DISPLAY_UNKNOWN
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
 from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort
@@ -79,7 +79,7 @@ class CommandHandlerBaseMixin:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt.astimezone().strftime(format_str)
         except (ValueError, TypeError, AttributeError):
-            return "unknown"
+            return DISPLAY_UNKNOWN
 
     @staticmethod
     def _message_content_to_text(content: Any) -> str:
