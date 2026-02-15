@@ -20,8 +20,6 @@ Categorize technical/code concerns under Secrets (credentials, keys) or Confiden
 
 REQUIRED OUTPUT FORMAT:
 
-First, provide findings by category:
-
 Personal:     ✅ None
 Secrets:      ✅ None
 Financial:    ✅ None
@@ -30,14 +28,7 @@ Offensive:    ✅ None
 Health:       ✅ None
 
 Replace "✅ None" with "⚠️ Found: description" when concerns exist.
-List all concerns found. Be specific about what was found and where (message location if multiple).
-
-Then, add verification summary showing what you checked:
-
-Verified: [Brief summary of analysis performed - what was scanned, methods used, scope covered]
-
-Example verification summary:
-"Verified: Analyzed 5 messages (3 user, 2 assistant). Scanned for PII patterns, credential formats (API keys, passwords, tokens), financial data markers, and code security issues. No hardcoded secrets or connection strings detected in code snippets."
+Be specific about what was found and where (message location if multiple).
 
 CONTENT:
 {CONTEXT}

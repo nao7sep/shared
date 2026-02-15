@@ -232,7 +232,7 @@ class RuntimeCommandsMixin:
 
         Args:
             args: Path to system prompt file, '--' to remove, 'default' to restore,
-                  persona name (e.g., 'razor', 'socrates'), or empty to show
+                  persona (e.g., 'razor', 'socrates'), or empty to show
 
         Returns:
             Confirmation message
@@ -285,8 +285,8 @@ class RuntimeCommandsMixin:
                 return "System prompt restored to inline profile default (content hidden)"
             return "System prompt restored to profile default"
 
-        # Check if it's a persona name shortcut (e.g., 'razor', 'socrates')
-        # Try to map to @/prompts/system/{name}.txt
+        # Check if it's a persona shortcut (e.g., 'razor', 'socrates')
+        # Try to map to @/prompts/system/{persona}.txt
         if "/" not in args and not args.startswith("@") and not args.startswith("~"):
             persona_path = f"@/prompts/system/{args}.txt"
             try:
@@ -303,7 +303,7 @@ class RuntimeCommandsMixin:
                 
                 return f"System prompt set to: {args} persona"
             except (ValueError, FileNotFoundError, OSError):
-                # Not a valid persona name, fall through to error at end
+                # Not a valid persona, fall through to error at end
                 raise ValueError(f"Unknown persona: {args}")
 
         # Otherwise, it's a path - validate and set it

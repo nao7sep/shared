@@ -20,6 +20,8 @@ from ..text_formatting import (
     format_messages,
     create_history_formatter,
     make_borderline,
+    minify_text,
+    truncate_text,
 )
 from ..prompts import (
     build_safety_check_prompt,
@@ -440,57 +442,71 @@ class MetadataCommandsMixin:
         timeout_display = self.manager.format_timeout(timeout)
 
         chat_title = metadata.get("title") or DISPLAY_NONE
-        chat_summary = metadata.get("summary") or DISPLAY_NONE
+        
+        # Truncate summary for display (minify + truncate like history messages)
+        raw_summary = metadata.get("summary") or ""
+        if raw_summary:
+            chat_summary = truncate_text(minify_text(raw_summary), MESSAGE_PREVIEW_LENGTH)
+        else:
+            chat_summary = DISPLAY_NONE
+        
+        # Get system prompt path for display (needs mapping if from chat metadata)
         chat_system_prompt = metadata.get("system_prompt")
         if chat_system_prompt:
-            system_prompt_display = chat_system_prompt
-        elif self.manager.system_prompt_path:
-            system_prompt_display = self.manager.system_prompt_path
+            # Chat has override - map it to absolute path for display
+            try:
+                from ..path_utils import map_path
+                system_prompt_display = map_path(chat_system_prompt)
+            except (ValueError, FileNotFoundError):
+                system_prompt_display = chat_system_prompt  # Fall back if mapping fails
         else:
-            system_prompt_display = DISPLAY_NONE
+            # Use profile default (already mapped in profile_data)
+            system_prompt_display = profile_data.get("system_prompt", DISPLAY_NONE)
+
+        # Get helper prompt paths from profile (already mapped)
+        title_prompt = profile_data.get("title_prompt", DISPLAY_NONE)
+        summary_prompt = profile_data.get("summary_prompt", DISPLAY_NONE)
+        safety_prompt = profile_data.get("safety_prompt", DISPLAY_NONE)
 
         updated_local = DISPLAY_UNKNOWN
         updated_at = metadata.get("updated_at")
         if updated_at:
             updated_local = self._to_local_time(updated_at, DATETIME_FORMAT_SHORT)
 
-        assistant_fields = [
-            ("Assistant:", f"{self.manager.current_ai} | {self.manager.current_model}"),
-            ("Helper:", f"{self.manager.helper_ai} | {self.manager.helper_model}"),
-            ("System Prompt:", system_prompt_display),
-            ("Timeout:", timeout_display),
-            ("Input Mode:", self.manager.input_mode),
-        ]
-        assistant_label_width = max(len(label) for label, _ in assistant_fields)
-        assistant_lines = [
-            f"{label:<{assistant_label_width}} {value}"
-            for label, value in assistant_fields
-        ]
-
         output = [
             "Session Status",
             make_borderline(),
-            f"Profile File: {profile_path}",
-            f"Chat File:    {chat_path or DISPLAY_NONE}",
-            f"Log File:     {log_file or DISPLAY_NONE}",
+            "Directories",
+            f"Chats:     {profile_data.get('chats_dir', DISPLAY_UNKNOWN)}",
+            f"Logs:      {profile_data.get('logs_dir', DISPLAY_UNKNOWN)}",
+            "",
+            "Files",
+            f"Profile:   {profile_path}",
+            f"Chat:      {chat_path or DISPLAY_NONE}",
+            f"Log:       {log_file or DISPLAY_NONE}",
             "",
             "Chat",
-            f"Chat Title:   {chat_title}",
-            f"Chat Summary: {chat_summary}",
-            f"Messages:     {len(messages)}",
-            f"Updated:      {updated_local}",
+            f"Title:     {chat_title}",
+            f"Summary:   {chat_summary}",
+            f"Messages:  {len(messages)}",
+            f"Updated:   {updated_local}",
             "",
-            "Assistant",
-            *assistant_lines,
+            "Providers",
+            f"Assistant: {self.manager.current_ai} | {self.manager.current_model}",
+            f"Helper:    {self.manager.helper_ai} | {self.manager.helper_model}",
+            "",
+            "Prompts",
+            f"System:    {system_prompt_display}",
+            f"Title:     {title_prompt}",
+            f"Summary:   {summary_prompt}",
+            f"Safety:    {safety_prompt}",
             "",
             "Modes",
-            f"Secret Mode:  {'ON' if self.manager.secret_mode else 'OFF'}",
-            f"Search Mode:  {'ON' if self.manager.search_mode else 'OFF'}",
-            f"Retry Mode:   {'ON' if self.manager.retry_mode else 'OFF'}",
-            "",
-            "Paths",
-            f"Chats Dir:    {profile_data.get('chats_dir', DISPLAY_UNKNOWN)}",
-            f"Logs Dir:     {profile_data.get('logs_dir', DISPLAY_UNKNOWN)}",
+            f"Input:     {self.manager.input_mode}",
+            f"Retry:     {'ON' if self.manager.retry_mode else 'OFF'}",
+            f"Secret:    {'ON' if self.manager.secret_mode else 'OFF'}",
+            f"Search:    {'ON' if self.manager.search_mode else 'OFF'}",
+            f"Timeout:   {timeout_display}",
             make_borderline(),
         ]
 

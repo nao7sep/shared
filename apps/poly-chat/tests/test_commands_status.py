@@ -4,31 +4,47 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_show_status_assistant_fields_align_values(command_handler, mock_session_manager):
-    """Assistant section values should begin in the same column."""
+async def test_show_status_all_fields_align_values(command_handler, mock_session_manager):
+    """All field values should begin in the same column."""
     mock_session_manager.chat["metadata"]["system_prompt"] = "@/prompts/system/default.txt"
 
     result = await command_handler.show_status("")
 
-    assistant_prefixes = (
+    # All fields that should be aligned
+    field_prefixes = (
+        "Chats:",
+        "Logs:",
+        "Profile:",
+        "Chat:",
+        "Log:",
+        "Title:",
+        "Summary:",
+        "Messages:",
+        "Updated:",
         "Assistant:",
         "Helper:",
-        "System Prompt:",
+        "System:",
+        "Safety:",
+        "Input:",
         "Timeout:",
-        "Input Mode:",
+        "Retry:",
+        "Secret:",
+        "Search:",
     )
-    assistant_lines = [line for line in result.splitlines() if line.startswith(assistant_prefixes)]
+    field_lines = [line for line in result.splitlines() if any(line.startswith(prefix) for prefix in field_prefixes)]
 
-    assert len(assistant_lines) == len(assistant_prefixes)
+    # Should have all fields
+    assert len(field_lines) >= 18
 
     value_starts = []
-    for line in assistant_lines:
+    for line in field_lines:
         colon_index = line.index(":")
         value_index = next(
             i for i, ch in enumerate(line[colon_index + 1 :], start=colon_index + 1) if ch != " "
         )
         value_starts.append(value_index)
 
+    # All values should start at same position
     assert len(set(value_starts)) == 1
 
 
@@ -40,6 +56,6 @@ async def test_show_status_system_prompt_none_has_readable_spacing(command_handl
 
     result = await command_handler.show_status("")
 
-    assert "System Prompt: none" in result
+    assert "System:        none" in result
 
 
