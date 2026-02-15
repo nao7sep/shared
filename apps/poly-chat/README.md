@@ -126,6 +126,20 @@ Logs are written in a structured plaintext block format and include contextual e
 - `/helper <shortcut>` - Set helper from provider shortcut (`gpt`, `gem`, `cla`, `grok`, `perp`, `mist`, `deep`)
 - `/helper default` - Restore helper AI from profile default
 
+**Configuration:**
+- `/input` - Show current input mode
+- `/input quick` - Enter sends, Option/Alt+Enter inserts newline
+- `/input compose` - Enter inserts newline, Option/Alt+Enter sends
+- `/input default` - Restore profile default input mode
+- `/timeout` - Show current timeout setting
+- `/timeout default` - Restore profile default timeout
+- `/timeout <secs>` - Set timeout (0 = wait forever)
+- `/system` - Show current system prompt path
+- `/system --` - Remove system prompt from chat
+- `/system default` - Restore profile default system prompt
+- `/system <persona>` - Set system prompt by persona (e.g., `razor`, `socrates`)
+- `/system <path>` - Set system prompt by path
+
 **Chat File Management:**
 - `/new` - Create new chat with timestamped filename
 - `/new <name>` - Create new chat with the provided name
@@ -185,20 +199,6 @@ PolyChat defines the "last interaction" as one of:
 **Safety:**
 - `/safe` - Check entire chat for unsafe content
 - `/safe <hex_id>` - Check one message for unsafe content
-
-**Configuration:**
-- `/input` - Show current input mode
-- `/input quick` - Enter sends, Option/Alt+Enter inserts newline
-- `/input compose` - Enter inserts newline, Option/Alt+Enter sends
-- `/input default` - Restore profile default input mode
-- `/timeout` - Show current timeout setting
-- `/timeout default` - Restore profile default timeout
-- `/timeout <secs>` - Set timeout (0 = wait forever)
-- `/system` - Show current system prompt path
-- `/system --` - Remove system prompt from chat
-- `/system default` - Restore profile default system prompt
-- `/system <persona>` - Set system prompt by persona (e.g., `razor`, `socrates`)
-- `/system <path>` - Set system prompt by path
 
 **Other:**
 - `/help` - Show all commands

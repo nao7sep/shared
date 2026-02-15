@@ -27,10 +27,10 @@ Provider Shortcuts:
 Model Management:
   /model              Show available models for current provider
   /model default      Restore to profile's default AI and model
-  /model <query>      Switch model via exact/fuzzy match (auto-detects provider)
+  /model <query>      Switch model via exact or fuzzy match (auto-detects provider)
   /helper             Show current helper AI model
   /helper default     Restore to profile's default helper AI
-  /helper <query>     Set helper via model query (exact/fuzzy)
+  /helper <query>     Set helper via model query (exact or fuzzy)
   /helper <shortcut>  Set helper via provider shortcut (gpt/gem/cla/grok/perp/mist/deep)
                       Ambiguous matches prompt for numbered selection
 
