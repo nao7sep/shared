@@ -271,7 +271,7 @@ async def test_show_assistant_message_includes_model(command_handler_with_messag
 
     result = await handler.show_message("b2c")
 
-    assert "Assistant (claude-haiku-4-5)" in result
+    assert "Assistant | claude-haiku-4-5" in result
     assert "I'm doing well, thank you!" in result
 
 

@@ -56,6 +56,6 @@ async def test_show_status_system_prompt_none_has_readable_spacing(command_handl
 
     result = await command_handler.show_status("")
 
-    assert "System:        none" in result
+    assert "System:    none" in result
 
 
