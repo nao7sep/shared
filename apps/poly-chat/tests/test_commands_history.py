@@ -112,7 +112,7 @@ async def test_history_default_last_10(command_handler_with_messages, mock_sessi
     assert "[a3f]" in result
     assert "[f6a]" in result
     assert "🍼 User" in result
-    assert "🤖 Assistant" in result
+    assert "🚀 Assistant" in result
     assert "❌ Error" in result
 
 

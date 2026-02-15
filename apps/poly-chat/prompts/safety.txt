@@ -1,26 +1,45 @@
-Analyze this content for safety issues including personal information, secrets, financial data, confidential information, offensive content, and health information.
+Analyze this content for safety and security concerns.
+
+CHECK FOR:
+Scan thoroughly for sensitive information and security issues:
+
+- Personal information (PII): names, emails, phone numbers, addresses, SSNs, birthdates, passport numbers
+- Secrets and credentials: API keys, passwords, tokens, OAuth secrets, access keys, private keys, database passwords
+- Financial data: credit card numbers, bank account numbers, routing numbers, transaction details, payment information
+- Confidential information: proprietary business data, trade secrets, internal documents, unreleased plans
+- Offensive content: hate speech, discriminatory language, explicit sexual content, violent threats
+- Health information: medical records, diagnoses, health conditions, treatments, patient data
+
+For code and technical content, also check for:
+- Hardcoded credentials (example: const API_KEY = "sk-proj-abc123...")
+- Connection strings (example: postgres://user:password@hostname/database)
+- Infrastructure details (example: internal IPs like 10.0.1.45, server names, deployment credentials)
+- Security vulnerabilities (SQL injection patterns, XSS code, exposed endpoints)
+
+Categorize technical/code concerns under Secrets (credentials, keys) or Confidential (infrastructure, internal details).
 
 REQUIRED OUTPUT FORMAT:
-Use this exact format for your response:
 
-PERSONAL: [✓ None | ⚠ Found: brief description]
-SECRETS: [✓ None | ⚠ Found: brief description]
-FINANCIAL: [✓ None | ⚠ Found: brief description]
-CONFIDENTIAL: [✓ None | ⚠ Found: brief description]
-OFFENSIVE: [✓ None | ⚠ Found: brief description]
-HEALTH: [✓ None | ⚠ Found: brief description]
+First, provide findings by category:
 
-Keep descriptions brief (one line max). For found items, mention location if checking multiple messages.
+Personal:     ✅ None
+Secrets:      ✅ None
+Financial:    ✅ None
+Confidential: ✅ None
+Offensive:    ✅ None
+Health:       ✅ None
 
-CATEGORIES:
-- PERSONAL: names, emails, phone numbers, addresses, social security numbers
-- SECRETS: passwords, API keys, tokens, access keys, credentials
-- FINANCIAL: credit card numbers, bank accounts, financial data
-- CONFIDENTIAL: proprietary business data, trade secrets, internal documents
-- OFFENSIVE: hate speech, discriminatory language, explicit content
-- HEALTH: medical information, health conditions, diagnoses, medical records
+Replace "✅ None" with "⚠️ Found: description" when concerns exist.
+List all concerns found. Be specific about what was found and where (message location if multiple).
+
+Then, add verification summary showing what you checked:
+
+Verified: [Brief summary of analysis performed - what was scanned, methods used, scope covered]
+
+Example verification summary:
+"Verified: Analyzed 5 messages (3 user, 2 assistant). Scanned for PII patterns, credential formats (API keys, passwords, tokens), financial data markers, and code security issues. No hardcoded secrets or connection strings detected in code snippets."
 
 CONTENT:
-{CONTENT}
+{CONTEXT}
 
 Perform the safety check now:

@@ -147,7 +147,11 @@ def rename_chat(old_path: str, new_name: str, chats_dir: str) -> str:
         else:
             new_file = Path(new_name).expanduser()
 
-        if is_absolute:
+        # Must check both is_absolute and is_mapped_path here.
+        # Mapped paths like @/file.json are already resolved by map_path() above,
+        # so they should be treated as absolute paths, not relative to chats_dir.
+        # Without this check, @/file.json would incorrectly become chats_dir/@/file.json.
+        if is_absolute or is_mapped_path:
             new_file = new_file.resolve()
         else:
             new_file = (Path(chats_dir) / new_name).resolve()
