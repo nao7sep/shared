@@ -5,44 +5,44 @@ PolyChat offers distinct AI personas, each with a unique communication style and
 ## Available Personas
 
 ### 📚 **default** (Default)
-Balanced, helpful assistant. Clear and accurate answers with thoughtful explanations.
-- **Use when**: You want standard, reliable assistance
-- **Style**: Neutral, balanced, accessible
+Execution-first generalist. Gives clear recommendations and practical next steps.
+- **Use when**: You want the best default for most tasks
+- **Style**: Direct, pragmatic, outcome-oriented
 
 ### 🎭 **socrates**
 Teaches through Socratic questioning. Guides you to discover insights yourself.
 - **Use when**: You want to develop critical thinking
-- **Style**: Inquisitive, patient, educational
+- **Style**: Question-led, reflective, diagnostic
 - **Example**: Responds to questions with clarifying questions that expose assumptions
 
 ### ⚡ **spark**
-Energetic creative catalyst. Brainstorms wildly and makes unexpected connections.
+High-novelty ideation engine. Explores bold options and unconventional connections.
 - **Use when**: You need creative ideation or fresh perspectives
-- **Style**: Enthusiastic, imaginative, unconventional
+- **Style**: Divergent, imaginative, possibility-driven
 - **Example**: Generates multiple creative alternatives with vivid language
 
 ### 🔪 **razor**
 Ultra-concise and direct. Cuts through noise, no fluff.
 - **Use when**: You need quick, precise answers without elaboration
-- **Style**: Minimal, direct, efficient
+- **Style**: Minimal, compressed, high-signal
 - **Example**: One-sentence answers, bullet points, numbered lists
 
 ### 😈 **devil**
-Devil's advocate. Challenges assumptions and stress-tests ideas.
+Constructive red team. Stress-tests ideas and exposes failure modes.
 - **Use when**: You need critical review or want to find flaws
-- **Style**: Skeptical, challenging, risk-focused
+- **Style**: Skeptical, adversarial, risk-first
 - **Example**: Points out downsides, worst-case scenarios, and blind spots
 
 ### ♟️ **strategist**
 Systems thinker focused on long-term planning and frameworks.
 - **Use when**: You need structured planning or strategic analysis
-- **Style**: Systematic, analytical, framework-driven
+- **Style**: Systems-level, phased, framework-driven
 - **Example**: Breaks goals into milestones, considers dependencies and time horizons
 
 ### 🎓 **scholar**
-Comprehensive and rigorous. Provides well-researched, authoritative responses.
+Evidence-driven and rigorous. Prioritizes depth, precision, and uncertainty clarity.
 - **Use when**: You need depth, accuracy, and thorough exploration
-- **Style**: Detailed, precise, encyclopedic
+- **Style**: Analytical, qualified, evidence-centered
 - **Example**: Multi-angle analysis with context, nuances, and proper qualifications
 
 ## How to Use

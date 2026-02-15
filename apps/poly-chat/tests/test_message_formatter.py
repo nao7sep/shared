@@ -98,7 +98,59 @@ def test_truncate_text_uses_boundary_run_start_on_left_search():
     assert result == "Alpha..."
 
 
-def test_truncate_text_uses_first_boundary_on_right_search():
-    """If no left boundary is found, use the first right boundary as-is."""
+def test_truncate_text_no_forward_search():
+    """Algorithm only searches backward, never forward beyond target."""
     result = truncate_text("AlphaBeta,  gamma", 11)
-    assert result == "AlphaBeta..."
+    # Target is position 8 ('a'), no spaces backward, cuts exactly there
+    assert result == "AlphaBet..."
+
+
+def test_truncate_max_length_guarantee():
+    """Result never exceeds max_length (hard guarantee)."""
+    cases = [
+        ("Hello world this is a very long string", 15),
+        ("NoSpacesHereAtAllJustOneLongWord", 10),
+        ("a" * 100, 25),
+        ("Short", 20),
+    ]
+    
+    for text, max_len in cases:
+        result = truncate_text(text, max_len)
+        assert len(result) <= max_len, f"Result '{result}' exceeds max_length {max_len}"
+
+
+def test_truncate_removes_trailing_punctuation():
+    """When breaking at boundary, removes trailing punctuation."""
+    result = truncate_text("Hello world,  more text", 15)
+    assert result == "Hello world..."
+
+
+def test_truncate_removes_trailing_ellipsis():
+    """Removes original ellipsis in text when truncating."""
+    result = truncate_text("This is word...  and more text here", 18)
+    assert result == "This is word..."
+
+
+def test_truncate_custom_suffix():
+    """Supports custom suffix and respects max_length."""
+    result = truncate_text("Hello world", 10, suffix=">>")
+    assert result == "Hello>>"
+    assert len(result) <= 10
+
+
+def test_truncate_empty_max_length():
+    """Handles edge case of max_length <= 0."""
+    result = truncate_text("Hello", 0)
+    assert result == ""
+
+
+def test_truncate_suffix_longer_than_max():
+    """Handles edge case where suffix is longer than max_length."""
+    result = truncate_text("Hello world", 2, suffix="...")
+    assert result == ".."  # Returns truncated suffix
+
+
+def test_truncate_exact_max_length():
+    """Text exactly at max_length is not truncated."""
+    result = truncate_text("Hello", 5)
+    assert result == "Hello"
