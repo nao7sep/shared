@@ -71,4 +71,4 @@ def build_safety_check_prompt(content_to_check: str, prompt_path: Optional[str])
         Complete prompt with content substituted
     """
     template = _load_prompt_from_path(prompt_path, prompt_type="safety")
-    return template.replace("{CONTENT}", content_to_check)
+    return template.replace("{CONTEXT}", content_to_check)

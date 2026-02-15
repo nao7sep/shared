@@ -247,7 +247,7 @@ def create_history_formatter(
             role_display = f"{EMOJI_ROLE_USER} User"
         elif role == "assistant":
             model = msg.get("model", DISPLAY_UNKNOWN)
-            role_display = f"{EMOJI_ROLE_ASSISTANT} Assistant/{model}"
+            role_display = f"{EMOJI_ROLE_ASSISTANT} Assistant | {model}"
         elif role == "error":
             role_display = f"{EMOJI_ROLE_ERROR} Error"
         else:
@@ -266,7 +266,7 @@ def create_history_formatter(
             content_text = str(content)
         content_preview = truncate_text(minify_text(content_text), truncate_length)
 
-        header = f"[{hex_id}] {role_display} ({time_str})"
+        header = f"[{hex_id}] {role_display} | {time_str}"
         return f"{header}\n  {content_preview}"
 
     return format_one_message

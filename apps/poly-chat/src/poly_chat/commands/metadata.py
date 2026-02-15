@@ -409,7 +409,7 @@ class MetadataCommandsMixin:
         # Role display
         if role == "assistant":
             model = msg.get("model", DISPLAY_UNKNOWN)
-            role_display = f"Assistant ({model})"
+            role_display = f"Assistant | {model}"
         else:
             role_display = role.capitalize()
 
@@ -418,7 +418,7 @@ class MetadataCommandsMixin:
 
         # Build output
         output = [
-            f"Message [{args.strip()}] - {role_display} ({time_str})",
+            f"Message [{args.strip()}] | {role_display} | {time_str}",
             formatted_content,
         ]
 
@@ -455,8 +455,8 @@ class MetadataCommandsMixin:
             updated_local = self._to_local_time(updated_at, DATETIME_FORMAT_SHORT)
 
         assistant_fields = [
-            ("Assistant:", f"{self.manager.current_ai} ({self.manager.current_model})"),
-            ("Helper:", f"{self.manager.helper_ai} ({self.manager.helper_model})"),
+            ("Assistant:", f"{self.manager.current_ai} | {self.manager.current_model}"),
+            ("Helper:", f"{self.manager.helper_ai} | {self.manager.helper_model}"),
             ("System Prompt:", system_prompt_display),
             ("Timeout:", timeout_display),
             ("Input Mode:", self.manager.input_mode),
