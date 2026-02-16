@@ -2,7 +2,7 @@
 
 This module provides path mapping functionality to support:
 - ~ or ~/... → User home directory
-- @ or @/... → App root directory (project directory containing pyproject.toml)
+- @ or @/... → App package directory (contains bundled prompts/resources)
 - Absolute paths → Used as-is
 - Relative paths without prefix → Error (to avoid ambiguity)
 """
@@ -13,15 +13,15 @@ from pathlib import Path
 def get_app_root() -> Path:
     """Get app root directory.
 
-    Returns the directory containing pyproject.toml.
+    Returns the installed `poly_chat` package directory.
 
     Returns:
         Path to app root directory
     """
-    # Find pyproject.toml directory by going up from this file's location
-    # This file is at: src/poly_chat/path_utils.py
-    # App root is 3 levels up
-    return Path(__file__).parent.parent.parent
+    # This file is at: poly_chat/path_utils.py
+    # App root should be the package directory so "@/..." resolves to
+    # bundled resources both in source checkouts and site-packages installs.
+    return Path(__file__).resolve().parent
 
 
 def has_home_path_prefix(path: str) -> bool:
@@ -60,7 +60,7 @@ def map_path(path: str) -> str:
         'C:\\Users\\username\\chats\\my-chat.json'
 
         >>> map_path("@/prompts/title.txt")
-        '/path/to/poly-chat/prompts/title.txt'
+        '/path/to/poly_chat/prompts/title.txt'
 
         >>> map_path("/usr/local/data/profile.json")  # Unix
         '/usr/local/data/profile.json'

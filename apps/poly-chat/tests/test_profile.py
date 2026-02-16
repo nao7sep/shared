@@ -3,6 +3,7 @@
 import json
 import pytest
 from pathlib import Path
+from poly_chat.path_utils import get_app_root
 from poly_chat.profile import (
     map_path,
     load_profile,
@@ -28,16 +29,15 @@ def test_map_path_tilde_alone():
 def test_map_path_at_with_subpath():
     """Test mapping @ with subpath."""
     result = map_path("@/test/path")
-    # App root is where pyproject.toml is (poly-chat/)
+    app_root = str(get_app_root())
     assert result.endswith("test/path")
-    assert "poly-chat" in result
+    assert result.startswith(app_root)
 
 
 def test_map_path_at_alone():
     """Test mapping @ alone."""
     result = map_path("@")
-    # App root is where pyproject.toml is (poly-chat/)
-    assert "poly-chat" in result
+    assert result == str(get_app_root())
 
 
 def test_map_path_absolute():
@@ -210,9 +210,10 @@ def test_load_profile_maps_at_paths(tmp_path):
     profile = load_profile(str(profile_path))
 
     # Should map @ to app root
-    assert "poly-chat" in profile["chats_dir"]
-    assert "poly-chat" in profile["logs_dir"]
-    assert "poly-chat" in profile["system_prompt"]
+    app_root = str(get_app_root())
+    assert profile["chats_dir"].startswith(app_root)
+    assert profile["logs_dir"].startswith(app_root)
+    assert profile["system_prompt"].startswith(app_root)
 
 
 def test_load_profile_maps_json_api_key_path(tmp_path):

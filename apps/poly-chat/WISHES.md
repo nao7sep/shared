@@ -880,3 +880,9 @@ let's consider alternative icons for /history. the user / assistant icons look k
 ---
 
 let's update /system so that persona name alone can change the system prompt. we have distinct builtin personas. things like "/system razor" too should work. please update tests, /help content and readme.md too.
+
+## distribution
+
+please find poly-chat.
+
+i need to update code so the @ symbol based path mapping will work when app has been installed on another computer via pypi. we can move the prompts directory to poly-chat/src/poly_chat/prompts if that is going to be necessary. what would you suggest?

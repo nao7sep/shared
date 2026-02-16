@@ -3,13 +3,14 @@
 - read the claude code book on mcp, parallel development, sub-agents
 - write web app that just sends todo mail
 - vocabulary development infrastructure for my daughter
-- introduce tk (first python app, that nobody else will use)
+- introduce tk, my first python app that nobody else will use :)
 - introduce and release poly-chat
 - automate "recordings => transcription => context"
 - seek tools to read foreign language books
 - learn about github pages, automation
 - tackle https://www.darioamodei.com/essay/the-adolescence-of-technology
 - analyze page structures of https://openwebf.com/en
+- learn: pypi, github actions, what else?
 
 ## History
 

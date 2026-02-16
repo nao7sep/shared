@@ -351,9 +351,9 @@ PolyChat supports special path prefixes for portability across platforms:
 - Example: `~/poly-chat/chats/` → `/Users/username/poly-chat/chats/`
 
 **`@` or `@/...`** → App root directory
-- Points to the project directory (contains `pyproject.toml`)
-- Example: `@/prompts/title.txt` → `/path/to/poly-chat/prompts/title.txt`
-- Useful for accessing project prompts and resources
+- Points to the installed `poly_chat` package directory
+- Example: `@/prompts/title.txt` → `/path/to/site-packages/poly_chat/prompts/title.txt`
+- Useful for accessing bundled prompts and resources
 
 **Absolute paths** → Used as-is
 - Example: `/usr/local/poly-chat/` or `C:\Program Files\poly-chat\`
@@ -366,7 +366,7 @@ PolyChat uses file-based prompts for all AI interactions. Prompts are configured
 
 #### Built-in Prompts
 
-Built-in prompts are located in the `prompts/` directory:
+Built-in prompts are bundled in `src/poly_chat/prompts/` (installed as `poly_chat/prompts/`):
 
 **System Prompts** (`prompts/system/`):
 - `default.txt` - Balanced, helpful assistant
@@ -377,7 +377,7 @@ Built-in prompts are located in the `prompts/` directory:
 - `strategist.txt` - Strategic planning, systems thinking
 - `scholar.txt` - Comprehensive research, authoritative depth
 
-See `prompts/system/README.md` for detailed persona descriptions.
+See `src/poly_chat/prompts/system/README.md` for detailed persona descriptions.
 
 **Helper Prompts** (`prompts/`):
 - `title.txt` - Chat title generation template (uses `{CONTEXT}` placeholder)
