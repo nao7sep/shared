@@ -1,6 +1,10 @@
 # mac
 .DS_Store
 
+# build artifacts
+dist/
+build/
+
 # python
 .venv/
 __pycache__/
