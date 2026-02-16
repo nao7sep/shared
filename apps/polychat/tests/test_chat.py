@@ -2,7 +2,7 @@
 
 import json
 import pytest
-from poly_chat.chat import (
+from polychat.chat import (
     load_chat,
     save_chat,
     add_user_message,

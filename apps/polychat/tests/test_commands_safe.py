@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import AsyncMock, patch
-from poly_chat.commands import CommandHandler
-from poly_chat.session_manager import SessionManager
+from polychat.commands import CommandHandler
+from polychat.session_manager import SessionManager
 
 
 @pytest.fixture
@@ -103,8 +103,8 @@ async def test_safe_command_full_chat(command_handler_safe, mock_session_manager
     handler = command_handler_safe
 
     # Mock prompt loading and helper AI
-    with patch("poly_chat.prompts._load_prompt_from_path") as mock_load_prompt, \
-         patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+    with patch("polychat.prompts._load_prompt_from_path") as mock_load_prompt, \
+         patch("polychat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.return_value = """PII: ⚠ Found: name "John Doe" in message
 CREDENTIALS: ⚠ Found: potential API key in message
@@ -130,8 +130,8 @@ async def test_safe_command_specific_message(command_handler_safe, mock_session_
     """Test /safe command checking specific message by hex ID."""
     handler = command_handler_safe
 
-    with patch("poly_chat.prompts._load_prompt_from_path") as mock_load_prompt, \
-         patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+    with patch("polychat.prompts._load_prompt_from_path") as mock_load_prompt, \
+         patch("polychat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.return_value = """PII: ⚠ Found: name "John Doe"
 CREDENTIALS: ✓ None
@@ -163,8 +163,8 @@ async def test_safe_command_error_handling(command_handler_safe, mock_session_ma
     """Test /safe command error handling."""
     handler = command_handler_safe
 
-    with patch("poly_chat.prompts._load_prompt_from_path") as mock_load_prompt, \
-         patch("poly_chat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+    with patch("polychat.prompts._load_prompt_from_path") as mock_load_prompt, \
+         patch("polychat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.side_effect = Exception("API error")
 
@@ -176,7 +176,7 @@ async def test_safe_command_error_handling(command_handler_safe, mock_session_ma
 @pytest.mark.asyncio
 async def test_format_message_for_safety_check(command_handler_safe, mock_session_manager_safe):
     """Test message formatting for safety check."""
-    from poly_chat.text_formatting import format_message_for_safety_check, format_messages
+    from polychat.text_formatting import format_message_for_safety_check, format_messages
 
     messages = [
         {"role": "user", "content": ["Test message 1"]},
@@ -193,7 +193,7 @@ async def test_format_message_for_safety_check(command_handler_safe, mock_sessio
 @pytest.mark.asyncio
 async def test_format_message_with_hex_ids(command_handler_safe, mock_session_manager_safe):
     """Safety formatting should not include hex IDs."""
-    from poly_chat.text_formatting import format_for_safety_check
+    from polychat.text_formatting import format_for_safety_check
 
     # Use messages with hex IDs from session
     messages = mock_session_manager_safe.chat["messages"][:1]

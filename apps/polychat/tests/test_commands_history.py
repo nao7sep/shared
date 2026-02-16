@@ -1,8 +1,8 @@
 """Tests for /history and /show commands."""
 
 import pytest
-from poly_chat.commands import CommandHandler
-from poly_chat.session_manager import SessionManager
+from polychat.commands import CommandHandler
+from polychat.session_manager import SessionManager
 
 
 @pytest.fixture

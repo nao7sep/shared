@@ -6,7 +6,7 @@
   - Secondary: improve separation of concerns without over-engineering.
   - No micro-optimization work.
 - Review scope completed:
-  - Source modules under `src/poly_chat/`
+  - Source modules under `src/polychat/`
   - Test suite and quality checks:
     - `poetry run pytest -q` (439 passed, 3 deselected)
     - `poetry run mypy src` (311 errors)
@@ -14,7 +14,7 @@
 
 ## Findings Driving This Plan
 1. Confirmed runtime bug in `/purge` when no chat is open:
-   - `src/poly_chat/commands/runtime.py` directly indexes `chat["messages"]` without open-chat guard.
+   - `src/polychat/commands/runtime.py` directly indexes `chat["messages"]` without open-chat guard.
    - Repro: instantiate `SessionManager(chat=None)` then call `purge_messages("abc")` -> `KeyError: 'messages'`.
 2. Helper AI metadata commands build low-quality/unbounded prompts:
    - `generate_title` and `generate_summary` serialize message `content` lists directly and summary sends the full history unbounded.

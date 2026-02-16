@@ -11,7 +11,7 @@ PolyChat supports 7 AI providers but none currently leverage their web search ca
 
 ## Step 1: Add Search Support Registry
 
-**File:** `src/poly_chat/models.py`
+**File:** `src/polychat/models.py`
 
 Add a constant set of providers that support web search:
 
@@ -32,7 +32,7 @@ def provider_supports_search(provider: str) -> bool:
 
 ## Step 2: Add `search_mode` to Session State
 
-**File:** `src/poly_chat/app_state.py`
+**File:** `src/polychat/app_state.py`
 
 Add field to `SessionState` dataclass:
 
@@ -40,7 +40,7 @@ Add field to `SessionState` dataclass:
 search_mode: bool = False
 ```
 
-**File:** `src/poly_chat/session_manager.py`
+**File:** `src/polychat/session_manager.py`
 
 Add property (following `secret_mode` pattern at ~line 188):
 
@@ -70,7 +70,7 @@ Add to `to_dict()` (~line 283):
 
 ## Step 3: Add `/search` Command
 
-**File:** `src/poly_chat/commands/runtime.py`
+**File:** `src/polychat/commands/runtime.py`
 
 Add `search_mode_command()` method to `RuntimeCommandsMixin`, following the exact pattern of `secret_mode_command()` in `commands/misc.py`:
 
@@ -81,7 +81,7 @@ Add `search_mode_command()` method to `RuntimeCommandsMixin`, following the exac
 
 When enabling, check `models.provider_supports_search(self.manager.current_ai)`. If not supported, return error message like: "Search not supported for {provider}. Supported: openai, claude, gemini, grok, perplexity"
 
-**File:** `src/poly_chat/commands/__init__.py`
+**File:** `src/polychat/commands/__init__.py`
 
 Register in `command_map` (~line 53):
 
@@ -89,7 +89,7 @@ Register in `command_map` (~line 53):
 "search": self.search_mode_command,
 ```
 
-**File:** `src/poly_chat/commands/misc.py`
+**File:** `src/polychat/commands/misc.py`
 
 Add to help text under "Chat Control:" section:
 
@@ -99,7 +99,7 @@ Add to help text under "Chat Control:" section:
   /search <msg>     Send one search-enabled message
 ```
 
-**File:** `src/poly_chat/commands/metadata.py`
+**File:** `src/polychat/commands/metadata.py`
 
 Add to `show_status()` output under "Modes" section (~line 533):
 
@@ -111,7 +111,7 @@ f"Search Mode:  {'ON' if self.manager.search_mode else 'OFF'}",
 
 ## Step 4: Update AI Provider Protocol
 
-**File:** `src/poly_chat/ai/base.py`
+**File:** `src/polychat/ai/base.py`
 
 Add `search: bool = False` parameter to both `send_message()` and `get_full_response()`:
 
@@ -138,7 +138,7 @@ async def get_full_response(
 
 ## Step 5: Update AI Runtime
 
-**File:** `src/poly_chat/ai_runtime.py`
+**File:** `src/polychat/ai_runtime.py`
 
 Add `search: bool = False` parameter to `send_message_to_ai()`:
 
@@ -163,7 +163,7 @@ Log `search=search` in the `log_event("ai_request", ...)` call.
 
 ## Step 6: Implement Provider Search — Perplexity (easiest)
 
-**File:** `src/poly_chat/ai/perplexity_provider.py`
+**File:** `src/polychat/ai/perplexity_provider.py`
 
 Perplexity Sonar models have search built-in. When `search=True`:
 
@@ -178,7 +178,7 @@ Minimal change since Perplexity already does search. The main addition is extrac
 
 ## Step 7: Implement Provider Search — OpenAI
 
-**File:** `src/poly_chat/ai/openai_provider.py`
+**File:** `src/polychat/ai/openai_provider.py`
 
 When `search=True`:
 
@@ -198,7 +198,7 @@ When `search=True`:
 
 ## Step 8: Implement Provider Search — Gemini
 
-**File:** `src/poly_chat/ai/gemini_provider.py`
+**File:** `src/polychat/ai/gemini_provider.py`
 
 When `search=True`:
 
@@ -218,7 +218,7 @@ When `search=True`:
 
 ## Step 9: Implement Provider Search — Grok
 
-**File:** `src/poly_chat/ai/grok_provider.py`
+**File:** `src/polychat/ai/grok_provider.py`
 
 When `search=True`:
 
@@ -234,7 +234,7 @@ When `search=True`:
 
 ## Step 10: Implement Provider Search — Claude (most complex)
 
-**File:** `src/poly_chat/ai/claude_provider.py`
+**File:** `src/polychat/ai/claude_provider.py`
 
 When `search=True`:
 
@@ -258,7 +258,7 @@ When `search=True`:
 
 ## Step 11: Add Citation Display
 
-**File:** `src/poly_chat/streaming.py`
+**File:** `src/polychat/streaming.py`
 
 Add a function to display citations after the response:
 
@@ -283,7 +283,7 @@ def display_citations(citations: list[dict]) -> None:
 
 ## Step 12: Update REPL
 
-**File:** `src/poly_chat/repl.py`
+**File:** `src/polychat/repl.py`
 
 ### For persistent search mode (toggle):
 
@@ -297,7 +297,7 @@ In the `send_normal`/`send_retry`/`send_secret` handling block (~line 310-397):
 
 In `handle_command_response` signal processing, detect `__SEARCH_ONESHOT__`:
 
-**File:** `src/poly_chat/orchestrator.py`
+**File:** `src/polychat/orchestrator.py`
 
 Add handler for `__SEARCH_ONESHOT__:<msg>` in `handle_command_response()` (~line 139):
 
@@ -309,7 +309,7 @@ if response.startswith("__SEARCH_ONESHOT__:"):
     )
 ```
 
-**File:** `src/poly_chat/repl.py`
+**File:** `src/polychat/repl.py`
 
 Handle `search_oneshot` action:
 - Same as `send_normal` flow (message IS saved to chat)
@@ -318,7 +318,7 @@ Handle `search_oneshot` action:
 
 Add `search_oneshot` to the OrchestratorAction:
 
-**File:** `src/poly_chat/orchestrator.py`
+**File:** `src/polychat/orchestrator.py`
 
 In `OrchestratorAction.action` docstring, add `"search_oneshot"` to valid action types.
 
@@ -353,23 +353,23 @@ Add `handle_search_oneshot_message()` method (follows `_handle_normal_message()`
 
 | File | Change |
 |------|--------|
-| `src/poly_chat/models.py` | Add `SEARCH_SUPPORTED_PROVIDERS`, `provider_supports_search()` |
-| `src/poly_chat/app_state.py` | Add `search_mode` field |
-| `src/poly_chat/session_manager.py` | Add `search_mode` property, clear on chat switch, add to `to_dict()` |
-| `src/poly_chat/commands/runtime.py` | Add `search_mode_command()` |
-| `src/poly_chat/commands/__init__.py` | Register `/search` in command_map |
-| `src/poly_chat/commands/misc.py` | Update help text |
-| `src/poly_chat/commands/metadata.py` | Update `/status` output |
-| `src/poly_chat/ai/base.py` | Add `search` param to protocol |
-| `src/poly_chat/ai_runtime.py` | Pass `search` flag through |
-| `src/poly_chat/ai/perplexity_provider.py` | Extract citations from streaming |
-| `src/poly_chat/ai/openai_provider.py` | Add `web_search_preview` tool, handle search events |
-| `src/poly_chat/ai/gemini_provider.py` | Add Google Search grounding tool |
-| `src/poly_chat/ai/grok_provider.py` | Add `web_search` tool |
-| `src/poly_chat/ai/claude_provider.py` | Add web search tool, handle multi-block response |
-| `src/poly_chat/streaming.py` | Add `display_citations()` |
-| `src/poly_chat/repl.py` | Pass search flag, display citations, handle search_oneshot |
-| `src/poly_chat/orchestrator.py` | Handle `__SEARCH_ONESHOT__` signal |
+| `src/polychat/models.py` | Add `SEARCH_SUPPORTED_PROVIDERS`, `provider_supports_search()` |
+| `src/polychat/app_state.py` | Add `search_mode` field |
+| `src/polychat/session_manager.py` | Add `search_mode` property, clear on chat switch, add to `to_dict()` |
+| `src/polychat/commands/runtime.py` | Add `search_mode_command()` |
+| `src/polychat/commands/__init__.py` | Register `/search` in command_map |
+| `src/polychat/commands/misc.py` | Update help text |
+| `src/polychat/commands/metadata.py` | Update `/status` output |
+| `src/polychat/ai/base.py` | Add `search` param to protocol |
+| `src/polychat/ai_runtime.py` | Pass `search` flag through |
+| `src/polychat/ai/perplexity_provider.py` | Extract citations from streaming |
+| `src/polychat/ai/openai_provider.py` | Add `web_search_preview` tool, handle search events |
+| `src/polychat/ai/gemini_provider.py` | Add Google Search grounding tool |
+| `src/polychat/ai/grok_provider.py` | Add `web_search` tool |
+| `src/polychat/ai/claude_provider.py` | Add web search tool, handle multi-block response |
+| `src/polychat/streaming.py` | Add `display_citations()` |
+| `src/polychat/repl.py` | Pass search flag, display citations, handle search_oneshot |
+| `src/polychat/orchestrator.py` | Handle `__SEARCH_ONESHOT__` signal |
 | `tests/test_session_state.py` | Test search_mode default |
 | `tests/test_session_manager.py` | Test search_mode property |
 | `tests/test_commands_runtime.py` | Test /search command |
@@ -389,7 +389,7 @@ Add `handle_search_oneshot_message()` method (follows `_handle_normal_message()`
 
 ## Verification
 
-1. Run existing tests: `cd apps/poly-chat && python -m pytest tests/ -v`
+1. Run existing tests: `cd apps/polychat && python -m pytest tests/ -v`
 2. Run new tests for search command, session state, and model support
 3. Manual testing per provider (requires API keys):
    - `/search on` → send message → verify response includes citations

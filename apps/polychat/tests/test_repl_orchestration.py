@@ -1,10 +1,10 @@
 """Tests for REPL/session orchestration state transitions."""
 
-from poly_chat.app_state import (
+from polychat.app_state import (
     SessionState,
     initialize_message_hex_ids,
 )
-from poly_chat.commands.types import CommandSignal
+from polychat.commands.types import CommandSignal
 
 
 class TestCommandSignals:

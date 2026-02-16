@@ -1,7 +1,7 @@
 """Tests for unified key loader."""
 
 import pytest
-from poly_chat.keys.loader import load_api_key, validate_api_key
+from polychat.keys.loader import load_api_key, validate_api_key
 
 
 def test_load_api_key_env(monkeypatch):

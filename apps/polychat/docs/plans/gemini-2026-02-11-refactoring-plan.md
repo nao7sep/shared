@@ -18,7 +18,7 @@ Review of the PolyChat project revealed a functional but increasingly complex co
 
 ### 1.1 Extract `AIExecutionService`
 The `execute_send_action` function in `repl.py` is too large and handles too many concerns.
-- **Goal**: Create `src/poly_chat/ai/service.py` to encapsulate the lifecycle of an AI request.
+- **Goal**: Create `src/polychat/ai/service.py` to encapsulate the lifecycle of an AI request.
 - **Responsibilities**:
     - Provider validation and retrieval.
     - AI invocation and streaming management.

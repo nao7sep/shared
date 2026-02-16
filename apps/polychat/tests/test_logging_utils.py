@@ -2,7 +2,7 @@
 
 import logging
 
-from poly_chat.logging_utils import StructuredTextFormatter
+from polychat.logging_utils import StructuredTextFormatter
 
 
 def test_structured_formatter_extracts_httpx_request_fields():
@@ -58,7 +58,7 @@ def test_structured_formatter_uses_logger_name_for_non_httpx_messages():
 def test_structured_formatter_uses_full_logger_name_for_non_httpx_messages():
     formatter = StructuredTextFormatter()
     record = logging.LogRecord(
-        name="poly_chat.repl",
+        name="polychat.repl",
         level=logging.INFO,
         pathname=__file__,
         lineno=1,
@@ -69,7 +69,7 @@ def test_structured_formatter_uses_full_logger_name_for_non_httpx_messages():
 
     result = formatter.format(record)
 
-    assert "=== poly_chat.repl ===" in result
+    assert "=== polychat.repl ===" in result
     assert "=== log ===" not in result
-    assert "logger: poly_chat.repl" in result
+    assert "logger: polychat.repl" in result
     assert "message: Unexpected command error" in result

@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from poly_chat.session_manager import SessionManager
+from polychat.session_manager import SessionManager
 
 
 class TestSessionManagerCreation:

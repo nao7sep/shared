@@ -2,9 +2,9 @@
 
 Date checked: February 9, 2026
 
-## Providers in poly-chat (7)
+## Providers in polychat (7)
 
-From `apps/poly-chat/src/poly_chat/models.py`:
+From `apps/polychat/src/polychat/models.py`:
 
 - openai
 - claude (Anthropic)
@@ -14,19 +14,19 @@ From `apps/poly-chat/src/poly_chat/models.py`:
 - mistral
 - deepseek
 
-## Package usage in poly-chat
+## Package usage in polychat
 
 - OpenAI provider uses Responses API (`openai` SDK):
-  - `apps/poly-chat/src/poly_chat/ai/openai_provider.py`
+  - `apps/polychat/src/polychat/ai/openai_provider.py`
 - Gemini provider uses Google SDK:
-  - `apps/poly-chat/src/poly_chat/ai/gemini_provider.py`
+  - `apps/polychat/src/polychat/ai/gemini_provider.py`
 - Claude provider uses Anthropic SDK:
-  - `apps/poly-chat/src/poly_chat/ai/claude_provider.py`
+  - `apps/polychat/src/polychat/ai/claude_provider.py`
 - Other 4 providers use OpenAI-compatible `openai` SDK:
-  - `apps/poly-chat/src/poly_chat/ai/grok_provider.py`
-  - `apps/poly-chat/src/poly_chat/ai/perplexity_provider.py`
-  - `apps/poly-chat/src/poly_chat/ai/mistral_provider.py`
-  - `apps/poly-chat/src/poly_chat/ai/deepseek_provider.py`
+  - `apps/polychat/src/polychat/ai/grok_provider.py`
+  - `apps/polychat/src/polychat/ai/perplexity_provider.py`
+  - `apps/polychat/src/polychat/ai/mistral_provider.py`
+  - `apps/polychat/src/polychat/ai/deepseek_provider.py`
 
 ## Official search support (latest docs)
 

@@ -18,7 +18,7 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
 
     Example configs:
         {"type": "env", "key": "OPENAI_API_KEY"}
-        {"type": "keychain", "service": "poly-chat", "account": "claude-key"}
+        {"type": "keychain", "service": "polychat", "account": "claude-key"}
         {"type": "json", "path": "~/.secrets/keys.json", "key": "gemini"}
         {"type": "direct", "value": "sk-..."} (testing only)
     """

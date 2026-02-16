@@ -1,7 +1,7 @@
 """Tests for env_vars key loading."""
 
 import pytest
-from poly_chat.keys.env_vars import load_from_env
+from polychat.keys.env_vars import load_from_env
 
 
 def test_load_from_env_success(monkeypatch):

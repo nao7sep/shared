@@ -3,7 +3,7 @@
 import pytest
 from io import StringIO
 from unittest.mock import patch
-from poly_chat.streaming import (
+from polychat.streaming import (
     display_streaming_response,
     accumulate_stream,
     print_with_prefix,

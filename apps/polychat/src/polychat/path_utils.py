@@ -13,12 +13,12 @@ from pathlib import Path
 def get_app_root() -> Path:
     """Get app root directory.
 
-    Returns the installed `poly_chat` package directory.
+    Returns the installed `polychat` package directory.
 
     Returns:
         Path to app root directory
     """
-    # This file is at: poly_chat/path_utils.py
+    # This file is at: polychat/path_utils.py
     # App root should be the package directory so "@/..." resolves to
     # bundled resources both in source checkouts and site-packages installs.
     return Path(__file__).resolve().parent
@@ -60,7 +60,7 @@ def map_path(path: str) -> str:
         'C:\\Users\\username\\chats\\my-chat.json'
 
         >>> map_path("@/prompts/title.txt")
-        '/path/to/poly_chat/prompts/title.txt'
+        '/path/to/polychat/prompts/title.txt'
 
         >>> map_path("/usr/local/data/profile.json")  # Unix
         '/usr/local/data/profile.json'

@@ -102,7 +102,7 @@ if chunk.choices[0].finish_reason:
 
 ### Changes Made
 
-**File:** `src/poly_chat/ai/perplexity_provider.py`
+**File:** `src/polychat/ai/perplexity_provider.py`
 
 **Location:** Lines ~254-265 (in the `send_message` streaming loop)
 
@@ -230,10 +230,10 @@ This is documented in the main README.md under the principle: "Citations and tho
 
 ## Related Files
 
-- `src/poly_chat/ai/perplexity_provider.py` - Main provider implementation
-- `src/poly_chat/streaming.py` - `display_citations()` function
-- `src/poly_chat/repl.py` - Citation enrichment and display logic
-- `src/poly_chat/chat.py` - `add_assistant_message()` with citations parameter
+- `src/polychat/ai/perplexity_provider.py` - Main provider implementation
+- `src/polychat/streaming.py` - `display_citations()` function
+- `src/polychat/repl.py` - Citation enrichment and display logic
+- `src/polychat/chat.py` - `add_assistant_message()` with citations parameter
 - `README.md` - User-facing documentation
 
 ## Future Considerations

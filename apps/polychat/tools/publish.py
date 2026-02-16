@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Manual PyPI distribution tool for poly-chat.
+"""Manual PyPI distribution tool for polychat.
 
-This script helps publish poly-chat to PyPI manually using Poetry.
+This script helps publish polychat to PyPI manually using Poetry.
 It reads the version from pyproject.toml and guides you through the process.
 
 Usage:
@@ -65,7 +65,7 @@ def get_version() -> str:
     """Extract version from pyproject.toml."""
     pyproject = Path("pyproject.toml")
     if not pyproject.exists():
-        print_error("pyproject.toml not found. Run from project root (apps/poly-chat).")
+        print_error("pyproject.toml not found. Run from project root (apps/polychat).")
         sys.exit(1)
     
     content = pyproject.read_text()
@@ -143,7 +143,7 @@ def publish_to_testpypi() -> None:
     print_success("Published to TestPyPI!")
     print("\nTest installation with:")
     print(f"  pip install --index-url https://test.pypi.org/simple/ \\")
-    print(f"    --extra-index-url https://pypi.org/simple/ poly-chat")
+    print(f"    --extra-index-url https://pypi.org/simple/ polychat")
 
 
 def publish_to_pypi() -> None:
@@ -161,7 +161,7 @@ def publish_to_pypi() -> None:
     
     print_success("Published to PyPI!")
     print("\nInstall with:")
-    print("  pip install poly-chat")
+    print("  pip install polychat")
 
 
 def configure_credentials() -> None:
@@ -177,7 +177,7 @@ def configure_credentials() -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Publish poly-chat to PyPI")
+    parser = argparse.ArgumentParser(description="Publish polychat to PyPI")
     parser.add_argument(
         '--test',
         action='store_true',
@@ -201,7 +201,7 @@ def main():
     
     args = parser.parse_args()
     
-    print(f"{Colors.BOLD}=== poly-chat PyPI Publisher ==={Colors.END}")
+    print(f"{Colors.BOLD}=== polychat PyPI Publisher ==={Colors.END}")
     
     # Setup mode
     if args.setup:
@@ -210,7 +210,7 @@ def main():
     
     # Check we're in the right directory
     if not Path("pyproject.toml").exists():
-        print_error("Must run from project root (apps/poly-chat)")
+        print_error("Must run from project root (apps/polychat)")
         sys.exit(1)
     
     # Check prerequisites

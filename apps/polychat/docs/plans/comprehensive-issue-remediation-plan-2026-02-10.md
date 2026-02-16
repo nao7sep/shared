@@ -15,7 +15,7 @@ Secondary goal: Improve maintainability with balanced separation of concerns
 
 ## 2. Current Baseline and Blocking Facts
 
-1. Manual full-code review completed across `src/poly_chat` and tests.
+1. Manual full-code review completed across `src/polychat` and tests.
 2. Full automated test run was not executable in this environment, but parse-level verification was run via:
    - `python3 -m compileall -q src tests`
 3. Parse check currently fails due syntax error in tests:
@@ -39,7 +39,7 @@ P1 (high ROI correctness + robustness):
 P2 (maintainability/architecture hardening):
 1. Async command layer uses blocking console I/O (`input()`), tangling UI and domain logic.
 2. Provider protocol signature drift (`AIProvider` vs implementations/runtime usage).
-3. Test imports mix `poly_chat` and `src.poly_chat` namespaces, risking duplicate module state and flaky patching.
+3. Test imports mix `polychat` and `src.polychat` namespaces, risking duplicate module state and flaky patching.
 
 ## 4. Detailed Issue Catalog and Fix Plan
 
@@ -49,8 +49,8 @@ Problem:
 1. `set_model` and `set_helper` use `self.session` (non-existent in current architecture), causing `AttributeError` for unknown model names.
 
 Evidence:
-1. `src/poly_chat/commands/runtime.py:45`
-2. `src/poly_chat/commands/runtime.py:82`
+1. `src/polychat/commands/runtime.py:45`
+2. `src/polychat/commands/runtime.py:82`
 
 Root cause:
 1. Migration from dict-based session to `SessionManager` left stale references.
@@ -61,7 +61,7 @@ Implementation steps:
 3. Ensure return messages remain user-friendly and deterministic.
 
 Files to edit:
-1. `src/poly_chat/commands/runtime.py`
+1. `src/polychat/commands/runtime.py`
 
 Tests to add/update:
 1. Add tests for unknown `/model <name>` and `/helper <name>` to ensure no crash and correct provider display.
@@ -82,8 +82,8 @@ Problem:
 3. This can leave unsent input in session state and later AI context.
 
 Evidence:
-1. Message appended before send: `src/poly_chat/orchestrator.py:497`
-2. Validation error early return: `src/poly_chat/repl.py:157`
+1. Message appended before send: `src/polychat/orchestrator.py:497`
+2. Validation error early return: `src/polychat/repl.py:157`
 
 Root cause:
 1. Send path assumes validation happens after safe state transitions; rollback path exists for streaming errors, not pre-send validation errors.
@@ -98,9 +98,9 @@ Implementation details for option A:
 3. Ensure retry/secret modes are untouched.
 
 Files to edit:
-1. `src/poly_chat/repl.py`
-2. `src/poly_chat/orchestrator.py`
-3. Possibly `src/poly_chat/session_manager.py` (only if helper API needed)
+1. `src/polychat/repl.py`
+2. `src/polychat/orchestrator.py`
+3. Possibly `src/polychat/session_manager.py` (only if helper API needed)
 
 Tests to add/update:
 1. New orchestrator/REPL test: provider validation failure leaves no extra user message.
@@ -139,7 +139,7 @@ Problem:
 2. Some tests constructing valid profile fixtures omit it.
 
 Evidence:
-1. Required fields include `pages_dir`: `src/poly_chat/profile.py:131`
+1. Required fields include `pages_dir`: `src/polychat/profile.py:131`
 2. Example missing `pages_dir`: `tests/test_profile.py:165`
 
 Implementation steps:
@@ -163,15 +163,15 @@ Problem:
 3. Malformed/legacy data can produce corrupted content or runtime errors.
 
 Evidence:
-1. Weak check: `src/poly_chat/chat.py:49`
+1. Weak check: `src/polychat/chat.py:49`
 2. Formatter assumption (`lines_to_text` called on `msg["content"]`):
-   - `src/poly_chat/ai/openai_provider.py:72`
-   - `src/poly_chat/ai/claude_provider.py:69`
-   - `src/poly_chat/ai/gemini_provider.py:64`
-   - `src/poly_chat/ai/grok_provider.py:71`
-   - `src/poly_chat/ai/perplexity_provider.py:90`
-   - `src/poly_chat/ai/mistral_provider.py:72`
-   - `src/poly_chat/ai/deepseek_provider.py:72`
+   - `src/polychat/ai/openai_provider.py:72`
+   - `src/polychat/ai/claude_provider.py:69`
+   - `src/polychat/ai/gemini_provider.py:64`
+   - `src/polychat/ai/grok_provider.py:71`
+   - `src/polychat/ai/perplexity_provider.py:90`
+   - `src/polychat/ai/mistral_provider.py:72`
+   - `src/polychat/ai/deepseek_provider.py:72`
 
 Implementation steps:
 1. Add explicit schema validation/normalization at load boundary.
@@ -183,8 +183,8 @@ Implementation steps:
 4. Keep backward compatibility for benign legacy files where possible.
 
 Files to edit:
-1. `src/poly_chat/chat.py`
-2. Possibly `src/poly_chat/message_formatter.py` (if helper normalization needed)
+1. `src/polychat/chat.py`
+2. Possibly `src/polychat/message_formatter.py` (if helper normalization needed)
 
 Tests to add/update:
 1. `load_chat` with string content should normalize to list-of-lines.
@@ -204,7 +204,7 @@ Problem:
 2. Windows absolute paths with backslashes can be misclassified.
 
 Evidence:
-1. `src/poly_chat/chat_manager.py:118`
+1. `src/polychat/chat_manager.py:118`
 
 Implementation steps:
 1. Replace path classification logic with robust path checks:
@@ -214,7 +214,7 @@ Implementation steps:
 3. Preserve allowed behavior for simple filenames and in-chats-dir relative names.
 
 Files to edit:
-1. `src/poly_chat/chat_manager.py`
+1. `src/polychat/chat_manager.py`
 
 Tests to add/update:
 1. Add tests for Windows-style absolute path inputs.
@@ -233,9 +233,9 @@ Problem:
 2. Switching provider/model can leave unsupported flags enabled.
 
 Evidence:
-1. Search on-check only: `src/poly_chat/commands/runtime.py:375`
-2. Thinking on-check only: `src/poly_chat/commands/runtime.py:422`
-3. Provider can change in `/model`: `src/poly_chat/commands/runtime.py:37`
+1. Search on-check only: `src/polychat/commands/runtime.py:375`
+2. Thinking on-check only: `src/polychat/commands/runtime.py:422`
+3. Provider can change in `/model`: `src/polychat/commands/runtime.py:37`
 
 Implementation steps:
 1. Add reconciliation hook whenever provider changes (`/model`, shortcuts, potentially `/model default`).
@@ -243,8 +243,8 @@ Implementation steps:
 3. Keep behavior explicit and predictable in status output.
 
 Files to edit:
-1. `src/poly_chat/commands/runtime.py`
-2. `src/poly_chat/commands/base.py` (if shared provider-switch hook needed)
+1. `src/polychat/commands/runtime.py`
+2. `src/polychat/commands/base.py` (if shared provider-switch hook needed)
 
 Tests to add/update:
 1. Enable search/thinking on supported provider, switch to unsupported provider, verify auto-disable.
@@ -262,8 +262,8 @@ Problem:
 2. Consecutive responses in same second can collide and overwrite files.
 
 Evidence:
-1. Batch timestamp generation: `src/poly_chat/citations.py:155`
-2. Filename pattern: `src/poly_chat/page_fetcher.py:81`
+1. Batch timestamp generation: `src/polychat/citations.py:155`
+2. Filename pattern: `src/polychat/page_fetcher.py:81`
 
 Implementation steps:
 1. Make filename unique per saved page:
@@ -272,8 +272,8 @@ Implementation steps:
 2. Add last-resort collision loop if target exists.
 
 Files to edit:
-1. `src/poly_chat/page_fetcher.py`
-2. Optional: `src/poly_chat/citations.py` (if passing stronger timestamp token)
+1. `src/polychat/page_fetcher.py`
+2. Optional: `src/polychat/citations.py` (if passing stronger timestamp token)
 
 Tests to add/update:
 1. Simulate same timestamp writes and ensure unique outputs.
@@ -291,10 +291,10 @@ Problem:
 3. Event loop can be blocked and architecture becomes harder to test.
 
 Evidence:
-1. `src/poly_chat/commands/runtime.py:498`
-2. `src/poly_chat/commands/runtime.py:548`
-3. `src/poly_chat/commands/chat_files.py:121`
-4. `src/poly_chat/commands/chat_files.py:212`
+1. `src/polychat/commands/runtime.py:498`
+2. `src/polychat/commands/runtime.py:548`
+3. `src/polychat/commands/chat_files.py:121`
+4. `src/polychat/commands/chat_files.py:212`
 
 Implementation strategy (balanced separation, no over-engineering):
 1. Introduce lightweight prompt abstraction (e.g., `UserInteractionPort`).
@@ -302,10 +302,10 @@ Implementation strategy (balanced separation, no over-engineering):
 3. Keep existing signal pattern if desired, but remove direct blocking I/O from command mixins.
 
 Files to edit:
-1. `src/poly_chat/commands/runtime.py`
-2. `src/poly_chat/commands/chat_files.py`
-3. `src/poly_chat/repl.py`
-4. Optional new adapter module in `src/poly_chat/ui/`
+1. `src/polychat/commands/runtime.py`
+2. `src/polychat/commands/chat_files.py`
+3. `src/polychat/repl.py`
+4. Optional new adapter module in `src/polychat/ui/`
 
 Tests to add/update:
 1. Command tests should no longer monkeypatch `builtins.input` for core flow.
@@ -325,11 +325,11 @@ Problem:
 3. This increases refactor risk and weakens static verification.
 
 Evidence:
-1. Protocol `send_message` lacks metadata: `src/poly_chat/ai/base.py:15`
-2. Runtime always passes metadata: `src/poly_chat/ai_runtime.py:107`
+1. Protocol `send_message` lacks metadata: `src/polychat/ai/base.py:15`
+2. Runtime always passes metadata: `src/polychat/ai_runtime.py:107`
 3. Provider signature mismatch examples:
-   - `src/poly_chat/ai/mistral_provider.py:196`
-   - `src/poly_chat/ai/deepseek_provider.py:225`
+   - `src/polychat/ai/mistral_provider.py:196`
+   - `src/polychat/ai/deepseek_provider.py:225`
 
 Implementation steps:
 1. Align protocol and all providers to a single contract:
@@ -339,8 +339,8 @@ Implementation steps:
 3. Add lightweight interface conformance tests or static type check target.
 
 Files to edit:
-1. `src/poly_chat/ai/base.py`
-2. All provider modules under `src/poly_chat/ai/`
+1. `src/polychat/ai/base.py`
+2. All provider modules under `src/polychat/ai/`
 3. Optional type-check config and docs.
 
 Acceptance criteria:
@@ -349,7 +349,7 @@ Acceptance criteria:
 
 ---
 
-### P2-03: Test import namespace inconsistency (`poly_chat` vs `src.poly_chat`)
+### P2-03: Test import namespace inconsistency (`polychat` vs `src.polychat`)
 
 Problem:
 1. Tests import both namespaces, potentially loading duplicate modules and causing patch-target mismatch.
@@ -359,12 +359,12 @@ Evidence:
 2. `tests/conftest.py:89`
 
 Implementation steps:
-1. Standardize tests to `poly_chat.*` imports only.
+1. Standardize tests to `polychat.*` imports only.
 2. Ensure pytest path config resolves package from `src` consistently.
 3. Update patch targets accordingly.
 
 Files to edit:
-1. `tests/` files using `src.poly_chat`
+1. `tests/` files using `src.polychat`
 2. `pyproject.toml` pytest config only if required for import resolution
 
 Acceptance criteria:
@@ -398,15 +398,15 @@ Phase 3 (P2 maintainability):
 ## 6. File-Level Worklist
 
 Core runtime:
-1. `src/poly_chat/commands/runtime.py`
-2. `src/poly_chat/repl.py`
-3. `src/poly_chat/orchestrator.py`
-4. `src/poly_chat/chat.py`
-5. `src/poly_chat/chat_manager.py`
-6. `src/poly_chat/citations.py`
-7. `src/poly_chat/page_fetcher.py`
-8. `src/poly_chat/ai/base.py`
-9. `src/poly_chat/ai/*.py`
+1. `src/polychat/commands/runtime.py`
+2. `src/polychat/repl.py`
+3. `src/polychat/orchestrator.py`
+4. `src/polychat/chat.py`
+5. `src/polychat/chat_manager.py`
+6. `src/polychat/citations.py`
+7. `src/polychat/page_fetcher.py`
+8. `src/polychat/ai/base.py`
+9. `src/polychat/ai/*.py`
 
 Tests:
 1. `tests/test_orchestrator.py`
@@ -417,7 +417,7 @@ Tests:
 6. `tests/test_path_security.py`
 7. `tests/test_mode_combinations.py`
 8. `tests/test_citations.py`
-9. Remaining tests currently importing `src.poly_chat.*`
+9. Remaining tests currently importing `src.polychat.*`
 
 ## 7. Verification Plan
 
@@ -441,7 +441,7 @@ Full non-integration suite before release:
 
 Static checks (if configured in environment):
 1. `ruff check src tests`
-2. `mypy src/poly_chat`
+2. `mypy src/polychat`
 
 ## 8. Definition of Done (overall)
 

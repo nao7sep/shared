@@ -1,7 +1,7 @@
 """Tests for direct value key loading."""
 
 import pytest
-from poly_chat.keys.loader import load_api_key
+from polychat.keys.loader import load_api_key
 
 
 def test_load_direct_success():

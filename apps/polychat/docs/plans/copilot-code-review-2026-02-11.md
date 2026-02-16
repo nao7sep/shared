@@ -2,7 +2,7 @@
 
 **Agent:** copilot
 **Date:** 2026-02-11
-**Scope:** Full source code review of `src/poly_chat/` (~347 KB across 50 files)
+**Scope:** Full source code review of `src/polychat/` (~347 KB across 50 files)
 
 ---
 

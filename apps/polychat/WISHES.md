@@ -2,7 +2,7 @@
 
 i want to make a multi-ai cli chat tool in python.
 
-name will be PolyChat. i made shared/apps/poly-chat. code should be in shared/apps/poly-chat/src/poly_chat. hyphen for the upper folder and underscore for the lower one. is that correct in python world?
+name will be PolyChat. i made shared/apps/polychat. code should be in shared/apps/polychat/src/polychat. hyphen for the upper folder and underscore for the lower one. is that correct in python world?
 
 primary objective is to establish basic knowledge regarding major ai sdks. i am thinking about openai, gemini, claude, grok, maybe perplexity, maybe mistral, maybe deepseek. there should be official python packages from all these vendors. for grok, one by openai might be more suitable. we'll find out. i would like to support many ais, but not many features of them. the chat tool's scope is strictly limited to manage a conversation log, send it with a new user message to one of the supported ais, retrieve the assistant message, add it to the conversation log and save/load the conversation log.
 
@@ -12,7 +12,7 @@ along the way, i would like to learn best practices regarding api key management
 
 i received 33 questions from claude code (sonnet 4.5). i will respond to them in natural language.
 
-we will place pyproject.toml in poly-chat and use poetry to manage packages. .command files in tools might be useful.
+we will place pyproject.toml in polychat and use poetry to manage packages. .command files in tools might be useful.
 
 in c#, i once tried to define shared interfaces for chat-related features and miserably failed due to the great inconsistencies of the api designs. of course, that was anticipated, but i strongly believed i, with some help from ais, could extract the very minimal essences.
 
@@ -20,7 +20,7 @@ to avoid repeating the same mistake, let's define a set of types for a conversat
 
 everything must be async.
 
-can we make command "pc" while the lower folder name is poly_chat? if that is possible, i would like it.
+can we make command "pc" while the lower folder name is polychat? if that is possible, i would like it.
 
 persistent storage for conversation logs is one json file per conversation.
 
@@ -28,7 +28,7 @@ i want the app to be profile-based. default config is virtually impossible as ap
 
 please analyze how tk maps relative file paths. @ for app root. ~ for user directory. absolute paths arent mapped. with this mechanism, we can do something like: path is "~/.secrets/api-keys.json" and key is "openai".
 
-app needs a profile to run. then it'll be a new conversation and app will make a new file. profile should have a default directory path. if user specifies just a name, it'll be a file in that directory. if a relative path, @ and ~ will be handled well. if these arent found, we should explicitly make it an error because current directory is unreliable. if an absolute path is given, it will be used. if none is specified (like user just hits enter), ai should use (uuid).json maybe with a prefix. what would be a good prefix? PolyChat or poly-chat or poly_chat? if we are using poly-chat, to preserve the semantic relations of the connected words, poly-chat_uuid.json too might be an option (as uuid will contain hyphens).
+app needs a profile to run. then it'll be a new conversation and app will make a new file. profile should have a default directory path. if user specifies just a name, it'll be a file in that directory. if a relative path, @ and ~ will be handled well. if these arent found, we should explicitly make it an error because current directory is unreliable. if an absolute path is given, it will be used. if none is specified (like user just hits enter), ai should use (uuid).json maybe with a prefix. what would be a good prefix? PolyChat or polychat or polychat? if we are using polychat, to preserve the semantic relations of the connected words, polychat_uuid.json too might be an option (as uuid will contain hyphens).
 
 a conversation is a complex data structure. cognitively massive as well. so, one run of app can have just one conversation assigned. if user ends the conversation, app ends. it doesnt hurt to have to run multiple terminals to have multiple conversations.
 
@@ -193,7 +193,7 @@ in the storytelling test, let's make sure we are really calling the right ai. wh
 
 ---
 
-let's move to test_keys. it tests environment variables. it must also test keychain, json and direct strings. we wont be sending these keys to actual apis. we only need to make sure features in poly_chat/keys work.
+let's move to test_keys. it tests environment variables. it must also test keychain, json and direct strings. we wont be sending these keys to actual apis. we only need to make sure features in polychat/keys work.
 
 ---
 
@@ -247,7 +247,7 @@ earlier, i said /open and some other commands should show a list and an option o
 
 as for the input field, do we need the "|" symbol at line start? i see [ and ] in each line of the input field. how will it look on windows?
 
-when i /new a new chat file and immediately call /open, the file is not visible. we should save an empty chat. its file name pattern should be poly-chat_YYYY-MM-DD_HH-MM-SS.json.
+when i /new a new chat file and immediately call /open, the file is not visible. we should save an empty chat. its file name pattern should be polychat_YYYY-MM-DD_HH-MM-SS.json.
 
 if no chat is open and we call /new, app should ask whether to open it.
 
@@ -467,7 +467,7 @@ in profile, which is always available if the app has successfully started, chat 
 
 for each chat to run, app needs one chat history file. one chat history file per one chat. if chat history file is specified in command line, it is opened automatically and user should see a message. in repl mode, app can make many chats and switch among them (by closing and opening another; we probably should implement "switch" command that does both). parameter-less commands like "/open" are user-friendly and show list of chats in the mandatory chat history directory. with a path parameter, these commands map and validate the provided path.
 
-as for log files, let's make it official that only one log file is used for the ENTIRE run of the app (because it is bound to the profile) with an unique file name in the mandatory error log directory IF no error log file path has been specified in command line. when app makes one, the file name pattern should be poly-chat_YYYY-MM-DD_HH-MM-SS with an extension.
+as for log files, let's make it official that only one log file is used for the ENTIRE run of the app (because it is bound to the profile) with an unique file name in the mandatory error log directory IF no error log file path has been specified in command line. when app makes one, the file name pattern should be polychat_YYYY-MM-DD_HH-MM-SS with an extension.
 
 should we use a plaintext format and use ".log" or json and ".json"? please analyze how log entries are output. i havent yet read that part of implementation at all. => it's plaintext and ".log" currently. i am ok with that. if i ever need to machine-read the logs, i'll switch to json. until then, plaintext is more human-readable.
 
@@ -495,7 +495,7 @@ please refer to openai-responses-api-guide.md.
 
 for more information, be sure to refer to https://platform.openai.com/docs/guides/text as well. if you encounter 403 error and cant load the page, please tell me.
 
-openai provider should be caller-agnostic type. if we carefully update the code and the corresponding tests, poly-chat should work with absolutely no modifications. if not, please suggest a refactoring plan.
+openai provider should be caller-agnostic type. if we carefully update the code and the corresponding tests, polychat should work with absolutely no modifications. if not, please suggest a refactoring plan.
 
 ---
 
@@ -748,15 +748,15 @@ you implemented sanitization on log files. that is unnecessary. if somebody has 
 please also remove following limits;:
 
 Log argument summarization limits:
-- apps/poly-chat/src/poly_chat/logging_utils.py:403 (max_len=160)
-- apps/poly-chat/src/poly_chat/logging_utils.py:438 (max_len=100 for command args)
+- apps/polychat/src/polychat/logging_utils.py:403 (max_len=160)
+- apps/polychat/src/polychat/logging_utils.py:438 (max_len=100 for command args)
 
 Safety-check formatting limit:
-- apps/poly-chat/src/poly_chat/commands/metadata.py:300 (message content truncated to 500 for helper prompt)
+- apps/polychat/src/polychat/commands/metadata.py:300 (message content truncated to 500 for helper prompt)
 
 Title generation context limits:
-- apps/poly-chat/src/poly_chat/commands/metadata.py:85 (first 10 messages)
-- apps/poly-chat/src/poly_chat/commands/metadata.py:87 (200 chars per message)
+- apps/polychat/src/polychat/commands/metadata.py:85 (first 10 messages)
+- apps/polychat/src/polychat/commands/metadata.py:87 (200 chars per message)
 
 do we have limits on summarization context as well?
 
@@ -771,22 +771,22 @@ let's keep:
 History display limits (UI/display only):
 
 - Default /history shows last 10:
-  - apps/poly-chat/src/poly_chat/commands/metadata.py:322
+  - apps/polychat/src/polychat/commands/metadata.py:322
 - History preview truncates each message to 100 chars:
-  - apps/poly-chat/src/poly_chat/commands/metadata.py:398
+  - apps/polychat/src/polychat/commands/metadata.py:398
 
 Timeouts/retries:
 - Central timeout/retry constants:
-  - apps/poly-chat/src/poly_chat/timeouts.py:12
+  - apps/polychat/src/polychat/timeouts.py:12
 - Citation redirect timeout/concurrency:
-  - apps/poly-chat/src/poly_chat/citations.py:237
-  - apps/poly-chat/src/poly_chat/citations.py:238
+  - apps/polychat/src/polychat/citations.py:237
+  - apps/polychat/src/polychat/citations.py:238
 
 Prompt-level brevity constraints (output style, not context):
 - Summary asks for one paragraph:
-  - apps/poly-chat/src/poly_chat/prompts.py:29
+  - apps/polychat/src/polychat/prompts.py:29
 - Safety prompt asks one-line descriptions:
-  - apps/poly-chat/src/poly_chat/prompts.py:46
+  - apps/polychat/src/polychat/prompts.py:46
 
 BUT please move all timeouts from citations.py to timeouts.py.
 
@@ -796,14 +796,14 @@ let's remove:
 
 AI output/thinking token limits (optional/profile-driven):
 - Forwarded in normal AI runtime:
-  - apps/poly-chat/src/poly_chat/ai_runtime.py:124
+  - apps/polychat/src/polychat/ai_runtime.py:124
 - Forwarded in helper tasks (/title, /summary, /safe):
-  - apps/poly-chat/src/poly_chat/helper_ai.py:94
+  - apps/polychat/src/polychat/helper_ai.py:94
 
 Claude fallback output cap:
 - If no configured max, uses max_tokens=8192:
-  - apps/poly-chat/src/poly_chat/ai/claude_provider.py:166
-  - apps/poly-chat/src/poly_chat/ai/claude_provider.py:288
+  - apps/polychat/src/polychat/ai/claude_provider.py:166
+  - apps/polychat/src/polychat/ai/claude_provider.py:288
 
 ---
 
@@ -839,7 +839,7 @@ currently, we have default, helpful, concise, critic system prompts. they were g
 
 are windows absolute paths supported? they need to be. if a given path is a windows absolute path, we dont need to map it. please check one last time to make sure ~ and @ are handled well on and for windows too.
 
-i see ".poly-chat-history" in code. what does this do?
+i see ".polychat-history" in code. what does this do?
 
 let's use another character as a borderline char. app currently uses ━. we cant expect every western font contains this glyph. terminal output may vary.
 
@@ -861,7 +861,7 @@ the personas sound interesting. let's do it.
 
 we need to support ~\ and @\ for windows. that is why we need to centralize path-related things. one exceptional quick logic to handle paths is often a source of bugs at runtime. let's really centralize everything-everything.
 
-so, .poly-chat-history is a file in user directory for repl command history. is there a convention that the file name must be exactly like this? like, dot + app name + history. if not, we should put it in a directory: ~/.poly-chat. will this work both on mac and windows?
+so, .polychat-history is a file in user directory for repl command history. is there a convention that the file name must be exactly like this? like, dot + app name + history. if not, we should put it in a directory: ~/.polychat. will this work both on mac and windows?
 
 any other embedded paths or keys or things like these that i may not have noticed?
 
@@ -883,6 +883,12 @@ let's update /system so that persona name alone can change the system prompt. we
 
 ## distribution
 
-please find poly-chat.
+please find polychat.
 
-i need to update code so the @ symbol based path mapping will work when app has been installed on another computer via pypi. we can move the prompts directory to poly-chat/src/poly_chat/prompts if that is going to be necessary. what would you suggest?
+i need to update code so the @ symbol based path mapping will work when app has been installed on another computer via pypi. we can move the prompts directory to polychat/src/polychat/prompts if that is going to be necessary. what would you suggest?
+
+---
+
+i just renamed the app from poly(HYPHEN)chat or poly(UNDERSCORE)chat to polychat. PolyChat is the display name and will always be. i just thought using a hyphen or underscore depending on the context would make the semantic boundary of the app name more explicit, but that was textbook thinking; it's like ChatGPT in code is chat-gpt and chat_gpt. if the name is like MySuperCoolApp, mysupercoolapp may not be the best package name or identifier, but polychat for PolyChat wont hurt.
+
+after relatively simple text replacements (while i at least asked an ai to consider each occurrence's context), WISHES.md and some other documents may appear inconsistent from now on. so, i'm leaving this note.

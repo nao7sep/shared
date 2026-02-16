@@ -1,6 +1,6 @@
 """Tests for centralized AI limit resolution."""
 
-from poly_chat.ai.limits import (
+from polychat.ai.limits import (
     resolve_profile_limits,
     resolve_request_limits,
     select_max_output_tokens,

@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from poly_chat.ai_runtime import send_message_to_ai, validate_and_get_provider
-from poly_chat.app_state import SessionState
+from polychat.ai_runtime import send_message_to_ai, validate_and_get_provider
+from polychat.app_state import SessionState
 
 
 async def _empty_stream():
@@ -18,7 +18,7 @@ async def test_send_message_to_ai_omits_limit_kwargs_when_unset():
     provider = MagicMock()
     provider.send_message = MagicMock(return_value=_empty_stream())
 
-    with patch("poly_chat.ai_runtime.log_event"):
+    with patch("polychat.ai_runtime.log_event"):
         await send_message_to_ai(
             provider_instance=provider,
             messages=[{"role": "user", "content": "hi"}],
@@ -48,7 +48,7 @@ async def test_send_message_to_ai_applies_profile_limits():
         }
     }
 
-    with patch("poly_chat.ai_runtime.log_event"):
+    with patch("polychat.ai_runtime.log_event"):
         await send_message_to_ai(
             provider_instance=provider,
             messages=[{"role": "user", "content": "hi"}],
@@ -67,7 +67,7 @@ async def test_send_message_to_ai_applies_claude_fallback_limit_when_unset():
     provider = MagicMock()
     provider.send_message = MagicMock(return_value=_empty_stream())
 
-    with patch("poly_chat.ai_runtime.log_event"):
+    with patch("polychat.ai_runtime.log_event"):
         await send_message_to_ai(
             provider_instance=provider,
             messages=[{"role": "user", "content": "hi"}],
@@ -139,10 +139,10 @@ def test_validate_and_get_provider_applies_mode_timeout_multiplier(
             captured["timeout"] = timeout_sec
         return object()
 
-    with patch("poly_chat.ai_runtime.load_api_key", return_value="test-key"):
-        with patch("poly_chat.ai_runtime.validate_api_key", return_value=True):
+    with patch("polychat.ai_runtime.load_api_key", return_value="test-key"):
+        with patch("polychat.ai_runtime.validate_api_key", return_value=True):
             with patch(
-                "poly_chat.ai_runtime.get_provider_instance",
+                "polychat.ai_runtime.get_provider_instance",
                 side_effect=fake_get_provider_instance,
             ):
                 provider_instance, error = validate_and_get_provider(
@@ -169,10 +169,10 @@ def test_validate_and_get_provider_keeps_zero_timeout_without_multiplier():
             captured["timeout"] = timeout_sec
         return object()
 
-    with patch("poly_chat.ai_runtime.load_api_key", return_value="test-key"):
-        with patch("poly_chat.ai_runtime.validate_api_key", return_value=True):
+    with patch("polychat.ai_runtime.load_api_key", return_value="test-key"):
+        with patch("polychat.ai_runtime.validate_api_key", return_value=True):
             with patch(
-                "poly_chat.ai_runtime.get_provider_instance",
+                "polychat.ai_runtime.get_provider_instance",
                 side_effect=fake_get_provider_instance,
             ):
                 provider, error = validate_and_get_provider(

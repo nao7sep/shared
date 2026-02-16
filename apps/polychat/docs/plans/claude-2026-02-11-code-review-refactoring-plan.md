@@ -513,7 +513,7 @@ return f"Error loading chat: {e}"  # ❌ Could leak API keys
 
 **Fix**:
 ```python
-from poly_chat.logging_utils import sanitize_error_message
+from polychat.logging_utils import sanitize_error_message
 
 # Before
 raise ValueError(f"Invalid path: {path} ({e})")

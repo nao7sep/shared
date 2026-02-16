@@ -8,10 +8,10 @@
 
 ## 1. Codebase Architecture Overview
 
-PolyChat is a Python CLI multi-AI chat tool at `apps/poly-chat/`. Key directories:
+PolyChat is a Python CLI multi-AI chat tool at `apps/polychat/`. Key directories:
 
 ```
-src/poly_chat/
+src/polychat/
   ai/                    # Provider implementations (7 files + base.py)
   commands/              # Command handlers (mixin architecture)
   keys/                  # API key loading
@@ -288,11 +288,11 @@ Returns a list of URL strings. For streaming, citations appear in the final chun
 
 The four research documents have some inaccuracies:
 
-1. **`poly-chat-providers-copilot-analysis.md`** — WRONG about Claude ("LIMITED/no web search") and Mistral ("NO NATIVE SUPPORT"). Claude has full web search since May 2025. Mistral has search via Agents API. This doc's summary table is outdated.
+1. **`polychat-providers-copilot-analysis.md`** — WRONG about Claude ("LIMITED/no web search") and Mistral ("NO NATIVE SUPPORT"). Claude has full web search since May 2025. Mistral has search via Agents API. This doc's summary table is outdated.
 
 2. **`claude-ai-provider-search-features-2026.md`** — References future-dated OpenAI models (`gpt-5-search-api-2026-10-14`). These don't exist yet (it's Feb 2026). OpenAI search works via `web_search_preview` tool in Responses API with existing models.
 
-3. **`poly-chat-provider-search-codex-2026-02-09.md`** — Concise and accurate.
+3. **`polychat-provider-search-codex-2026-02-09.md`** — Concise and accurate.
 
 4. **`ai-providers-search-gemini.md`** — Accurate.
 
@@ -352,7 +352,7 @@ The four research documents have some inaccuracies:
 
 Run existing tests first to establish baseline:
 ```bash
-cd apps/poly-chat && python -m pytest tests/ -v
+cd apps/polychat && python -m pytest tests/ -v
 ```
 
 Tests use `conftest.py` fixtures:

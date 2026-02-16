@@ -3,8 +3,8 @@
 import json
 import pytest
 from pathlib import Path
-from poly_chat.path_utils import get_app_root
-from poly_chat.profile import (
+from polychat.path_utils import get_app_root
+from polychat.profile import (
     map_path,
     load_profile,
     validate_profile,
@@ -525,7 +525,7 @@ def test_validate_profile_api_key_keychain_missing_account():
         "api_keys": {
             "claude": {
                 "type": "keychain",
-                "service": "poly-chat"
+                "service": "polychat"
                 # Missing "account"
             }
         }
@@ -634,7 +634,7 @@ def test_validate_profile_valid_all_api_key_types():
             },
             "openai": {
                 "type": "keychain",
-                "service": "poly-chat",
+                "service": "polychat",
                 "account": "openai-api-key"
             },
             "gemini": {
@@ -723,7 +723,7 @@ def test_validate_profile_rejects_unknown_ai_limit_key():
 
 def test_create_profile_template_uses_file_prompts_and_mixed_api_key_examples(tmp_path):
     """Generated template should be directly useful and avoid companion API-key files."""
-    profile_path = tmp_path / "poly-chat-profile.json"
+    profile_path = tmp_path / "polychat-profile.json"
 
     created_profile, _messages = create_profile(str(profile_path))
 
@@ -731,15 +731,15 @@ def test_create_profile_template_uses_file_prompts_and_mixed_api_key_examples(tm
     assert created_profile["title_prompt"] == "@/prompts/title.txt"
     assert created_profile["summary_prompt"] == "@/prompts/summary.txt"
     assert created_profile["safety_prompt"] == "@/prompts/safety.txt"
-    assert created_profile["chats_dir"] == "~/.poly-chat/chats"
-    assert created_profile["logs_dir"] == "~/.poly-chat/logs"
+    assert created_profile["chats_dir"] == "~/.polychat/chats"
+    assert created_profile["logs_dir"] == "~/.polychat/logs"
     assert created_profile["api_keys"]["openai"] == {
         "type": "env",
         "key": "OPENAI_API_KEY",
     }
     assert created_profile["api_keys"]["claude"] == {
         "type": "keychain",
-        "service": "poly-chat",
+        "service": "polychat",
         "account": "claude-api-key",
     }
     assert created_profile["ai_limits"]["default"]["max_output_tokens"] is None

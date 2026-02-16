@@ -291,13 +291,13 @@ This document provides a comprehensive overview of search capabilities across al
 ### Code References
 
 **Provider implementations:**
-- `/apps/poly-chat/src/poly_chat/ai/openai_provider.py` - OpenAI Responses API
-- `/apps/poly-chat/src/poly_chat/ai/gemini_provider.py` - Google genai SDK
-- `/apps/poly-chat/src/poly_chat/ai/claude_provider.py` - Anthropic SDK
-- `/apps/poly-chat/src/poly_chat/ai/perplexity_provider.py` - OpenAI-compatible (line 249: citations)
-- `/apps/poly-chat/src/poly_chat/ai/deepseek_provider.py` - OpenAI-compatible
-- `/apps/poly-chat/src/poly_chat/ai/mistral_provider.py` - OpenAI-compatible
-- `/apps/poly-chat/src/poly_chat/ai/grok_provider.py` - OpenAI-compatible
+- `/apps/polychat/src/polychat/ai/openai_provider.py` - OpenAI Responses API
+- `/apps/polychat/src/polychat/ai/gemini_provider.py` - Google genai SDK
+- `/apps/polychat/src/polychat/ai/claude_provider.py` - Anthropic SDK
+- `/apps/polychat/src/polychat/ai/perplexity_provider.py` - OpenAI-compatible (line 249: citations)
+- `/apps/polychat/src/polychat/ai/deepseek_provider.py` - OpenAI-compatible
+- `/apps/polychat/src/polychat/ai/mistral_provider.py` - OpenAI-compatible
+- `/apps/polychat/src/polychat/ai/grok_provider.py` - OpenAI-compatible
 
 ---
 

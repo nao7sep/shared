@@ -1,6 +1,6 @@
 # Publishing to PyPI
 
-Simple manual process for publishing poly-chat to PyPI.
+Simple manual process for publishing polychat to PyPI.
 
 ## One-Time Setup
 
@@ -24,7 +24,7 @@ If you skip this, Poetry will prompt for tokens when publishing.
 ### Full Interactive Mode (Recommended)
 
 ```bash
-cd shared/apps/poly-chat
+cd shared/apps/polychat
 
 # 1. Update version in pyproject.toml manually
 #    Edit: version = "0.2.0"
@@ -77,14 +77,14 @@ python tools/publish.py --setup
 ```bash
 pip install --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  poly-chat
+  polychat
 
 pc --version
 ```
 
 ### From PyPI
 ```bash
-pip install poly-chat
+pip install polychat
 pc --version
 ```
 
@@ -137,15 +137,15 @@ Install Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
 ### Build contains wrong files
 Check `packages` in `pyproject.toml`:
 ```toml
-packages = [{include = "poly_chat", from = "src"}]
+packages = [{include = "polychat", from = "src"}]
 ```
 
-Only `src/poly_chat/` is included in the package.
+Only `src/polychat/` is included in the package.
 
 ## What Gets Published
 
 From your local project:
-- `src/poly_chat/` directory (the package)
+- `src/polychat/` directory (the package)
 - `README.md`
 - `LICENSE`
 - Generated: `PKG-INFO`, `METADATA`

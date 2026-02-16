@@ -6,9 +6,9 @@ i will save (some of) them from now because: 1) with investigated information co
 
 based on:
 
-- ai/poly-chat-providers-copilot-analysis.md (2026-02-10)
+- ai/polychat-providers-copilot-analysis.md (2026-02-10)
 - ai/claude-ai-provider-search-features-2026.md (2026-02-10)
-- ai/poly-chat-provider-search-codex-2026-02-09.md (2026-02-10)
+- ai/polychat-provider-search-codex-2026-02-09.md (2026-02-10)
 - ai/ai-providers-search-gemini.md (2026-02-10)
 
 claude code (opus 4.6) generated:

@@ -18,22 +18,22 @@ from datetime import datetime
 
 import pytest
 
-from poly_chat.profile import load_profile
-from poly_chat.chat import (
+from polychat.profile import load_profile
+from polychat.chat import (
     load_chat,
     save_chat,
     add_user_message,
     add_assistant_message,
     get_messages_for_ai,
 )
-from poly_chat.keys.loader import load_api_key
-from poly_chat.ai.openai_provider import OpenAIProvider
-from poly_chat.ai.claude_provider import ClaudeProvider
-from poly_chat.ai.gemini_provider import GeminiProvider
-from poly_chat.ai.grok_provider import GrokProvider
-from poly_chat.ai.perplexity_provider import PerplexityProvider
-from poly_chat.ai.mistral_provider import MistralProvider
-from poly_chat.ai.deepseek_provider import DeepSeekProvider
+from polychat.keys.loader import load_api_key
+from polychat.ai.openai_provider import OpenAIProvider
+from polychat.ai.claude_provider import ClaudeProvider
+from polychat.ai.gemini_provider import GeminiProvider
+from polychat.ai.grok_provider import GrokProvider
+from polychat.ai.perplexity_provider import PerplexityProvider
+from polychat.ai.mistral_provider import MistralProvider
+from polychat.ai.deepseek_provider import DeepSeekProvider
 
 from .test_helpers import find_test_api_keys_file, load_test_config, is_ai_available
 

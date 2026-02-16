@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Clean build artifacts from poly-chat project
+# Clean build artifacts from polychat project
 # Removes .venv, __pycache__, .pyc files, .pytest_cache, .ruff_cache
 
 set -e  # Exit on any error
@@ -10,7 +10,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 echo ""
-echo "=== poly-chat Cleanup ==="
+echo "=== polychat Cleanup ==="
 echo ""
 echo "Project directory: $PROJECT_DIR"
 echo ""

@@ -21,7 +21,7 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 ## Installation
 
 ```bash
-cd poly-chat
+cd polychat
 poetry install
 ```
 
@@ -36,7 +36,7 @@ poetry run pc init ~/my-profile.json
 This creates a template file:
 - Profile JSON at the path you provide
 
-The generated profile template uses home-based paths (`~/poly-chat/...`) for directories and app root paths (`@/prompts/...`) for built-in prompt files.
+The generated profile template uses home-based paths (`~/polychat/...`) for directories and app root paths (`@/prompts/...`) for built-in prompt files.
 It also includes mixed API-key configuration examples (`env`, `keychain`, `json`) so you can pick the style you want.
 Then edit the template values (models, paths, and `api_keys`) before running PolyChat.
 
@@ -102,7 +102,7 @@ CLI path flags use the same path mapping rules:
 Use `~/...`, `@/...`, or absolute paths. Plain relative paths are rejected.
 
 If `-l/--log` is omitted, PolyChat creates one log file for the current app run in the profile's `logs_dir`:
-- `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
+- `polychat_YYYY-MM-DD_HH-MM-SS.log`
 
 Logs are written in a structured plaintext block format and include contextual events such as app/session start and stop, command execution, chat lifecycle actions, and AI request/response/error details.
 
@@ -259,8 +259,8 @@ When search is enabled, AI responses include a "Sources:" section with citation 
   "title_prompt": "@/prompts/title.txt",
   "summary_prompt": "@/prompts/summary.txt",
   "safety_prompt": "@/prompts/safety.txt",
-  "chats_dir": "~/poly-chat/chats",
-  "logs_dir": "~/poly-chat/logs",
+  "chats_dir": "~/polychat/chats",
+  "logs_dir": "~/polychat/logs",
   "api_keys": {
     "openai": {
       "type": "env",
@@ -268,7 +268,7 @@ When search is enabled, AI responses include a "Sources:" section with citation 
     },
     "claude": {
       "type": "keychain",
-      "service": "poly-chat",
+      "service": "polychat",
       "account": "claude-api-key"
     },
     "gemini": {
@@ -306,7 +306,7 @@ The profile requires two directory paths:
 - Use `/new`, `/open`, `/switch`, `/rename`, and `/delete` commands to manage
 
 **`logs_dir`** - Where application log files are written
-- One log file per app run: `poly-chat_YYYY-MM-DD_HH-MM-SS.log`
+- One log file per app run: `polychat_YYYY-MM-DD_HH-MM-SS.log`
 - Structured plaintext format with contextual events
 - Includes AI requests/responses, commands, errors
 
@@ -327,7 +327,7 @@ Both directories are created automatically if they don't exist.
 ```json
 {
   "type": "keychain",
-  "service": "poly-chat",
+  "service": "polychat",
   "account": "claude-api-key"
 }
 ```
@@ -348,15 +348,15 @@ PolyChat supports special path prefixes for portability across platforms:
 **`~` or `~/...`** → User home directory
 - macOS/Linux: `/Users/username/` or `/home/username/`
 - Windows: `C:\Users\YourName\`
-- Example: `~/poly-chat/chats/` → `/Users/username/poly-chat/chats/`
+- Example: `~/polychat/chats/` → `/Users/username/polychat/chats/`
 
 **`@` or `@/...`** → App root directory
-- Points to the installed `poly_chat` package directory
-- Example: `@/prompts/title.txt` → `/path/to/site-packages/poly_chat/prompts/title.txt`
+- Points to the installed `polychat` package directory
+- Example: `@/prompts/title.txt` → `/path/to/site-packages/polychat/prompts/title.txt`
 - Useful for accessing bundled prompts and resources
 
 **Absolute paths** → Used as-is
-- Example: `/usr/local/poly-chat/` or `C:\Program Files\poly-chat\`
+- Example: `/usr/local/polychat/` or `C:\Program Files\polychat\`
 
 **Relative paths without prefix** → **Error** (rejected to avoid ambiguity)
 
@@ -366,7 +366,7 @@ PolyChat uses file-based prompts for all AI interactions. Prompts are configured
 
 #### Built-in Prompts
 
-Built-in prompts are bundled in `src/poly_chat/prompts/` (installed as `poly_chat/prompts/`):
+Built-in prompts are bundled in `src/polychat/prompts/` (installed as `polychat/prompts/`):
 
 **System Prompts** (`prompts/system/`):
 - `default.txt` - Balanced, helpful assistant
@@ -377,7 +377,7 @@ Built-in prompts are bundled in `src/poly_chat/prompts/` (installed as `poly_cha
 - `strategist.txt` - Strategic planning, systems thinking
 - `scholar.txt` - Comprehensive research, authoritative depth
 
-See `src/poly_chat/prompts/system/README.md` for detailed persona descriptions.
+See `src/polychat/prompts/system/README.md` for detailed persona descriptions.
 
 **Helper Prompts** (`prompts/`):
 - `title.txt` - Chat title generation template (uses `{CONTEXT}` placeholder)
@@ -510,5 +510,5 @@ poetry run ruff check .
 ### Type Checking
 
 ```bash
-poetry run mypy src/poly_chat
+poetry run mypy src/polychat
 ```

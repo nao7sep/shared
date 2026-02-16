@@ -9,14 +9,14 @@ Requires .TEST_API_KEYS.json with valid API keys for each provider.
 """
 
 import pytest
-from poly_chat.models import MODEL_REGISTRY
-from poly_chat.ai.openai_provider import OpenAIProvider
-from poly_chat.ai.claude_provider import ClaudeProvider
-from poly_chat.ai.gemini_provider import GeminiProvider
-from poly_chat.ai.grok_provider import GrokProvider
-from poly_chat.ai.perplexity_provider import PerplexityProvider
-from poly_chat.ai.mistral_provider import MistralProvider
-from poly_chat.ai.deepseek_provider import DeepSeekProvider
+from polychat.models import MODEL_REGISTRY
+from polychat.ai.openai_provider import OpenAIProvider
+from polychat.ai.claude_provider import ClaudeProvider
+from polychat.ai.gemini_provider import GeminiProvider
+from polychat.ai.grok_provider import GrokProvider
+from polychat.ai.perplexity_provider import PerplexityProvider
+from polychat.ai.mistral_provider import MistralProvider
+from polychat.ai.deepseek_provider import DeepSeekProvider
 from tests.test_helpers import find_test_api_keys_file, load_test_config, is_ai_available
 
 

@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from poly_chat.commands import CommandHandler
-from poly_chat.commands.types import CommandSignal
+from polychat.commands import CommandHandler
+from polychat.commands.types import CommandSignal
 
 
 class _InteractionStub:
@@ -26,7 +26,7 @@ async def test_new_chat_no_open_prompts_and_opens_on_default_yes(mock_session_ma
 
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "poly_chat.commands.chat_files.generate_chat_filename",
+            "polychat.commands.chat_files.generate_chat_filename",
             lambda _chats_dir, _name: "/test/chats/new-chat.json",
         )
         result = await command_handler.new_chat("")
@@ -44,14 +44,14 @@ async def test_new_chat_no_open_can_create_without_switch(mock_session_manager):
 
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "poly_chat.commands.chat_files.generate_chat_filename",
+            "polychat.commands.chat_files.generate_chat_filename",
             lambda _chats_dir, _name: "/test/chats/new-chat.json",
         )
         mp.setattr(
-            "poly_chat.commands.chat_files.load_chat",
+            "polychat.commands.chat_files.load_chat",
             lambda _path: {"metadata": {}, "messages": []},
         )
-        mp.setattr("poly_chat.commands.chat_files.save_chat", save_mock)
+        mp.setattr("polychat.commands.chat_files.save_chat", save_mock)
         result = await command_handler.new_chat("")
 
     assert result == "Created new chat (not opened): /test/chats/new-chat.json"
@@ -69,7 +69,7 @@ async def test_new_chat_with_open_chat_skips_prompt(mock_session_manager):
 
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "poly_chat.commands.chat_files.generate_chat_filename",
+            "polychat.commands.chat_files.generate_chat_filename",
             lambda _chats_dir, _name: "/test/chats/new-chat.json",
         )
         result = await command_handler.new_chat("")

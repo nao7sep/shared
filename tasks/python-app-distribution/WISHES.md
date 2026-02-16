@@ -1,6 +1,6 @@
 ## pypi
 
-please find poly-chat in shared repo. i would like to distribute it via pypi. along the way, i would like to learn about relevant services including github actions. should i automate everything? i am new to python. i might feel more comfortable editing pyproject.toml with a new version number only when i feel the new code is good enough for release AND manually push it to pypi (if that is how it works), but i am usually wrong when i wish to stick to old ways. please tell me everything people do.
+please find polychat in shared repo. i would like to distribute it via pypi. along the way, i would like to learn about relevant services including github actions. should i automate everything? i am new to python. i might feel more comfortable editing pyproject.toml with a new version number only when i feel the new code is good enough for release AND manually push it to pypi (if that is how it works), but i am usually wrong when i wish to stick to old ways. please tell me everything people do.
 
 ---
 
@@ -14,15 +14,15 @@ should i use testpypi? if there's a very high chance that my first attempt can b
 
 ---
 
-ok, i'm already lazy. can we develop a mini tool, following the directory structure of poly-chat, that will ask for a version number string, update pyproject.toml (and relevant files), commit the version number only diff, set a tag, push the file(s) and push the tag? github actions will automate things AFTER the tag is pushed, right? is there a standard tool for what i am thinking about too?
+ok, i'm already lazy. can we develop a mini tool, following the directory structure of polychat, that will ask for a version number string, update pyproject.toml (and relevant files), commit the version number only diff, set a tag, push the file(s) and push the tag? github actions will automate things AFTER the tag is pushed, right? is there a standard tool for what i am thinking about too?
 
-poly-chat has some builtin prompts as files. they are in poly-chat/prompts while the app is in poly-chat/src/poly_chat. within the app, the paths to them are handled with the @ symbol, that maps relative paths to the app directory (where pyproject.toml exists). like, @/prompts/system/default.txt. i am guessing i need to move them to poly-chat/src/poly_chat/prompts. i wonder what will happen for @/* paths. please investigate the code.
+polychat has some builtin prompts as files. they are in polychat/prompts while the app is in polychat/src/polychat. within the app, the paths to them are handled with the @ symbol, that maps relative paths to the app directory (where pyproject.toml exists). like, @/prompts/system/default.txt. i am guessing i need to move them to polychat/src/polychat/prompts. i wonder what will happen for @/* paths. please investigate the code.
 
 ---
 
 you made tools/release.py and publish-pypi.yml and publish-testpypi.yml in .github/workflows.
 
-should i install github actions extension to vsc? should the github files be exactly where they are (poly-chat/.github/workflows)? is it correct to assume release.py only does the local git work and then github actions on the server side will find the workflow files and publish the app IF a corresponding tag is found?
+should i install github actions extension to vsc? should the github files be exactly where they are (polychat/.github/workflows)? is it correct to assume release.py only does the local git work and then github actions on the server side will find the workflow files and publish the app IF a corresponding tag is found?
 
 ---
 
@@ -36,9 +36,9 @@ let's switch to a python script based manual distribution that uses the poetry c
 
 ---
 
-i have pypi/testpypi accounts with 2fa enabled. i have made 2 tokens for "poly-chat" and registered them via the "poetry config" command like:
+i have pypi/testpypi accounts with 2fa enabled. i have made 2 tokens for "polychat" and registered them via the "poetry config" command like:
 
-cd ~/code/shared/apps/poly-chat
+cd ~/code/shared/apps/polychat
 poetry config pypi-token.pypi pypi-YOUR_TOKEN_HERE
 poetry config pypi-token.testpypi pypi-YOUR_TESTPYPI_TOKEN_HERE
 
@@ -59,13 +59,13 @@ python3 tools/publish.py --prod
 
 let's clarify a few things:
 
-1. should i commit files in dist directory? is there a way to specify where to create contents of this directory from next time? if an experienced user wants to try poly-chat, they should clone the repo. if the user is not that experienced, pip/pipx should be easier. what do people do with dist directory?
+1. should i commit files in dist directory? is there a way to specify where to create contents of this directory from next time? if an experienced user wants to try polychat, they should clone the repo. if the user is not that experienced, pip/pipx should be easier. what do people do with dist directory?
 
-2. is there a way to check if poly-chat's dependencies are actually needed? i switched from google-generativeai to google-genai. unlike c#, references seem more explicit in python (probably because versions must be locked). in C#, if we need package A and if package A depends on package B, if we no longer need package A and delete it from the .csproj file, package B is no longer referenced. but in python, if we need package A, just to lock the version of package B, package B is referenced in pyproject.toml. or, maybe i am understanding something incorrectly. question is: how do we make sure users wont get what they dont need? optionally, how do we automate this sanitization?
+2. is there a way to check if polychat's dependencies are actually needed? i switched from google-generativeai to google-genai. unlike c#, references seem more explicit in python (probably because versions must be locked). in C#, if we need package A and if package A depends on package B, if we no longer need package A and delete it from the .csproj file, package B is no longer referenced. but in python, if we need package A, just to lock the version of package B, package B is referenced in pyproject.toml. or, maybe i am understanding something incorrectly. question is: how do we make sure users wont get what they dont need? optionally, how do we automate this sanitization?
 
-3. is the current state of pyproject.toml correct? will prompt files be included? poly-chat doesnt have a project-level .gitignore. are things like __pycache__ properly ignored?
+3. is the current state of pyproject.toml correct? will prompt files be included? polychat doesnt have a project-level .gitignore. are things like __pycache__ properly ignored?
 
-4. is poly-chat really ready to work with different app root directory paths?
+4. is polychat really ready to work with different app root directory paths?
 
 5. when i made pypi/testpypi tokens, i made them effective in the entire scope or something as instructed. i guess i will need to update their settings after first uploads. how should i do that?
 

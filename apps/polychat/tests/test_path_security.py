@@ -2,8 +2,8 @@
 
 import pytest
 from pathlib import Path
-from poly_chat.profile import map_path
-from poly_chat.path_utils import has_app_path_prefix, has_home_path_prefix
+from polychat.profile import map_path
+from polychat.path_utils import has_app_path_prefix, has_home_path_prefix
 
 
 def test_map_path_rejects_relative_paths():

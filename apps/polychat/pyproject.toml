@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "poly-chat"
+name = "polychat"
 version = "0.1.0"
 description = "Multi-AI CLI chat tool for long-term, version-controlled chats"
 authors = ["nao7sep <nao7sep@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "poly_chat", from = "src"}]
+packages = [{include = "polychat", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -26,7 +26,7 @@ ruff = "^0.15.1"
 mypy = "^1.19.1"
 
 [tool.poetry.scripts]
-pc = "poly_chat.cli:main"
+pc = "polychat.cli:main"
 
 [build-system]
 requires = ["poetry-core"]

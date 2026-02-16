@@ -10,7 +10,7 @@ def load_from_keychain(service: str, account: str) -> str:
     """Load API key from macOS Keychain.
 
     Args:
-        service: Keychain service name (e.g., "poly-chat")
+        service: Keychain service name (e.g., "polychat")
         account: Keychain account name (e.g., "claude-api-key")
 
     Returns:

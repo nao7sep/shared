@@ -7,7 +7,7 @@ This module consolidates configuration constants and magic numbers.
 # Application identity
 # ============================================================================
 
-APP_NAME = "poly-chat"
+APP_NAME = "polychat"
 APP_DISPLAY_NAME = "PolyChat"
 
 # ============================================================================

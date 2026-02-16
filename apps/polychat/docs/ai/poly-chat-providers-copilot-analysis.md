@@ -5,43 +5,43 @@
 ## The 7 AI Providers in PolyChat
 
 ### 1. OpenAI Provider
-- **Location:** `apps/poly-chat/src/poly_chat/ai/openai_provider.py`
+- **Location:** `apps/polychat/src/polychat/ai/openai_provider.py`
 - **Implementation:** Uses OpenAI Responses API (recommended for all new projects)
 - **Package:** `openai` (AsyncOpenAI)
 - **Notes:** Uses the official OpenAI SDK with Responses API
 
 ### 2. Claude (Anthropic) Provider
-- **Location:** `apps/poly-chat/src/poly_chat/ai/claude_provider.py`
+- **Location:** `apps/polychat/src/polychat/ai/claude_provider.py`
 - **Implementation:** Uses Anthropic's own SDK
 - **Package:** `anthropic` (AsyncAnthropic)
 - **Notes:** Uses the official Anthropic SDK
 
 ### 3. Gemini (Google) Provider
-- **Location:** `apps/poly-chat/src/poly_chat/ai/gemini_provider.py`
+- **Location:** `apps/polychat/src/polychat/ai/gemini_provider.py`
 - **Implementation:** Uses Google's own genai SDK
 - **Package:** `google.genai`
 - **Notes:** Uses the official Google Generative AI SDK
 
 ### 4. Perplexity Provider
-- **Location:** `apps/poly-chat/src/poly_chat/ai/perplexity_provider.py`
+- **Location:** `apps/polychat/src/polychat/ai/perplexity_provider.py`
 - **Implementation:** Uses OpenAI-compatible API
 - **Package:** `openai` (AsyncOpenAI)
 - **Notes:** Uses OpenAI package to reduce complexity
 
 ### 5. Mistral Provider
-- **Location:** `apps/poly-chat/src/poly_chat/ai/mistral_provider.py`
+- **Location:** `apps/polychat/src/polychat/ai/mistral_provider.py`
 - **Implementation:** Uses OpenAI-compatible API
 - **Package:** `openai` (AsyncOpenAI)
 - **Notes:** Uses OpenAI package to reduce complexity
 
 ### 6. Grok (xAI) Provider
-- **Location:** `apps/poly-chat/src/poly_chat/ai/grok_provider.py`
+- **Location:** `apps/polychat/src/polychat/ai/grok_provider.py`
 - **Implementation:** Uses OpenAI-compatible API
 - **Package:** `openai` (AsyncOpenAI)
 - **Notes:** Uses OpenAI package to reduce complexity
 
 ### 7. DeepSeek Provider
-- **Location:** `apps/poly-chat/src/poly_chat/ai/deepseek_provider.py`
+- **Location:** `apps/polychat/src/polychat/ai/deepseek_provider.py`
 - **Implementation:** Uses OpenAI-compatible API
 - **Package:** `openai` (AsyncOpenAI)
 - **Notes:** Uses OpenAI package to reduce complexity

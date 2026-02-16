@@ -1,6 +1,6 @@
 """Tests for text_formatting module."""
 
-from poly_chat.text_formatting import lines_to_text, text_to_lines, truncate_text
+from polychat.text_formatting import lines_to_text, text_to_lines, truncate_text
 
 
 def test_text_to_lines_simple():

@@ -4,7 +4,7 @@
 - write web app that just sends todo mail
 - vocabulary development infrastructure for my daughter
 - introduce tk, my first python app that nobody else will use :)
-- introduce and release poly-chat
+- introduce and release polychat
 - automate "recordings => transcription => context"
 - seek tools to read foreign language books
 - learn about github pages, automation
@@ -22,15 +22,15 @@
 - ❌ learn different ways to split text into chunks for embedding
 - ❌ try deepl/google translation apis
 - ❌ try openai/google transcription apis
-- ✅ review poly-chat and update readme.md => first beta done
+- ✅ review polychat and update readme.md => first beta done
 
 ### 2026-02-09
 - ✅ review tk and update readme.md
 - ✅ tk: shouldnt be able to set note to pending task
 
 ### 2026-02-08
-- ✅ multi-ai cli chat tool => first version of poly-chat runs. refactored and tested
-- ✅ try developing 2 projects in parallel => poly-chat and tk. it worked
+- ✅ multi-ai cli chat tool => first version of polychat runs. refactored and tested
+- ✅ try developing 2 projects in parallel => polychat and tk. it worked
 
 ### 2026-02-06
 - ✅ refine vibe coding workflow => watched some videos and simplified things
@@ -38,7 +38,7 @@
 ### 2026-02-05
 - ❌ add prefix _ to what.md and how.md => did and reverted. made internal_docs instead
 - ✅ try using mac keychain => wrote code and tests
-- ✅ mechanism to store/retrieve api keys => implemented in poly-chat
+- ✅ mechanism to store/retrieve api keys => implemented in polychat
 - ❌ docs on config-related python packages => yagni
 - ❌ tk: smoother workflow. must be something my windows user wife could use => workflow is just fine
 - ❌ tk: task addition without "add"? => risky

@@ -1,10 +1,10 @@
 # AI Providers and Search Capabilities (Poly-Chat)
 
-This document summarizes the 7 AI providers integrated into `poly-chat` and their official support for web search/grounding features as of February 2026.
+This document summarizes the 7 AI providers integrated into `polychat` and their official support for web search/grounding features as of February 2026.
 
 ## Provider Implementation Details
 
-The following providers are implemented in `apps/poly-chat/src/poly_chat/ai/`:
+The following providers are implemented in `apps/polychat/src/polychat/ai/`:
 
 | Provider | Implementation Path | SDK / Integration Method |
 | :--- | :--- | :--- |

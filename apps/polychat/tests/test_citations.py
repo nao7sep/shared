@@ -2,7 +2,7 @@
 
 import pytest
 
-from poly_chat import citations as citation_utils
+from polychat import citations as citation_utils
 
 
 def test_normalize_citations_orders_keys_numbers_and_dedupes():

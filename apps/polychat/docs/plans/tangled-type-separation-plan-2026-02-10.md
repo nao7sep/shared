@@ -18,8 +18,8 @@ Non-goal: Performance tuning or broad style-only refactors
 ### T1: Command result transport is stringly-typed
 
 Problem:
-1. `CommandHandler.execute_command` returns `Optional[str]` (`src/poly_chat/commands/__init__.py:23`).
-2. Control flow uses magic prefixes like `__NEW_CHAT__:` and `__APPLY_RETRY__:` parsed later by orchestrator (`src/poly_chat/orchestrator.py:75`).
+1. `CommandHandler.execute_command` returns `Optional[str]` (`src/polychat/commands/__init__.py:23`).
+2. Control flow uses magic prefixes like `__NEW_CHAT__:` and `__APPLY_RETRY__:` parsed later by orchestrator (`src/polychat/orchestrator.py:75`).
 3. This mixes user-facing text and control signals in one raw type.
 
 Impact:
@@ -30,8 +30,8 @@ Impact:
 ### T2: Orchestrator action is a single optional-field container
 
 Problem:
-1. `OrchestratorAction` has many nullable fields used conditionally by `action` string (`src/poly_chat/orchestrator.py:18`).
-2. REPL branches on `action.action` and assumes field combinations (`src/poly_chat/repl.py:155`).
+1. `OrchestratorAction` has many nullable fields used conditionally by `action` string (`src/polychat/orchestrator.py:18`).
+2. REPL branches on `action.action` and assumes field combinations (`src/polychat/repl.py:155`).
 3. Invalid field combinations are representable.
 
 Impact:
@@ -42,9 +42,9 @@ Impact:
 ### T3: AI metadata is an untyped cross-layer dict
 
 Problem:
-1. `ai_runtime.send_message_to_ai` creates free-form metadata dict (`src/poly_chat/ai_runtime.py:104`).
+1. `ai_runtime.send_message_to_ai` creates free-form metadata dict (`src/polychat/ai_runtime.py:104`).
 2. Providers mutate ad-hoc keys (`usage`, `citations`, `thought_callback`, `search_evidence`, etc.).
-3. REPL consumes these keys directly (`src/poly_chat/repl.py:219`, `src/poly_chat/repl.py:257`).
+3. REPL consumes these keys directly (`src/polychat/repl.py:219`, `src/polychat/repl.py:257`).
 
 Impact:
 1. Contract drift risk between providers and runtime.
@@ -54,7 +54,7 @@ Impact:
 ### T4: Session manager blends state model and service logic
 
 Problem:
-1. `SessionManager` owns state access, persistence, prompt loading, retry lifecycle, mode lifecycle, and provider cache (`src/poly_chat/session_manager.py:16`, `src/poly_chat/session_manager.py:423`, `src/poly_chat/session_manager.py:508`).
+1. `SessionManager` owns state access, persistence, prompt loading, retry lifecycle, mode lifecycle, and provider cache (`src/polychat/session_manager.py:16`, `src/polychat/session_manager.py:423`, `src/polychat/session_manager.py:508`).
 2. The type model is broad and responsibilities are mixed.
 
 Impact:
@@ -70,7 +70,7 @@ Note:
 ### 3.1 Commands Contract Types
 
 Add module:
-1. `src/poly_chat/commands/types.py`
+1. `src/polychat/commands/types.py`
 
 Define:
 1. `CommandTextResult` (for user-visible command output)
@@ -85,7 +85,7 @@ Suggested shape:
 ### 3.2 Orchestrator Action Types
 
 Add module:
-1. `src/poly_chat/orchestrator_types.py`
+1. `src/polychat/orchestrator_types.py`
 
 Define discriminated actions:
 1. `BreakAction`
@@ -97,7 +97,7 @@ Define discriminated actions:
 ### 3.3 AI Metadata Types
 
 Add module:
-1. `src/poly_chat/ai/types.py`
+1. `src/polychat/ai/types.py`
 
 Define:
 1. `TokenUsage` TypedDict
@@ -118,9 +118,9 @@ Minimum keys:
 ### 3.4 Session State Split (Second Wave)
 
 Potential modules:
-1. `src/poly_chat/session_types.py` (type-level state containers only)
-2. `src/poly_chat/session_persistence.py` (save/load helpers)
-3. `src/poly_chat/session_modes.py` (retry/secret/search/thinking transitions)
+1. `src/polychat/session_types.py` (type-level state containers only)
+2. `src/polychat/session_persistence.py` (save/load helpers)
+3. `src/polychat/session_modes.py` (retry/secret/search/thinking transitions)
 
 ## 4. Implementation Plan (Phase Order)
 
@@ -138,7 +138,7 @@ Acceptance:
 ## Phase 1: Separate command signal types (T1)
 
 Steps:
-1. Create `src/poly_chat/commands/types.py`.
+1. Create `src/polychat/commands/types.py`.
 2. Update signal-producing command methods to return `CommandSignal` instead of encoded strings.
 3. Keep compatibility adapter in orchestrator:
 1. `handle_command_response` accepts both legacy string and new `CommandResult` during migration.
@@ -146,11 +146,11 @@ Steps:
 5. Remove string-prefix parsing once all command paths are migrated.
 
 Files:
-1. `src/poly_chat/commands/types.py` (new)
-2. `src/poly_chat/commands/__init__.py`
-3. `src/poly_chat/commands/chat_files.py`
-4. `src/poly_chat/commands/runtime.py`
-5. `src/poly_chat/orchestrator.py`
+1. `src/polychat/commands/types.py` (new)
+2. `src/polychat/commands/__init__.py`
+3. `src/polychat/commands/chat_files.py`
+4. `src/polychat/commands/runtime.py`
+5. `src/polychat/orchestrator.py`
 6. `tests/test_orchestrator.py`
 7. `tests/test_repl_orchestration.py`
 
@@ -161,16 +161,16 @@ Acceptance:
 ## Phase 2: Split orchestrator actions into discriminated types (T2)
 
 Steps:
-1. Create `src/poly_chat/orchestrator_types.py`.
+1. Create `src/polychat/orchestrator_types.py`.
 2. Replace monolithic `OrchestratorAction` dataclass with union types.
 3. Update orchestrator methods to return exact action class.
 4. Update REPL dispatch to pattern-match by class/type, not action string + optional fields.
 5. Add assertions/tests for invalid action construction impossible by type.
 
 Files:
-1. `src/poly_chat/orchestrator_types.py` (new)
-2. `src/poly_chat/orchestrator.py`
-3. `src/poly_chat/repl.py`
+1. `src/polychat/orchestrator_types.py` (new)
+2. `src/polychat/orchestrator.py`
+3. `src/polychat/repl.py`
 4. `tests/test_orchestrator.py`
 
 Acceptance:
@@ -180,18 +180,18 @@ Acceptance:
 ## Phase 3: Type AI metadata contract (T3)
 
 Steps:
-1. Create `src/poly_chat/ai/types.py`.
+1. Create `src/polychat/ai/types.py`.
 2. Change `send_message_to_ai` metadata type from `dict` to `AIResponseMetadata`.
 3. Update provider method signatures to accept `AIResponseMetadata | None`.
 4. Standardize metadata helper writes to shared helper functions where possible.
 5. Update REPL consumers to use typed lookups and defaults.
 
 Files:
-1. `src/poly_chat/ai/types.py` (new)
-2. `src/poly_chat/ai_runtime.py`
-3. `src/poly_chat/ai/base.py`
-4. `src/poly_chat/ai/*.py`
-5. `src/poly_chat/repl.py`
+1. `src/polychat/ai/types.py` (new)
+2. `src/polychat/ai_runtime.py`
+3. `src/polychat/ai/base.py`
+4. `src/polychat/ai/*.py`
+5. `src/polychat/repl.py`
 6. Provider-focused tests (existing + targeted additions)
 
 Acceptance:
@@ -207,10 +207,10 @@ Steps:
 4. Move only one concern per commit.
 
 Files:
-1. `src/poly_chat/session_manager.py`
-2. `src/poly_chat/session_types.py` (new)
-3. `src/poly_chat/session_persistence.py` (new)
-4. `src/poly_chat/session_modes.py` (new)
+1. `src/polychat/session_manager.py`
+2. `src/polychat/session_types.py` (new)
+3. `src/polychat/session_persistence.py` (new)
+4. `src/polychat/session_modes.py` (new)
 5. Session-related tests
 
 Acceptance:
@@ -224,7 +224,7 @@ Common gate after each phase:
 2. `.venv/bin/pytest -q -m 'not integration'`
 
 Type-focused gate:
-1. `.venv/bin/mypy src/poly_chat`
+1. `.venv/bin/mypy src/polychat`
 
 Phase-specific targeted tests:
 1. Commands/orchestrator: `tests/test_orchestrator.py`, `tests/test_repl_orchestration.py`, `tests/test_commands_*.py`

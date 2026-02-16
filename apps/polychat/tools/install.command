@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Install poly-chat CLI app using Poetry
-# This script ensures Poetry is installed, then installs the poly-chat app dependencies
+# Install polychat CLI app using Poetry
+# This script ensures Poetry is installed, then installs the polychat app dependencies
 
 set -e  # Exit on any error
 
@@ -10,7 +10,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 echo ""
-echo "=== poly-chat Installation ==="
+echo "=== polychat Installation ==="
 echo ""
 echo "Project directory: $PROJECT_DIR"
 echo ""
@@ -44,11 +44,11 @@ fi
 echo ""
 echo "=== Installation Complete! ==="
 echo ""
-echo "To use poly-chat:"
-echo "  poetry run poly-chat [options]"
+echo "To use polychat:"
+echo "  poetry run polychat [options]"
 echo ""
 echo "Or activate the virtual environment first:"
 echo "  cd $PROJECT_DIR"
 echo "  poetry shell"
-echo "  poly-chat [options]"
+echo "  polychat [options]"
 echo ""

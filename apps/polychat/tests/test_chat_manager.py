@@ -3,12 +3,12 @@
 import json
 import pytest
 from pathlib import Path
-from poly_chat.chat_manager import (
+from polychat.chat_manager import (
     list_chats,
     generate_chat_filename,
     rename_chat,
 )
-from poly_chat.ui.chat_ui import format_chat_info
+from polychat.ui.chat_ui import format_chat_info
 
 
 def test_list_chats_empty_directory(tmp_path):
@@ -192,13 +192,13 @@ def test_generate_chat_filename_without_name(tmp_path):
     """Test generating chat filename with timestamp."""
     path = generate_chat_filename(str(tmp_path))
 
-    # Should match pattern: poly-chat_YYYY-MM-DD_HH-MM-SS.json
+    # Should match pattern: polychat_YYYY-MM-DD_HH-MM-SS.json
     filename = Path(path).name
-    assert filename.startswith("poly-chat_")
+    assert filename.startswith("polychat_")
     assert filename.endswith(".json")
 
     # Extract timestamp part
-    timestamp_part = filename[10:-5]  # Remove "poly-chat_" and ".json"
+    timestamp_part = filename[10:-5]  # Remove "polychat_" and ".json"
 
     # Should have format: YYYY-MM-DD_HH-MM-SS
     parts = timestamp_part.split("_")
@@ -299,7 +299,7 @@ def test_rename_chat_supports_app_mapped_path(tmp_path, monkeypatch):
         called["path"] = path
         return str(mapped_target)
 
-    monkeypatch.setattr("poly_chat.chat_manager.map_path", fake_map_path)
+    monkeypatch.setattr("polychat.chat_manager.map_path", fake_map_path)
 
     new_path = rename_chat(str(old_file), "@/renamed.json", str(tmp_path))
 

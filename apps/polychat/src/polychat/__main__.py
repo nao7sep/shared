@@ -1,6 +1,6 @@
 """Entry point for running PolyChat as a module.
 
-This allows running: python -m poly_chat
+This allows running: python -m polychat
 """
 
 from .cli import main

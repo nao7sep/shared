@@ -1,7 +1,7 @@
 """Tests for hex_id module."""
 
 import pytest
-from poly_chat.hex_id import (
+from polychat.hex_id import (
     generate_hex_id,
     is_hex_id,
     assign_hex_ids,

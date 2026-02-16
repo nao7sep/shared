@@ -80,7 +80,7 @@ def generate_chat_filename(chats_dir: str, name: Optional[str] = None) -> str:
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
         base = f"{safe_name}{CHAT_FILE_EXTENSION}"
     else:
-        # Use timestamp: poly-chat_YYYY-MM-DD_HH-MM-SS.json
+        # Use timestamp: polychat_YYYY-MM-DD_HH-MM-SS.json
         timestamp = datetime.now().strftime(DATETIME_FORMAT_FILENAME)
         base = f"{APP_NAME}_{timestamp}{CHAT_FILE_EXTENSION}"
 

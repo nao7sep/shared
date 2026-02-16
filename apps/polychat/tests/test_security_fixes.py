@@ -2,8 +2,8 @@
 
 import pytest
 from pathlib import Path
-from poly_chat.chat_manager import rename_chat
-from poly_chat.cli import sanitize_error_message
+from polychat.chat_manager import rename_chat
+from polychat.cli import sanitize_error_message
 
 
 def test_path_traversal_prevention_rename(tmp_path):

@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from poly_chat.commands import CommandHandler
-from poly_chat.commands.types import CommandSignal
+from polychat.commands import CommandHandler
+from polychat.commands.types import CommandSignal
 
 
 class _InteractionStub:
@@ -66,7 +66,7 @@ async def test_system_show_prefers_chat_unmapped_path(command_handler, mock_sess
 async def test_system_persona_name_shortcut(command_handler, mock_session_manager, tmp_path):
     """Test that /system razor maps to @/prompts/system/razor.txt"""
     # Create a temporary razor.txt in the expected location
-    from poly_chat import path_utils
+    from polychat import path_utils
     from pathlib import Path
     
     # Initialize system_prompt in metadata (normally done when chat is created)
