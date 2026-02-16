@@ -1,0 +1,8 @@
+{
+  "data_path": "~/code/shared/apps/tk/data/data.json",
+  "output_path": "~/code/shared/TODO.md",
+  "timezone": "Asia/Tokyo",
+  "subjective_day_start": "04:00:00",
+  "auto_sync": true,
+  "sync_on_exit": false
+}
