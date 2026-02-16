@@ -1,4 +1,4 @@
-# Poly-Chat Provider Search Capability Check (2026-02-09)
+# PolyChat Provider Search Capability Check (2026-02-09)
 
 Date checked: February 9, 2026
 

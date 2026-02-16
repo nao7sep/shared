@@ -1,4 +1,4 @@
-# AI Providers and Search Capabilities (Poly-Chat)
+# AI Providers and Search Capabilities (PolyChat)
 
 This document summarizes the 7 AI providers integrated into `polychat` and their official support for web search/grounding features as of February 2026.
 
