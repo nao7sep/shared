@@ -16,5 +16,4 @@ __pycache__/
 .claude/
 
 # test secrets
-__TEST_API_KEYS.json
 .TEST_API_KEYS.json
