@@ -1,5 +1,3 @@
-## pypi
-
 please find polychat in shared repo. i would like to distribute it via pypi. along the way, i would like to learn about relevant services including github actions. should i automate everything? i am new to python. i might feel more comfortable editing pyproject.toml with a new version number only when i feel the new code is good enough for release AND manually push it to pypi (if that is how it works), but i am usually wrong when i wish to stick to old ways. please tell me everything people do.
 
 ---
