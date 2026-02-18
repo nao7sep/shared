@@ -30,7 +30,7 @@ Wake up, open 5 terminals, run AI CLI in each, give instructions, monitor diffs 
 │   │   │   ├── cookiecutter.json
 │   │   │   └── {{cookiecutter.project_name}}/
 │   │   └── python-lib/
-│   ├── tools/                        # Shared utilities
+│   ├── scripts/                      # Shared utilities
 │   │   ├── scripts/
 │   │   │   ├── new-project.sh       # Create project from template
 │   │   │   ├── setup-dev.sh         # Setup dev environment
@@ -62,7 +62,7 @@ Wake up, open 5 terminals, run AI CLI in each, give instructions, monitor diffs 
 ### 1. Create Shared Repository
 
 ```bash
-mkdir -p ~/code/shared/{guidelines,templates,tools/{scripts,config},docs}
+mkdir -p ~/code/shared/{guidelines,templates,scripts/{bin,config},docs}
 cd ~/code/shared
 git init
 ```
@@ -78,7 +78,7 @@ Common guidelines, templates, and tools for all projects.
 
 - **guidelines/**: Coding standards and patterns
 - **templates/**: Project templates (use cookiecutter/copier)
-- **tools/**: Scripts and shared configurations
+- **scripts/**: Scripts and shared configurations
 - **docs/**: Documentation including transition guide
 
 ## Usage

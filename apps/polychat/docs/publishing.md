@@ -30,7 +30,7 @@ cd shared/apps/polychat
 #    Edit: version = "0.2.0"
 
 # 2. Run publish script
-python tools/publish.py
+python scripts/publish.py
 
 # 3. Follow the interactive prompts:
 #    - Choose TestPyPI (for testing) or PyPI (production)
@@ -41,16 +41,16 @@ python tools/publish.py
 
 ```bash
 # Build only (no publishing)
-python tools/publish.py --build-only
+python scripts/publish.py --build-only
 
 # Publish to TestPyPI
-python tools/publish.py --test
+python scripts/publish.py --test
 
 # Publish to PyPI (production)
-python tools/publish.py --prod
+python scripts/publish.py --prod
 
 # Show credential setup help
-python tools/publish.py --setup
+python scripts/publish.py --setup
 ```
 
 ## What the Script Does
@@ -129,7 +129,7 @@ poetry publish
 PyPI doesn't allow re-uploading. You must bump the version number in `pyproject.toml`.
 
 ### "Authentication failed"
-Run `python tools/publish.py --setup` for credential instructions.
+Run `python scripts/publish.py --setup` for credential instructions.
 
 ### "Poetry not found"
 Install Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
@@ -151,7 +151,7 @@ From your local project:
 - Generated: `PKG-INFO`, `METADATA`
 
 NOT included:
-- `tests/`, `docs/`, `tools/`, `prompts/`
+- `tests/`, `docs/`, `scripts/`, `prompts/`
 - `.venv/`, `.pytest_cache/`
 - Development configs
 

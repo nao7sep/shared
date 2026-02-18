@@ -151,7 +151,7 @@ your-app/
 │           └── defaults.json
 ├── tests/                 # Not included in package
 ├── docs/                  # Not included in package
-└── tools/                 # Not included in package
+└── scripts/               # Not included in package
 ```
 
 ### Naming Conventions

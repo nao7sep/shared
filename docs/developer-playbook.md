@@ -53,7 +53,7 @@ project-name/
 ├── tests/
 │   ├── __init__.py
 │   └── test_*.py
-├── tools/                   # Development scripts
+├── scripts/                 # Development scripts
 ├── internal_docs/           # Project-specific documentation
 ├── pyproject.toml
 └── README.md

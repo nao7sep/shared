@@ -5,9 +5,9 @@ This script helps publish polychat to PyPI manually using Poetry.
 It reads the version from pyproject.toml and guides you through the process.
 
 Usage:
-    python tools/publish.py          # Interactive mode
-    python tools/publish.py --test   # Publish to TestPyPI
-    python tools/publish.py --prod   # Publish to PyPI (production)
+    python scripts/publish.py          # Interactive mode
+    python scripts/publish.py --test   # Publish to TestPyPI
+    python scripts/publish.py --prod   # Publish to PyPI (production)
 """
 
 import argparse

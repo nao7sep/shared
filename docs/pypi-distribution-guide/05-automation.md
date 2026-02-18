@@ -20,7 +20,7 @@ Manual publishing is error-prone:
 
 ## The Publishing Script
 
-Create `tools/publish.py` in your app directory:
+Create `scripts/publish.py` in your app directory:
 
 ```python
 #!/usr/bin/env python3
@@ -29,9 +29,9 @@ Create `tools/publish.py` in your app directory:
 Automates building and publishing packages with safety checks.
 
 Usage:
-    python tools/publish.py          # Interactive mode
-    python tools/publish.py --test   # Publish to TestPyPI
-    python tools/publish.py --prod   # Publish to PyPI
+    python scripts/publish.py          # Interactive mode
+    python scripts/publish.py --test   # Publish to TestPyPI
+    python scripts/publish.py --prod   # Publish to PyPI
 """
 
 import argparse
@@ -226,7 +226,7 @@ if __name__ == "__main__":
 ## Making the Script Executable
 
 ```bash
-chmod +x tools/publish.py
+chmod +x scripts/publish.py
 ```
 
 ## Usage Examples
@@ -235,7 +235,7 @@ chmod +x tools/publish.py
 
 ```bash
 cd /path/to/your/app
-python3 tools/publish.py
+python3 scripts/publish.py
 ```
 
 The script will:
@@ -249,7 +249,7 @@ The script will:
 ### Build Only
 
 ```bash
-python3 tools/publish.py --build-only
+python3 scripts/publish.py --build-only
 ```
 
 Just builds the package without publishing. Useful for:
@@ -260,7 +260,7 @@ Just builds the package without publishing. Useful for:
 ### Publish to TestPyPI
 
 ```bash
-python3 tools/publish.py --test
+python3 scripts/publish.py --test
 ```
 
 Automatically publishes to TestPyPI after building.
@@ -268,7 +268,7 @@ Automatically publishes to TestPyPI after building.
 ### Publish to PyPI
 
 ```bash
-python3 tools/publish.py --prod
+python3 scripts/publish.py --prod
 ```
 
 Publishes to production PyPI with confirmation prompt.
@@ -304,20 +304,20 @@ Publishes to production PyPI with confirmation prompt.
 # version = "0.1.0"
 
 # 2. Test build
-python3 tools/publish.py --build-only
+python3 scripts/publish.py --build-only
 
 # 3. Check contents
 tar -tzf dist/*.tar.gz
 
 # 4. Publish to TestPyPI
-python3 tools/publish.py --test
+python3 scripts/publish.py --test
 
 # 5. Test installation
 pipx install --index-url https://test.pypi.org/simple/ \
   --pip-args="--extra-index-url https://pypi.org/simple/" your-app
 
 # 6. If good, publish to PyPI
-python3 tools/publish.py --prod
+python3 scripts/publish.py --prod
 
 # 7. Tag in git
 git add pyproject.toml
@@ -365,7 +365,7 @@ If you prefer shell scripts:
 
 ```bash
 #!/bin/bash
-# tools/publish.sh
+# scripts/publish.sh
 
 set -e
 

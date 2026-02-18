@@ -91,7 +91,7 @@ This means:
 - ✅ `src/your_package/` (your code)
 - ✅ `README.md`
 - ✅ `LICENSE`
-- ❌ `tests/`, `docs/`, `tools/` (excluded automatically)
+- ❌ `tests/`, `docs/`, `scripts/` (excluded automatically)
 - ❌ `.venv/`, `__pycache__/` (build artifacts - always excluded)
 
 ### Package Data (Files Within Your Package)
@@ -164,7 +164,7 @@ your-repo/
 │   ├── app1/
 │   │   ├── pyproject.toml
 │   │   ├── src/
-│   │   └── tools/
+│   │   └── scripts/
 │   └── app2/
 │       ├── pyproject.toml
 │       └── src/
