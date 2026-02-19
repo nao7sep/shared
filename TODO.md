@@ -19,6 +19,7 @@
 - split-conversation-into-docs.md as skill
 - catalogue of tools and work reports
 - report on migration, tk, polychat
+- user friendly repo root readme.md
 
 ## History
 
