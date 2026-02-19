@@ -29,6 +29,7 @@
 - maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents
 - maybe, separate repo for one-shot docs?
 - time to refine anything and everything in current repos. moving on to typescript soon
+- it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?
 
 ## History
 
