@@ -22,7 +22,7 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 
 ```bash
 cd polychat
-poetry install
+uv sync
 ```
 
 ## Quick Start
@@ -30,7 +30,7 @@ poetry install
 ### 1. Create a Profile
 
 ```bash
-poetry run pc init ~/my-profile.json
+uv run pc init ~/my-profile.json
 ```
 
 This creates a template file:
@@ -44,10 +44,10 @@ Then edit the template values (models, paths, and `api_keys`) before running Pol
 
 ```bash
 # Start with a specific chat
-poetry run pc -p ~/my-profile.json -c ~/chats/my-chat.json
+uv run pc -p ~/my-profile.json -c ~/chats/my-chat.json
 
 # Or start without a chat (use /new or /open commands)
-poetry run pc -p ~/my-profile.json
+uv run pc -p ~/my-profile.json
 ```
 
 The app goes straight to the REPL and shows configured AI providers.
@@ -497,18 +497,18 @@ Contributions welcome! Please follow the existing code style and add tests for n
 ### Running Tests
 
 ```bash
-poetry run pytest
+uv run pytest
 ```
 
 ### Code Formatting
 
 ```bash
-poetry run black .
-poetry run ruff check .
+uv run ruff check .
+uv run ruff format .
 ```
 
 ### Type Checking
 
 ```bash
-poetry run mypy src/polychat
+uv run mypy src/polychat
 ```

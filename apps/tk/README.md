@@ -17,12 +17,13 @@ A timezone-aware CLI task manager with subjective day tracking.
 
 ### 1. Install
 ```bash
-poetry install
+cd /path/to/shared/apps/tk
+uv sync
 ```
 
 ### 2. Create a profile
 ```bash
-poetry run tk init -p ~/work/my-profile.json
+uv run tk init -p ~/work/my-profile.json
 ```
 
 This creates a profile with:
@@ -33,7 +34,7 @@ This creates a profile with:
 
 ### 3. Start the REPL
 ```bash
-poetry run tk -p ~/work/my-profile.json
+uv run tk -p ~/work/my-profile.json
 ```
 
 You'll see:
@@ -245,25 +246,17 @@ Generated automatically after each change (if `auto_sync: true`):
 
 ## Installation for Daily Use
 
-After `poetry install`, you can either:
+After `uv sync`, you can either:
 
-**Option 1:** Use poetry shell
+**Option 1:** Run via uv
 ```bash
-cd /path/to/tk
-poetry shell
-tk -p ~/my-profile.json
+cd /path/to/shared/apps/tk
+uv run tk -p ~/my-profile.json
 ```
 
 **Option 2:** Create an alias
 ```bash
-alias tk='poetry run --directory /path/to/tk tk'
-tk -p ~/my-profile.json
-```
-
-**Option 3:** Install in editable mode
-```bash
-cd /path/to/tk
-pip install -e .
+alias tk='uv run --directory /path/to/shared/apps/tk tk'
 tk -p ~/my-profile.json
 ```
 
@@ -285,7 +278,7 @@ TK_DEBUG=1 tk -p ~/my-profile.json
 ### Debug Mode
 Set `TK_DEBUG=1` for detailed stack traces on unexpected errors:
 ```bash
-TK_DEBUG=1 poetry run tk -p ~/my-profile.json
+TK_DEBUG=1 uv run tk -p ~/my-profile.json
 ```
 
 ### Manual Data Edits

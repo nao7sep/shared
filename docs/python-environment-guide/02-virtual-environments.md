@@ -51,27 +51,27 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Your prompt changes to show (.venv)
-# Now pip installs go into .venv, not Homebrew Python
-pip install fastapi
+# Now uv pip installs go into .venv, not Homebrew Python
+uv pip install fastapi
 
 # Deactivate
 deactivate
 ```
 
-## Creating Virtual Environments (Poetry)
+## Creating Virtual Environments (uv)
 
-**Poetry automates this**:
+**uv automates this**:
 
 ```bash
 cd my-project
 
-# Initialize project
-poetry init
+# Initialize project (creates pyproject.toml)
+uv init
 
 # Add a dependency - creates .venv if not present
-poetry add fastapi
-# Poetry creates .venv automatically
-# Poetry installs fastapi to .venv/lib/python3.x/site-packages/
+uv add fastapi
+# uv creates .venv automatically
+# uv installs fastapi to .venv/lib/python3.x/site-packages/
 
 # Run commands in the virtual environment
 poetry run uvicorn app.main:app --reload
@@ -124,20 +124,18 @@ When you run `poetry run uvicorn`, it uses `.venv/bin/uvicorn`.
 
 ## Why Isolation Matters
 
-**Without .venv**:
+**Without .venv** (also: direct `pip install` is blocked by Homebrew Python):
 ```bash
-python3 -m pip install fastapi==0.100.0  # Installs to Homebrew Python
-cd ../other-project
-python3 -m pip install fastapi==0.109.0  # Overwrites 0.100.0!
-# First project now broken
+# Homebrew Python blocks this with "externally managed environment" error
+python3 -m pip install fastapi==0.100.0
 ```
 
-**With .venv**:
+**With .venv via uv**:
 ```bash
 cd project-a
-poetry add fastapi==0.100.0  # Installs to project-a/.venv
+uv add fastapi  # Installs to project-a/.venv
 cd ../project-b
-poetry add fastapi==0.109.0  # Installs to project-b/.venv
+uv add fastapi  # Installs to project-b/.venv
 # Both projects work independently
 ```
 
@@ -237,21 +235,19 @@ poetry config virtualenvs.in-project true
 
 ### Option 1: Activate
 ```bash
-poetry shell
-# Spawns new shell with .venv activated
-# Prompt shows: (.venv)
+source .venv/bin/activate
 
 python3 --version  # Uses .venv Python
-pip list           # Shows .venv packages
+uv pip list        # Shows .venv packages
 uvicorn app.main:app --reload  # Runs from .venv
 
-exit  # Deactivate
+deactivate
 ```
 
 ### Option 2: Run (without activating)
 ```bash
-poetry run python3 --version
-poetry run uvicorn app.main:app --reload
+uv run python3 --version
+uv run uvicorn app.main:app --reload
 poetry run pytest
 # Executes in .venv without activating shell
 ```

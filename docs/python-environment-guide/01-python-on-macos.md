@@ -74,28 +74,20 @@ python3 --version
 
 **Important**: When Homebrew Python updates (e.g., 3.11 → 3.12), you'll need to rebuild project virtual environments (covered in document 02).
 
-## Homebrew Python's pip
+## Installing Python Tools Globally
 
-Homebrew Python comes with its own pip.
+Modern Homebrew Python blocks direct `pip install` (PEP 668 "externally managed environment"). Use `uv tool` instead:
 
-**Updating pip**:
 ```bash
-python3 -m pip install --upgrade pip
+# Install uv (manages everything else)
+brew install uv
+
+# Install CLI tools globally via uv tool
+uv tool install my-tool
 ```
 
-**What to install here**:
-Only tools you want available globally across all projects:
-```bash
-# Example: Install Poetry (dependency manager)
-# Note: Installing poetry via brew is preferred
-brew install poetry
-
-# Or if you must use pip:
-python3 -m pip install poetry cookiecutter httpie
-```
-
-**What NOT to install here**:
-Project-specific packages (FastAPI, SQLAlchemy, etc.) - these go in virtual environments.
+**What NOT to install globally**:
+Project-specific packages (FastAPI, SQLAlchemy, etc.) — these go in project virtual environments managed by uv.
 
 ## Python Symlinks on macOS
 
@@ -128,13 +120,8 @@ which python3
 python3 -c "import sys; print(sys.prefix)"
 # Expected: /opt/homebrew/... or /usr/local/...
 
-# 3. Check pip location
-which pip3
-# Expected: /opt/homebrew/bin/pip3 or /usr/local/bin/pip3
-
-# 4. List Homebrew Python packages
-python3 -m pip list
-# Should show minimal packages (pip, setuptools, wheel, maybe poetry)
+# 3. Verify uv is installed
+uv --version
 ```
 
 ## Summary
@@ -148,7 +135,7 @@ python3 -m pip list
 ```bash
 brew install python        # Install
 brew upgrade python        # Update
-python3 -m pip install --upgrade pip  # Update pip
+brew install uv            # Install uv (replaces pip, pipx, pyenv, poetry)
 ```
 
 Next: Learn about virtual environments in 02-virtual-environments.md

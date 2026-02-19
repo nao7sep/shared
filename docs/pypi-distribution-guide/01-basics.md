@@ -4,7 +4,7 @@ Understanding Python package distribution fundamentals before you start publishi
 
 ## What is PyPI?
 
-**PyPI (Python Package Index)** is the official repository for Python packages. When users run `pip install your-package`, pip downloads it from PyPI.
+**PyPI (Python Package Index)** is the official repository for Python packages. When users run `uv tool install your-package`, uv downloads it from PyPI.
 
 - **Website**: https://pypi.org
 - **Purpose**: Central repository for all public Python packages
@@ -31,7 +31,7 @@ Understanding Python package distribution fundamentals before you start publishi
 Because dependencies aren't on TestPyPI, you need both indexes:
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ \
+uv tool install --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
   your-package
 ```
@@ -81,14 +81,14 @@ MAJOR.MINOR.PATCH
 Only what's specified in `pyproject.toml`:
 
 ```toml
-[tool.poetry]
-packages = [{include = "your_package", from = "src"}]
+[project]
+name = "your-package"
 readme = "README.md"
-license = "LICENSE"
+license = {file = "LICENSE"}
 ```
 
 This means:
-- ✅ `src/your_package/` (your code)
+- ✅ `src/your_package/` (auto-detected by uv_build)
 - ✅ `README.md`
 - ✅ `LICENSE`
 - ❌ `tests/`, `docs/`, `scripts/` (excluded automatically)
@@ -107,7 +107,7 @@ src/your_package/
     └── system.txt
 ```
 
-Poetry includes them automatically! Just ensure they're inside the package directory specified in `pyproject.toml`.
+uv_build includes them automatically! Just ensure they're inside the package directory.
 
 ### Verifying Package Contents
 

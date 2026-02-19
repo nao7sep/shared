@@ -6,8 +6,8 @@ The step-by-step process for building and publishing your package to PyPI.
 
 From [02-setup.md](02-setup.md):
 - PyPI and TestPyPI accounts configured
-- API tokens stored in Poetry config
-- TestPyPI repository configured
+- API tokens saved securely
+- uv installed
 
 ## The Publishing Process Overview
 
@@ -24,7 +24,7 @@ From [02-setup.md](02-setup.md):
 Edit `pyproject.toml`:
 
 ```toml
-[tool.poetry]
+[project]
 name = "your-app"
 version = "0.1.0"  # ← Change this
 ```
@@ -42,7 +42,7 @@ Navigate to your app directory:
 
 ```bash
 cd /path/to/your/app
-poetry build
+uv build
 ```
 
 This creates two files in `dist/`:
@@ -70,7 +70,7 @@ If rebuilding, clean the `dist/` directory first:
 
 ```bash
 rm -rf dist/
-poetry build
+uv build
 ```
 
 Or if you have a cleanup script (see [05-automation.md](05-automation.md)), it can handle this.
@@ -80,19 +80,17 @@ Or if you have a cleanup script (see [05-automation.md](05-automation.md)), it c
 Always test on TestPyPI first:
 
 ```bash
-poetry publish -r testpypi
+export UV_PUBLISH_TOKEN=<your-testpypi-token>
+uv publish --publish-url https://test.pypi.org/legacy/
 ```
 
-- `-r testpypi`: Publishes to the TestPyPI repository we configured earlier
-- Poetry will use your stored token automatically
-- If successful, you'll see a URL to your package on TestPyPI
+If successful, you'll see a URL to your package on TestPyPI.
 
 ### Success Output
 
 ```
-Publishing your-app (0.1.0) to testpypi
- - Uploading your_app-0.1.0-py3-none-any.whl 100%
- - Uploading your_app-0.1.0.tar.gz 100%
+Uploading your_app-0.1.0-py3-none-any.whl
+Uploading your_app-0.1.0.tar.gz
 ```
 
 ### View Your Package
@@ -109,10 +107,10 @@ Check:
 
 Before publishing to production, test that your package installs and works.
 
-### Using pip
+### Using uv tool (For CLI Apps)
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ \
+uv tool install --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
   your-app==0.1.0
 ```
@@ -120,17 +118,9 @@ pip install --index-url https://test.pypi.org/simple/ \
 **Why both indexes?**
 - Your app is on TestPyPI
 - Dependencies (like `openai`, `anthropic`) are on real PyPI
-- `--extra-index-url` lets pip find dependencies
+- `--extra-index-url` lets uv find dependencies
 
-### Using pipx (For CLI Apps)
-
-```bash
-pipx install --index-url https://test.pypi.org/simple/ \
-  --pip-args="--extra-index-url https://pypi.org/simple/" \
-  your-app==0.1.0
-```
-
-See [04-installation.md](04-installation.md) for more on pip vs pipx.
+See [04-installation.md](04-installation.md) for more on installing from TestPyPI.
 
 ### Test the Installation
 
@@ -158,23 +148,17 @@ Fix the issue, increment version (`0.0.2`), rebuild, and republish to TestPyPI.
 Once TestPyPI installation works perfectly:
 
 ```bash
-poetry publish
+export UV_PUBLISH_TOKEN=<your-pypi-token>
+uv publish
 ```
 
-**No `-r` flag needed** - publishes to PyPI by default.
-
-### Confirmation Prompt
-
-Poetry doesn't ask for confirmation! Once you hit Enter, it publishes.
-
-**Best practice**: Use a helper script (see [05-automation.md](05-automation.md)) that asks for confirmation.
+**Best practice**: Use a helper script (see [05-automation.md](05-automation.md)) that asks for confirmation before publishing to production.
 
 ### Success Output
 
 ```
-Publishing your-app (0.1.0) to PyPI
- - Uploading your_app-0.1.0-py3-none-any.whl 100%
- - Uploading your_app-0.1.0.tar.gz 100%
+Uploading your_app-0.1.0-py3-none-any.whl
+Uploading your_app-0.1.0.tar.gz
 ```
 
 ### View Your Package
@@ -188,11 +172,7 @@ Your package is now publicly available!
 Verify the production package works:
 
 ```bash
-# Using pipx (recommended for CLI apps)
-pipx install your-app
-
-# Using pip
-pip install your-app
+uv tool install your-app
 ```
 
 No need for `--index-url` or `--extra-index-url` - everything is on PyPI now.
@@ -232,8 +212,8 @@ version = "0.1.0"  # to
 version = "0.1.1"
 
 # Then rebuild and publish
-poetry build
-poetry publish
+uv build
+uv publish
 ```
 
 ### "Invalid credentials"
@@ -243,8 +223,8 @@ HTTP Error 403: Invalid or non-existent authentication information.
 ```
 
 **Solutions:**
-- Verify token is configured: `poetry config --list | grep pypi-token`
-- Reconfigure token: `poetry config pypi-token.pypi pypi-YOUR_TOKEN`
+- Check `UV_PUBLISH_TOKEN` environment variable is set correctly
+- Verify token starts with `pypi-`
 - Check token hasn't been revoked in PyPI settings
 - Ensure token has correct scope (entire account or project)
 
@@ -268,7 +248,7 @@ Update `name` in `pyproject.toml` and try again.
 Before publishing to production PyPI:
 
 - [ ] Version number updated in `pyproject.toml`
-- [ ] `poetry build` succeeds without errors
+- [ ] `uv build` succeeds without errors
 - [ ] Checked package contents with `tar -tzf dist/*.tar.gz`
 - [ ] Published to TestPyPI successfully
 - [ ] Tested installation from TestPyPI
@@ -281,28 +261,28 @@ Before publishing to production PyPI:
 **For first release (0.0.1):**
 ```bash
 # Edit pyproject.toml → version = "0.0.1"
-poetry build
-poetry publish -r testpypi
+uv build
+uv publish --publish-url https://test.pypi.org/legacy/
 # Test installation from TestPyPI
-poetry publish  # Production PyPI
+uv publish  # Production PyPI
 ```
 
 **For subsequent releases:**
 ```bash
 # Edit pyproject.toml → version = "0.1.0"
-poetry build
-poetry publish  # Skip TestPyPI if you're confident
+uv build
+uv publish  # Skip TestPyPI if you're confident
 ```
 
 **For testing iterations:**
 ```bash
 # Edit pyproject.toml → version = "0.0.2"
-poetry build
-poetry publish -r testpypi
+uv build
+uv publish --publish-url https://test.pypi.org/legacy/
 # Test, find issue, increment version, repeat
 ```
 
 ## Next Steps
 
-- Learn about [04-installation.md](04-installation.md) - Installing packages with pip vs pipx
+- Learn about [04-installation.md](04-installation.md) - Installing packages with uv tool
 - Or skip to [05-automation.md](05-automation.md) - Create a helper script to automate this workflow

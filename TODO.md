@@ -20,6 +20,7 @@
 - catalogue of tools and work reports
 - report on migration, tk, polychat
 - user friendly repo root readme.md
+- migrate from poetry and hatchling to uv
 
 ## History
 

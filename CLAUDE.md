@@ -28,5 +28,8 @@ Never use raw dicts for structured data — session state, command results, conf
 - **Testing**: pytest
 - **CLI tool installation**: `uv tool install` (replaces pipx)
 
+## Don't Edit TODO.md
+The `TODO.md` at each repo root is managed by the `tk` task manager, which keeps it in sync with a JSON data file. Editing `TODO.md` directly breaks that sync. Never modify `TODO.md` files.
+
 ## Don't Add Silently
 If caching, background jobs, WebSockets, logging beyond basics, monitoring, Docker, CI/CD, or similar infrastructure would meaningfully benefit the current task, mention it — but don't implement it unless asked.

@@ -33,7 +33,7 @@ grep -rh "^import \|^from " src/your_package --include="*.py" | \
   sort -u
 ```
 
-Compare this list to `[tool.poetry.dependencies]` - they should match (excluding standard library modules).
+Compare this list to `[project.dependencies]` - they should match (excluding standard library modules).
 
 ### Standard Library vs External
 
@@ -54,14 +54,14 @@ import anthropic
 
 ## Version Constraints
 
-### The Caret (^) Constraint
+### No Version Constraints
 
-For applications, use caret (`^`) for compatible version ranges:
+For applications, list dependencies without version constraints and let uv resolve the latest compatible versions:
 
 ```toml
-[tool.poetry.dependencies]
-python = "^3.10"
-openai = "^2.20.0"
+[project]
+requires-python = ">=3.9"
+dependencies = ["openai", "anthropic"]
 ```
 
 **What `^` means:**
@@ -114,25 +114,17 @@ package = "1.2.*"
 package = ">=1.2.0,<2.0.0"
 ```
 
-### When to Update Version Minimums
+### Updating Dependencies
 
-After updating dependencies:
+Run periodically to get latest compatible versions:
 
 ```bash
-poetry update
+uv lock --upgrade
+uv sync
+uv run pytest  # Verify nothing broke
 ```
 
-Update `pyproject.toml` to reflect new minimums:
-
-```toml
-# Before poetry update
-openai = "^2.20.0"
-
-# After update (locked to 2.21.0)
-openai = "^2.21.0"  # Update this
-```
-
-**Why?** Someone installing from source (without lock file) gets tested versions.
+uv resolves the latest compatible versions and updates `uv.lock`.
 
 ## Project Structure Best Practices
 
@@ -173,7 +165,7 @@ src/your_package/  # Use underscores for Python
 ### CLI Entry Points
 
 ```toml
-[tool.poetry.scripts]
+[project.scripts]
 your-command = "your_package.cli:main"
 ```
 
@@ -188,20 +180,10 @@ your-command = "your_package.cli:main"
 ```markdown
 ## Installation
 
-### Using pipx (Recommended)
-
 \`\`\`bash
-pipx install your-app
-\`\`\`
-
-### Using pip
-
-\`\`\`bash
-pip install your-app
+uv tool install your-app
 \`\`\`
 ```
-
-**Always list pipx first for CLI apps.**
 
 ### Quick Start After Installation
 
@@ -271,15 +253,9 @@ local-config.json
 
 ### 1. Including Test Files in Package
 
-**Problem:**
-```toml
-packages = [{include = "*", from = "."}]  # Too broad!
-```
+**Problem:** Using a build backend that includes tests.
 
-**Solution:**
-```toml
-packages = [{include = "your_package", from = "src"}]
-```
+**Solution:** Use uv_build — it auto-detects the `src/` layout and only includes `src/your_package/`.
 
 Verify with: `tar -tzf dist/*.tar.gz`
 
@@ -365,15 +341,11 @@ pywin32 = { version = "^306", markers = "platform_system == 'Windows'" }
 
 ## Testing Best Practices
 
-### Test in Clean Environment
+### Test with uv tool
 
 ```bash
-# Create temp venv
-python3 -m venv /tmp/test-env
-source /tmp/test-env/bin/activate
-
 # Install from TestPyPI
-pip install --index-url https://test.pypi.org/simple/ \
+uv tool install --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
   your-app
 
@@ -382,23 +354,7 @@ your-command --help
 your-command init
 
 # Cleanup
-deactivate
-rm -rf /tmp/test-env
-```
-
-### Test with pipx
-
-```bash
-# Install
-pipx install --index-url https://test.pypi.org/simple/ \
-  --pip-args="--extra-index-url https://pypi.org/simple/" \
-  your-app
-
-# Test
-your-command --help
-
-# Cleanup
-pipx uninstall your-app
+uv tool uninstall your-app
 ```
 
 ## Documentation Structure
@@ -424,11 +380,10 @@ your-app/
 Before publishing to production PyPI:
 
 - [ ] Version incremented in `pyproject.toml`
-- [ ] Dependencies up to date (`poetry update`)
-- [ ] Dependency minimums updated (if needed)
+- [ ] Dependencies up to date (`uv lock --upgrade && uv sync`)
 - [ ] README reflects current version/features
-- [ ] Tests pass (`poetry run pytest`)
-- [ ] Built package (`poetry build`)
+- [ ] Tests pass (`uv run pytest`)
+- [ ] Built package (`uv build`)
 - [ ] Verified package contents (`tar -tzf dist/*.tar.gz`)
 - [ ] Published to TestPyPI
 - [ ] Tested installation from TestPyPI
@@ -479,16 +434,16 @@ Use these to improve your process and help others.
 
 **Key Takeaways:**
 
-1. **Dependencies**: List only direct imports, use `^` constraints
-2. **Structure**: Package data inside src/package/, exclude tests
+1. **Dependencies**: List only direct imports, no version pins in apps
+2. **Structure**: Package data inside src/package/, uv_build handles the rest
 3. **Testing**: Always test with TestPyPI first
-4. **Documentation**: Clear installation instructions, pipx first for CLI
+4. **Documentation**: Clear installation instructions, uv tool first for CLI
 5. **Workflow**: Use automation scripts, maintain checklists
 6. **Monorepos**: Manual publishing avoids tag conflicts
 
 ## Further Reading
 
-- [Poetry Documentation](https://python-poetry.org/docs/)
+- [uv Documentation](https://docs.astral.sh/uv/)
 - [PEP 440 - Version Identification](https://peps.python.org/pep-0440/)
 - [Semantic Versioning](https://semver.org/)
 - [PyPI Help](https://pypi.org/help/)
@@ -500,7 +455,7 @@ You now have a complete understanding of:
 - PyPI fundamentals and TestPyPI
 - Setting up accounts and credentials
 - The publishing workflow
-- pip vs pipx for installations
+- uv tool for installations
 - Automation scripts
 - Best practices and pitfalls
 

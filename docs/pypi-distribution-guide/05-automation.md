@@ -66,22 +66,6 @@ def get_version() -> str:
     return match.group(1)
 
 
-def check_poetry() -> None:
-    """Ensure Poetry is installed."""
-    try:
-        result = subprocess.run(
-            ["poetry", "--version"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        print(f"✓ Poetry found: {result.stdout.strip()}")
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print("Error: Poetry not found.")
-        print("Install: curl -sSL https://install.python-poetry.org | python3 -")
-        sys.exit(1)
-
-
 def check_git_status() -> None:
     """Warn about uncommitted changes."""
     result = run(["git", "status", "--porcelain"], check=True)
@@ -96,18 +80,18 @@ def check_git_status() -> None:
 
 
 def build_package() -> None:
-    """Build package with Poetry."""
+    """Build package with uv."""
     print("\n=== Building Package ===")
-    
+
     # Clean dist/
     dist_dir = Path("dist")
     if dist_dir.exists():
         print("Cleaning dist/ directory...")
         for file in dist_dir.glob("*"):
             file.unlink()
-    
+
     # Build
-    run(["poetry", "build"], capture=False)
+    run(["uv", "build"], capture=False)
     print("✓ Package built")
     
     # Show files
@@ -121,36 +105,33 @@ def build_package() -> None:
 def publish_testpypi() -> None:
     """Publish to TestPyPI."""
     print("\n=== Publishing to TestPyPI ===")
-    
-    # Configure repo
-    run(["poetry", "config", "repositories.testpypi", 
-         "https://test.pypi.org/legacy/"])
-    
+
     print("Publishing (you may be prompted for token)...")
-    run(["poetry", "publish", "-r", "testpypi"], capture=False, check=False)
-    
+    run(["uv", "publish", "--publish-url", "https://test.pypi.org/legacy/"],
+        capture=False, check=False)
+
     print("\n✓ Published to TestPyPI!")
     print("\nTest installation:")
-    print("  pipx install --index-url https://test.pypi.org/simple/ \\")
-    print("    --pip-args=\"--extra-index-url https://pypi.org/simple/\" your-app")
+    print("  uv tool install --index-url https://test.pypi.org/simple/ \\")
+    print("    --extra-index-url https://pypi.org/simple/ your-app")
 
 
 def publish_pypi() -> None:
     """Publish to PyPI (production)."""
     print("\n=== Publishing to PyPI (Production) ===")
-    
+
     print("⚠ This will publish to PRODUCTION PyPI!")
     response = input("Type 'yes' to confirm: ").strip()
     if response != 'yes':
         print("Cancelled.")
         sys.exit(0)
-    
+
     print("Publishing (you may be prompted for token)...")
-    run(["poetry", "publish"], capture=False, check=False)
-    
+    run(["uv", "publish"], capture=False, check=False)
+
     print("\n✓ Published to PyPI!")
     print("\nInstall with:")
-    print("  pipx install your-app")
+    print("  uv tool install your-app")
 
 
 def main():
@@ -170,9 +151,7 @@ def main():
     if not Path("pyproject.toml").exists():
         print("Error: Must run from project root")
         sys.exit(1)
-    
-    check_poetry()
-    
+
     # Show version
     version = get_version()
     print(f"\nCurrent version: {version}")
@@ -277,7 +256,6 @@ Publishes to production PyPI with confirmation prompt.
 
 ### Safety Checks
 
-- **Poetry verification**: Ensures Poetry is installed
 - **Git status check**: Warns about uncommitted changes
 - **Confirmation prompt**: For production PyPI publishing
 - **Clean dist/**: Removes old builds automatically
@@ -313,8 +291,8 @@ tar -tzf dist/*.tar.gz
 python3 scripts/publish.py --test
 
 # 5. Test installation
-pipx install --index-url https://test.pypi.org/simple/ \
-  --pip-args="--extra-index-url https://pypi.org/simple/" your-app
+uv tool install --index-url https://test.pypi.org/simple/ \
+  --extra-index-url https://pypi.org/simple/ your-app
 
 # 6. If good, publish to PyPI
 python3 scripts/publish.py --prod
@@ -370,7 +348,7 @@ If you prefer shell scripts:
 set -e
 
 echo "=== Building Package ==="
-poetry build
+uv build
 
 echo ""
 echo "=== Choose Target ==="
@@ -379,11 +357,11 @@ echo "2. PyPI"
 read -p "Choice: " choice
 
 if [ "$choice" == "1" ]; then
-    poetry publish -r testpypi
+    uv publish --publish-url https://test.pypi.org/legacy/
 elif [ "$choice" == "2" ]; then
     read -p "Publish to PRODUCTION PyPI? (yes/no): " confirm
     if [ "$confirm" == "yes" ]; then
-        poetry publish
+        uv publish
     fi
 fi
 ```
@@ -423,7 +401,7 @@ def run_tests():
     """Run tests before building."""
     print("\n=== Running Tests ===")
     result = subprocess.run(
-        ["poetry", "run", "pytest"],
+        ["uv", "run", "pytest"],
         capture_output=False
     )
     if result.returncode != 0:

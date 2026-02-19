@@ -249,10 +249,9 @@ Base URL: `/api/v1`
 
 ```bash
 cd backend
-# Use poetry or pdm (modern alternatives to pip)
-poetry init
-poetry add fastapi uvicorn sqlalchemy alembic pydantic-settings python-jose passlib bcrypt
-poetry add --group dev pytest httpx black ruff
+uv init
+uv add fastapi uvicorn sqlalchemy alembic pydantic-settings python-jose passlib bcrypt
+uv add --group dev pytest httpx ruff mypy
 ```
 
 ### Step 2: Tell AI to Implement
@@ -307,8 +306,8 @@ npx openapi-typescript http://localhost:8000/openapi.json -o src/types/api.ts
 **Option B**: Use pydantic-to-typescript
 ```bash
 # In backend
-poetry add --group dev pydantic-to-typescript
-pydantic2ts --module app.schemas --output ../frontend/src/types/api.ts
+uv add --group dev pydantic-to-typescript
+uv run pydantic2ts --module app.schemas --output ../frontend/src/types/api.ts
 ```
 
 ### Step 2: Tell AI to Implement

@@ -12,12 +12,13 @@ Create accounts and tokens:
 
 ### 2. Configure Tokens (Optional)
 
+Set as environment variable before publishing:
+
 ```bash
-poetry config pypi-token.pypi <your-pypi-token>
-poetry config pypi-token.testpypi <your-testpypi-token>
+export UV_PUBLISH_TOKEN=<your-token>
 ```
 
-If you skip this, Poetry will prompt for tokens when publishing.
+Or pass directly via `uv publish --token <your-token>`. If omitted, uv will prompt.
 
 ## Publishing Workflow
 
@@ -30,7 +31,7 @@ cd shared/apps/polychat
 #    Edit: version = "0.2.0"
 
 # 2. Run publish script
-python scripts/publish.py
+uv run python scripts/publish.py
 
 # 3. Follow the interactive prompts:
 #    - Choose TestPyPI (for testing) or PyPI (production)
@@ -41,22 +42,21 @@ python scripts/publish.py
 
 ```bash
 # Build only (no publishing)
-python scripts/publish.py --build-only
+uv run python scripts/publish.py --build-only
 
 # Publish to TestPyPI
-python scripts/publish.py --test
+uv run python scripts/publish.py --test
 
 # Publish to PyPI (production)
-python scripts/publish.py --prod
+uv run python scripts/publish.py --prod
 
 # Show credential setup help
-python scripts/publish.py --setup
+uv run python scripts/publish.py --setup
 ```
 
 ## What the Script Does
 
 1. **Validates environment**
-   - Checks Poetry is installed
    - Verifies pyproject.toml exists
    - Warns about uncommitted git changes
 
@@ -64,7 +64,7 @@ python scripts/publish.py --setup
 
 3. **Builds package**
    - Cleans `dist/` directory
-   - Runs `poetry build`
+   - Runs `uv build`
    - Shows built file sizes
 
 4. **Publishes** (based on your choice)
@@ -75,7 +75,7 @@ python scripts/publish.py --setup
 
 ### From TestPyPI
 ```bash
-pip install --index-url https://test.pypi.org/simple/ \
+uv tool install --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
   polychat
 
@@ -84,7 +84,7 @@ pc --version
 
 ### From PyPI
 ```bash
-pip install polychat
+uv tool install polychat
 pc --version
 ```
 
@@ -109,18 +109,15 @@ This is optional - tags are not required for PyPI publishing.
 
 ## Manual Publishing (Without Script)
 
-If you prefer raw Poetry commands:
-
 ```bash
 # Build
-poetry build
+uv build
 
 # Publish to TestPyPI
-poetry config repositories.testpypi https://test.pypi.org/legacy/
-poetry publish -r testpypi
+uv publish --publish-url https://test.pypi.org/legacy/
 
 # Publish to PyPI
-poetry publish
+uv publish
 ```
 
 ## Troubleshooting
@@ -129,18 +126,10 @@ poetry publish
 PyPI doesn't allow re-uploading. You must bump the version number in `pyproject.toml`.
 
 ### "Authentication failed"
-Run `python scripts/publish.py --setup` for credential instructions.
-
-### "Poetry not found"
-Install Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
+Run `uv run python scripts/publish.py --setup` for credential instructions.
 
 ### Build contains wrong files
-Check `packages` in `pyproject.toml`:
-```toml
-packages = [{include = "polychat", from = "src"}]
-```
-
-Only `src/polychat/` is included in the package.
+uv_build auto-detects the `src/` layout. Ensure `src/polychat/` exists and pyproject.toml has `name = "polychat"`.
 
 ## What Gets Published
 

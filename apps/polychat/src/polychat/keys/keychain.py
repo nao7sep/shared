@@ -24,7 +24,7 @@ def load_from_keychain(service: str, account: str) -> str:
     """
     if keyring is None:
         raise ImportError(
-            "keyring package not installed.\n" "Install with: poetry add keyring"
+            "keyring package not installed.\n" "Install with: uv add keyring"
         )
 
     try:

@@ -127,5 +127,8 @@ When generating or reviewing code, prioritize in this order:
 4. **Fit** — follows existing patterns in the codebase
 5. **Style** — only if genuinely confusing; don't nitpick
 
+## Don't Edit TODO.md
+The `TODO.md` at each repo root is managed by the `tk` task manager, which keeps it in sync with a JSON data file. Editing `TODO.md` directly bypasses tk and breaks the sync — tasks added or removed by hand will not appear in the task history and will be overwritten on the next sync. Never modify any `TODO.md` file. If a task is done, tell the user to mark it via `tk`.
+
 ## Don't Add Silently
 If caching, background jobs, WebSockets, logging beyond basics, monitoring, Docker, CI/CD, or similar infrastructure would meaningfully benefit the current task, mention it — but don't implement it unless asked.

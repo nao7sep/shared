@@ -9,7 +9,7 @@ This guide is structured as an ordered learning path:
 1. **[01-basics.md](01-basics.md)** - PyPI fundamentals, TestPyPI vs PyPI, version numbering, and what gets packaged
 2. **[02-setup.md](02-setup.md)** - One-time setup: accounts, tokens, Poetry configuration
 3. **[03-publishing.md](03-publishing.md)** - The publishing workflow: building and uploading packages
-4. **[04-installation.md](04-installation.md)** - Installing packages with pip vs pipx, testing installations
+4. **[04-installation.md](04-installation.md)** - Installing packages with uv tool, testing installations
 5. **[05-automation.md](05-automation.md)** - Creating helper scripts for the release process
 6. **[06-best-practices.md](06-best-practices.md)** - Dependency management, version constraints, common pitfalls
 
@@ -23,10 +23,10 @@ This guide is structured as an ordered learning path:
 ## Context
 
 This guide focuses on:
-- **Poetry** as the build/publish tool
+- **uv** as the build/publish tool (`uv build`, `uv publish`)
 - **Manual publishing workflow** (with helper scripts) instead of GitHub Actions
 - **CLI applications** specifically (not libraries)
-- **pipx** as the recommended installation method
+- **uv tool** as the recommended installation method (replaces pipx)
 - Monorepo-friendly approaches
 
 If you need GitHub Actions automation or library-specific guidance, those topics are noted but not the primary focus.
@@ -40,7 +40,7 @@ If you're already familiar with PyPI basics:
 
 ## Assumptions
 
-- You have a Python project using Poetry
+- You have a Python project using uv
 - Your project structure follows: `apps/your-app/pyproject.toml`
 - You're comfortable with command-line tools
 - You want manual control over releases (not full automation)
