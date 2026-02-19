@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Update Python and Poetry
-# This script ensures Homebrew, Python, and Poetry are installed via Homebrew,
-# then updates Python and Poetry to their latest versions
+# Update Python and uv
+# This script ensures Homebrew, Python, and uv are installed via Homebrew,
+# then updates Python and uv to their latest versions
 
 set -e  # Exit on any error
 
@@ -10,11 +10,11 @@ echo ""
 echo "=== Python Update ==="
 echo ""
 
-# Check if Homebrew is installed (needed for Python and Poetry)
+# Check if Homebrew is installed (needed for Python and uv)
 if command -v brew &> /dev/null; then
     echo "✓ Homebrew is installed"
 else
-    echo "Installing Homebrew (required for Python and Poetry)..."
+    echo "Installing Homebrew (required for Python and uv)..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
     # Detect architecture and set Homebrew path
@@ -52,16 +52,16 @@ else
     fi
 fi
 
-# Check if Poetry is installed via Homebrew
+# Check if uv is installed via Homebrew
 echo ""
-if brew list poetry &> /dev/null; then
-    echo "✓ Poetry is installed via Homebrew"
+if brew list uv &> /dev/null; then
+    echo "✓ uv is installed via Homebrew"
 else
-    echo "Installing Poetry via Homebrew..."
-    if brew install poetry; then
-        echo "✓ Poetry installed"
+    echo "Installing uv via Homebrew..."
+    if brew install uv; then
+        echo "✓ uv installed"
     else
-        echo "✗ Failed to install Poetry"
+        echo "✗ Failed to install uv"
         echo ""
         exit 1
     fi
@@ -83,17 +83,17 @@ else
     fi
 fi
 
-# Update Poetry
+# Update uv
 echo ""
-echo "Updating Poetry..."
-if brew upgrade poetry; then
-    echo "✓ Poetry updated"
+echo "Updating uv..."
+if brew upgrade uv; then
+    echo "✓ uv updated"
 else
     # Check if already up to date
-    if brew list --versions poetry &> /dev/null; then
-        echo "✓ Poetry is already up to date"
+    if brew list --versions uv &> /dev/null; then
+        echo "✓ uv is already up to date"
     else
-        echo "✗ Failed to update Poetry"
+        echo "✗ Failed to update uv"
         echo ""
         exit 1
     fi
