@@ -535,6 +535,70 @@
       "handled_at": null,
       "subjective_date": null,
       "note": null
+    },
+    {
+      "text": "refactor readme.md and relevant docs for all apps. just migrated to uv",
+      "status": "pending",
+      "created_at": "2026-02-19T04:53:41.377439+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "regenerate polychat's publish.py. uv-related changes are messy",
+      "status": "pending",
+      "created_at": "2026-02-19T04:56:31.811729+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "regenerate everything in shared/docs. uv related updates everywhere",
+      "status": "pending",
+      "created_at": "2026-02-19T04:58:26.878636+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "ACTUALLY i should just delete obsolete docs. i've done a few things with python. i now know basics",
+      "status": "pending",
+      "created_at": "2026-02-19T04:59:54.224956+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "make new branch for each repo. vibe coding often means micro commits, whose logs are rarely valuable",
+      "status": "pending",
+      "created_at": "2026-02-19T05:01:27.452281+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents",
+      "status": "pending",
+      "created_at": "2026-02-19T05:09:13.437044+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "maybe, separate repo for one-shot docs?",
+      "status": "pending",
+      "created_at": "2026-02-19T05:10:38.623656+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "time to refine anything and everything in current repos. moving on to typescript soon",
+      "status": "pending",
+      "created_at": "2026-02-19T05:11:34.425073+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
     }
   ]
 }

@@ -21,6 +21,14 @@
 - report on migration, tk, polychat
 - user friendly repo root readme.md
 - migrate from poetry and hatchling to uv
+- refactor readme.md and relevant docs for all apps. just migrated to uv
+- regenerate polychat's publish.py. uv-related changes are messy
+- regenerate everything in shared/docs. uv related updates everywhere
+- ACTUALLY i should just delete obsolete docs. i've done a few things with python. i now know basics
+- make new branch for each repo. vibe coding often means micro commits, whose logs are rarely valuable
+- maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents
+- maybe, separate repo for one-shot docs?
+- time to refine anything and everything in current repos. moving on to typescript soon
 
 ## History
 
