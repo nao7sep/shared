@@ -1,9 +1,7 @@
 #!/bin/zsh
 cd "$(dirname "$0")/.."
-echo "PolyChat Models Integration Test"
-echo "================================="
+echo "Running models integration test..."
 echo ""
-echo "This will test models in the registry with real API calls."
 echo "Requires .TEST_API_KEYS.json with valid API keys."
 echo ""
 echo "Options:"
