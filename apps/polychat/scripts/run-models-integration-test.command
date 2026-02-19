@@ -1,8 +1,5 @@
-#!/bin/bash
-# Quick launcher for models integration test
-
+#!/bin/zsh
 cd "$(dirname "$0")/.."
-
 echo "PolyChat Models Integration Test"
 echo "================================="
 echo ""
@@ -21,13 +18,13 @@ case $choice in
         echo ""
         echo "Running models smoke test..."
         echo ""
-        poetry run pytest tests/test_models_integration.py::test_all_models_smoke_test -v -s -m integration
+        uv run pytest tests/test_models_integration.py::test_all_models_smoke_test -v -s -m integration
         ;;
     2)
         echo ""
         echo "Running default models test..."
         echo ""
-        poetry run pytest tests/test_models_integration.py::test_default_models_work -v -s -m integration
+        uv run pytest tests/test_models_integration.py::test_default_models_work -v -s -m integration
         ;;
     3)
         echo "Cancelled."

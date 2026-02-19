@@ -198,7 +198,7 @@ def test_generate_chat_filename_without_name(tmp_path):
     assert filename.endswith(".json")
 
     # Extract timestamp part
-    timestamp_part = filename[10:-5]  # Remove "polychat_" and ".json"
+    timestamp_part = filename[9:-5]  # Remove "polychat_" (9 chars) and ".json"
 
     # Should have format: YYYY-MM-DD_HH-MM-SS
     parts = timestamp_part.split("_")
