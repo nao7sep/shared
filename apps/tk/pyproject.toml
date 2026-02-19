@@ -1,26 +1,22 @@
-[tool.poetry]
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
 name = "tk"
 version = "0.1.0"
 description = "A quick CLI app to manage tasks"
-authors = ["nao7sep <nao7sep@gmail.com>"]
+authors = [{name = "nao7sep", email = "nao7sep@gmail.com"}]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "tk", from = "src"}]
+requires-python = ">=3.9"
+dependencies = [
+    "tzlocal",
+    "tzdata ; platform_system == 'Windows'",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-tzlocal = "^5.3.1"
-tzdata = { version = "*", markers = "platform_system == 'Windows'" }
-
-[tool.poetry.scripts]
+[project.scripts]
 tk = "tk.cli:main"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^9.0.2"
-pytest-mock = "^3.15.1"
-pytest-cov = "^7.0.0"
-freezegun = "^1.5.5"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = ["pytest", "pytest-mock", "pytest-cov", "freezegun"]
