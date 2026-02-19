@@ -6,13 +6,25 @@
 - introduce tk, my first python app that nobody else will use :)
 - introduce and release polychat
 - automate "recordings => transcription => context"
-- seek tools to read foreign language books
 - learn about github pages, automation
 - tackle https://www.darioamodei.com/essay/the-adolescence-of-technology
 - analyze page structures of https://openwebf.com/en
-- learn: pypi, github actions, what else?
+- tool to generate font rendering sample images
+- tool to compose/print/save/organize documents for my daughter
+- prompts to skills
+- zip/rar archiver that works just like i want it to
+- system to save done-on-mac files on windows persistently
+- tool to help organize personal videos/photos
+- tool to scan/translate/share paper documents
+- split-conversation-into-docs.md as skill
+- catalogue of tools and work reports
+- report on migration, tk, polychat
 
 ## History
+
+### 2026-02-19
+- ✅ seek tools to read foreign language books => wrote 2 tools for personal use
+- ✅ learn: pypi, github actions, what else? => github actions + tags based auto distribution isnt optimal solution for mono repo
 
 ### 2026-02-12
 - ❌ check all existing tasks to draw a bigger picture. currently work is in bits => vibe management may work better. we finish what we want, when and while we want to

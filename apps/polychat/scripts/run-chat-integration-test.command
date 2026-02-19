@@ -7,6 +7,3 @@ echo "Running PolyChat Chat Integration Test..."
 echo ""
 
 poetry run pytest tests/test_chat_integration.py -v -s -m integration
-
-echo ""
-read -p "Press Enter to close..."

@@ -79,6 +79,16 @@ else
     echo "✓ No .mypy_cache directory found"
 fi
 
+# Remove dist directory
+echo ""
+if [ -d "dist" ]; then
+    echo "Removing dist directory..."
+    rm -rf dist
+    echo "✓ Removed dist"
+else
+    echo "✓ No dist directory found"
+fi
+
 # Remove .claude directory
 echo ""
 if [ -d ".claude" ]; then

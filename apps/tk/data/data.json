@@ -402,11 +402,11 @@
     },
     {
       "text": "seek tools to read foreign language books",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-12T03:42:42.574095+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-19T01:18:41.798522+00:00",
+      "subjective_date": "2026-02-19",
+      "note": "wrote 2 tools for personal use"
     },
     {
       "text": "learn about github pages, automation",
@@ -434,8 +434,88 @@
     },
     {
       "text": "learn: pypi, github actions, what else?",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-15T23:05:50.153014+00:00",
+      "handled_at": "2026-02-19T01:20:09.849497+00:00",
+      "subjective_date": "2026-02-19",
+      "note": "github actions + tags based auto distribution isnt optimal solution for mono repo"
+    },
+    {
+      "text": "tool to generate font rendering sample images",
+      "status": "pending",
+      "created_at": "2026-02-19T00:14:19.929598+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "tool to compose/print/save/organize documents for my daughter",
+      "status": "pending",
+      "created_at": "2026-02-19T00:17:22.165706+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "prompts to skills",
+      "status": "pending",
+      "created_at": "2026-02-19T00:17:45.216767+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "zip/rar archiver that works just like i want it to",
+      "status": "pending",
+      "created_at": "2026-02-19T00:18:32.153155+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "system to save done-on-mac files on windows persistently",
+      "status": "pending",
+      "created_at": "2026-02-19T00:19:45.205383+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "tool to help organize personal videos/photos",
+      "status": "pending",
+      "created_at": "2026-02-19T00:20:07.827282+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "tool to scan/translate/share paper documents",
+      "status": "pending",
+      "created_at": "2026-02-19T00:20:52.316059+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "split-conversation-into-docs.md as skill",
+      "status": "pending",
+      "created_at": "2026-02-19T00:27:51.737287+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "catalogue of tools and work reports",
+      "status": "pending",
+      "created_at": "2026-02-19T00:31:07.790626+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "report on migration, tk, polychat",
+      "status": "pending",
+      "created_at": "2026-02-19T00:32:39.744052+00:00",
       "handled_at": null,
       "subjective_date": null,
       "note": null

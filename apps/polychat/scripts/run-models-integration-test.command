@@ -36,6 +36,3 @@ case $choice in
         echo "Invalid choice."
         ;;
 esac
-
-echo ""
-read -p "Press Enter to close..."
