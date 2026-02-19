@@ -12,8 +12,5 @@ __pycache__/
 .coverage
 .mypy_cache/
 
-# tools
-.claude/
-
 # test secrets
 .TEST_API_KEYS.json
