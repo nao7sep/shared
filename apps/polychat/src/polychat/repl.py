@@ -23,6 +23,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from . import chat
 from .ai_runtime import send_message_to_ai, validate_and_get_provider
 from .app_state import has_pending_error, pending_error_guidance
+from .costs import format_cost_line
 from .session_manager import SessionManager
 from .orchestrator import ChatOrchestrator
 from .orchestrator_types import (
@@ -261,6 +262,11 @@ async def repl_loop(
                 ttft_ms = round((first_token_time - metadata["started"]) * 1000, 1)
 
             usage = metadata.get("usage", {})
+
+            # Display estimated cost after response
+            cost_line = format_cost_line(manager.current_model, usage)
+            if cost_line:
+                print(cost_line)
 
             log_event(
                 "ai_response",

@@ -185,6 +185,10 @@ class GrokProvider:
                             "completion_tokens": usage.output_tokens,
                             "total_tokens": usage.total_tokens,
                         }
+                        if hasattr(usage, "input_tokens_details"):
+                            in_details = usage.input_tokens_details
+                            if in_details and hasattr(in_details, "cached_tokens") and in_details.cached_tokens:
+                                metadata["usage"]["cached_tokens"] = in_details.cached_tokens
                         if hasattr(usage, "output_tokens_details"):
                             details = usage.output_tokens_details
                             if hasattr(details, "reasoning_tokens"):

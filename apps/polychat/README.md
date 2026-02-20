@@ -258,6 +258,22 @@ Where can I find current stock prices for AAPL?
 **Citations:**
 When search is enabled, AI responses include a "Sources:" section with citation titles and URLs reported by the provider. Citation records saved in chat history store only `number`, `title`, and `url` (with `null` for unavailable/invalid values).
 
+### Cost Estimates
+
+After each AI response, PolyChat displays a one-line cost summary:
+
+```
+1,234 in / 567 out tokens · ~$0.0142 (estimated)
+```
+
+When the provider reports cached input tokens, those are shown and factored in at the lower cache-hit rate:
+
+```
+5,000 in / 1,200 out / 3,800 cached tokens · ~$0.0089 (estimated)
+```
+
+**Important:** Displayed costs are estimates based on published list prices embedded in the app. Actual charges may differ due to provider pricing changes, batch discounts, or billing-tier adjustments. If you notice a significant discrepancy, please contact `nao7sep@gmail.com`.
+
 ## Configuration
 
 ### Profile File Format

@@ -164,6 +164,9 @@ class DeepSeekProvider:
                                 "completion_tokens": chunk.usage.completion_tokens,
                                 "total_tokens": chunk.usage.total_tokens,
                             }
+                            cache_hit = getattr(chunk.usage, "prompt_cache_hit_tokens", None)
+                            if cache_hit:
+                                metadata["usage"]["cached_tokens"] = cache_hit
                         log_event(
                             "provider_log",
                             level=logging.INFO,

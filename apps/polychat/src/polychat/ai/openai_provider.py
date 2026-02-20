@@ -174,6 +174,11 @@ class OpenAIProvider:
                                 "completion_tokens": usage.output_tokens,
                                 "total_tokens": usage.total_tokens,
                             }
+                            # Extract cached tokens if available
+                            if hasattr(usage, "input_tokens_details"):
+                                details = usage.input_tokens_details
+                                if details and hasattr(details, "cached_tokens") and details.cached_tokens:
+                                    metadata["usage"]["cached_tokens"] = details.cached_tokens
                         log_event(
                             "provider_log",
                             level=logging.INFO,

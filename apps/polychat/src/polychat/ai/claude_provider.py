@@ -177,6 +177,9 @@ class ClaudeProvider:
                         "total_tokens": final_message.usage.input_tokens
                         + final_message.usage.output_tokens,
                     }
+                    cache_read = getattr(final_message.usage, "cache_read_input_tokens", None)
+                    if cache_read:
+                        metadata["usage"]["cached_tokens"] = cache_read
 
                 # Extract citations from final_message if search was enabled
                 if search and metadata is not None:

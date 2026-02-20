@@ -173,6 +173,9 @@ class GeminiProvider:
                     "completion_tokens": getattr(usage_meta, "candidates_token_count", 0),
                     "total_tokens": getattr(usage_meta, "total_token_count", 0),
                 }
+                cached = getattr(usage_meta, "cached_content_token_count", None)
+                if cached:
+                    metadata["usage"]["cached_tokens"] = cached
 
             # Extract citations from grounding_metadata if search was enabled
             if search and metadata is not None and final_chunk and final_chunk.candidates:
