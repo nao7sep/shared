@@ -229,23 +229,17 @@ class PerplexityProvider:
 
             # Yield chunks
             async for chunk in response:
-                # Extract usage from any chunk (may arrive with or without choices)
+                # Extract usage from any chunk that carries it.  With
+                # stream_options={"include_usage": True} the API may emit
+                # usage on multiple chunks, so we silently overwrite and
+                # keep the last value.  Final totals are logged by the
+                # caller via the ai_response event.
                 if chunk.usage and metadata is not None:
                     metadata["usage"] = {
                         "prompt_tokens": chunk.usage.prompt_tokens,
                         "completion_tokens": chunk.usage.completion_tokens,
                         "total_tokens": chunk.usage.total_tokens,
                     }
-                    log_event(
-                        "provider_log",
-                        level=logging.INFO,
-                        provider="perplexity",
-                        message=(
-                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
-                            f"{chunk.usage.completion_tokens} completion = "
-                            f"{chunk.usage.total_tokens} total tokens"
-                        ),
-                    )
 
                 # Skip chunks with no choices (usage-only or citation-only)
                 if not chunk.choices:

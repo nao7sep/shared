@@ -207,18 +207,21 @@ class ClaudeProvider:
                 # After stream completes, check stop reason and extract usage
                 final_message = await response_stream.get_final_message()
 
-                # Populate metadata with usage info if provided
+                # Populate metadata with usage info if provided.
+                # Anthropic reports input_tokens as only the regular (non-cached,
+                # non-written) portion.  The true total is the sum of all three
+                # fields, consistent with how every other provider reports it.
                 if metadata is not None:
+                    cache_read = getattr(final_message.usage, "cache_read_input_tokens", None) or 0
+                    cache_write = getattr(final_message.usage, "cache_creation_input_tokens", None) or 0
+                    total_input = final_message.usage.input_tokens + cache_read + cache_write
                     metadata["usage"] = {
-                        "prompt_tokens": final_message.usage.input_tokens,
+                        "prompt_tokens": total_input,
                         "completion_tokens": final_message.usage.output_tokens,
-                        "total_tokens": final_message.usage.input_tokens
-                        + final_message.usage.output_tokens,
+                        "total_tokens": total_input + final_message.usage.output_tokens,
                     }
-                    cache_read = getattr(final_message.usage, "cache_read_input_tokens", None)
                     if cache_read:
                         metadata["usage"]["cached_tokens"] = cache_read
-                    cache_write = getattr(final_message.usage, "cache_creation_input_tokens", None)
                     if cache_write:
                         metadata["usage"]["cache_write_tokens"] = cache_write
 
@@ -398,17 +401,26 @@ class ClaudeProvider:
                 )
                 content += "\n[Response was truncated due to token limit]"
 
-            # Extract metadata
+            # Extract metadata.
+            # Anthropic reports input_tokens as only the regular (non-cached,
+            # non-written) portion.  The true total is the sum of all three
+            # fields, consistent with how every other provider reports it.
+            cache_read = getattr(response.usage, "cache_read_input_tokens", None) or 0
+            cache_write = getattr(response.usage, "cache_creation_input_tokens", None) or 0
+            total_input = response.usage.input_tokens + cache_read + cache_write
             metadata = {
                 "model": response.model,
                 "stop_reason": stop_reason,
                 "usage": {
-                    "prompt_tokens": response.usage.input_tokens,
+                    "prompt_tokens": total_input,
                     "completion_tokens": response.usage.output_tokens,
-                    "total_tokens": response.usage.input_tokens
-                    + response.usage.output_tokens,
+                    "total_tokens": total_input + response.usage.output_tokens,
                 },
             }
+            if cache_read:
+                metadata["usage"]["cached_tokens"] = cache_read
+            if cache_write:
+                metadata["usage"]["cache_write_tokens"] = cache_write
 
             # Extract citations if search was enabled
             if search:

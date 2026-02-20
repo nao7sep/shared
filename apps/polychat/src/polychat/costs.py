@@ -71,6 +71,61 @@ def estimate_cost(
     )
 
 
+def format_cost_usd(value: float) -> str:
+    """Format a USD cost with adaptive decimal precision.
+
+    Always shows at least 2 decimal places.  Locates the 2nd non-zero
+    digit across the full number (integer part first, then decimal).
+    If that digit falls at decimal position >= 3, that position is used
+    as the display precision.  Otherwise precision is max(2, position of
+    the first non-zero decimal digit).
+
+    Examples:
+        1.0      -> "$1.00"
+        100.2    -> "$100.20"
+        100.0023 -> "$100.002"
+        0.0123   -> "$0.012"
+        0.000123 -> "$0.00012"
+        0.007    -> "$0.007"
+        0.06     -> "$0.06"
+    """
+    MAX_SCAN = 10
+    s = f"{abs(value):.{MAX_SCAN}f}"
+    dot_idx = s.index(".")
+    integer_str = s[:dot_idx]
+    decimal_str = s[dot_idx + 1:]
+
+    nz_in_int = sum(1 for c in integer_str if c != "0")
+    if nz_in_int >= 2:
+        # Integer part alone supplies 2+ significant figures → 2 dp is enough.
+        return f"${value:.2f}"
+
+    # How many more non-zero digits we need from the decimal part.
+    nz_needed = 2 - nz_in_int  # 1 or 2
+
+    first_decimal_nz_pos = 0
+    second_nz_decimal_pos = 0
+    nz_count = 0
+
+    for i, c in enumerate(decimal_str, start=1):
+        if c != "0":
+            nz_count += 1
+            if nz_count == 1:
+                first_decimal_nz_pos = i
+            if nz_count == nz_needed:
+                second_nz_decimal_pos = i
+                break
+
+    if second_nz_decimal_pos >= 3:
+        precision = second_nz_decimal_pos
+    elif first_decimal_nz_pos > 0:
+        precision = max(2, first_decimal_nz_pos)
+    else:
+        precision = 2
+
+    return f"${value:.{precision}f}"
+
+
 def format_cost_line(model: str, usage: TokenUsage) -> str | None:
     """Build a one-line cost summary for display after a response.
 
@@ -93,10 +148,7 @@ def format_cost_line(model: str, usage: TokenUsage) -> str | None:
 
     # Cost (leading element so the user sees price first)
     if est is not None:
-        if est.total_cost < 0.01:
-            parts.append(f"${est.total_cost:.4f} estimated")
-        else:
-            parts.append(f"${est.total_cost:.2f} estimated")
+        parts.append(f"{format_cost_usd(est.total_cost)} estimated")
 
     # Token counts: "N input (N cached, N cache-write), N output"
     cached_tokens = usage.get("cached_tokens")

@@ -23,7 +23,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from . import chat
 from .ai_runtime import send_message_to_ai, validate_and_get_provider
 from .app_state import has_pending_error, pending_error_guidance
-from .costs import format_cost_line
+from .costs import estimate_cost, format_cost_line, format_cost_usd
 from .session_manager import SessionManager
 from .orchestrator import ChatOrchestrator
 from .orchestrator_types import (
@@ -269,6 +269,7 @@ async def repl_loop(
                 print()
                 print(cost_line)
 
+            cost_est = estimate_cost(manager.current_model, usage)
             log_event(
                 "ai_response",
                 level=logging.INFO,
@@ -284,6 +285,7 @@ async def repl_loop(
                 cache_write_tokens=usage.get("cache_write_tokens"),
                 output_tokens=usage.get("completion_tokens"),
                 total_tokens=usage.get("total_tokens"),
+                estimated_cost=format_cost_usd(cost_est.total_cost) if cost_est is not None else None,
             )
 
             # Handle successful response

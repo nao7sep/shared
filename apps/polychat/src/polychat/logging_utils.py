@@ -169,6 +169,7 @@ class StructuredTextFormatter(logging.Formatter):
             "cache_write_tokens",
             "output_tokens",
             "total_tokens",
+            "estimated_cost",
         ],
         "ai_error": [
             "ts",
@@ -211,6 +212,7 @@ class StructuredTextFormatter(logging.Formatter):
             "cache_write_tokens",
             "output_tokens",
             "total_tokens",
+            "estimated_cost",
         ],
         "helper_ai_error": [
             "ts",

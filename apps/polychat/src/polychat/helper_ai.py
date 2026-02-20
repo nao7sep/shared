@@ -40,6 +40,7 @@ async def invoke_helper_ai(
     from .ai_runtime import get_provider_instance
     from .ai.limits import resolve_request_limits
 
+    from .costs import estimate_cost, format_cost_usd
     from .logging_utils import (
         extract_http_error_context,
         log_event,
@@ -126,6 +127,7 @@ async def invoke_helper_ai(
         latency_ms = round((time.perf_counter() - started) * 1000, 1)
         usage = metadata.get("usage", {}) if isinstance(metadata, dict) else {}
 
+        cost_est = estimate_cost(helper_model, usage)
         log_event(
             "helper_ai_response",
             level=logging.INFO,
@@ -139,6 +141,7 @@ async def invoke_helper_ai(
             cache_write_tokens=usage.get("cache_write_tokens"),
             output_tokens=usage.get("completion_tokens"),
             total_tokens=usage.get("total_tokens"),
+            estimated_cost=format_cost_usd(cost_est.total_cost) if cost_est is not None else None,
         )
 
         return response_text.strip()
