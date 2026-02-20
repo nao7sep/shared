@@ -81,7 +81,7 @@ def load_profile(path: str) -> dict[str, Any]:
     if not profile_path.exists():
         raise FileNotFoundError(
             f"Profile not found: {profile_path}\n"
-            f"Create a new profile with: pc init {path}"
+            f"Create a new profile with: polychat init -p {path}"
         )
 
     # Load JSON
@@ -214,6 +214,11 @@ def validate_profile(profile: dict[str, Any]) -> None:
                 raise ValueError(f"API key config for '{provider}' (type=keychain) missing 'service' field")
             if "account" not in key_config:
                 raise ValueError(f"API key config for '{provider}' (type=keychain) missing 'account' field")
+        elif key_type == "credential":
+            if "service" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=credential) missing 'service' field")
+            if "account" not in key_config:
+                raise ValueError(f"API key config for '{provider}' (type=credential) missing 'account' field")
         elif key_type == "json":
             if "path" not in key_config:
                 raise ValueError(f"API key config for '{provider}' (type=json) missing 'path' field")
@@ -331,7 +336,7 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
         "     Update model names, paths, and API key placeholders",
         "",  # Empty line
         "  2. Start PolyChat:",
-        f"     uv run pc -p {profile_path}",
+        f"     uv run polychat -p {profile_path}",
     ])
 
     return profile, messages

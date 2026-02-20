@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pc = "polychat.cli:main"
+polychat = "polychat.cli:main"
 
 [dependency-groups]
 dev = ["pytest", "pytest-asyncio", "pytest-mock", "ruff", "mypy"]

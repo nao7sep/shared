@@ -44,18 +44,21 @@ def _map_cli_arg(path: str | None, arg_name: str) -> str | None:
 def main() -> None:
     """Main entry point for PolyChat CLI."""
     parser = argparse.ArgumentParser(
+        prog="polychat",
         description="PolyChat - Multi-AI CLI Chat Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument(
-        "-p", "--profile", help="Path to profile file (required for normal mode)"
+        "-p",
+        "--profile",
+        help="Path to profile file (required for normal mode; used by init to create profile)",
     )
 
     parser.add_argument(
         "-c",
         "--chat",
-        help="Path to chat history file (optional, will prompt if not provided)",
+        help="Path to chat history file (optional; starts without a chat if omitted)",
     )
 
     parser.add_argument(
@@ -63,23 +66,26 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "command", nargs="?", help="Command to run (e.g., 'init' to create profile)"
-    )
-
-    parser.add_argument(
-        "profile_path", nargs="?", help="Profile path (for init command)"
+        "command", nargs="?", help="Command to run (currently: 'init')"
     )
 
     args = parser.parse_args()
     app_started = time.perf_counter()
 
+    raw_args = sys.argv[1:]
+
     if args.command == "init":
-        if not args.profile_path:
-            print("Error: profile path required for init command")
-            print("Usage: pc init <profile-path>")
+        if not raw_args or raw_args[0] != "init":
+            print("Error: 'init' must be the first argument")
+            print("Usage: polychat init -p <profile-path>")
+            sys.exit(1)
+
+        if not args.profile:
+            print("Error: -p/--profile is required for init command")
+            print("Usage: polychat init -p <profile-path>")
             sys.exit(1)
         try:
-            mapped_init_profile_path = _map_cli_arg(args.profile_path, "profile")
+            mapped_init_profile_path = _map_cli_arg(args.profile, "profile")
             _, messages = profile.create_profile(mapped_init_profile_path)
             # Display status messages returned by create_profile
             for message in messages:
@@ -92,9 +98,17 @@ def main() -> None:
             print(f"Error creating profile: {e}")
             sys.exit(1)
 
+    if args.command:
+        print(f"Error: unknown command '{args.command}'")
+        print("Supported commands: init")
+        print("Usage:")
+        print("  polychat init -p <profile-path>")
+        print("  polychat -p <profile-path> [-c <chat-path>] [-l <log-path>]")
+        sys.exit(1)
+
     if not args.profile:
         print("Error: -p/--profile is required")
-        print("Usage: pc -p <profile-path> [-c <chat-path>] [-l <log-path>]")
+        print("Usage: polychat -p <profile-path> [-c <chat-path>] [-l <log-path>]")
         sys.exit(1)
 
     try:

@@ -196,7 +196,7 @@ We prefer `search_results` because it includes titles, which provide better cont
 ### Manual Test
 
 ```bash
-poetry run pc -p ~/profile.json
+poetry run polychat -p ~/profile.json
 /perp
 what's the weather in tokyo today?
 ```

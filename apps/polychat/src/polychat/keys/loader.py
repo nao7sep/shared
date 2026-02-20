@@ -19,6 +19,7 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
     Example configs:
         {"type": "env", "key": "OPENAI_API_KEY"}
         {"type": "keychain", "service": "polychat", "account": "claude-key"}
+        {"type": "credential", "service": "polychat", "account": "claude-key"}
         {"type": "json", "path": "~/.secrets/keys.json", "key": "gemini"}
         {"type": "direct", "value": "sk-..."} (testing only)
     """
@@ -37,6 +38,11 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
         from .keychain import load_from_keychain
 
         return load_from_keychain(config["service"], config["account"])
+
+    elif key_type == "credential":
+        from .credential_manager import load_from_credential_manager
+
+        return load_from_credential_manager(config["service"], config["account"])
 
     elif key_type == "json":
         from .json_files import load_from_json

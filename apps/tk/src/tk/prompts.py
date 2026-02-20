@@ -9,8 +9,6 @@ def collect_done_cancel_prompts(
     task: dict[str, Any],
     status: str,
     default_date: str,
-    provided_note: str | None = None,
-    provided_date: str | None = None,
 ) -> dict[str, Any] | str:
     """Collect interactive prompts for done/cancel commands.
 
@@ -18,9 +16,6 @@ def collect_done_cancel_prompts(
         task: Task dictionary being handled
         status: "done" or "cancelled"
         default_date: Default subjective date to use
-        provided_note: Note already provided via --note flag
-        provided_date: Date already provided via --date flag
-
     Returns:
         Dictionary with "note" and "date" keys, or "CANCELLED" string if user cancels
 
@@ -35,23 +30,15 @@ def collect_done_cancel_prompts(
     result = {}
 
     try:
-        # Collect note if not provided
-        if provided_note is None:
-            note_input = input("Note (press Enter to skip): ").strip()
-            result["note"] = note_input if note_input else None
-        else:
-            result["note"] = provided_note
+        note_input = input("Note (press Enter to skip): ").strip()
+        result["note"] = note_input if note_input else None
 
-        # Collect date if not provided
-        if provided_date is None:
-            date_input = input(f"Date override (press Enter to use {default_date}): ").strip()
-            if date_input:
-                validate_date_format(date_input)
-                result["date"] = date_input
-            else:
-                result["date"] = default_date
+        date_input = input(f"Date override (press Enter to use {default_date}): ").strip()
+        if date_input:
+            validate_date_format(date_input)
+            result["date"] = date_input
         else:
-            result["date"] = provided_date
+            result["date"] = default_date
 
         return result
 

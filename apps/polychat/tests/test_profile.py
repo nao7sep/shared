@@ -535,6 +535,46 @@ def test_validate_profile_api_key_keychain_missing_account():
         validate_profile(profile)
 
 
+def test_validate_profile_api_key_credential_missing_service():
+    """Test validation when credential type missing service."""
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "chats_dir": "~/chats",
+        "logs_dir": "~/logs",
+        "api_keys": {
+            "claude": {
+                "type": "credential",
+                "account": "claude-api-key"
+                # Missing "service"
+            }
+        }
+    }
+
+    with pytest.raises(ValueError, match="API key config for 'claude' .* missing 'service' field"):
+        validate_profile(profile)
+
+
+def test_validate_profile_api_key_credential_missing_account():
+    """Test validation when credential type missing account."""
+    profile = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "chats_dir": "~/chats",
+        "logs_dir": "~/logs",
+        "api_keys": {
+            "claude": {
+                "type": "credential",
+                "service": "polychat"
+                # Missing "account"
+            }
+        }
+    }
+
+    with pytest.raises(ValueError, match="API key config for 'claude' .* missing 'account' field"):
+        validate_profile(profile)
+
+
 def test_validate_profile_api_key_json_missing_path():
     """Test validation when json type missing path."""
     profile = {
@@ -621,7 +661,8 @@ def test_validate_profile_valid_all_api_key_types():
             "claude": "claude-haiku-4-5",
             "openai": "gpt-5-mini",
             "gemini": "gemini-3-flash-preview",
-            "grok": "grok-4-1-fast"
+            "grok": "grok-4-1-fast",
+            "perplexity": "sonar"
         },
         "timeout": 60,
         "input_mode": "quick",
@@ -645,6 +686,11 @@ def test_validate_profile_valid_all_api_key_types():
             "grok": {
                 "type": "direct",
                 "value": "xai-test-key"
+            },
+            "perplexity": {
+                "type": "credential",
+                "service": "polychat",
+                "account": "perplexity-api-key"
             }
         }
     }

@@ -86,10 +86,10 @@ class TestCommandRegistry:
     def test_registry_has_all_commands(self):
         """Test that all expected commands are registered."""
         expected_commands = [
-            "init", "add", "list", "history",
+            "add", "list", "history",
             "done", "cancel", "edit", "delete",
             "note", "date", "sync",
-            "today", "yesterday", "recent",
+            "today", "yesterday", "recent", "help",
         ]
 
         for cmd in expected_commands:
@@ -144,9 +144,14 @@ class TestExecuteCommand:
         # Set up mapping first
         sample_session.set_last_list([(1, 0)])
 
-        result = dispatcher.execute_command("done", [1], {"date": "2026-02-09"}, sample_session)
+        result = dispatcher.execute_command("done", [1], {}, sample_session)
 
         assert "marked as done" in result
+
+    def test_execute_command_done_non_numeric_usage_error(self, sample_session):
+        """Test that done command requires numeric task number."""
+        with pytest.raises(ValueError, match="Usage: done <num>"):
+            dispatcher.execute_command("done", ["--note"], {}, sample_session)
 
     def test_execute_command_unknown(self, sample_session):
         """Test that unknown command raises ValueError."""

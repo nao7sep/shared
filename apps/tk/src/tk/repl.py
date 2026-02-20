@@ -21,6 +21,8 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
         "add", "a",
         "edit", "e",
         "note", "n",
+        "done", "d",
+        "cancel", "c",
     }
 
     if cmd in no_flag_commands:
@@ -76,6 +78,9 @@ def _prepare_interactive_command(
     normalized = dispatcher.resolve_command_alias(cmd)
 
     if normalized in ("done", "cancel"):
+        if kwargs or len(args) != 1:
+            return cmd, args, kwargs
+
         num = _try_parse_first_num_arg(args)
         if num is None:
             return cmd, args, kwargs
@@ -89,8 +94,6 @@ def _prepare_interactive_command(
                 task=task,
                 status=status,
                 default_date=default_date,
-                provided_note=kwargs.get("note"),
-                provided_date=kwargs.get("date"),
             )
 
             if result == "CANCELLED":

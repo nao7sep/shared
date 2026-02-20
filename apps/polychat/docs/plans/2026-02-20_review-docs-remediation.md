@@ -2,7 +2,7 @@
 
 ## Scope Reviewed
 - `README.md`
-- CLI help output from `uv run pc --help`
+- CLI help output from `uv run polychat --help`
 - REPL help text from `/help` (`src/polychat/commands/misc.py`)
 - CLI usage/error text (`src/polychat/cli.py`)
 
@@ -53,7 +53,7 @@
   - `optional, will prompt if not provided`
 - To:
   - `optional; start without a chat and use /new or /open`
-- Regenerate/re-verify `pc --help` output.
+- Regenerate/re-verify `polychat --help` output.
 
 4. Add lightweight documentation drift checks.
 - Add a doc validation test that asserts:
@@ -62,6 +62,6 @@
 - This prevents future drift after profile/template changes.
 
 ## Verification Checklist
-- Run: `uv run pc --help`
-- Run: `uv run pc init /tmp/polychat-doc-check.json` and inspect generated JSON keys/paths.
+- Run: `uv run polychat --help`
+- Run: `uv run polychat init -p /tmp/polychat-doc-check.json` and inspect generated JSON keys/paths.
 - Confirm README sections now match both outputs and source constants.

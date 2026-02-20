@@ -23,13 +23,13 @@ class TestParseCommand:
         assert args == ["task", "text"]
         assert kwargs == {}
 
-    def test_parse_command_with_flags(self):
-        """Test parsing command with flags."""
+    def test_parse_done_treats_flags_as_plain_args(self):
+        """Test that done command does not parse flag syntax."""
         cmd, args, kwargs = parse_command("done 1 --note finished --date 2026-02-09")
 
         assert cmd == "done"
-        assert args == ["1"]
-        assert kwargs == {"note": "finished", "date": "2026-02-09"}
+        assert args == ["1", "--note", "finished", "--date", "2026-02-09"]
+        assert kwargs == {}
 
     def test_parse_command_flag_int_value(self):
         """Test that integer flag values are converted."""
@@ -46,7 +46,7 @@ class TestParseCommand:
         assert kwargs["force"] is True
 
     def test_parse_command_no_flag_commands(self):
-        """Test that add/edit/note don't parse flags."""
+        """Test that add/edit/note/done/cancel don't parse flags."""
         # 'add' command should treat --note as part of text
         cmd, args, kwargs = parse_command("add task with --note text")
 
@@ -62,16 +62,13 @@ class TestParseCommand:
         assert args == ["1", "new", "--text", "here"]
         assert kwargs == {}
 
-    def test_parse_command_multiple_args_and_flags(self):
-        """Test parsing mix of args and flags."""
-        # Note: The parser takes the next non-flag word as the value
-        # So "test note" becomes two args: "test" is value for --note, "note" is a standalone arg
-        cmd, args, kwargs = parse_command("done 1 --note completed --date 2026-02-09")
+    def test_parse_cancel_treats_flags_as_plain_args(self):
+        """Test that cancel command does not parse flag syntax."""
+        cmd, args, kwargs = parse_command("cancel 1 --note nope --date 2026-02-09")
 
-        assert cmd == "done"
-        assert args == ["1"]
-        assert kwargs["note"] == "completed"
-        assert kwargs["date"] == "2026-02-09"
+        assert cmd == "cancel"
+        assert args == ["1", "--note", "nope", "--date", "2026-02-09"]
+        assert kwargs == {}
 
 
 class TestTryParseFirstNumArg:

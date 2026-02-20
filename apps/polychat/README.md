@@ -12,7 +12,7 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 - **Web Search**: Enable AI-powered web search with inline citations (OpenAI, Claude, Gemini, Grok, Perplexity)
 - **Git-Friendly Logs**: Chat history stored as formatted JSON with messages as line arrays
 - **Retry & Time Travel**: Re-ask questions without deleting history, or delete messages to "go back in time"
-- **Secure API Keys**: Support for environment variables, macOS Keychain, and JSON files
+- **Secure API Keys**: Support for environment variables, macOS Keychain, Windows Credential Manager, and JSON files
 - **System Prompts**: Predefined and custom system prompts with version control
 - **Streaming Responses**: Real-time response display with async streaming
 - **Profile-Based**: Each profile contains AI preferences, API keys, and default settings
@@ -30,24 +30,24 @@ uv sync
 ### 1. Create a Profile
 
 ```bash
-uv run pc init ~/my-profile.json
+uv run polychat init -p ~/my-profile.json
 ```
 
 This creates a template file:
 - Profile JSON at the path you provide
 
-The generated profile template uses home-based paths (`~/polychat/...`) for directories and app root paths (`@/prompts/...`) for built-in prompt files.
-It also includes mixed API-key configuration examples (`env`, `keychain`, `json`) so you can pick the style you want.
+The generated profile template uses home-based paths (`~/.polychat/...`) for directories and app root paths (`@/prompts/...`) for built-in prompt files.
+It also includes mixed API-key configuration examples (`env`, `keychain`, `credential`, `json`, `direct`) so you can pick the style you want.
 Then edit the template values (models, paths, and `api_keys`) before running PolyChat.
 
 ### 2. Start PolyChat
 
 ```bash
 # Start with a specific chat
-uv run pc -p ~/my-profile.json -c ~/chats/my-chat.json
+uv run polychat -p ~/my-profile.json -c ~/chats/my-chat.json
 
 # Or start without a chat (use /new or /open commands)
-uv run pc -p ~/my-profile.json
+uv run polychat -p ~/my-profile.json
 ```
 
 The app goes straight to the REPL and shows configured AI providers.
@@ -82,16 +82,16 @@ Claude: Here are the main factors to consider:
 
 ```bash
 # Create new profile
-pc init <profile-path>
+polychat init -p <profile-path>
 
 # Start with profile
-pc -p <profile-path>
+polychat -p <profile-path>
 
 # Start with specific chat
-pc -p <profile-path> -c <chat-path>
+polychat -p <profile-path> -c <chat-path>
 
 # Enable error logging
-pc -p <profile-path> -l debug.log
+polychat -p <profile-path> -l ~/polychat-debug.log
 ```
 
 CLI path flags use the same path mapping rules:
@@ -259,8 +259,8 @@ When search is enabled, AI responses include a "Sources:" section with citation 
   "title_prompt": "@/prompts/title.txt",
   "summary_prompt": "@/prompts/summary.txt",
   "safety_prompt": "@/prompts/safety.txt",
-  "chats_dir": "~/polychat/chats",
-  "logs_dir": "~/polychat/logs",
+  "chats_dir": "~/.polychat/chats",
+  "logs_dir": "~/.polychat/logs",
   "api_keys": {
     "openai": {
       "type": "env",
@@ -332,6 +332,15 @@ Both directories are created automatically if they don't exist.
 }
 ```
 
+**Windows Credential Manager:**
+```json
+{
+  "type": "credential",
+  "service": "polychat",
+  "account": "claude-api-key"
+}
+```
+
 **JSON File:**
 ```json
 {
@@ -340,6 +349,16 @@ Both directories are created automatically if they don't exist.
   "key": "gemini"
 }
 ```
+
+**Direct Value:**
+```json
+{
+  "type": "direct",
+  "value": "xai-..."
+}
+```
+
+Use `direct` only when needed. Prefer `env`, `keychain` (macOS), or `credential` (Windows) so plaintext keys are less likely to be committed.
 
 ### Path Mapping
 

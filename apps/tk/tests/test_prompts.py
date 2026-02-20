@@ -73,32 +73,6 @@ class TestCollectDonePrompts:
 
         assert result == "CANCELLED"
 
-    def test_collect_done_prompts_provided_note(self, monkeypatch):
-        """Test using provided note without prompting."""
-        task = {"text": "Test task"}
-        inputs = iter([""])  # Only date prompt
-        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-
-        result = prompts.collect_done_cancel_prompts(
-            task, "done", "2026-02-09",
-            provided_note="Pre-provided note"
-        )
-
-        assert result["note"] == "Pre-provided note"
-
-    def test_collect_done_prompts_provided_date(self, monkeypatch):
-        """Test using provided date without prompting."""
-        task = {"text": "Test task"}
-        inputs = iter([""])  # Only note prompt
-        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-
-        result = prompts.collect_done_cancel_prompts(
-            task, "done", "2026-02-09",
-            provided_date="2026-02-05"
-        )
-
-        assert result["date"] == "2026-02-05"
-
     def test_collect_done_prompts_invalid_date(self, monkeypatch):
         """Test that invalid date raises ValueError."""
         task = {"text": "Test task"}

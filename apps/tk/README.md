@@ -92,7 +92,7 @@ Numbers are only valid until you run another command that changes the list.
 
 ### Interactive Prompts
 
-When marking tasks as done or cancelled without flags, tk prompts for details:
+When marking tasks as done or cancelled, tk prompts for details:
 
 ```
 tk> d 1
@@ -108,7 +108,7 @@ Task marked as done.
 **Prompt behavior:**
 - Press Enter to skip optional fields
 - Press Ctrl+C to cancel entire operation
-- If you provide `--note` or `--date` flags, those prompts are skipped
+- Use `note` and `date` commands later if you want to update handled tasks
 
 **Delete confirmation:**
 ```
@@ -116,7 +116,7 @@ tk> delete 1
 Task: old task
 Status: pending
 
-Delete this task? (yes/no): yes
+Delete permanently? (yes/N): yes
 Task deleted.
 ```
 
@@ -167,8 +167,8 @@ tk> h --days 7            # last 7 calendar days
 tk> h --working-days 5    # last 5 days with tasks
 ```
 
-**today (t)** - Show today's completed tasks
-**yesterday (y)** - Show yesterday's completed tasks
+**today (t)** - Show today's handled tasks
+**yesterday (y)** - Show yesterday's handled tasks
 **recent (r)** - Show last 3 working days
 
 ### Completing Tasks
@@ -176,13 +176,11 @@ tk> h --working-days 5    # last 5 days with tasks
 **done (d)** `<num>` - Mark as done (with interactive prompts)
 ```
 tk> d 1
-tk> d 1 --note "deployed to prod" --date 2026-02-05
 ```
 
 **cancel (c)** `<num>` - Mark as cancelled
 ```
 tk> c 2
-tk> c 2 --note "no longer needed"
 ```
 
 ### Editing
@@ -239,7 +237,7 @@ Generated automatically after each change (if `auto_sync: true`):
 - **Numbers reset:** After any command that changes state, run `list` or `history` again to get fresh numbers
 - **Use shortcuts:** `a`, `l`, `d`, `c`, `e` for speed
 - **Ctrl+C cancels:** Interactive prompts (done/cancel/delete) can be cancelled anytime
-- **Skip prompts with flags:** `d 1 --note "done" --date 2026-02-05` skips interactive prompts
+- **Update after handling:** Use `note <num> [<text>]` and `date <num> <YYYY-MM-DD>` on handled tasks
 - **Unknown handled date:** If a handled task has no subjective date (from manual JSON edits), it appears under `unknown` in both `history` output and `TODO.md`
 - **No duplicate checking:** Intentional design choice - just cancel or delete if needed
 - **Delete is rare:** Use `cancel` for tasks you won't do; reserve `delete` for mistakes
@@ -262,7 +260,9 @@ tk -p ~/my-profile.json
 
 ## Troubleshooting
 
-**"Unknown command" error:** Run `list` or `history` first to get task numbers.
+**"Run 'list' or 'history' first" error:** You tried a number-based command without a current list. Run `list`, `history`, `today`, `yesterday`, or `recent` first.
+
+**"Unknown command" error:** Check for typos or unsupported commands. Use `help` in REPL to see valid commands.
 
 **Numbers not working:** Task numbers reset after state-changing commands (add, edit, done, etc). Run `list` again.
 
@@ -274,12 +274,6 @@ TK_DEBUG=1 tk -p ~/my-profile.json
 ```
 
 ## Advanced Usage
-
-### Debug Mode
-Set `TK_DEBUG=1` for detailed stack traces on unexpected errors:
-```bash
-TK_DEBUG=1 uv run tk -p ~/my-profile.json
-```
 
 ### Manual Data Edits
 You can edit tasks.json directly, but:
@@ -307,3 +301,14 @@ These are current project assumptions, documented for future packaging work:
 - Timezone behavior on Windows is expected to depend on runtime packaging details (for example bundled timezone data); verify during actual packaging/testing.
 - `@/` paths are intended for source/project usage. In one-file packaged mode they may be unreliable, so avoid them there.
 - Backslash-style path shortcuts for `~`/`@` are not a supported input style in this project.
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE`.
+
+## Support
+
+For bugs or feature requests, open an issue in this repository with:
+- your command input
+- the exact error/output
+- your profile settings (redacted as needed)

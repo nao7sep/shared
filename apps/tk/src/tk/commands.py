@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
-from tk import data, markdown, profile, subjective_date
+from tk import data, markdown, subjective_date
 from tk.session import Session
 from tk.validation import validate_date_format
 
@@ -140,23 +140,6 @@ def extract_last_list_mapping(payload: dict[str, Any]) -> list[tuple[int, int]]:
     for group in payload.get("groups", []):
         mapping.extend((item["display_num"], item["array_index"]) for item in group["items"])
     return mapping
-
-
-def cmd_init(profile_path: str, session: Session) -> str:
-    """Create a new profile and initialize session state."""
-    profile.create_profile(profile_path)
-
-    prof = profile.load_profile(profile_path)
-    session.profile_path = profile_path
-    session.profile = prof
-
-    tasks_data = {"tasks": []}
-    data.save_tasks(prof["data_path"], tasks_data)
-    session.tasks = tasks_data
-
-    markdown.generate_todo([], prof["output_path"])
-
-    return f"Profile created: {profile_path}"
 
 
 def cmd_add(session: Session, text: str) -> str:

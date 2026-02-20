@@ -55,13 +55,6 @@ def _apply_last_list_mapping_from_payload(session: Session, payload: dict[str, A
     session.set_last_list(commands.extract_last_list_mapping(payload))
 
 
-# Command executor functions
-def _exec_init(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
-    if len(args) != 1:
-        raise ValueError("Usage: init <profile_path>")
-    return commands.cmd_init(args[0], session)
-
-
 def _exec_add(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) != 1:
         raise ValueError("Usage: add <text...>")
@@ -89,15 +82,15 @@ def _exec_history(args: list[Any], kwargs: dict[str, Any], session: Session) -> 
 
 
 def _exec_done(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
-    if len(args) != 1:
-        raise ValueError("Usage: done <num> [--note <text>] [--date YYYY-MM-DD]")
+    if len(args) != 1 or not isinstance(args[0], int):
+        raise ValueError("Usage: done <num>")
     array_index = session.resolve_array_index(args[0])
     return commands.cmd_done(session, array_index, kwargs.get("note"), kwargs.get("date"))
 
 
 def _exec_cancel(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
-    if len(args) != 1:
-        raise ValueError("Usage: cancel <num> [--note <text>] [--date YYYY-MM-DD]")
+    if len(args) != 1 or not isinstance(args[0], int):
+        raise ValueError("Usage: cancel <num>")
     array_index = session.resolve_array_index(args[0])
     return commands.cmd_cancel(session, array_index, kwargs.get("note"), kwargs.get("date"))
 
@@ -175,26 +168,25 @@ def _exec_help(args: list[Any], kwargs: dict[str, Any], session: Session) -> str
   delete <num>            - Delete task permanently
 
   history (h) [--days N] [--working-days N]
-  today (t)               - Today's completed tasks
-  yesterday (y)           - Yesterday's completed tasks
+  today (t)               - Today's handled tasks
+  yesterday (y)           - Yesterday's handled tasks
   recent (r)              - Last 3 working days
 
   date <num> <YYYY-MM-DD> - Change subjective date
   sync (s)                - Regenerate TODO.md
   exit / quit             - Exit (Ctrl-D also works)
 
-Run 'list' or 'history' first to get task numbers.
+Run 'list', 'history', 'today', 'yesterday', or 'recent' first to get task numbers.
 For full documentation, see README.md"""
 
 
 # Command registry
 COMMAND_REGISTRY = {
-    "init": CommandHandler(_exec_init, clears_list=True, usage="init <profile_path>"),
     "add": CommandHandler(_exec_add, clears_list=True, usage="add <text...>"),
     "list": CommandHandler(_exec_list, clears_list=False, usage="list"),
     "history": CommandHandler(_exec_history, clears_list=False, usage="history [--days N] [--working-days N]"),
-    "done": CommandHandler(_exec_done, clears_list=True, usage="done <num> [--note <text>] [--date YYYY-MM-DD]"),
-    "cancel": CommandHandler(_exec_cancel, clears_list=True, usage="cancel <num> [--note <text>] [--date YYYY-MM-DD]"),
+    "done": CommandHandler(_exec_done, clears_list=True, usage="done <num>"),
+    "cancel": CommandHandler(_exec_cancel, clears_list=True, usage="cancel <num>"),
     "edit": CommandHandler(_exec_edit, clears_list=True, usage="edit <num> <text>"),
     "delete": CommandHandler(_exec_delete, clears_list=True, usage="delete <num>"),
     "note": CommandHandler(_exec_note, clears_list=True, usage="note <num> [<text>]"),
