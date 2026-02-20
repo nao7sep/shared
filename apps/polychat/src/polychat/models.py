@@ -44,6 +44,7 @@ MODEL_REGISTRY: Dict[str, List[str]] = {
         "claude-haiku-4-5",
     ],
     "gemini": [
+        "gemini-3.1-pro-preview",
         "gemini-3-pro-preview",
         "gemini-3-flash-preview",
         "gemini-2.5-pro",
@@ -99,6 +100,7 @@ class ModelPricing:
     input_per_mtok: float
     output_per_mtok: float
     cached_input_per_mtok: float | None = None
+    cache_write_per_mtok: float | None = None
 
 
 # Pricing registry: model name -> ModelPricing
@@ -117,11 +119,13 @@ MODEL_PRICING: Dict[str, ModelPricing] = {
     "gpt-5-mini": ModelPricing(0.25, 2.00, cached_input_per_mtok=0.025),
     "gpt-5-nano": ModelPricing(0.05, 0.40, cached_input_per_mtok=0.005),
     "gpt-4.1":   ModelPricing(2.00, 8.00, cached_input_per_mtok=0.50),
-    # Claude
-    "claude-opus-4-6":   ModelPricing(5.00, 25.00, cached_input_per_mtok=0.50),
-    "claude-sonnet-4-6": ModelPricing(3.00, 15.00, cached_input_per_mtok=0.30),
-    "claude-haiku-4-5":  ModelPricing(1.00, 5.00,  cached_input_per_mtok=0.10),
+    # Claude — cache_write_per_mtok reflects the 25% write surcharge that
+    # applies at the default 5-minute TTL.  Longer TTLs cost more.
+    "claude-opus-4-6":   ModelPricing(5.00, 25.00, cached_input_per_mtok=0.50, cache_write_per_mtok=6.25),
+    "claude-sonnet-4-6": ModelPricing(3.00, 15.00, cached_input_per_mtok=0.30, cache_write_per_mtok=3.75),
+    "claude-haiku-4-5":  ModelPricing(1.00, 5.00,  cached_input_per_mtok=0.10, cache_write_per_mtok=1.25),
     # Gemini
+    "gemini-3.1-pro-preview":   ModelPricing(2.00, 12.00, cached_input_per_mtok=0.20),
     "gemini-3-pro-preview":  ModelPricing(2.00, 12.00, cached_input_per_mtok=0.20),
     "gemini-3-flash-preview": ModelPricing(0.50, 3.00, cached_input_per_mtok=0.05),
     "gemini-2.5-pro":        ModelPricing(1.25, 10.00, cached_input_per_mtok=0.125),

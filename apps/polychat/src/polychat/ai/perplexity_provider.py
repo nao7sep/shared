@@ -229,27 +229,27 @@ class PerplexityProvider:
 
             # Yield chunks
             async for chunk in response:
-                # Check if this is a usage-only chunk (no choices)
+                # Extract usage from any chunk (may arrive with or without choices)
+                if chunk.usage and metadata is not None:
+                    metadata["usage"] = {
+                        "prompt_tokens": chunk.usage.prompt_tokens,
+                        "completion_tokens": chunk.usage.completion_tokens,
+                        "total_tokens": chunk.usage.total_tokens,
+                    }
+                    log_event(
+                        "provider_log",
+                        level=logging.INFO,
+                        provider="perplexity",
+                        message=(
+                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
+                            f"{chunk.usage.completion_tokens} completion = "
+                            f"{chunk.usage.total_tokens} total tokens"
+                        ),
+                    )
+
+                # Skip chunks with no choices (usage-only or citation-only)
                 if not chunk.choices:
-                    if chunk.usage:
-                        # Populate metadata with usage info if provided
-                        if metadata is not None:
-                            metadata["usage"] = {
-                                "prompt_tokens": chunk.usage.prompt_tokens,
-                                "completion_tokens": chunk.usage.completion_tokens,
-                                "total_tokens": chunk.usage.total_tokens,
-                            }
-                        log_event(
-                            "provider_log",
-                            level=logging.INFO,
-                            provider="perplexity",
-                            message=(
-                                f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
-                                f"{chunk.usage.completion_tokens} completion = "
-                                f"{chunk.usage.total_tokens} total tokens"
-                            ),
-                        )
-                    # Extract citations/search results if available (final chunk without choices)
+                    # Extract citations/search results if available
                     if metadata is not None:
                         citations = self._extract_citations(chunk)
                         if citations:

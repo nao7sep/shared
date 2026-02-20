@@ -12,6 +12,7 @@ class TokenUsage(TypedDict, total=False):
     completion_tokens: int
     total_tokens: int
     cached_tokens: int
+    cache_write_tokens: int
     reasoning_tokens: int
 
 

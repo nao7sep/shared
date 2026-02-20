@@ -37,6 +37,24 @@ from .types import AIResponseMetadata
 class ClaudeProvider:
     """Claude (Anthropic) provider implementation."""
 
+    # Set to True to enable prompt caching.  When enabled, the system
+    # prompt and the final conversation message each receive a
+    # cache_control breakpoint, asking the API to cache those tokens.
+    #
+    # Caching is not free.  Cache reads cost 90% less than regular input,
+    # but cache writes carry a surcharge: 25% more at the default 5-minute
+    # TTL, or twice the regular rate at the maximum 1-hour TTL.  Savings
+    # only materialize when the cached prefix is reused within the window.
+    #
+    # PolyChat is designed for deep, deliberate conversation.  Users often
+    # spend more than five minutes composing a message, and it is common
+    # to revisit a thread after more than an hour.  Under these conditions,
+    # prompt caching rarely breaks even and may increase costs instead.
+    # This flag is provided for testing only; the default is False, and
+    # the TTL is not user-configurable here.  Other providers in the stack
+    # serve different interaction styles where caching may be worthwhile.
+    prompt_caching: bool = False
+
     def __init__(self, api_key: str, timeout: float = DEFAULT_PROFILE_TIMEOUT_SEC):
         """Initialize Claude provider.
 
@@ -148,6 +166,17 @@ class ClaudeProvider:
             # Format messages
             formatted_messages = self.format_messages(messages)
 
+            # Optionally add cache_control breakpoints for prompt caching
+            if self.prompt_caching and formatted_messages:
+                last_msg = formatted_messages[-1]
+                last_msg["content"] = [
+                    {
+                        "type": "text",
+                        "text": last_msg["content"],
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+
             # Claude handles system prompt separately
             kwargs = {
                 "model": model,
@@ -156,7 +185,16 @@ class ClaudeProvider:
             }
 
             if system_prompt:
-                kwargs["system"] = system_prompt
+                if self.prompt_caching:
+                    kwargs["system"] = [
+                        {
+                            "type": "text",
+                            "text": system_prompt,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ]
+                else:
+                    kwargs["system"] = system_prompt
 
             if search:
                 kwargs["tools"] = claude_web_search_tools()
@@ -180,6 +218,9 @@ class ClaudeProvider:
                     cache_read = getattr(final_message.usage, "cache_read_input_tokens", None)
                     if cache_read:
                         metadata["usage"]["cached_tokens"] = cache_read
+                    cache_write = getattr(final_message.usage, "cache_creation_input_tokens", None)
+                    if cache_write:
+                        metadata["usage"]["cache_write_tokens"] = cache_write
 
                 # Extract citations from final_message if search was enabled
                 if search and metadata is not None:
@@ -304,6 +345,17 @@ class ClaudeProvider:
             # Format messages
             formatted_messages = self.format_messages(messages)
 
+            # Optionally add cache_control breakpoints for prompt caching
+            if self.prompt_caching and formatted_messages:
+                last_msg = formatted_messages[-1]
+                last_msg["content"] = [
+                    {
+                        "type": "text",
+                        "text": last_msg["content"],
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+
             # Claude handles system prompt separately
             kwargs = {
                 "model": model,
@@ -315,7 +367,16 @@ class ClaudeProvider:
                 kwargs["tools"] = claude_web_search_tools()
 
             if system_prompt:
-                kwargs["system"] = system_prompt
+                if self.prompt_caching:
+                    kwargs["system"] = [
+                        {
+                            "type": "text",
+                            "text": system_prompt,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ]
+                else:
+                    kwargs["system"] = system_prompt
 
             # Create non-streaming request with retry logic
             response = await self._create_message(**kwargs)

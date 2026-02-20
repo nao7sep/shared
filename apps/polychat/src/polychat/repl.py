@@ -266,6 +266,7 @@ async def repl_loop(
             # Display estimated cost after response
             cost_line = format_cost_line(manager.current_model, usage)
             if cost_line:
+                print()
                 print(cost_line)
 
             log_event(
@@ -279,6 +280,8 @@ async def repl_loop(
                 ttft_ms=ttft_ms,
                 output_chars=len(response_text),
                 input_tokens=usage.get("prompt_tokens"),
+                cached_tokens=usage.get("cached_tokens"),
+                cache_write_tokens=usage.get("cache_write_tokens"),
                 output_tokens=usage.get("completion_tokens"),
                 total_tokens=usage.get("total_tokens"),
             )

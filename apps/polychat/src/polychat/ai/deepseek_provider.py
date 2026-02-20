@@ -154,39 +154,39 @@ class DeepSeekProvider:
 
             # Yield chunks
             async for chunk in response:
-                # Check if this is a usage-only chunk (no choices)
+                # Extract usage from any chunk (may arrive with or without choices)
+                if chunk.usage and metadata is not None:
+                    metadata["usage"] = {
+                        "prompt_tokens": chunk.usage.prompt_tokens,
+                        "completion_tokens": chunk.usage.completion_tokens,
+                        "total_tokens": chunk.usage.total_tokens,
+                    }
+                    cache_hit = getattr(chunk.usage, "prompt_cache_hit_tokens", None)
+                    if cache_hit:
+                        metadata["usage"]["cached_tokens"] = cache_hit
+                    log_event(
+                        "provider_log",
+                        level=logging.INFO,
+                        provider="deepseek",
+                        message=(
+                            f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
+                            f"{chunk.usage.completion_tokens} completion = "
+                            f"{chunk.usage.total_tokens} total tokens"
+                        ),
+                    )
+                    # Log reasoning tokens if present (R1/reasoning models)
+                    if hasattr(chunk.usage, "completion_tokens_details"):
+                        details = chunk.usage.completion_tokens_details
+                        if hasattr(details, "reasoning_tokens"):
+                            log_event(
+                                "provider_log",
+                                level=logging.INFO,
+                                provider="deepseek",
+                                message=f"Reasoning tokens: {details.reasoning_tokens}",
+                            )
+
+                # Skip chunks with no choices (usage-only)
                 if not chunk.choices:
-                    if chunk.usage:
-                        # Populate metadata with usage info if provided
-                        if metadata is not None:
-                            metadata["usage"] = {
-                                "prompt_tokens": chunk.usage.prompt_tokens,
-                                "completion_tokens": chunk.usage.completion_tokens,
-                                "total_tokens": chunk.usage.total_tokens,
-                            }
-                            cache_hit = getattr(chunk.usage, "prompt_cache_hit_tokens", None)
-                            if cache_hit:
-                                metadata["usage"]["cached_tokens"] = cache_hit
-                        log_event(
-                            "provider_log",
-                            level=logging.INFO,
-                            provider="deepseek",
-                            message=(
-                                f"Stream usage: {chunk.usage.prompt_tokens} prompt + "
-                                f"{chunk.usage.completion_tokens} completion = "
-                                f"{chunk.usage.total_tokens} total tokens"
-                            ),
-                        )
-                        # Log reasoning tokens if present (R1/reasoning models)
-                        if hasattr(chunk.usage, "completion_tokens_details"):
-                            details = chunk.usage.completion_tokens_details
-                            if hasattr(details, "reasoning_tokens"):
-                                log_event(
-                                    "provider_log",
-                                    level=logging.INFO,
-                                    provider="deepseek",
-                                    message=f"Reasoning tokens: {details.reasoning_tokens}",
-                                )
                     continue
 
                 # Check for content

@@ -135,6 +135,8 @@ async def invoke_helper_ai(
             latency_ms=latency_ms,
             output_chars=len(response_text),
             input_tokens=usage.get("prompt_tokens"),
+            cached_tokens=usage.get("cached_tokens"),
+            cache_write_tokens=usage.get("cache_write_tokens"),
             output_tokens=usage.get("completion_tokens"),
             total_tokens=usage.get("total_tokens"),
         )
