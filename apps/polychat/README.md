@@ -27,7 +27,21 @@ uv sync
 
 ## Quick Start
 
-### 1. Create a Profile
+### 1. Easy Setup (Recommended)
+
+```bash
+uv run polychat setup
+```
+
+The setup wizard:
+- Asks for API keys for each of the 7 supported AI providers (Enter to skip)
+- Shows a summary and asks for confirmation
+- Creates `~/.polychat/profile.json` and `~/.polychat/api-keys.json`
+- Enters the REPL immediately
+
+You can run `setup` again anytime to reconfigure. It overwrites profile and API key files but leaves chats and logs intact.
+
+### 2. Create a Profile (Advanced)
 
 ```bash
 uv run polychat init -p ~/my-profile.json
@@ -40,7 +54,7 @@ The generated profile template uses home-based paths (`~/.polychat/...`) for dir
 It also includes mixed API-key configuration examples (`env`, `keychain`, `credential`, `json`, `direct`) so you can pick the style you want.
 Then edit the template values (models, paths, and `api_keys`) before running PolyChat.
 
-### 2. Start PolyChat
+### 3. Start PolyChat
 
 ```bash
 # Start with a specific chat
@@ -52,7 +66,7 @@ uv run polychat -p ~/my-profile.json
 
 The app goes straight to the REPL and shows configured AI providers.
 
-### 3. Chat
+### 4. Chat
 
 Messages are multiline:
 - Default input mode is **quick**:
@@ -81,7 +95,10 @@ Claude: Here are the main factors to consider:
 ### Basic Commands
 
 ```bash
-# Create new profile
+# Easy setup (interactive wizard)
+polychat setup
+
+# Create new profile (advanced)
 polychat init -p <profile-path>
 
 # Start with profile

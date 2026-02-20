@@ -892,3 +892,11 @@ i need to update code so the @ symbol based path mapping will work when app has 
 i just renamed the app from poly(HYPHEN)chat or poly(UNDERSCORE)chat to polychat. PolyChat is the display name and will always be. i just thought using a hyphen or underscore depending on the context would make the semantic boundary of the app name more explicit, but that was textbook thinking; it's like ChatGPT in code is chat-gpt and chat_gpt. if the name is like MySuperCoolApp, mysupercoolapp may not be the best package name or identifier, but polychat for PolyChat wont hurt.
 
 after relatively simple text replacements (while i at least asked an ai to consider each occurrence's context), WISHES.md and some other documents may appear inconsistent from now on. so, i'm leaving this note.
+
+## improvements
+
+i have migrated from poetry to uv, removed support for the "pc" commandline, made it mandatory to specify the option name --profile/-p for the init subcommand and fixed a few more things.
+
+now let's implement a new subcommand for the user to configure the app easily. profile will be made at ~/.polychat/profile.json. api keys will be stored as plaintext in ~/.polychat/api-keys.json. chats_dir will be ~/.polychat/chats. logs_dir will be ~/.polychat/logs. ai_limits section of the profile will be generated and all values will be null. this subcommand will show a wizard, which asks only for api keys. this subcommand can be called as many times as the user wants. profile.json and api-keys.json will be overwritten, but chats and logs will not be affected. the wizard says the app supports 7 ai providers. then, for each ai, app asks for an api key or enter key to skip. then, app will show a list of the api keys and asks for confirmation. if there's no valid info, app can say so and nicely close as the subcommand has failed. if info is sufficient and user confirms, app will go into the repl.
+
+also, recently, opus/sonnet 4.6 and codex 5.3 is out. please check all 7 ai companies' latest model names and update models.py and relevant documents.

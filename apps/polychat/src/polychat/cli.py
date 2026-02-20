@@ -6,7 +6,7 @@ import logging
 import sys
 import time
 
-from . import chat, profile
+from . import chat, profile, setup
 from .constants import DISPLAY_UNKNOWN
 from .logging_utils import (
     build_run_log_path,
@@ -66,7 +66,7 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "command", nargs="?", help="Command to run (currently: 'init')"
+        "command", nargs="?", help="Command to run (currently: 'init', 'setup')"
     )
 
     args = parser.parse_args()
@@ -98,11 +98,28 @@ def main() -> None:
             print(f"Error creating profile: {e}")
             sys.exit(1)
 
+    if args.command == "setup":
+        if not raw_args or raw_args[0] != "setup":
+            print("Error: 'setup' must be the first argument")
+            print("Usage: polychat setup")
+            sys.exit(1)
+
+        result = setup.run_setup_wizard()
+        if result is None:
+            sys.exit(1)
+
+        # Fall through to normal REPL startup with the setup profile
+        args.profile = result
+        args.chat = None
+        args.log = None
+        args.command = None
+
     if args.command:
         print(f"Error: unknown command '{args.command}'")
-        print("Supported commands: init")
+        print("Supported commands: init, setup")
         print("Usage:")
         print("  polychat init -p <profile-path>")
+        print("  polychat setup")
         print("  polychat -p <profile-path> [-c <chat-path>] [-l <log-path>]")
         sys.exit(1)
 

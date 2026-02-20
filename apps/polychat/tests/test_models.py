@@ -24,7 +24,7 @@ def test_get_provider_for_model_openai():
 def test_get_provider_for_model_claude():
     """Test getting provider for Claude models."""
     assert get_provider_for_model("claude-opus-4-6") == "claude"
-    assert get_provider_for_model("claude-sonnet-4-5") == "claude"
+    assert get_provider_for_model("claude-sonnet-4-6") == "claude"
     assert get_provider_for_model("claude-haiku-4-5") == "claude"
 
 
