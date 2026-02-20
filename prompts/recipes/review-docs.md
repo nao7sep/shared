@@ -32,4 +32,4 @@ After multiple rounds of implementation, docs often drift from reality. Verify e
 
 - All good: report inline, no file.
 - Minor corrections: report inline and suggest fixing them immediately.
-- Non-minor findings: generate a plan at `docs/plans/{YYYY-MM-DD}-{short-description}.md`.
+- Non-minor findings: generate a plan at `docs/plans/{YYYY-MM-DD}_{short-description}.md`.

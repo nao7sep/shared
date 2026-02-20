@@ -13,7 +13,7 @@ Before starting, identify the project's package manager and ecosystem:
 | `package.json` + `package-lock.json` | Node.js | `npm` |
 | `package.json` + `yarn.lock` | Node.js | `yarn` |
 | `package.json` + `pnpm-lock.yaml` | Node.js | `pnpm` |
-| `go.mod` | Go | `go` |
+| `*.csproj` / `*.sln` | C# / .NET | `dotnet` |
 
 If multiple ecosystems are present, update each independently.
 
@@ -32,10 +32,12 @@ If multiple ecosystems are present, update each independently.
 2. For major version bumps, check changelogs for breaking changes before upgrading.
 3. Run the test suite (`npm test` or equivalent).
 
-### Go
+### C# / .NET (dotnet)
 
-1. Run `go get -u ./...` then `go mod tidy`.
-2. Run the test suite (`go test ./...`).
+1. Run `dotnet list package --outdated` to identify available updates.
+2. Update packages with `dotnet add package <name>` (which installs the latest stable by default) or edit version attributes in `.csproj` and run `dotnet restore`.
+3. For major version bumps, check release notes for breaking changes before upgrading.
+4. Run the test suite (`dotnet test`).
 
 ## Principles
 

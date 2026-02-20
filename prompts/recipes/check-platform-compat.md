@@ -52,4 +52,4 @@ Before starting, determine which platforms are relevant by checking:
 
 - All good: report inline, no file.
 - Minor issues: report inline and suggest fixing them immediately.
-- Non-minor findings: generate a plan at `docs/plans/{YYYY-MM-DD}-{short-description}.md` with specific file and line references.
+- Non-minor findings: generate a plan at `docs/plans/{YYYY-MM-DD}_{short-description}.md` with specific file and line references.
