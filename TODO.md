@@ -31,6 +31,9 @@
 - time to refine anything and everything in current repos. moving on to typescript soon
 - it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?
 - time to build an unified system to work on 3+ projects at once. 2 worked well yesterday
+- polychat: notifications?
+- polychat: copy command to copy selected message to clipboard?
+- polychat: adjustable ttl values?
 
 ## History
 
