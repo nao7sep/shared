@@ -106,6 +106,8 @@ class TestCommandRegistry:
         for cmd, handler in dispatcher.COMMAND_REGISTRY.items():
             assert hasattr(handler, "usage")
             assert isinstance(handler.usage, str)
+            assert hasattr(handler, "summary")
+            assert isinstance(handler.summary, str)
 
     def test_list_commands_dont_clear_list(self):
         """Test that list commands preserve mapping."""
@@ -188,3 +190,22 @@ class TestExecuteCommand:
 
         # Mapping should be set (not cleared)
         assert len(sample_session.last_list) > 0
+
+
+class TestHelpRendering:
+    """Test metadata-driven help rendering."""
+
+    def test_help_text_includes_all_registry_commands(self):
+        help_text = dispatcher.render_help_text()
+
+        for cmd in dispatcher.COMMAND_REGISTRY:
+            display_usage = next(
+                row["display_usage"]
+                for row in dispatcher.command_doc_entries()
+                if row["command"] == cmd
+            )
+            assert display_usage in help_text
+
+    def test_help_text_includes_footer(self):
+        help_text = dispatcher.render_help_text()
+        assert "For full documentation, see README.md" in help_text

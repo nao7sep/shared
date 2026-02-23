@@ -7,7 +7,7 @@ All costs are approximate and actual charges depend on provider billing.
 from dataclasses import dataclass
 
 from .ai.types import TokenUsage
-from .models import ModelPricing, get_model_pricing
+from .models import get_model_pricing
 
 
 @dataclass(frozen=True, slots=True)

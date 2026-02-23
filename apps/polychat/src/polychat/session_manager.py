@@ -4,13 +4,15 @@ This module provides a SessionManager class that wraps SessionState and provides
 a clean interface for session management.
 """
 
-import json
-import math
 from typing import Any, Optional
 
 from .app_state import SessionState, initialize_message_hex_ids, assign_new_message_hex_id
 from . import hex_id
-from . import profile
+from .session import messages as session_messages
+from .session import modes as session_modes
+from .session.system_prompt import load_system_prompt as load_system_prompt_content
+from .session.timeouts import format_timeout as format_timeout_value
+from .session.timeouts import normalize_timeout
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 
 
@@ -340,20 +342,7 @@ class SessionManager:
 
     def _clear_chat_scoped_state(self) -> None:
         """Clear state that shouldn't leak across chat boundaries."""
-        # Clear retry mode
-        self._state.retry_mode = False
-        self._state.retry_base_messages.clear()
-        self._state.retry_target_index = None
-        for hid in list(self._state.retry_attempts.keys()):
-            self._state.hex_id_set.discard(hid)
-        self._state.retry_attempts.clear()
-
-        # Clear secret mode
-        self._state.secret_mode = False
-        self._state.secret_base_messages.clear()
-
-        # Clear search mode
-        self._state.search_mode = False
+        session_modes.clear_chat_scoped_state(self._state)
 
     def clear_chat_scoped_state(self) -> None:
         """Public wrapper to clear retry/secret state."""
@@ -362,21 +351,12 @@ class SessionManager:
     @staticmethod
     def _normalize_timeout(value: Any) -> int | float:
         """Normalize timeout to int/float and reject invalid values."""
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError("Timeout must be a non-negative finite number")
-        numeric = float(value)
-        if not math.isfinite(numeric) or numeric < 0:
-            raise ValueError("Timeout must be a non-negative finite number")
-        if numeric.is_integer():
-            return int(numeric)
-        return numeric
+        return normalize_timeout(value)
 
     @staticmethod
     def format_timeout(timeout: int | float) -> str:
         """Format timeout value for user-facing messages."""
-        if timeout == 0:
-            return "0 (wait forever)"
-        return f"{timeout} seconds"
+        return format_timeout_value(timeout)
 
     @property
     def default_timeout(self) -> int | float:
@@ -440,35 +420,11 @@ class SessionManager:
         Returns:
             Tuple of (system_prompt_text, system_prompt_path, warning_message)
         """
-        system_prompt = None
-        system_prompt_path = None
-        warning = None
-
-        prompt_config = profile_data.get("system_prompt")
-        if isinstance(prompt_config, str):
-            system_prompt_path = prompt_config
-
-            if profile_path:
-                try:
-                    with open(profile_path, "r", encoding="utf-8") as f:
-                        original_profile = json.load(f)
-                    raw_path = original_profile.get("system_prompt")
-                    if isinstance(raw_path, str):
-                        system_prompt_path = raw_path
-                except Exception:
-                    # Fall back to mapped path already loaded into profile_data.
-                    pass
-
-            try:
-                mapped_path = profile.map_system_prompt_path(system_prompt_path)
-                with open(mapped_path, "r", encoding="utf-8") as f:
-                    system_prompt = f.read().strip()
-            except Exception as e:
-                if strict:
-                    raise ValueError(f"Could not load system prompt: {e}") from e
-                warning = f"Could not load system prompt: {e}"
-
-        return system_prompt, system_prompt_path, warning
+        return load_system_prompt_content(
+            profile_data,
+            profile_path=profile_path,
+            strict=strict,
+        )
 
     # ===================================================================
     # Retry Mode Management
@@ -481,15 +437,11 @@ class SessionManager:
             base_messages: Frozen message context (all messages except last assistant)
             target_index: Index of the message that /apply should replace
         """
-        if self._state.secret_mode:
-            raise ValueError("Cannot enter retry mode while in secret mode")
-
-        self._state.retry_mode = True
-        self._state.retry_base_messages = base_messages.copy()
-        self._state.retry_target_index = target_index
-        for hid in list(self._state.retry_attempts.keys()):
-            self._state.hex_id_set.discard(hid)
-        self._state.retry_attempts.clear()
+        session_modes.enter_retry_mode(
+            self._state,
+            base_messages,
+            target_index=target_index,
+        )
 
     def get_retry_context(self) -> list[dict]:
         """Get frozen retry context.
@@ -500,10 +452,7 @@ class SessionManager:
         Raises:
             ValueError: If not in retry mode
         """
-        if not self._state.retry_mode:
-            raise ValueError("Not in retry mode")
-
-        return self._state.retry_base_messages
+        return session_modes.get_retry_context(self._state)
 
     def add_retry_attempt(
         self,
@@ -513,51 +462,37 @@ class SessionManager:
         citations: Optional[list[dict[str, Any]]] = None,
     ) -> str:
         """Store a retry attempt and return its runtime hex ID."""
-        if not self._state.retry_mode:
-            raise ValueError("Not in retry mode")
-
-        if retry_hex_id is None:
-            retry_hex_id = hex_id.generate_hex_id(self._state.hex_id_set)
-        else:
-            self._state.hex_id_set.add(retry_hex_id)
-        self._state.retry_attempts[retry_hex_id] = {
-            "user_msg": user_msg,
-            "assistant_msg": assistant_msg,
-        }
-        if citations:
-            self._state.retry_attempts[retry_hex_id]["citations"] = citations
-        return retry_hex_id
+        return session_modes.add_retry_attempt(
+            self._state,
+            user_msg,
+            assistant_msg,
+            retry_hex_id=retry_hex_id,
+            citations=citations,
+        )
 
     def get_retry_attempt(self, retry_hex_id: str) -> Optional[dict[str, Any]]:
         """Get one retry attempt by runtime hex ID."""
-        return self._state.retry_attempts.get(retry_hex_id)
+        return session_modes.get_retry_attempt(self._state, retry_hex_id)
 
     def get_latest_retry_attempt_id(self) -> Optional[str]:
         """Get the most recently generated retry attempt hex ID."""
-        if not self._state.retry_attempts:
-            return None
-        return next(reversed(self._state.retry_attempts))
+        return session_modes.get_latest_retry_attempt_id(self._state)
 
     def get_retry_target_index(self) -> Optional[int]:
         """Get the chat message index that /apply should replace."""
-        return self._state.retry_target_index
+        return session_modes.get_retry_target_index(self._state)
 
     def reserve_hex_id(self) -> str:
         """Reserve a runtime hex ID for an in-flight assistant response."""
-        return hex_id.generate_hex_id(self._state.hex_id_set)
+        return session_modes.reserve_hex_id(self._state)
 
     def release_hex_id(self, message_hex_id: str) -> None:
         """Release a runtime hex ID that was reserved but not persisted."""
-        self._state.hex_id_set.discard(message_hex_id)
+        session_modes.release_hex_id(self._state, message_hex_id)
 
     def exit_retry_mode(self) -> None:
         """Exit retry mode and clear retry state."""
-        self._state.retry_mode = False
-        self._state.retry_base_messages.clear()
-        self._state.retry_target_index = None
-        for hid in list(self._state.retry_attempts.keys()):
-            self._state.hex_id_set.discard(hid)
-        self._state.retry_attempts.clear()
+        session_modes.exit_retry_mode(self._state)
 
     # ===================================================================
     # Secret Mode Management
@@ -569,11 +504,7 @@ class SessionManager:
         Args:
             base_messages: Current persisted message context
         """
-        if self._state.retry_mode:
-            raise ValueError("Cannot enter secret mode while in retry mode")
-
-        self._state.secret_mode = True
-        self._state.secret_base_messages = base_messages.copy()
+        session_modes.enter_secret_mode(self._state, base_messages)
 
     def get_secret_context(self) -> list[dict]:
         """Get stored secret-mode context snapshot.
@@ -584,15 +515,11 @@ class SessionManager:
         Raises:
             ValueError: If not in secret mode
         """
-        if not self._state.secret_mode:
-            raise ValueError("Not in secret mode")
-
-        return self._state.secret_base_messages
+        return session_modes.get_secret_context(self._state)
 
     def exit_secret_mode(self) -> None:
         """Exit secret mode and clear secret state."""
-        self._state.secret_mode = False
-        self._state.secret_base_messages.clear()
+        session_modes.exit_secret_mode(self._state)
 
     # ===================================================================
     # Hex ID Management
@@ -618,11 +545,7 @@ class SessionManager:
         Returns:
             Hex ID or None if not assigned
         """
-        messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
-        if message_index < 0 or message_index >= len(messages):
-            return None
-        hid = messages[message_index].get("hex_id")
-        return hid if isinstance(hid, str) else None
+        return session_messages.get_message_hex_id(self._state, message_index)
 
     def remove_message_hex_id(self, message_index: int) -> None:
         """Remove hex ID for a message.
@@ -630,12 +553,7 @@ class SessionManager:
         Args:
             message_index: Index of the message
         """
-        messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
-        if message_index < 0 or message_index >= len(messages):
-            return
-        hex_to_remove = messages[message_index].pop("hex_id", None)
-        if isinstance(hex_to_remove, str):
-            self._state.hex_id_set.discard(hex_to_remove)
+        session_messages.remove_message_hex_id(self._state, message_index)
 
     def pop_message(
         self,
@@ -651,20 +569,11 @@ class SessionManager:
         Returns:
             Popped message dict, or None when the chat has no messages.
         """
-        target_chat = chat_data if chat_data is not None else self._state.chat
-        if not isinstance(target_chat, dict):
-            return None
-
-        messages = target_chat.get("messages")
-        if not isinstance(messages, list) or not messages:
-            return None
-
-        popped = messages.pop(message_index)
-        if isinstance(popped, dict):
-            hex_to_remove = popped.pop("hex_id", None)
-            if isinstance(hex_to_remove, str):
-                self._state.hex_id_set.discard(hex_to_remove)
-        return popped if isinstance(popped, dict) else None
+        return session_messages.pop_message(
+            self._state,
+            message_index=message_index,
+            chat_data=chat_data,
+        )
 
     # ===================================================================
     # Provider Caching

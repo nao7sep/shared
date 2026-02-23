@@ -1,13 +1,21 @@
 """Runtime and conversation command mixin."""
 
+from typing import TYPE_CHECKING
+
 from .. import chat, hex_id, models, profile
 from ..chat import delete_message_and_following, update_metadata
 from ..constants import DISPLAY_UNKNOWN
 from ..timeouts import resolve_profile_timeout
 from .types import CommandResult, CommandSignal
 
+if TYPE_CHECKING:
+    from .contracts import CommandDependencies as _CommandDependencies
+else:
+    class _CommandDependencies:
+        pass
 
-class RuntimeCommandsMixin:
+
+class RuntimeCommandsMixin(_CommandDependencies):
     async def _choose_model_from_candidates(
         self,
         query: str,
@@ -86,18 +94,20 @@ class RuntimeCommandsMixin:
             return resolution_error
         if selected_model is None:
             return "Model selection cancelled."
+        # Keep mypy aligned with runtime control flow.
+        assert selected_model is not None
 
-        provider = models.get_provider_for_model(selected_model)
-        if provider is None:
+        model_provider = models.get_provider_for_model(selected_model)
+        if model_provider is None:
             return f"No provider found for model '{selected_model}'."
 
-        self.manager.current_ai = provider
+        self.manager.current_ai = model_provider
         self.manager.current_model = selected_model
 
-        base_message = f"Switched to {provider} ({selected_model})"
+        base_message = f"Switched to {model_provider} ({selected_model})"
         if selected_model != query:
             base_message += f" [matched from '{query}']"
-        notices = self._reconcile_provider_modes(provider)
+        notices = self._reconcile_provider_modes(model_provider)
         if notices:
             return base_message + "\n" + "\n".join(notices)
         return base_message
@@ -292,6 +302,8 @@ class RuntimeCommandsMixin:
             try:
                 # Try to map and validate the path
                 mapped_path = profile.map_system_prompt_path(persona_path)
+                if mapped_path is None:
+                    raise ValueError("Unknown persona")
                 # Check if file exists
                 with open(mapped_path, "r", encoding="utf-8") as f:
                     system_prompt_content = f.read().strip()
@@ -310,6 +322,8 @@ class RuntimeCommandsMixin:
         try:
             # Validate path mapping
             system_prompt_mapped_path = profile.map_system_prompt_path(args)
+            if system_prompt_mapped_path is None:
+                raise ValueError("System prompt path is required")
 
             # Try to read the file to make sure it exists
             try:
@@ -544,9 +558,10 @@ class RuntimeCommandsMixin:
                     )
                 index = len(messages) - 2
         elif hex_id.is_hex_id(target):
-            index = hex_id.get_message_index(target, messages)
-            if index is None:
+            found_index = hex_id.get_message_index(target, messages)
+            if found_index is None:
                 raise ValueError(f"Hex ID '{target}' not found")
+            index = found_index
         else:
             raise ValueError("Invalid target. Use a hex ID or 'last'")
 

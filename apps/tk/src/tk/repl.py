@@ -1,16 +1,21 @@
 """REPL parsing and loop orchestration for tk."""
 
 import os
+import shlex
 import traceback
 from typing import Any
 
 from tk import commands, dispatcher, markdown, prompts
+from tk.errors import TkError, TkUsageError
 from tk.session import Session
 
 
 def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
     """Parse command line into (command, args, kwargs)."""
-    parts = line.split()
+    try:
+        parts = shlex.split(line)
+    except ValueError as e:
+        raise TkUsageError(f"Invalid command syntax: {e}") from e
 
     if not parts:
         return "", [], {}
@@ -163,8 +168,13 @@ def repl(session: Session) -> None:
             print()
             continue
 
-        except ValueError as e:
+        except TkError as e:
             # Expected business logic errors (user errors, validation failures)
+            print(f"Error: {e}")
+            print()
+
+        except ValueError as e:
+            # Backward-compatible catch for any remaining ValueError paths.
             print(f"Error: {e}")
             print()
 
@@ -179,13 +189,16 @@ def repl(session: Session) -> None:
     profile_data = session.profile
     tasks_data = session.tasks
     if profile_data and tasks_data and profile_data.get("sync_on_exit", False):
-        markdown.generate_todo(tasks_data["tasks"], profile_data["output_path"])
+        markdown.generate_todo(
+            tasks_data.to_dict()["tasks"] if hasattr(tasks_data, "to_dict") else tasks_data["tasks"],
+            profile_data["output_path"],
+        )
 
     if tasks_data:
-        tasks = tasks_data["tasks"]
-        pending_count = sum(1 for t in tasks if t["status"] == "pending")
-        done_count = sum(1 for t in tasks if t["status"] == "done")
-        cancelled_count = sum(1 for t in tasks if t["status"] == "cancelled")
+        raw_tasks = tasks_data.to_dict()["tasks"] if hasattr(tasks_data, "to_dict") else tasks_data["tasks"]
+        pending_count = sum(1 for t in raw_tasks if t["status"] == "pending")
+        done_count = sum(1 for t in raw_tasks if t["status"] == "done")
+        cancelled_count = sum(1 for t in raw_tasks if t["status"] == "cancelled")
 
         print(f"{pending_count} pending, {done_count} done, {cancelled_count} cancelled")
 

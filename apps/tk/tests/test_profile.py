@@ -22,6 +22,13 @@ class TestMapPath:
         expected = str(Path.home() / "test/path")
         assert result == expected
 
+    def test_map_path_tilde_with_backslash_subpath(self):
+        """Test mapping tilde with Windows-style separator."""
+        result = map_path("~\\test\\path", "/profile/dir")
+        path_obj = Path(result)
+        assert path_obj.parts[-2:] == ("test", "path")
+        assert str(path_obj).startswith(str(Path.home()))
+
     def test_map_path_tilde_alone(self):
         """Test mapping tilde alone."""
         result = map_path("~", "/profile/dir")
@@ -33,6 +40,12 @@ class TestMapPath:
         result = map_path("@/test/path", "/profile/dir")
         # App root is where pyproject.toml is (tk/)
         assert result.endswith("test/path")
+        assert "tk" in result or "src" in result
+
+    def test_map_path_at_with_backslash_subpath(self):
+        """Test mapping @ with Windows-style separator."""
+        result = map_path("@\\test\\path", "/profile/dir")
+        assert Path(result).parts[-2:] == ("test", "path")
         assert "tk" in result or "src" in result
 
     def test_map_path_at_alone(self):
@@ -84,11 +97,17 @@ class TestParseTime:
         with pytest.raises(ValueError, match="Invalid time format"):
             parse_time("4:00 AM")
 
-        # Note: parse_time uses regex, so 25:00 matches the pattern (doesn't validate range)
-        # The validation happens at profile validation level
-
         with pytest.raises(ValueError, match="Invalid time format"):
             parse_time("not a time")
+
+    @pytest.mark.parametrize(
+        "time_str",
+        ["24:00", "25:00", "12:60", "12:30:60"],
+    )
+    def test_parse_time_out_of_range(self, time_str):
+        """Test that out-of-range values raise ValueError."""
+        with pytest.raises(ValueError, match="Time out of range"):
+            parse_time(time_str)
 
     def test_parse_time_midnight(self):
         """Test parsing midnight."""
@@ -156,6 +175,16 @@ class TestValidateProfile:
                 "subjective_day_start": "04:00:00",
             })
 
+    def test_validate_profile_invalid_timezone(self):
+        """Test that invalid timezone values are rejected."""
+        with pytest.raises(ValueError, match="Invalid timezone"):
+            validate_profile({
+                "data_path": "~/tasks.json",
+                "output_path": "~/TODO.md",
+                "timezone": "Not/A_Real_Zone",
+                "subjective_day_start": "04:00:00",
+            })
+
 
 class TestLoadProfile:
     """Test load_profile function."""
@@ -164,7 +193,7 @@ class TestLoadProfile:
         """Test that loading non-existent profile raises FileNotFoundError."""
         profile_path = temp_dir / "nonexistent.json"
 
-        with pytest.raises(FileNotFoundError, match="Profile not found"):
+        with pytest.raises(FileNotFoundError, match="Use 'init' command"):
             load_profile(str(profile_path))
 
     def test_load_profile_invalid_json(self, temp_dir):

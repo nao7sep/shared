@@ -3,8 +3,18 @@
 import json
 from pathlib import Path
 from typing import Any
-from datetime import datetime
+from datetime import time as time_type
 import re
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from tk.errors import TkConfigError
+
+APP_DIR = Path(__file__).resolve().parents[2]
+
+
+def _normalize_shortcut_subpath(path: str) -> str:
+    """Normalize shortcut subpath separators for cross-platform behavior."""
+    return path[2:].replace("\\", "/")
 
 
 def map_path(path: str, profile_dir: str) -> str:
@@ -18,22 +28,20 @@ def map_path(path: str, profile_dir: str) -> str:
         Absolute path string
 
     Mapping rules:
-        ~ or ~/ -> user home directory
-        @ or @/ -> app directory (where pyproject.toml is located)
+        ~ or ~/ or ~\\ -> user home directory
+        @ or @/ or @\\ -> app directory (where pyproject.toml is located)
         Relative paths -> relative to profile_dir
         Absolute paths -> used as-is
     """
-    if path.startswith("~/"):
-        return str(Path.home() / path[2:])
+    if path.startswith("~/") or path.startswith("~\\"):
+        return str(Path.home() / _normalize_shortcut_subpath(path))
     elif path == "~":
         return str(Path.home())
-    elif path.startswith("@/"):
-        # App directory is the root of the tk package (where pyproject.toml is)
-        app_dir = Path(__file__).parent.parent.parent
-        return str(app_dir / path[2:])
+    elif path.startswith("@/") or path.startswith("@\\"):
+        # App directory is the project root (where pyproject.toml is).
+        return str(APP_DIR / _normalize_shortcut_subpath(path))
     elif path == "@":
-        app_dir = Path(__file__).parent.parent.parent
-        return str(app_dir)
+        return str(APP_DIR)
     elif Path(path).is_absolute():
         return path
     else:
@@ -51,7 +59,7 @@ def parse_time(time_str: str) -> tuple[int, int, int]:
         Tuple of (hours, minutes, seconds)
 
     Raises:
-        ValueError: If format is invalid
+        TkConfigError: If format is invalid
     """
     # Support both HH:MM and HH:MM:SS
     pattern_with_seconds = r"^(\d{1,2}):(\d{2}):(\d{2})$"
@@ -60,14 +68,28 @@ def parse_time(time_str: str) -> tuple[int, int, int]:
     match = re.match(pattern_with_seconds, time_str)
     if match:
         hours, minutes, seconds = match.groups()
-        return int(hours), int(minutes), int(seconds)
+        parsed = (int(hours), int(minutes), int(seconds))
+        try:
+            time_type(*parsed)
+        except ValueError as e:
+            raise TkConfigError(
+                f"Time out of range: {time_str}. Expected 00:00 to 23:59:59"
+            ) from e
+        return parsed
 
     match = re.match(pattern_without_seconds, time_str)
     if match:
         hours, minutes = match.groups()
-        return int(hours), int(minutes), 0
+        parsed = (int(hours), int(minutes), 0)
+        try:
+            time_type(*parsed)
+        except ValueError as e:
+            raise TkConfigError(
+                f"Time out of range: {time_str}. Expected 00:00 to 23:59:59"
+            ) from e
+        return parsed
 
-    raise ValueError(f"Invalid time format: {time_str}. Expected HH:MM or HH:MM:SS")
+    raise TkConfigError(f"Invalid time format: {time_str}. Expected HH:MM or HH:MM:SS")
 
 
 def validate_profile(profile: dict[str, Any]) -> None:
@@ -77,23 +99,27 @@ def validate_profile(profile: dict[str, Any]) -> None:
         profile: Profile dictionary to validate
 
     Raises:
-        ValueError: If profile is invalid
+        TkConfigError: If profile is invalid
     """
     required_fields = ["data_path", "output_path", "timezone", "subjective_day_start"]
     missing = [f for f in required_fields if f not in profile]
 
     if missing:
-        raise ValueError(f"Profile missing required fields: {', '.join(missing)}")
+        raise TkConfigError(f"Profile missing required fields: {', '.join(missing)}")
 
     # Validate time format
     try:
         parse_time(profile["subjective_day_start"])
-    except ValueError as e:
-        raise ValueError(f"Invalid subjective_day_start: {e}")
+    except TkConfigError as e:
+        raise TkConfigError(f"Invalid subjective_day_start: {e}")
 
-    # Validate timezone (basic check - full validation happens in zoneinfo)
+    # Validate timezone.
     if not isinstance(profile["timezone"], str) or not profile["timezone"]:
-        raise ValueError("timezone must be a non-empty string")
+        raise TkConfigError("timezone must be a non-empty string")
+    try:
+        ZoneInfo(profile["timezone"])
+    except ZoneInfoNotFoundError as e:
+        raise TkConfigError(f"Invalid timezone: {profile['timezone']}") from e
 
 
 def load_profile(path: str) -> dict[str, Any]:
@@ -115,7 +141,7 @@ def load_profile(path: str) -> dict[str, Any]:
     if not profile_path.exists():
         raise FileNotFoundError(
             f"Profile not found: {profile_path}\n"
-            f"Use 'new' command to create a profile"
+            "Use 'init' command to create a profile"
         )
 
     with open(profile_path, "r", encoding="utf-8") as f:

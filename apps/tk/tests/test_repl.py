@@ -1,6 +1,7 @@
 """Tests for repl module."""
 
 import pytest
+from tk.errors import TkUsageError
 from tk.repl import parse_command, _try_parse_first_num_arg
 
 
@@ -21,6 +22,14 @@ class TestParseCommand:
 
         assert cmd == "add"
         assert args == ["task", "text"]
+        assert kwargs == {}
+
+    def test_parse_command_quoted_text(self):
+        """Test parsing quoted arguments with shlex semantics."""
+        cmd, args, kwargs = parse_command('add "task with spaces" tail')
+
+        assert cmd == "add"
+        assert args == ["task with spaces", "tail"]
         assert kwargs == {}
 
     def test_parse_done_treats_flags_as_plain_args(self):
@@ -69,6 +78,11 @@ class TestParseCommand:
         assert cmd == "cancel"
         assert args == ["1", "--note", "nope", "--date", "2026-02-09"]
         assert kwargs == {}
+
+    def test_parse_command_invalid_syntax(self):
+        """Test that unmatched quotes raise usage error."""
+        with pytest.raises(TkUsageError, match="Invalid command syntax"):
+            parse_command('add "unterminated')
 
 
 class TestTryParseFirstNumArg:

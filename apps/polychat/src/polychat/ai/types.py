@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, TypedDict
+from typing import TypedDict
 
 
 class TokenUsage(TypedDict, total=False):

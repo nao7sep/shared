@@ -1,6 +1,7 @@
 """Chat file management command mixin."""
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..chat import load_chat, save_chat
 from ..chat_manager import (
@@ -11,8 +12,14 @@ from ..chat_manager import (
 from ..logging_utils import sanitize_error_message
 from .types import CommandResult, CommandSignal
 
+if TYPE_CHECKING:
+    from .contracts import CommandDependencies as _CommandDependencies
+else:
+    class _CommandDependencies:
+        pass
 
-class ChatFileCommandsMixin:
+
+class ChatFileCommandsMixin(_CommandDependencies):
     @staticmethod
     def _is_yes_choice(answer: str) -> bool:
         return answer.strip().lower() in {"", "y", "yes"}
@@ -61,6 +68,7 @@ class ChatFileCommandsMixin:
         """
         chats_dir = self.manager.profile["chats_dir"]
 
+        selected_path: str | None
         if args.strip():
             # Path provided as argument
             try:

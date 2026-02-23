@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from tk import data
+from tk.models import Profile, Task, TaskStore
 
 
 @dataclass
@@ -11,20 +11,24 @@ class Session:
     """In-memory runtime state for a tk session."""
 
     profile_path: str | None = None
-    profile: dict[str, Any] | None = None
-    tasks: dict[str, Any] | None = None
+    profile: Profile | dict[str, Any] | None = None
+    tasks: TaskStore | dict[str, Any] | None = None
     last_list: list[tuple[int, int]] = field(default_factory=list)
 
-    def require_profile(self) -> dict[str, Any]:
+    def require_profile(self) -> Profile:
         """Return loaded profile or raise if missing."""
         if self.profile is None:
             raise ValueError("No profile loaded")
+        if isinstance(self.profile, dict):
+            self.profile = Profile.from_dict(self.profile)
         return self.profile
 
-    def require_tasks(self) -> dict[str, Any]:
+    def require_tasks(self) -> TaskStore:
         """Return loaded task data or raise if missing."""
         if self.tasks is None:
             raise ValueError("No tasks loaded")
+        if isinstance(self.tasks, dict):
+            self.tasks = TaskStore.from_dict(self.tasks)
         return self.tasks
 
     def set_last_list(self, mapping: list[tuple[int, int]]) -> None:
@@ -46,10 +50,10 @@ class Session:
 
         raise ValueError("Invalid task number")
 
-    def get_task_by_display_number(self, display_num: int) -> dict[str, Any]:
+    def get_task_by_display_number(self, display_num: int) -> Task:
         """Get a task via the current list/history display number mapping."""
         array_index = self.resolve_array_index(display_num)
-        task = data.get_task_by_index(self.require_tasks(), array_index)
+        task = self.require_tasks().get_task_by_index(array_index)
         if not task:
             raise ValueError("Task not found")
         return task

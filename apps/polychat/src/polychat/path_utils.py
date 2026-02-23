@@ -3,11 +3,13 @@
 This module provides path mapping functionality to support:
 - ~ or ~/... → User home directory
 - @ or @/... → App package directory (contains bundled prompts/resources)
-- Absolute paths → Used as-is
+- Native absolute paths → Used as-is
+- Windows absolute paths (C:\\..., C:/..., UNC) → Supported on Windows,
+  rejected on non-Windows hosts
 - Relative paths without prefix → Error (to avoid ambiguity)
 """
 
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 def get_app_root() -> Path:
@@ -34,13 +36,19 @@ def has_app_path_prefix(path: str) -> bool:
     return path == "@" or path.startswith("@/") or path.startswith("@\\")
 
 
+def is_windows_absolute_path(path: str) -> bool:
+    """Return True when path is an absolute Windows path (drive or UNC)."""
+    return PureWindowsPath(path).is_absolute()
+
+
 def map_path(path: str) -> str:
     """Map path with special prefixes to absolute path.
 
     Supports special prefixes (with / or \\ for Windows compatibility):
     - ~/... or ~\\... → expands to user home directory
     - @/... or @\\... → expands to app root directory
-    - Absolute paths → used as-is (C:\\, C:/, /usr/local, etc.)
+    - Native absolute paths → used as-is
+    - Windows absolute paths (C:\\, C:/, UNC) → accepted on Windows, rejected on non-Windows
     - Relative paths without prefix → Error
 
     Args:
@@ -50,7 +58,8 @@ def map_path(path: str) -> str:
         Absolute path string
 
     Raises:
-        ValueError: If path is relative without special prefix, or escapes boundary
+        ValueError: If path is relative without special prefix, escapes boundary,
+            or uses a Windows absolute path on non-Windows
 
     Examples:
         >>> map_path("~/chats/my-chat.json")  # Unix
@@ -65,7 +74,7 @@ def map_path(path: str) -> str:
         >>> map_path("/usr/local/data/profile.json")  # Unix
         '/usr/local/data/profile.json'
 
-        >>> map_path("C:\\Users\\data\\profile.json")  # Windows
+        >>> map_path("C:\\Users\\data\\profile.json")  # Windows-only
         'C:\\Users\\data\\profile.json'
 
         >>> map_path("relative/path.json")
@@ -102,8 +111,14 @@ def map_path(path: str) -> str:
             raise ValueError(f"Path escapes app directory: {path}")
         return str(resolved)
 
-    # Absolute path - use as-is
-    # Works for both Unix (/usr/local) and Windows (C:\, C:/)
+    # Absolute path - use as-is.
+    # On non-Windows hosts, reject Windows absolute paths explicitly.
+    if is_windows_absolute_path(path) and not Path(path).is_absolute():
+        raise ValueError(
+            f"Windows absolute paths are not supported on this platform: {path}"
+        )
+
+    # Works for native absolute paths on the current platform.
     elif Path(path).is_absolute():
         return str(Path(path).resolve())
 

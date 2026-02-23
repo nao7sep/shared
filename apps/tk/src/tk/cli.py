@@ -6,6 +6,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from tk import data, markdown, profile
+from tk.errors import TkError
 from tk.repl import repl
 from tk.session import Session
 
@@ -75,6 +76,9 @@ Examples:
             print()
             print(f"Start the app with: tk --profile {args.profile}")
 
+        except TkError as e:
+            print(f"Error creating profile: {e}")
+            sys.exit(1)
         except Exception as e:
             print(f"Error creating profile: {e}")
             sys.exit(1)
@@ -99,6 +103,9 @@ Examples:
             print(f"Create it with: tk init --profile {args.profile}")
             sys.exit(1)
 
+        except TkError as e:
+            print(f"Error loading profile: {e}")
+            sys.exit(1)
         except Exception as e:
             print(f"Error loading profile: {e}")
             sys.exit(1)

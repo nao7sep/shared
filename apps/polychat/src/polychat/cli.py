@@ -19,6 +19,8 @@ from .repl import repl_loop
 from .session_manager import SessionManager
 from .timeouts import resolve_profile_timeout
 
+__all__ = ["main", "sanitize_error_message"]
+
 
 def _map_cli_arg(path: str | None, arg_name: str) -> str | None:
     """Map CLI path argument with descriptive error messages.

@@ -51,6 +51,18 @@ def test_map_path_accepts_absolute_paths():
     assert result == abs_path
 
 
+def test_map_path_rejects_windows_absolute_path_on_non_windows():
+    """Windows absolute paths should fail fast on non-Windows hosts."""
+    if Path("C:/").exists():
+        pytest.skip("Windows host")
+
+    with pytest.raises(
+        ValueError,
+        match="Windows absolute paths are not supported on this platform",
+    ):
+        map_path(r"C:\\Users\\alice\\profile.json")
+
+
 def test_map_path_home_returns_absolute():
     """Test that home paths return absolute paths."""
     result = map_path("~/documents/file.txt")

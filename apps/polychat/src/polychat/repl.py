@@ -138,7 +138,6 @@ async def repl_loop(
         event.current_buffer.validate_and_handle()
 
     # REPL command history file
-    from .constants import REPL_HISTORY_FILE
     from .path_utils import map_path
 
     history_file_path = map_path(REPL_HISTORY_FILE)

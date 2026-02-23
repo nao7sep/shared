@@ -6,6 +6,14 @@ from typing import Any
 from tk import data
 
 
+def _write_todo(lines: list[str], output_path: str) -> None:
+    """Write generated TODO.md content to disk."""
+    output_file = Path(output_path)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
 def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     """Generate TODO.md from tasks.
 
@@ -47,10 +55,7 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     if not has_handled:
         # No history to show, just end with empty line
         lines.append("")
-        output_file = Path(output_path)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
+        _write_todo(lines, output_path)
         return
 
     # History section (merge done and cancelled)
@@ -98,10 +103,4 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
 
     # End with empty line
     lines.append("")
-
-    # Write to file
-    output_file = Path(output_path)
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+    _write_todo(lines, output_path)

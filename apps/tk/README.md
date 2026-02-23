@@ -125,6 +125,7 @@ Task deleted.
 **Path shortcuts** in data_path/output_path:
 - `~/dir/file` → your home directory
 - `@/dir/file` → tk app root (where pyproject.toml is) - source mode only
+- `~\dir\file` and `@\dir\file` are also accepted (normalized to path separators)
 - `./dir/file` or `file` → relative to profile directory
 - `/abs/path` → absolute path used as-is
 
@@ -300,7 +301,6 @@ These are current project assumptions, documented for future packaging work:
 - Windows `.exe` one-file packaging is not an active goal right now.
 - Timezone behavior on Windows is expected to depend on runtime packaging details (for example bundled timezone data); verify during actual packaging/testing.
 - `@/` paths are intended for source/project usage. In one-file packaged mode they may be unreliable, so avoid them there.
-- Backslash-style path shortcuts for `~`/`@` are not a supported input style in this project.
 
 ## License
 

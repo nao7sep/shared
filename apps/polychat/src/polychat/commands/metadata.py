@@ -1,6 +1,7 @@
 """Metadata, safety, and history command mixin."""
 
 import logging
+from typing import TYPE_CHECKING, Optional
 
 from .. import hex_id
 from ..chat import get_messages_for_ai
@@ -13,7 +14,6 @@ from ..constants import (
     MESSAGE_PREVIEW_LENGTH,
 )
 from ..text_formatting import (
-    lines_to_text,
     format_for_ai_context,
     format_for_safety_check,
     format_for_show,
@@ -30,14 +30,21 @@ from ..prompts import (
 )
 from ..timeouts import resolve_profile_timeout
 
-class MetadataCommandsMixin:
+if TYPE_CHECKING:
+    from .contracts import CommandDependencies as _CommandDependencies
+else:
+    class _CommandDependencies:
+        pass
+
+
+class MetadataCommandsMixin(_CommandDependencies):
     async def _invoke_helper_ai(
         self,
         helper_ai: str,
         helper_model: str,
         profile_data: dict,
         messages: list[dict],
-        system_prompt: str,
+        system_prompt: Optional[str],
         task: str,
     ) -> str:
         """Late-bind helper call through commands module for test patch compatibility."""
@@ -400,7 +407,6 @@ class MetadataCommandsMixin:
         msg = messages[msg_index]
         role = msg.get("role", DISPLAY_UNKNOWN)
         timestamp = msg.get("timestamp", "")
-        content_parts = msg.get("content", [])
 
         if timestamp:
             time_str = self._to_local_time(timestamp, DATETIME_FORMAT_FULL)
