@@ -2,7 +2,7 @@
 cd "$(dirname "$0")/.."
 echo "Running models integration test..."
 echo ""
-echo "Requires .TEST_API_KEYS.json with valid API keys."
+echo "Requires .dev-api-keys.json with valid API keys."
 echo ""
 echo "Options:"
 echo "  1. Test every model (34 models, slower)"

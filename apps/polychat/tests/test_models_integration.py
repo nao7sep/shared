@@ -5,7 +5,7 @@ This test makes real API calls to every model defined in models.py to verify:
 2. Models are accessible with current API keys
 3. Basic functionality works
 
-Requires .TEST_API_KEYS.json with valid API keys for each provider.
+Requires .dev-api-keys.json with valid API keys for each provider.
 """
 
 import pytest
@@ -101,7 +101,7 @@ async def test_all_models_smoke_test():
     # Check if we have test config
     test_config_file = find_test_api_keys_file()
     if not test_config_file:
-        pytest.skip(".TEST_API_KEYS.json not found")
+        pytest.skip(".dev-api-keys.json not found")
 
     test_config = load_test_config()
 
@@ -198,7 +198,7 @@ async def test_default_models_work():
     # Check if we have test config
     test_config_file = find_test_api_keys_file()
     if not test_config_file:
-        pytest.skip(".TEST_API_KEYS.json not found")
+        pytest.skip(".dev-api-keys.json not found")
 
     test_config = load_test_config()
 

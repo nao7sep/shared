@@ -4,13 +4,13 @@ import json
 from pathlib import Path
 from typing import Optional
 
-_TEST_API_KEYS_FILENAME = ".TEST_API_KEYS.json"
+_DEV_API_KEYS_FILENAME = ".dev-api-keys.json"
 _config_cache: Optional[dict] = None
 
 
 def find_test_api_keys_file() -> Optional[Path]:
     """
-    Search for .TEST_API_KEYS.json by recursively checking parent directories.
+    Search for .dev-api-keys.json by recursively checking parent directories.
 
     Starts from the current file's directory and moves up until:
     - File is found (returns Path)
@@ -21,7 +21,7 @@ def find_test_api_keys_file() -> Optional[Path]:
     current = Path(__file__).resolve().parent
 
     while True:
-        candidate = current / _TEST_API_KEYS_FILENAME
+        candidate = current / _DEV_API_KEYS_FILENAME
         if candidate.exists():
             return candidate
 
@@ -39,7 +39,7 @@ def load_test_config() -> dict:
     Load test API keys configuration.
 
     Returns the full config dict. Caches result after first load.
-    Raises FileNotFoundError if .TEST_API_KEYS.json is not found.
+    Raises FileNotFoundError if .dev-api-keys.json is not found.
     """
     global _config_cache
 
@@ -49,8 +49,8 @@ def load_test_config() -> dict:
     config_file = find_test_api_keys_file()
     if config_file is None:
         raise FileNotFoundError(
-            f"{_TEST_API_KEYS_FILENAME} not found in current directory or any parent directory. "
-            "Create this file at repo root with API keys for testing."
+            f"{_DEV_API_KEYS_FILENAME} not found in current directory or any parent directory. "
+            "Create this file in your home directory (~) or any parent directory with API keys for testing."
         )
 
     with open(config_file, 'r', encoding='utf-8') as f:
