@@ -71,32 +71,22 @@ fi
 echo ""
 echo "Updating Python..."
 if brew upgrade python || brew upgrade python@3; then
-    echo "✓ Python updated"
+    echo "✓ Python updated (or already up to date)"
 else
-    # Check if already up to date
-    if brew list --versions python &> /dev/null || brew list --versions python@3 &> /dev/null; then
-        echo "✓ Python is already up to date"
-    else
-        echo "✗ Failed to update Python"
-        echo ""
-        exit 1
-    fi
+    echo "✗ Failed to update Python"
+    echo ""
+    exit 1
 fi
 
 # Update uv
 echo ""
 echo "Updating uv..."
 if brew upgrade uv; then
-    echo "✓ uv updated"
+    echo "✓ uv updated (or already up to date)"
 else
-    # Check if already up to date
-    if brew list --versions uv &> /dev/null; then
-        echo "✓ uv is already up to date"
-    else
-        echo "✗ Failed to update uv"
-        echo ""
-        exit 1
-    fi
+    echo "✗ Failed to update uv"
+    echo ""
+    exit 1
 fi
 
 echo ""

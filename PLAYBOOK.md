@@ -14,6 +14,7 @@ Developer profile and engineering principles for AI-assisted development.
 - Git commit: `nao7sep <nao7sep@gmail.com>`
 - Copyright holder: `nao7sep`
 - Default license: MIT
+- Use these values for project/package metadata by default (for example `pyproject.toml`) unless explicitly told otherwise.
 
 ## Background
 
@@ -23,15 +24,17 @@ Developer profile and engineering principles for AI-assisted development.
 ## Collaboration
 
 - I define WHAT to build; you handle HOW, including recommending the best stack.
-- Bias toward action. Do not ask questions that can be deferred or reasonably decided without my input. Names, locations, and cosmetic details can be decided after the work is done.
-- When multiple valid approaches exist, pick the simplest one and proceed. Mention the alternative only if the trade-off is non-obvious.
+- Bias toward action. Do not ask questions that can be deferred or reasonably decided without my input.
+- If the choice is low-risk and reversible, pick the simplest option and proceed.
+- If the choice changes architecture or operations (caching, background jobs, WebSockets, advanced logging, monitoring, Docker, CI/CD), propose first and implement only on request.
+- Mention alternatives only when the trade-off is non-obvious.
 
 ## Conventions
 
 ### Repos
 
-- `~/code/shared/` is a public mono repo of reusable tools and libraries.
-- `~/code/secrets/` is a private repo for configurations, credentials, and personal-use utilities.
+- `~/code/shared/` contains reusable, publishable code and docs. Assume contents may become public.
+- `~/code/secrets/` contains private configs, credentials, and personal-use utilities. Treat contents as non-public and never copy sensitive data into `shared`.
 
 ### Naming
 
@@ -46,36 +49,30 @@ AI-agnostic task prompts live in `shared/prompts/recipes/`. These are standalone
 
 ### Data Modeling
 
-Never use raw dicts for structured data. If data has more than one field and lives beyond a single expression, it belongs in a typed model — `dataclass` for simple cases, Pydantic `BaseModel` when validation or serialization is needed.
+Never use raw dicts for structured data. If data has more than one field and lives beyond a single expression, it belongs in a typed model - `dataclass` for simple cases, Pydantic `BaseModel` when validation or serialization is needed.
 
-### Complexity
+### Design Rules
 
-Keep it simple for one-shot scripts that take input, do work, and exit. Design from day one when there is persistent state, sessions, multiple subsystems, or data flowing across layers.
-
-### Separation of Concerns
-
-Keep layers distinct: input handling, business logic, data access, output. Do not mix concerns only to save lines. A 200-line class with one responsibility is better than a 50-line class with three.
-
-### Abstraction
-
-- Single implementation: concrete class/function.
-- Two or more implementations: introduce Protocol/interface.
-- Cross-cutting concern: separate middleware/decorator/dependency.
-- Hard to test: extract dependencies and use DI.
-- File >500 lines: consider split by responsibility.
-- Three repeated lines are better than a bad abstraction.
+- One-shot scripts: optimize for directness and clarity.
+- Systems with persistent state, sessions, multiple subsystems, or cross-layer data flow: define boundaries early.
+- Separation of concerns is the highest priority for code structure, especially in Python.
+- Keep layers strictly distinct: input handling, business logic, data access, output.
+- Reject tangled designs that mix responsibilities just to reduce line count.
+- Start concrete. Introduce Protocol/interface when there are two or more implementations.
+- Extract dependencies when code is hard to test.
+- File >500 lines: split by responsibility.
+- Prefer small duplication over poor abstraction.
 
 ### Error Handling
 
-- Raise exceptions for error paths. Catch at system boundaries (CLI entry point, API handler, top-level loop).
+- Raise exceptions for error paths. Catch at system boundaries (CLI entry point, API handler, top-level loop) and show a clear user-facing message.
 - No sentinel values (`None`, `-1`, magic strings) for errors. Special return values are acceptable only for non-error outcomes (e.g., search miss).
-- Every unhandled exception path must surface to the user with a clear message.
 
 ### Code Review Priorities
 
 1. Security
 2. Correctness
-3. Maintainability
+3. Separation of concerns and maintainability
 4. Fit with existing codebase
 5. Style (only when clarity is affected)
 
@@ -83,7 +80,10 @@ Keep layers distinct: input handling, business logic, data access, output. Do no
 
 ### Python
 
-`uv` for package/env management (replaces pip, venv, pipx, pyenv, poetry, twine). `ruff` for linting. `mypy` for type checking. `pytest` for testing.
+- `uv` for dependency and environment management.
+- `ruff` for linting.
+- `mypy` for type checking.
+- `pytest` for testing.
 
 ### TypeScript
 
@@ -92,4 +92,3 @@ Keep layers distinct: input handling, business logic, data access, output. Do no
 ## Guardrails
 
 - **TODO.md is managed by `tk`** and synced with a JSON data file. Never edit `TODO.md` directly.
-- **Do not add infrastructure silently.** If caching, background jobs, WebSockets, advanced logging, monitoring, Docker, or CI/CD would materially help, mention it first and implement only on request.
