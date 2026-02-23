@@ -32,6 +32,9 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 - UI, domain logic, commands, and data handling must not be tangled.
 - A reasonable signal: if source files are consistently 5–25 KB, the structure is likely healthy.
 - Files over 500 lines should be reviewed for mixed responsibilities.
+- 500+ lines alone is not a finding; report only when there is concrete evidence of mixed responsibilities.
+- Long files can be acceptable when cohesive (for example: generated code, command registries, parsers, or state machines).
+- If recommending a split, specify proposed boundaries and how behavior/API stability will be protected during migration.
 
 ## What Not To Look For
 
