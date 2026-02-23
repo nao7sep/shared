@@ -43,4 +43,4 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 
 - All good: report inline, no file.
 - Minor points that can be fixed quickly: report inline and suggest fixing them immediately.
-- Non-minor findings: generate a plan at `docs/plans/{YYYY-MM-DD}_{short-description}.md` with specific file references and clear rationale for each finding.
+- Non-minor findings: generate a plan as `{YYYY-MM-DD}_{short-description}.md` in a location relevant to the current app/task context, with specific file references and clear rationale for each finding.

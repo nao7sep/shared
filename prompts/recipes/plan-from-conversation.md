@@ -19,7 +19,7 @@ The H1 title should identify the app. Use the app name if one was decided during
 Implementation plan generated from conversation on {YYYY-MM-DD}.
 
 ## Overview
-What the app does in 2–3 sentences.
+What the app does.
 
 ## Requirements
 Concrete, actionable requirements distilled from the conversation.
@@ -38,9 +38,9 @@ Number them sequentially; note dependencies where one step must complete before 
 Anything that was raised but not resolved in the conversation.
 ```
 
-## Output Location
+## Output
 
-Save the plan as `{YYYY-MM-DD}_{short-kebab-description}.md` in the workspace root (the directory where the coding agent was initiated). If the project directory and `docs/plans/` already exist, save there instead.
+Save the plan as `{YYYY-MM-DD}_{short-description}.md` in a location relevant to the current app/task context.
 
 Derive the filename description from the plan title (e.g., a plan titled "CLI Bookmark Manager" becomes `2026-02-20_cli-bookmark-manager.md`).
 

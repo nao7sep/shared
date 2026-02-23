@@ -11,31 +11,34 @@
 - analyze page structures of https://openwebf.com/en
 - tool to generate font rendering sample images
 - tool to compose/print/save/organize documents for my daughter
-- prompts to skills
 - zip/rar archiver that works just like i want it to
 - system to save done-on-mac files on windows persistently
 - tool to help organize personal videos/photos
 - tool to scan/translate/share paper documents
-- split-conversation-into-docs.md as skill
 - catalogue of tools and work reports
-- report on migration, tk, polychat
 - user friendly repo root readme.md
-- migrate from poetry and hatchling to uv
-- refactor readme.md and relevant docs for all apps. just migrated to uv
 - regenerate polychat's publish.py. uv-related changes are messy
-- regenerate everything in shared/docs. uv related updates everywhere
-- ACTUALLY i should just delete obsolete docs. i've done a few things with python. i now know basics
-- make new branch for each repo. vibe coding often means micro commits, whose logs are rarely valuable
-- maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents
-- maybe, separate repo for one-shot docs?
 - time to refine anything and everything in current repos. moving on to typescript soon
 - it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?
 - time to build an unified system to work on 3+ projects at once. 2 worked well yesterday
 - polychat: notifications?
 - polychat: copy command to copy selected message to clipboard?
-- polychat: adjustable ttl values?
+- polychat: metadata is updated when mode is switched (bug)
 
 ## History
+
+### 2026-02-23
+- ✅ prompts to skills => refined. kept as prompts.
+- ✅ split-conversation-into-docs.md as skill => refined
+- ❌ report on migration, tk, polychat => too personal to be interesting. had excellent chat with gemini regarding quantity strategy, instead
+- ✅ migrate from poetry and hatchling to uv
+- ✅ refactor readme.md and relevant docs for all apps. just migrated to uv
+- ❌ regenerate everything in shared/docs. uv related updates everywhere => just deleted. one-shot docs need separate storage
+- ✅ ACTUALLY i should just delete obsolete docs. i've done a few things with python. i now know basics => yeah yeah
+- ✅ make new branch for each repo. vibe coding often means micro commits, whose logs are rarely valuable => yes, we no longer need 100 commit details made in a few days
+- ❌ maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents => micro optimization is evil
+- ❌ maybe, separate repo for one-shot docs? => separate repo ONLY if authorization settings or app/doc life cycle differ. not just because we feel something would be messy
+- ❌ polychat: adjustable ttl values? => considered. only claude supports it meaningfully and there are trade offs
 
 ### 2026-02-19
 - ✅ seek tools to read foreign language books => wrote 2 tools for personal use

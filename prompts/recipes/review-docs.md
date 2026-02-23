@@ -6,7 +6,7 @@ Validate the current project's user-facing documentation for completeness and ac
 
 Check README.md, CLI --help/-h output, REPL /help output, and any other help text or usage guides the app exposes to users. Look for other forms — they may exist beyond the obvious ones.
 
-Skip all other markdown files, plain text, logs, and data files — these are internal reference material.
+Include all user-facing docs and help text (even outside README). Skip files that are clearly internal-only reference material (notes, plans, logs, or data dumps).
 
 ## Standards
 
@@ -32,4 +32,4 @@ After multiple rounds of implementation, docs often drift from reality. Verify e
 
 - All good: report inline, no file.
 - Minor corrections: report inline and suggest fixing them immediately.
-- Non-minor findings: generate a plan at `docs/plans/{YYYY-MM-DD}_{short-description}.md`.
+- Non-minor findings: generate a plan as `{YYYY-MM-DD}_{short-description}.md` in a location relevant to the current app/task context.

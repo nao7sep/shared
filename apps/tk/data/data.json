@@ -458,11 +458,11 @@
     },
     {
       "text": "prompts to skills",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T00:17:45.216767+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:14:40.088913+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "refined. kept as prompts."
     },
     {
       "text": "zip/rar archiver that works just like i want it to",
@@ -498,11 +498,11 @@
     },
     {
       "text": "split-conversation-into-docs.md as skill",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T00:27:51.737287+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:15:09.399752+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "refined"
     },
     {
       "text": "catalogue of tools and work reports",
@@ -514,11 +514,11 @@
     },
     {
       "text": "report on migration, tk, polychat",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-19T00:32:39.744052+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:16:52.422649+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "too personal to be interesting. had excellent chat with gemini regarding quantity strategy, instead"
     },
     {
       "text": "user friendly repo root readme.md",
@@ -530,18 +530,18 @@
     },
     {
       "text": "migrate from poetry and hatchling to uv",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T04:03:01.085711+00:00",
-      "handled_at": null,
-      "subjective_date": null,
+      "handled_at": "2026-02-23T06:17:07.874762+00:00",
+      "subjective_date": "2026-02-23",
       "note": null
     },
     {
       "text": "refactor readme.md and relevant docs for all apps. just migrated to uv",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T04:53:41.377439+00:00",
-      "handled_at": null,
-      "subjective_date": null,
+      "handled_at": "2026-02-23T06:17:25.812886+00:00",
+      "subjective_date": "2026-02-23",
       "note": null
     },
     {
@@ -554,43 +554,43 @@
     },
     {
       "text": "regenerate everything in shared/docs. uv related updates everywhere",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-19T04:58:26.878636+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:18:24.419430+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "just deleted. one-shot docs need separate storage"
     },
     {
       "text": "ACTUALLY i should just delete obsolete docs. i've done a few things with python. i now know basics",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T04:59:54.224956+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:18:45.675675+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "yeah yeah"
     },
     {
       "text": "make new branch for each repo. vibe coding often means micro commits, whose logs are rarely valuable",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T05:01:27.452281+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:19:37.666961+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "yes, we no longer need 100 commit details made in a few days"
     },
     {
       "text": "maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-19T05:09:13.437044+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:20:06.601944+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "micro optimization is evil"
     },
     {
       "text": "maybe, separate repo for one-shot docs?",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-19T05:10:38.623656+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-23T06:22:08.029772+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "separate repo ONLY if authorization settings or app/doc life cycle differ. not just because we feel something would be messy"
     },
     {
       "text": "time to refine anything and everything in current repos. moving on to typescript soon",
@@ -634,8 +634,16 @@
     },
     {
       "text": "polychat: adjustable ttl values?",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-21T21:46:32.109727+00:00",
+      "handled_at": "2026-02-23T06:23:40.552752+00:00",
+      "subjective_date": "2026-02-23",
+      "note": "considered. only claude supports it meaningfully and there are trade offs"
+    },
+    {
+      "text": "polychat: metadata is updated when mode is switched (bug)",
+      "status": "pending",
+      "created_at": "2026-02-23T06:24:15.893882+00:00",
       "handled_at": null,
       "subjective_date": null,
       "note": null
