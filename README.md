@@ -1,5 +1,8 @@
 # shared
 
-## todo
+Reusable, publishable code and documentation.
 
-refer to TODO.md
+## Pointers
+
+- Conventions: `PLAYBOOK.md`
+- Tasks: `TODO.md`
