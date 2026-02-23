@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..app_state import SessionState
+    from .state import SessionState
 
 
 def get_message_hex_id(state: "SessionState", message_index: int) -> Optional[str]:

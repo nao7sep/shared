@@ -4,7 +4,7 @@ import logging
 import time
 from typing import AsyncIterator, Optional
 
-from .app_state import SessionState
+from .session.state import SessionState
 from .keys.loader import load_api_key, validate_api_key
 from .logging_utils import (
     extract_http_error_context,

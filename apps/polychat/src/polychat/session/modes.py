@@ -7,7 +7,7 @@ from typing import Any, Optional, TYPE_CHECKING
 from .. import hex_id
 
 if TYPE_CHECKING:
-    from ..app_state import SessionState
+    from .state import SessionState
 
 
 def clear_chat_scoped_state(state: "SessionState") -> None:

@@ -84,7 +84,7 @@ def test_mode_combination_case1_both_persistent(session_manager):
 
 def test_unsupported_provider_with_search_mode(session_manager):
     """Search mode can be set even with unsupported provider."""
-    from polychat.models import provider_supports_search
+    from polychat.ai.capabilities import provider_supports_search
 
     session_manager._state.current_ai = "mistral"
 

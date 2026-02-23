@@ -1,7 +1,6 @@
 """Tests for web search feature."""
 
-import pytest
-from polychat.models import provider_supports_search, SEARCH_SUPPORTED_PROVIDERS
+from polychat.ai.capabilities import SEARCH_SUPPORTED_PROVIDERS, provider_supports_search
 from polychat.app_state import SessionState
 
 

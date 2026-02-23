@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
-from .. import models
+from ..ai.capabilities import provider_supports_search
+from ..ai.catalog import resolve_provider_shortcut
 from ..constants import CHAT_FILE_EXTENSION, DISPLAY_UNKNOWN
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
@@ -127,7 +128,7 @@ class CommandHandlerBaseMixin:
         Returns:
             Confirmation message
         """
-        provider = models.resolve_provider_shortcut(shortcut)
+        provider = resolve_provider_shortcut(shortcut)
         if not provider:
             raise ValueError(f"Unknown provider shortcut: /{shortcut}")
 
@@ -148,7 +149,7 @@ class CommandHandlerBaseMixin:
         provider_name = provider or self.manager.current_ai
         notices: list[str] = []
 
-        if self.manager.search_mode and not models.provider_supports_search(provider_name):
+        if self.manager.search_mode and not provider_supports_search(provider_name):
             self.manager.search_mode = False
             notices.append(f"Search mode auto-disabled: {provider_name} does not support search.")
 

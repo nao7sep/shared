@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from .. import models
+from ..ai.catalog import PROVIDER_SHORTCUTS
 from .registry import CommandCallable, build_command_map
 from .types import CommandResult
 
@@ -25,7 +25,7 @@ class CommandDispatcher:
 
     async def dispatch(self, command: str, args: str) -> CommandResult:
         """Dispatch one command with already-parsed args."""
-        if command in models.PROVIDER_SHORTCUTS:
+        if command in PROVIDER_SHORTCUTS:
             return self.handler.switch_provider_shortcut(command)
 
         command_handler = self._command_map.get(command)

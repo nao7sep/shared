@@ -6,10 +6,16 @@ a clean interface for session management.
 
 from typing import Any, Optional
 
-from .app_state import SessionState, initialize_message_hex_ids, assign_new_message_hex_id
+from .session.state import (
+    SessionState,
+    assign_new_message_hex_id,
+    initialize_message_hex_ids,
+)
+from .session import chat_lifecycle as session_chat_lifecycle
 from . import hex_id
 from .session import messages as session_messages
 from .session import modes as session_modes
+from .session import provider_cache as session_provider_cache
 from .session.system_prompt import load_system_prompt as load_system_prompt_content
 from .session.timeouts import format_timeout as format_timeout_value
 from .session.timeouts import normalize_timeout
@@ -312,33 +318,16 @@ class SessionManager:
             chat_path: Path to the new chat file
             chat_data: Chat data dictionary
         """
-        # Update chat data
-        self._state.chat = chat_data
-        self._state.chat_path = chat_path
-
-        # Keep older chats aligned with active session system prompt metadata.
-        metadata = chat_data.get("metadata") if isinstance(chat_data, dict) else None
-        if (
-            isinstance(metadata, dict)
-            and self._state.system_prompt_path
-            and not metadata.get("system_prompt")
-        ):
-            from .chat import update_metadata
-
-            update_metadata(chat_data, system_prompt=self._state.system_prompt_path)
-
-        # Reinitialize hex IDs for new chat
-        initialize_message_hex_ids(self._state)
-
-        # Clear chat-scoped state (retry/secret modes)
-        self._clear_chat_scoped_state()
+        session_chat_lifecycle.switch_chat(
+            self._state,
+            chat_path,
+            chat_data,
+            system_prompt_path=self._state.system_prompt_path,
+        )
 
     def close_chat(self) -> None:
         """Close current chat and clear related state."""
-        self._state.chat = {}
-        self._state.chat_path = None
-        self._state.hex_id_set.clear()
-        self._clear_chat_scoped_state()
+        session_chat_lifecycle.close_chat(self._state)
 
     def _clear_chat_scoped_state(self) -> None:
         """Clear state that shouldn't leak across chat boundaries."""
@@ -376,7 +365,7 @@ class SessionManager:
 
     def clear_provider_cache(self) -> None:
         """Clear all cached provider instances."""
-        self._state.clear_provider_cache()
+        session_provider_cache.clear_provider_cache(self._state)
 
     async def save_current_chat(
         self,
@@ -595,8 +584,11 @@ class SessionManager:
         Returns:
             Cached provider instance or None
         """
-        return self._state.get_cached_provider(
-            provider_name, api_key, timeout_sec=timeout_sec
+        return session_provider_cache.get_cached_provider(
+            self._state,
+            provider_name,
+            api_key,
+            timeout_sec=timeout_sec,
         )
 
     def cache_provider(
@@ -614,8 +606,12 @@ class SessionManager:
             instance: Provider instance to cache
             timeout_sec: Effective timeout used to build provider instance
         """
-        self._state.cache_provider(
-            provider_name, api_key, instance, timeout_sec=timeout_sec
+        session_provider_cache.cache_provider(
+            self._state,
+            provider_name,
+            api_key,
+            instance,
+            timeout_sec=timeout_sec,
         )
 
     # ===================================================================

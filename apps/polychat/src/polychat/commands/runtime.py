@@ -2,7 +2,15 @@
 
 from typing import TYPE_CHECKING
 
-from .. import chat, hex_id, models, profile
+from .. import chat, hex_id, profile
+from ..ai.capabilities import SEARCH_SUPPORTED_PROVIDERS, provider_supports_search
+from ..ai.catalog import (
+    get_all_providers,
+    get_models_for_provider,
+    get_provider_for_model,
+    resolve_model_candidates,
+    resolve_provider_shortcut,
+)
 from ..chat import delete_message_and_following, update_metadata
 from ..constants import DISPLAY_UNKNOWN
 from ..timeouts import resolve_profile_timeout
@@ -24,7 +32,7 @@ class RuntimeCommandsMixin(_CommandDependencies):
         """Prompt user to select one model when multiple candidates match."""
         prompt_lines = [f"Multiple models match '{query}':"]
         for index, model_name in enumerate(candidates, start=1):
-            provider_name = models.get_provider_for_model(model_name) or DISPLAY_UNKNOWN
+            provider_name = get_provider_for_model(model_name) or DISPLAY_UNKNOWN
             prompt_lines.append(f"  {index}. {model_name} ({provider_name})")
         prompt_lines.append("Select one by number (press Enter to cancel).")
 
@@ -42,7 +50,7 @@ class RuntimeCommandsMixin(_CommandDependencies):
 
     async def _resolve_model_selection(self, query: str) -> tuple[str | None, str]:
         """Resolve a model query to one selected model."""
-        candidates = models.resolve_model_candidates(query)
+        candidates = resolve_model_candidates(query)
         if not candidates:
             return None, f"No model matches '{query}'."
         if len(candidates) == 1:
@@ -69,7 +77,7 @@ class RuntimeCommandsMixin(_CommandDependencies):
         if not args:
             # Show available models for current provider
             provider = self.manager.current_ai
-            available_models = models.get_models_for_provider(provider)
+            available_models = get_models_for_provider(provider)
             return f"Available models for {provider}:\n" + "\n".join(
                 f"  - {m}" for m in available_models
             )
@@ -97,7 +105,7 @@ class RuntimeCommandsMixin(_CommandDependencies):
         # Keep mypy aligned with runtime control flow.
         assert selected_model is not None
 
-        model_provider = models.get_provider_for_model(selected_model)
+        model_provider = get_provider_for_model(selected_model)
         if model_provider is None:
             return f"No provider found for model '{selected_model}'."
 
@@ -142,7 +150,7 @@ class RuntimeCommandsMixin(_CommandDependencies):
         lowered = query.lower()
 
         # Allow provider shortcuts (/helper gpt, /helper gem, etc.).
-        provider_shortcut = models.resolve_provider_shortcut(lowered)
+        provider_shortcut = resolve_provider_shortcut(lowered)
         if provider_shortcut is not None:
             provider_model = self.manager.profile["models"].get(provider_shortcut)
             if not provider_model:
@@ -151,7 +159,7 @@ class RuntimeCommandsMixin(_CommandDependencies):
             self.manager.helper_model = provider_model
             return f"Helper AI set to {provider_shortcut} ({provider_model})"
 
-        if lowered in models.get_all_providers():
+        if lowered in get_all_providers():
             provider_model = self.manager.profile["models"].get(lowered)
             if not provider_model:
                 return f"No model configured for {lowered} in profile"
@@ -165,7 +173,7 @@ class RuntimeCommandsMixin(_CommandDependencies):
         if selected_model is None:
             return "Helper model selection cancelled."
 
-        provider = models.get_provider_for_model(selected_model)
+        provider = get_provider_for_model(selected_model)
         if provider is None:
             return f"No provider found for model '{selected_model}'."
 
@@ -475,8 +483,6 @@ class RuntimeCommandsMixin(_CommandDependencies):
         Returns:
             Status message
         """
-        from ..models import provider_supports_search, SEARCH_SUPPORTED_PROVIDERS
-
         chat_data = self.manager.chat
 
         if not chat_data or "messages" not in chat_data:

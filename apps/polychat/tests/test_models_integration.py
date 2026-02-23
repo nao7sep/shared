@@ -9,7 +9,7 @@ Requires .dev-api-keys.json with valid API keys for each provider.
 """
 
 import pytest
-from polychat.models import MODEL_REGISTRY
+from polychat.ai.catalog import MODEL_REGISTRY
 from polychat.ai.openai_provider import OpenAIProvider
 from polychat.ai.claude_provider import ClaudeProvider
 from polychat.ai.gemini_provider import GeminiProvider
@@ -230,15 +230,15 @@ async def test_default_models_work():
         api_key = provider_config.get("api_key")
 
         print(f"\n{provider}: {model}")
-        print(f"  Testing...", end=" ", flush=True)
+        print("  Testing...", end=" ", flush=True)
 
         result = await check_single_model(provider, model, api_key)
         results.append(result)
 
         if result["status"] == "success":
-            print(f"✓ OK")
+            print("✓ OK")
         else:
-            print(f"✗ FAILED")
+            print("✗ FAILED")
             print(f"  Error: {result['error']}")
 
     print("\n" + "=" * 80)

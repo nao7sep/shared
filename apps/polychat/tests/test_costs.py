@@ -1,7 +1,8 @@
 """Tests for cost estimation module."""
 
 import pytest
-from polychat.costs import estimate_cost, format_cost_line, format_cost_usd
+from polychat.ai.costing import estimate_cost
+from polychat.formatting.costs import format_cost_line, format_cost_usd
 
 
 # ---------------------------------------------------------------------------

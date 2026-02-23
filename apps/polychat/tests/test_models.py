@@ -1,5 +1,5 @@
 """Tests for models module."""
-from polychat.models import (
+from polychat.ai.catalog import (
     get_provider_for_model,
     get_models_for_provider,
     get_all_providers,
