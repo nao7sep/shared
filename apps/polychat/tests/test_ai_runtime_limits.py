@@ -82,7 +82,7 @@ async def test_send_message_to_ai_applies_claude_fallback_limit_when_unset():
 
 
 def _build_session(
-    timeout: int | float = 30,
+    timeout: int | float = 300,
     *,
     provider: str = "openai",
     model: str = "gpt-5-mini",
@@ -110,10 +110,10 @@ def _build_session(
 @pytest.mark.parametrize(
     ("provider_name", "search", "expected_timeout"),
     [
-        ("openai", False, 30),
-        ("openai", True, 90),
-        ("claude", False, 30),
-        ("claude", True, 90),
+        ("openai", False, 300),
+        ("openai", True, 900),
+        ("claude", False, 300),
+        ("claude", True, 900),
     ],
 )
 def test_validate_and_get_provider_applies_mode_timeout_multiplier(
@@ -123,7 +123,7 @@ def test_validate_and_get_provider_applies_mode_timeout_multiplier(
 ):
     model = "claude-haiku-4-5" if provider_name == "claude" else "gpt-5-mini"
     session = _build_session(
-        timeout=30,
+        timeout=300,
         provider=provider_name,
         model=model,
     )

@@ -23,7 +23,7 @@ def mock_session_manager_defaults():
                 "claude": "claude-haiku-4-5",
                 "gemini": "gemini-3-flash-preview",
             },
-            "timeout": 30,
+            "timeout": 300,
             "input_mode": "quick",
             "api_keys": {},
             "chats_dir": "/test/chats",
@@ -72,8 +72,8 @@ async def test_timeout_default_command(command_handler_defaults, mock_session_ma
     result = await command_handler_defaults.set_timeout("default")
 
     # Should revert to startup profile default
-    assert result == "Reverted to profile default: 30 seconds"
-    assert mock_session_manager_defaults.profile["timeout"] == 30
+    assert result == "Reverted to profile default: 300 seconds"
+    assert mock_session_manager_defaults.profile["timeout"] == 300
 
 
 @pytest.mark.asyncio

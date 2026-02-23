@@ -37,7 +37,7 @@ def mock_session_manager_safe():
             "models": {
                 "claude": "claude-haiku-4-5",
             },
-            "timeout": 30,
+            "timeout": 300,
             "input_mode": "quick",
             "title_prompt": "/test/prompts/title.txt",
             "summary_prompt": "/test/prompts/summary.txt",

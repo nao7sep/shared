@@ -114,7 +114,7 @@ def create_temp_profile(test_config: dict, temp_dir: Path) -> Path:
     profile_data = {
         "default_ai": default_ai,
         "models": models,
-        "timeout": 30,
+        "timeout": 300,
         "input_mode": "quick",
         "system_prompt": None,
         "chats_dir": str(temp_dir / "chats"),
@@ -222,7 +222,7 @@ async def test_full_chat_flow():
 
             # Create provider instance with timeout from profile
             provider_class = PROVIDER_CLASSES[provider_name]
-            timeout = test_config.get("timeout", 30)
+            timeout = test_config.get("timeout", 300)
             provider = provider_class(api_key=api_key, timeout=timeout)
 
             # Show API endpoint being used (to prove different AIs)
@@ -370,7 +370,7 @@ async def test_full_chat_flow():
         # Use first available AI for verification
         verify_provider_name = available_ais[0]
         verify_config = test_config[verify_provider_name]
-        timeout = test_config.get("timeout", 30)
+        timeout = test_config.get("timeout", 300)
         verify_provider = PROVIDER_CLASSES[verify_provider_name](api_key=verify_config["api_key"], timeout=timeout)
 
         log(f"Using {verify_provider_name} for verification", indent=1)

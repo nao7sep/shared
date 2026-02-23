@@ -32,7 +32,7 @@ class GeminiProvider:
 
         Args:
             api_key: Google API key
-            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
+            timeout: Request timeout in seconds (0 = no timeout, default: 300.0)
         """
         # Convert timeout from seconds to milliseconds (Gemini SDK uses ms)
         # 0 means no timeout -> use None

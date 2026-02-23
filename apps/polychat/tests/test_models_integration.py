@@ -63,7 +63,7 @@ async def check_single_model(provider_name: str, model: str, api_key: str) -> di
     try:
         # Get provider class and instantiate
         provider_class = PROVIDER_CLASSES[provider_name]
-        provider = provider_class(api_key=api_key, timeout=30.0)
+        provider = provider_class(api_key=api_key, timeout=300.0)
 
         # Prepare messages
         messages = [{"role": "user", "content": TEST_PROMPT}]

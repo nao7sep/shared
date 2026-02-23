@@ -9,7 +9,11 @@ import httpx
 
 
 # Profile-level timeout defaults and mode behavior.
-DEFAULT_PROFILE_TIMEOUT_SEC = 30
+# The previous default of 30 s caused 504 DEADLINE_EXCEEDED errors from
+# providers that treat the client timeout as a server-side request
+# deadline.  300 s (5 min) aligns with the generous defaults used by
+# major AI SDKs and leaves headroom for complex or long-running prompts.
+DEFAULT_PROFILE_TIMEOUT_SEC = 300
 AI_MODE_TIMEOUT_MULTIPLIER = 3
 
 # Shared provider HTTP timeout buckets.

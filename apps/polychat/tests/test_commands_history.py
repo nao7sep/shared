@@ -30,7 +30,7 @@ def mock_session_manager_with_messages():
             {
                 "timestamp": "2026-02-02T10:00:03+00:00",
                 "role": "error",
-                "content": ["API timeout after 30 seconds"]
+                "content": ["API timeout after 300 seconds"]
             },
             {
                 "timestamp": "2026-02-02T10:00:04+00:00",
@@ -50,7 +50,7 @@ def mock_session_manager_with_messages():
         profile={
             "default_ai": "claude",
             "models": {"claude": "claude-haiku-4-5"},
-            "timeout": 30,
+            "timeout": 300,
             "input_mode": "quick",
             "chats_dir": "/test/chats",
             "logs_dir": "/test/logs",

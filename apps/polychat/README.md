@@ -286,7 +286,7 @@ When the provider reports cached input tokens, those are shown and factored in a
     "claude": "claude-haiku-4-5",
     "gemini": "gemini-3-flash-preview"
   },
-  "timeout": 30,
+  "timeout": 300,
   "input_mode": "quick",
   "system_prompt": "@/prompts/system/default.txt",
   "title_prompt": "@/prompts/title.txt",

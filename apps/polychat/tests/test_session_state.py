@@ -59,7 +59,7 @@ class TestSessionStateCreation:
             current_model="gpt-5-mini",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             chat={"messages": []},
             system_prompt="You are helpful",
             system_prompt_path="~/prompts/default.txt",
@@ -85,7 +85,7 @@ class TestSessionDictDuality:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             chat={"messages": []},
             input_mode="quick",
         )
@@ -204,11 +204,11 @@ class TestProviderCaching:
         provider_fast = {"name": "claude-fast"}
         provider_slow = {"name": "claude-slow"}
 
-        session.cache_provider("claude", "key1", provider_fast, timeout_sec=30)
-        session.cache_provider("claude", "key1", provider_slow, timeout_sec=90)
+        session.cache_provider("claude", "key1", provider_fast, timeout_sec=300)
+        session.cache_provider("claude", "key1", provider_slow, timeout_sec=900)
 
-        assert session.get_cached_provider("claude", "key1", timeout_sec=30) == provider_fast
-        assert session.get_cached_provider("claude", "key1", timeout_sec=90) == provider_slow
+        assert session.get_cached_provider("claude", "key1", timeout_sec=300) == provider_fast
+        assert session.get_cached_provider("claude", "key1", timeout_sec=900) == provider_slow
 
     def test_cache_miss_returns_none(self):
         """Test that cache miss returns None."""

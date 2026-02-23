@@ -44,7 +44,7 @@ class MistralProvider:
 
         Args:
             api_key: Mistral API key
-            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
+            timeout: Request timeout in seconds (0 = no timeout, default: 300.0)
         """
         from openai import AsyncOpenAI
 

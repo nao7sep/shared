@@ -12,7 +12,7 @@ class TestSessionManagerCreation:
     def test_create_minimal_manager(self):
         """Test creating manager with minimal required arguments."""
         manager = SessionManager(
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -21,7 +21,7 @@ class TestSessionManagerCreation:
         assert manager.current_model == "claude-haiku-4-5"
         assert manager.helper_ai == "claude"  # Defaults to current_ai
         assert manager.helper_model == "claude-haiku-4-5"  # Defaults to current_model
-        assert manager.profile == {"timeout": 30}
+        assert manager.profile == {"timeout": 300}
         assert manager.chat == {}
         assert manager.input_mode == "quick"
 
@@ -126,7 +126,7 @@ class TestPropertyAccess:
     def test_read_properties(self):
         """Test reading properties."""
         manager = SessionManager(
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             current_ai="claude",
             current_model="claude-haiku-4-5",
             system_prompt="Be helpful",
@@ -135,7 +135,7 @@ class TestPropertyAccess:
 
         assert manager.current_ai == "claude"
         assert manager.current_model == "claude-haiku-4-5"
-        assert manager.profile == {"timeout": 30}
+        assert manager.profile == {"timeout": 300}
         assert manager.system_prompt == "Be helpful"
         assert manager.input_mode == "compose"
         assert manager.retry_mode is False
@@ -175,7 +175,7 @@ class TestPropertyAccess:
 class TestTimeoutManagement:
     def test_set_timeout_normalizes_and_clears_cache(self):
         manager = SessionManager(
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -189,7 +189,7 @@ class TestTimeoutManagement:
 
     def test_reset_timeout_to_default_uses_startup_value(self):
         manager = SessionManager(
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -197,8 +197,8 @@ class TestTimeoutManagement:
 
         timeout = manager.reset_timeout_to_default()
 
-        assert timeout == 30
-        assert manager.profile["timeout"] == 30
+        assert timeout == 300
+        assert manager.profile["timeout"] == 300
 
 
 class TestDictLikeAccess:
@@ -207,14 +207,14 @@ class TestDictLikeAccess:
     def test_getitem_access(self):
         """Test accessing values via dict-like syntax."""
         manager = SessionManager(
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
 
         assert manager["current_ai"] == "claude"
         assert manager["current_model"] == "claude-haiku-4-5"
-        assert manager["profile"] == {"timeout": 30}
+        assert manager["profile"] == {"timeout": 300}
         assert manager["input_mode"] == "quick"
 
     def test_setitem_access(self):
@@ -256,7 +256,7 @@ class TestDictLikeAccess:
     def test_to_dict_conversion(self):
         """Test converting manager to dictionary."""
         manager = SessionManager(
-            profile={"timeout": 30},
+            profile={"timeout": 300},
             current_ai="claude",
             current_model="claude-haiku-4-5",
             input_mode="compose",
@@ -267,7 +267,7 @@ class TestDictLikeAccess:
         assert isinstance(session_dict, dict)
         assert session_dict["current_ai"] == "claude"
         assert session_dict["current_model"] == "claude-haiku-4-5"
-        assert session_dict["profile"] == {"timeout": 30}
+        assert session_dict["profile"] == {"timeout": 300}
         assert session_dict["input_mode"] == "compose"
         assert session_dict["retry_mode"] is False
 

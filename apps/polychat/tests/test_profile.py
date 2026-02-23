@@ -114,7 +114,7 @@ def test_load_profile_rejects_relative_dir_paths(tmp_path):
     profile_data = {
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
-        "timeout": 30,
+        "timeout": 300,
         "input_mode": "quick",
         "chats_dir": "chats",
         "logs_dir": "logs",
@@ -140,7 +140,7 @@ def test_load_profile_valid(tmp_path):
             "claude": "claude-haiku-4-5",
             "openai": "gpt-5-mini"
         },
-        "timeout": 30,
+        "timeout": 300,
         "input_mode": "quick",
         "system_prompt": "@/prompts/system/default.txt",
         "chats_dir": str(chats_dir),
@@ -171,7 +171,7 @@ def test_load_profile_maps_tilde_paths(tmp_path):
     profile_data = {
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
-        "timeout": 30,
+        "timeout": 300,
         "input_mode": "quick",
         "system_prompt": "~/system-prompt.txt",
         "chats_dir": "~/chats",
@@ -196,7 +196,7 @@ def test_load_profile_maps_at_paths(tmp_path):
     profile_data = {
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
-        "timeout": 30,
+        "timeout": 300,
         "input_mode": "quick",
         "system_prompt": "@/prompts/system/default.txt",
         "chats_dir": "@/chats",
@@ -223,7 +223,7 @@ def test_load_profile_maps_json_api_key_path(tmp_path):
     profile_data = {
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
-        "timeout": 30,
+        "timeout": 300,
         "input_mode": "quick",
         "system_prompt": "@/prompts/system/default.txt",
         "chats_dir": "~/chats",
@@ -265,7 +265,7 @@ def test_load_profile_sets_default_timeout(tmp_path):
 
     profile = load_profile(str(profile_path))
 
-    assert profile["timeout"] == 30
+    assert profile["timeout"] == 300
 
 
 def test_validate_profile_missing_required_fields():
@@ -327,7 +327,7 @@ def test_validate_profile_timeout_not_number():
     profile = {
         "default_ai": "claude",
         "models": {"claude": "claude-haiku-4-5"},
-        "timeout": "30",  # Should be number
+        "timeout": "300",  # Should be number
         "chats_dir": "~/chats",
         "logs_dir": "~/logs",
         "api_keys": {}

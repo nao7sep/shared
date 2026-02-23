@@ -11,7 +11,7 @@ def session_manager():
     profile = {
         "default_ai": "openai",
         "models": {"openai": "gpt-5"},
-        "timeout": 30,
+        "timeout": 300,
     }
     chat = {"messages": [], "metadata": {}}
     return SessionManager(

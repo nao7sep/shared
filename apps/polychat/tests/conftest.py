@@ -31,7 +31,7 @@ def sample_profile(temp_dir):
             "claude": "claude-haiku-4-5",
             "gemini": "gemini-3-flash-preview"
         },
-        "timeout": 30,
+        "timeout": 300,
         "input_mode": "quick",
         "system_prompt": str(prompts_dir / "system.txt"),
         "title_prompt": str(prompts_dir / "title.txt"),
@@ -107,7 +107,7 @@ def mock_session_manager():
         profile={
             "default_ai": "claude",
             "models": {"claude": "claude-haiku-4-5", "openai": "gpt-5-mini"},
-            "timeout": 30,
+            "timeout": 300,
             "input_mode": "quick",
             "title_prompt": "/test/prompts/title.txt",
             "summary_prompt": "/test/prompts/summary.txt",

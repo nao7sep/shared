@@ -43,7 +43,7 @@ class OpenAIProvider:
 
         Args:
             api_key: OpenAI API key
-            timeout: Request timeout in seconds (0 = no timeout, default: 30.0)
+            timeout: Request timeout in seconds (0 = no timeout, default: 300.0)
         """
         timeout_config = build_ai_httpx_timeout(timeout)
 

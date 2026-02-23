@@ -93,7 +93,7 @@ def test_sanitize_error_message_multiple_keys():
 
 def test_sanitize_error_message_no_sensitive_data():
     """Test that messages without sensitive data pass through."""
-    error = "Connection timeout after 30 seconds"
+    error = "Connection timeout after 300 seconds"
     sanitized = sanitize_error_message(error)
 
     assert sanitized == error
