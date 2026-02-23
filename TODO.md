@@ -16,7 +16,6 @@
 - tool to help organize personal videos/photos
 - tool to scan/translate/share paper documents
 - catalogue of tools and work reports
-- user friendly repo root readme.md
 - regenerate polychat's publish.py. uv-related changes are messy
 - time to refine anything and everything in current repos. moving on to typescript soon
 - it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?
@@ -39,6 +38,7 @@
 - ❌ maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents => micro optimization is evil
 - ❌ maybe, separate repo for one-shot docs? => separate repo ONLY if authorization settings or app/doc life cycle differ. not just because we feel something would be messy
 - ❌ polychat: adjustable ttl values? => considered. only claude supports it meaningfully and there are trade offs
+- ✅ user friendly repo root readme.md => capitalized. good enough for now
 
 ### 2026-02-19
 - ✅ seek tools to read foreign language books => wrote 2 tools for personal use
