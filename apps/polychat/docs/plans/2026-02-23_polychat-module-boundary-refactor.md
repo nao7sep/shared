@@ -303,16 +303,16 @@ Target package map (incremental):
 
 ### Phase 1: AI catalog/capability/pricing split
 
-- [ ] Add `ai/catalog.py`, `ai/capabilities.py`, `ai/pricing.py`, `ai/costing.py`.
-- [ ] Convert `models.py` and `costs.py` into compatibility re-export facades.
-- [ ] Update imports in command/repl/helper modules to new AI modules.
-- [ ] Update tests (`test_models.py`, `test_search_feature.py`, `test_costs.py`) for new primary import paths while preserving backward compatibility tests.
+- [x] Add `ai/catalog.py`, `ai/capabilities.py`, `ai/pricing.py`, `ai/costing.py`.
+- [x] Convert `models.py` and `costs.py` into compatibility re-export facades.
+- [x] Update imports in command/repl/helper modules to new AI modules.
+- [x] Update tests (`test_models.py`, `test_search_feature.py`, `test_costs.py`) for new primary import paths while preserving backward compatibility tests.
 
 ### Phase 2: Chat and session boundary alignment
 
 - [ ] Introduce `chat/` package (`storage.py`, `messages.py`, `files.py`).
-- [ ] Move state internals from `app_state.py` to `session/state.py` and add shim.
-- [ ] Extract `session/chat_lifecycle.py` and `session/provider_cache.py`.
+- [x] Move state internals from `app_state.py` to `session/state.py` and add shim.
+- [x] Extract `session/chat_lifecycle.py` and `session/provider_cache.py`.
 - [ ] Keep `session_manager.py` as facade, remove internal duplication.
 
 ### Phase 3: Orchestration and REPL decomposition
