@@ -1,5 +1,6 @@
 """Tests for chat module."""
 
+import asyncio
 import json
 import pytest
 from polychat.chat import (
@@ -244,7 +245,7 @@ async def test_save_chat_creates_directory(tmp_path):
 
 @pytest.mark.asyncio
 async def test_save_chat_updates_timestamps(tmp_path):
-    """Test that save_chat updates timestamps."""
+    """save_chat should update timestamps only when persisted payload changes."""
     chat_path = tmp_path / "timestamps.json"
 
     chat_data = {
@@ -267,13 +268,24 @@ async def test_save_chat_updates_timestamps(tmp_path):
     # They should be the same on first save
     assert chat_data["metadata"]["created_at"] == chat_data["metadata"]["updated_at"]
 
-    # Save again
+    # Save again without mutation: no-op write should keep updated_at stable
     original_created = chat_data["metadata"]["created_at"]
+    original_updated = chat_data["metadata"]["updated_at"]
+    await asyncio.sleep(0.001)
     await save_chat(str(chat_path), chat_data)
 
-    # created_at should not change, updated_at should
+    # No persisted change -> created_at and updated_at should remain unchanged.
     assert chat_data["metadata"]["created_at"] == original_created
-    assert chat_data["metadata"]["updated_at"] != original_created
+    assert chat_data["metadata"]["updated_at"] == original_updated
+
+    # Mutate persisted payload and save again.
+    chat_data["metadata"]["title"] = "Updated"
+    await asyncio.sleep(0.001)
+    await save_chat(str(chat_path), chat_data)
+
+    # created_at should stay fixed; updated_at should move forward on mutation.
+    assert chat_data["metadata"]["created_at"] == original_created
+    assert chat_data["metadata"]["updated_at"] != original_updated
 
 
 @pytest.mark.asyncio

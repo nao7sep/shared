@@ -38,7 +38,7 @@ class ChatOrchestrator(
             )
 
         if isinstance(response, str):
-            await self._save_chat_if_dirty(current_chat_path, current_chat_data)
+            await self._persist_chat_after_command(current_chat_path, current_chat_data)
             return PrintAction(message=response)
 
         return ContinueAction()

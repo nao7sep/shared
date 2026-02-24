@@ -221,12 +221,12 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         del signal, current_chat_path, current_chat_data
         return self._handle_clear_secret_context()
 
-    async def _save_chat_if_dirty(
+    async def _persist_chat_after_command(
         self,
         chat_path: Optional[str],
         chat_data: Optional[dict],
     ) -> None:
-        """Persist chat only when command handlers marked state as dirty."""
+        """Persist chat after a command response when required by save policy."""
         await self.manager.save_current_chat(chat_path=chat_path, chat_data=chat_data)
 
     async def _handle_apply_retry(
