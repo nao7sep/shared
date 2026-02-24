@@ -60,9 +60,11 @@ Never use raw dicts for structured data. If data has more than one field and liv
 - Reject tangled designs that mix responsibilities just to reduce line count.
 - Start concrete. Introduce Protocol/interface when there are two or more implementations.
 - Extract dependencies when code is hard to test.
-- File >500 lines: treat as a review trigger, not an automatic split.
+- Never split a module only to reduce line count.
+- Large files are acceptable when cohesive.
 - Split only with clear boundary problems (mixed layers, multiple reasons to change, hard-to-test coupling).
 - Do not split cohesive modules (parsers/state machines/registries/generated code) just to satisfy a size threshold.
+- Before deciding no split, verify maintainability explicitly: one primary reason to change, clear internal sectioning, and tests that can target behavior without fragile setup.
 - Before splitting, preserve behavior first: keep tests green, keep public APIs stable, and avoid dumping code into generic `utils` modules.
 - Prefer small duplication over poor abstraction.
 

@@ -24,9 +24,10 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/orchestration/`
   - Owns REPL orchestration flow handlers:
-    - command signals (`signals.py`)
+    - command signals (`signals.py`, dispatch table + payload validation)
     - user message entry/send action preparation (`message_entry.py`)
     - response/error/cancel post-send mutations (`response_handlers.py`)
+    - retry apply transition construction (`retry_transitions.py`)
   - Root `orchestrator.py` is a thin composer facade.
 
 - `src/polychat/repl/`

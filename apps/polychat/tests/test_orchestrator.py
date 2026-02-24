@@ -463,6 +463,83 @@ class TestSecretModeSignals:
 
 
 
+class TestInvalidSignalPayloads:
+    """Test signal-payload validation and unknown signal handling."""
+
+    @pytest.mark.asyncio
+    async def test_new_chat_signal_missing_path(self, orchestrator):
+        action = await orchestrator.handle_command_response(
+            CommandSignal(kind="new_chat"),
+            current_chat_path=None,
+            current_chat_data=None,
+        )
+
+        assert isinstance(action, PrintAction)
+        assert action.message == "Error: Invalid command signal (missing new chat path)"
+
+    @pytest.mark.asyncio
+    async def test_open_chat_signal_missing_path(self, orchestrator):
+        action = await orchestrator.handle_command_response(
+            CommandSignal(kind="open_chat"),
+            current_chat_path=None,
+            current_chat_data=None,
+        )
+
+        assert isinstance(action, PrintAction)
+        assert action.message == "Error: Invalid command signal (missing open chat path)"
+
+    @pytest.mark.asyncio
+    async def test_rename_current_signal_missing_path(self, orchestrator):
+        action = await orchestrator.handle_command_response(
+            CommandSignal(kind="rename_current"),
+            current_chat_path=None,
+            current_chat_data=None,
+        )
+
+        assert isinstance(action, PrintAction)
+        assert action.message == "Error: Invalid command signal (missing rename path)"
+
+    @pytest.mark.asyncio
+    async def test_delete_current_signal_missing_filename(self, orchestrator):
+        action = await orchestrator.handle_command_response(
+            CommandSignal(kind="delete_current"),
+            current_chat_path=None,
+            current_chat_data=None,
+        )
+
+        assert isinstance(action, PrintAction)
+        assert action.message == "Error: Invalid command signal (missing deleted filename)"
+
+    @pytest.mark.asyncio
+    async def test_apply_retry_signal_missing_or_blank_id(self, orchestrator):
+        missing_id = await orchestrator.handle_command_response(
+            CommandSignal(kind="apply_retry"),
+            current_chat_path=None,
+            current_chat_data=None,
+        )
+        blank_id = await orchestrator.handle_command_response(
+            CommandSignal(kind="apply_retry", value="   "),
+            current_chat_path=None,
+            current_chat_data=None,
+        )
+
+        assert isinstance(missing_id, PrintAction)
+        assert missing_id.message == "Retry ID not found"
+        assert isinstance(blank_id, PrintAction)
+        assert blank_id.message == "Retry ID not found"
+
+    @pytest.mark.asyncio
+    async def test_unknown_signal_kind(self, orchestrator):
+        action = await orchestrator.handle_command_response(
+            CommandSignal(kind="unknown"),  # type: ignore[arg-type]
+            current_chat_path=None,
+            current_chat_data=None,
+        )
+
+        assert isinstance(action, PrintAction)
+        assert action.message == "Error: Unknown command signal 'unknown'"
+
+
 class TestRegularMessages:
     """Test handling of regular (non-signal) messages."""
 

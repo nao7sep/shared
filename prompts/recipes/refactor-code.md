@@ -12,9 +12,11 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 
 - Files or classes doing more than one job. If a module handles both HTTP requests and database queries, those should separate.
 - Functions longer than ~50 lines that contain distinct logical phases.
-- Treat file length (for example, >500 lines) as a heuristic, not a refactor trigger by itself.
+- File size is a weak smell, not evidence by itself.
 - Split only when boundaries are clear and each extracted module has one reason to change.
 - Prefer no split when the file is large but cohesive and extraction would increase coupling.
+- Before deciding not to split, verify separation of concerns explicitly: one primary reason to change, clear boundaries between layers, and focused tests that do not require broad fixture setup.
+- For each split recommendation, cite concrete evidence (for example: mixed layers in one function, recurring cross-module edits, or tests that require unrelated setup).
 - Avoid "misc/utils dumping ground" refactors; each new file must have a clear responsibility and name.
 - Refactors must preserve behavior first: use small reversible moves and keep tests/API compatibility intact.
 

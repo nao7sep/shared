@@ -9,8 +9,8 @@ Improve long-term maintainability of PolyChat by reducing hidden coupling, intro
 ## Progress Update (2026-02-24)
 
 1. Baseline quality gates are now green:
-   - `pytest -q`: `533 passed, 3 deselected`
-   - `mypy src/polychat`: `Success: no issues found in 97 source files`
+   - `pytest -q`: `544 passed, 3 deselected`
+   - `mypy src/polychat`: `Success: no issues found in 98 source files`
    - `ruff check src tests`: pass
 2. Phase 1 now has typed domain boundaries for chat and profile:
    - Added `src/polychat/domain/chat.py` and `src/polychat/domain/__init__.py`.
@@ -39,6 +39,13 @@ Improve long-term maintainability of PolyChat by reducing hidden coupling, intro
    - Added `src/polychat/session/accessors.py` for typed state descriptors and dict/snapshot helpers.
    - `src/polychat/session_manager.py` now delegates state access via `StateField` and access helpers.
    - `session_manager.py` reduced from 633 to 499 lines while preserving public API behavior.
+9. Phase 3 orchestration transition extraction started:
+   - Added `src/polychat/orchestration/retry_transitions.py` to centralize `/apply` retry replacement rules.
+   - `src/polychat/orchestration/signals.py` now delegates retry replacement to explicit helper logic.
+   - Added focused tests in `tests/test_orchestration_retry_transitions.py`.
+10. Phase 3 signal routing hardening continued:
+   - `src/polychat/orchestration/signals.py` now uses an explicit command-signal dispatch table.
+   - Added payload validation tests for missing/invalid command signal fields in `tests/test_orchestrator.py`.
 
 ## Baseline Findings (At Plan Creation)
 
@@ -306,6 +313,8 @@ Dependencies:
 
 - [x] Extract `session/` submodules and reduce `SessionManager` to facade.
 - [ ] Extract orchestration mode handlers and signal routing.
+  - [x] Extract retry-apply transition rules to dedicated helper module.
+  - [x] Replace command-signal `if` chain with explicit dispatch table and payload validators.
 - [ ] Add transition-invariant tests:
   - retry mode entry/exit
   - apply/cancel semantics
