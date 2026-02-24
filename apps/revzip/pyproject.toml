@@ -1,0 +1,15 @@
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
+name = "revzip"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+revzip = "revzip.__main__:main"
+
+[dependency-groups]
+dev = ["pytest"]

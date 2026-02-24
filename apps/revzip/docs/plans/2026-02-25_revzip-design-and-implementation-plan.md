@@ -169,70 +169,70 @@ Implementation plan generated from conversation on 2026-02-25.
 
 ## Implementation Steps
 1. Project scaffolding
-   - [ ] Create `src/revzip`, `tests`, `scripts`, and docs plan baseline.
-   - [ ] Add `pyproject.toml` using `uv_build`, script entry point, and dev group.
-   - [ ] Add package entry files (`__init__.py`, `__main__.py`).
+   - [x] Create `src/revzip`, `tests`, `scripts`, and docs plan baseline.
+   - [x] Add `pyproject.toml` using `uv_build`, script entry point, and dev group.
+   - [x] Add package entry files (`__init__.py`, `__main__.py`).
 
 2. Constants, errors, and models
-   - [ ] Define literal constants in `constants.py`.
-   - [ ] Define typed exceptions in `errors.py`.
-   - [ ] Define dataclasses in `models.py` (no raw dict contracts).
+   - [x] Define literal constants in `constants.py`.
+   - [x] Define typed exceptions in `errors.py`.
+   - [x] Define dataclasses in `models.py` (no raw dict contracts).
 
 3. Path mapping/validation subsystem
-   - [ ] Implement path mapping policy from spec (`~`, `@`, absolute-only, rejection cases).
-   - [ ] Implement overlap checks for `--source` vs `--dest`.
-   - [ ] Implement destination existence/type checks and creation behavior.
+   - [x] Implement path mapping policy from spec (`~`, `@`, absolute-only, rejection cases).
+   - [x] Implement overlap checks for `--source` vs `--dest`.
+   - [x] Implement destination existence/type checks and creation behavior.
 
 4. Ignore rules subsystem
-   - [ ] Implement ignore file line parsing (trim, blank/# skip).
-   - [ ] Compile regex rules with robust error reporting.
-   - [ ] Implement `re.search` matching over `raw_source_arg + "/" + relative_path`.
+   - [x] Implement ignore file line parsing (trim, blank/# skip).
+   - [x] Compile regex rules with robust error reporting.
+   - [x] Implement `re.search` matching over `raw_source_arg + "/" + relative_path`.
 
 5. Traversal and inventory collection
-   - [ ] Implement recursive traversal from source root.
-   - [ ] Apply default ignores and optional regex ignores.
-   - [ ] Skip symlinks with warnings.
-   - [ ] Collect sorted regular-file and empty-directory relative path lists.
+   - [x] Implement recursive traversal from source root.
+   - [x] Apply default ignores and optional regex ignores.
+   - [x] Skip symlinks with warnings.
+   - [x] Collect sorted regular-file and empty-directory relative path lists.
 
 6. Archive output pipeline
-   - [ ] Implement comment validation and filename-segment sanitization.
-   - [ ] Implement local filename timestamp and internal `created_utc`.
-   - [ ] Implement collision check for same-base `.zip`/`.json`.
-   - [ ] Implement zip writing with source-relative entry names and duplicate-entry guard.
-   - [ ] Implement metadata JSON writing.
-   - [ ] Implement zero-inventory no-op behavior.
+   - [x] Implement comment validation and filename-segment sanitization.
+   - [x] Implement local filename timestamp and internal `created_utc`.
+   - [x] Implement collision check for same-base `.zip`/`.json`.
+   - [x] Implement zip writing with source-relative entry names and duplicate-entry guard.
+   - [x] Implement metadata JSON writing.
+   - [x] Implement zero-inventory no-op behavior.
 
 7. Snapshot discovery and validation
-   - [ ] Implement metadata file discovery in destination.
-   - [ ] Parse metadata into dataclasses.
-   - [ ] Validate corresponding zip presence.
-   - [ ] Collect loud warnings for invalid/orphaned entries while preserving valid list.
-   - [ ] Sort valid records by `created_utc` descending.
+   - [x] Implement metadata file discovery in destination.
+   - [x] Parse metadata into dataclasses.
+   - [x] Validate corresponding zip presence.
+   - [x] Collect loud warnings for invalid/orphaned entries while preserving valid list.
+   - [x] Sort valid records by `created_utc` descending.
 
 8. Restore pipeline
-   - [ ] Implement list rendering with padded index and `|` separators.
-   - [ ] Implement numeric selection parsing and exact `yes` confirmation.
-   - [ ] Verify zip integrity before destructive changes.
-   - [ ] Delete source contents, recreate source directory, and extract selected snapshot.
+   - [x] Implement list rendering with padded index and `|` separators.
+   - [x] Implement numeric selection parsing and exact `yes` confirmation.
+   - [x] Verify zip integrity before destructive changes.
+   - [x] Delete source contents, recreate source directory, and extract selected snapshot.
 
 9. CLI and REPL integration
-   - [ ] Wire argparse for required `--source` and `--dest`, optional `--ignore`.
-   - [ ] Implement fixed menu REPL loop and action dispatch.
-   - [ ] Keep boundary exception handling in CLI entrypoint.
+   - [x] Wire argparse for required `--source` and `--dest`, optional `--ignore`.
+   - [x] Implement fixed menu REPL loop and action dispatch.
+   - [x] Keep boundary exception handling in CLI entrypoint.
 
 10. Scripts and documentation
-    - [ ] Add `.command` wrappers for install/run/test/clean.
-    - [ ] Write `README.md` with usage, safety notes, ignore semantics, timestamp rules, and restore behavior.
-    - [ ] Ensure `revzip` naming remains lowercase in docs and scripts.
+    - [x] Add `.command` wrappers for install/run/test/clean.
+    - [x] Write `README.md` with usage, safety notes, ignore semantics, timestamp rules, and restore behavior.
+    - [x] Ensure `revzip` naming remains lowercase in docs and scripts.
 
 11. Verification and test coverage
-    - [ ] Unit tests for comment validation/sanitization (including multiline).
-    - [ ] Unit tests for path mapping and overlap rejection.
-    - [ ] Unit tests for ignore parsing and `re.search` semantics.
-    - [ ] Unit tests for archive collision handling (forced same-second case).
-    - [ ] Unit tests for duplicate zip-entry detection (mocked inventory).
-    - [ ] Unit tests for snapshot discovery warnings + valid-list continuation.
-    - [ ] Integration tests for archive/extract roundtrip including empty directories and UTF-8 names.
+    - [x] Unit tests for comment validation/sanitization (including multiline).
+    - [x] Unit tests for path mapping and overlap rejection.
+    - [x] Unit tests for ignore parsing and `re.search` semantics.
+    - [x] Unit tests for archive collision handling (forced same-second case).
+    - [x] Unit tests for duplicate zip-entry detection (mocked inventory).
+    - [x] Unit tests for snapshot discovery warnings + valid-list continuation.
+    - [x] Integration tests for archive/extract roundtrip including empty directories and UTF-8 names.
 
 ## Open Questions
 - None for MVP scope. Behavior required by this conversation is fully specified.
