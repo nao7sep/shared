@@ -9,8 +9,8 @@ Improve long-term maintainability of PolyChat by reducing hidden coupling, intro
 ## Progress Update (2026-02-24)
 
 1. Baseline quality gates are now green:
-   - `pytest -q`: `566 passed, 3 deselected`
-   - `mypy src/polychat`: `Success: no issues found in 102 source files`
+   - `pytest -q`: `575 passed, 3 deselected`
+   - `mypy src/polychat`: `Success: no issues found in 106 source files`
    - `ruff check src tests`: pass
 2. Phase 1 now has typed domain boundaries for chat and profile:
    - Added `src/polychat/domain/chat.py` and `src/polychat/domain/__init__.py`.
@@ -61,6 +61,19 @@ Improve long-term maintainability of PolyChat by reducing hidden coupling, intro
    - Added `src/polychat/ai/provider_logging.py` for standardized provider error log emission and message templates.
    - Migrated provider exception logging paths across all provider modules to the shared helper while preserving existing message text.
    - Added focused helper coverage in `tests/test_provider_logging.py`.
+15. Phase 4 logging schema split completed:
+   - Added `src/polychat/logging/schema.py` to own event key ordering and log-path field contracts.
+   - Updated `src/polychat/logging/formatter.py` and `src/polychat/logging/events.py` to consume schema definitions.
+   - Added parser-compatibility coverage in `tests/test_logging_schema.py` (event key ordering and backward-compatible `system_prompt_path` handling).
+16. Phase 5 docs/help generation started:
+   - Added `src/polychat/commands/command_docs.py` as single-source command metadata and renderers for `/help` and README in-chat command docs.
+   - `src/polychat/commands/misc.py` now serves `/help` from generated metadata instead of a hardcoded text blob.
+   - Added `scripts/generate-command-docs.py` and README generated markers for command docs workflow.
+   - Added drift tests in `tests/test_command_docs.py` to enforce command coverage and README generated-block parity.
+17. Phase 5 quality-gate/policy hardening completed:
+   - Split command doc metadata into focused modules (`command_docs.py`, `command_docs_data.py`, `command_docs_models.py`) to stay under the 500-line threshold.
+   - Added staged strict typing gate in `scripts/check-mypy-staged.command` and wired it into `scripts/check.command`.
+   - Added `docs/architecture/no-new-debt-policy.md` and policy checks in `tests/test_maintainability_policy.py` (module size threshold + typed-debt checks for refactored targets).
 
 ## Baseline Findings (At Plan Creation)
 
@@ -344,23 +357,23 @@ Dependencies:
 
 ### Phase 4: Provider/logging consolidation
 
-- [ ] Extract shared provider utilities and migrate providers one by one.
+- [x] Extract shared provider utilities and migrate providers one by one.
   - [x] Extract shared provider message-formatting utility and migrate provider formatters.
   - [x] Extract shared provider error logging/message helper and migrate provider exception paths.
-- [ ] Split logging module into schema/formatter/sanitization components.
-- [ ] Preserve log field compatibility for existing parsers.
+- [x] Split logging module into schema/formatter/sanitization components.
+- [x] Preserve log field compatibility for existing parsers.
 
 Dependencies:
 - Phase 1 typed metadata models
 
 ### Phase 5: Docs/help generation and quality gates
 
-- [ ] Create command metadata registry and generator.
-- [ ] Update README generation workflow and tests.
-- [ ] Turn on staged mypy enforcement for refactored packages.
-- [ ] Define "no new debt" policy:
-  - no new `dict[str, Any]` in core flows
-  - no new module >500 lines without explicit split rationale
+- [x] Create command metadata registry and generator.
+- [x] Update README generation workflow and tests.
+- [x] Turn on staged mypy enforcement for refactored packages.
+- [x] Define "no new debt" policy:
+  - [x] no new `dict[str, Any]` in core flows
+  - [x] no new module >500 lines without explicit split rationale
 
 Dependencies:
 - Phases 2-4

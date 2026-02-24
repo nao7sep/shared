@@ -12,8 +12,12 @@ from .events import (
 )
 from .formatter import StructuredTextFormatter
 from .sanitization import sanitize_error_message
+from .schema import DEFAULT_EVENT_KEY_ORDER, EVENT_KEY_ORDER, LOG_PATH_FIELDS
 
 __all__ = [
+    "DEFAULT_EVENT_KEY_ORDER",
+    "EVENT_KEY_ORDER",
+    "LOG_PATH_FIELDS",
     "StructuredTextFormatter",
     "before_sleep_log_event",
     "build_run_log_path",

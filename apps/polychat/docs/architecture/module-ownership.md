@@ -40,6 +40,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/commands/`
   - Owns command handlers and dispatch.
+  - `command_docs.py`, `command_docs_data.py`, and `command_docs_models.py` own single-source command documentation metadata/renderers for `/help` and README command listings.
   - `context.py` owns explicit command dependency wiring (`CommandContext`).
   - `misc.py` and `chat_files.py` use explicit handler objects with thin adapter mixins for compatibility.
   - `runtime_models.py` and `runtime_modes.py` use explicit handler objects with thin adapter mixins for compatibility.
@@ -63,7 +64,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
   - `prompts/__init__.py` re-exports compatibility symbols, including `_load_prompt_from_path` for existing patch points.
 
 - `src/polychat/logging/`
-  - Owns logging implementation (`events.py`, `formatter.py`, `sanitization.py`).
+  - Owns logging implementation (`schema.py`, `events.py`, `formatter.py`, `sanitization.py`).
 
 ## Facade Policy
 

@@ -10,20 +10,7 @@ from typing import Any, Optional
 
 from ..constants import APP_NAME, DATETIME_FORMAT_FILENAME, LOG_FILE_EXTENSION
 from .formatter import StructuredTextFormatter
-
-_LOG_PATH_FIELDS = {
-    "profile_file",
-    "chat_file",
-    "log_file",
-    "chats_dir",
-    "logs_dir",
-    "previous_chat_file",
-    "old_chat_file",
-    "new_chat_file",
-    "system_prompt",
-    # Backward compatibility if an older call site still emits this key.
-    "system_prompt_path",
-}
+from .schema import LOG_PATH_FIELDS
 
 
 def _to_log_safe(value: Any) -> Any:
@@ -126,7 +113,7 @@ def log_event(event: str, level: int = logging.INFO, **fields: Any) -> None:
         "event": event,
     }
     for key, value in fields.items():
-        if key in _LOG_PATH_FIELDS and isinstance(value, str):
+        if key in LOG_PATH_FIELDS and isinstance(value, str):
             value = _resolve_log_path(value)
         payload[key] = _to_log_safe(value)
     logging.log(level, json.dumps(payload, ensure_ascii=False, separators=(",", ":")))

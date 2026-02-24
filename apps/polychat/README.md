@@ -123,6 +123,7 @@ If `-l/--log` is omitted, PolyChat creates one log file for the current app run 
 
 Logs are written in a structured plaintext block format and include contextual events such as app/session start and stop, command execution, chat lifecycle actions, and AI request/response/error details.
 
+<!-- BEGIN GENERATED:COMMANDS -->
 ### In-Chat Commands
 
 **Provider Shortcuts:**
@@ -175,7 +176,7 @@ Logs are written in a structured plaintext block format and include contextual e
 Delete operations always ask for confirmation and require typing `yes`.
 
 **What "Last Interaction" Means:**
-PolyChat defines the "last interaction" as one of:
+PolyChat defines the last interaction as one of:
 1. A trailing `user + assistant` pair
 2. A trailing `user + error` pair
 3. A standalone trailing `error`
@@ -223,6 +224,7 @@ PolyChat defines the "last interaction" as one of:
 
 When commands show chat lists for selection (`/open`, `/switch`, `/rename`, `/delete`), "Last Updated" is shown in your local time.
 For `/model` and `/helper`, fuzzy matching normalizes names to alphanumeric characters and uses in-order subsequence matching (for example, `op4` or `o4.6` can match `claude-opus-4-6`). When multiple models match, PolyChat prompts you to choose by number.
+<!-- END GENERATED:COMMANDS -->
 
 ### Web Search
 
