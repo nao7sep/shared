@@ -5,11 +5,13 @@ from __future__ import annotations
 from typing import Any, Optional, Protocol
 
 from ..session_manager import SessionManager
+from .context import CommandContext
 
 
 class CommandDependencies(Protocol):
     """Structural contract implemented by the composed command handler."""
 
+    context: CommandContext
     manager: SessionManager
 
     def _require_open_chat(

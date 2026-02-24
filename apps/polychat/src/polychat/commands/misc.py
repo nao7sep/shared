@@ -1,19 +1,17 @@
-"""Misc command mixin."""
+"""Misc command handlers and compatibility adapters."""
+
+from typing import TYPE_CHECKING
 
 from .types import CommandResult, CommandSignal
 
+if TYPE_CHECKING:
+    from .contracts import CommandDependencies as _CommandDependencies
+else:
+    class _CommandDependencies:
+        pass
 
-class MiscCommandsMixin:
-    async def show_help(self, args: str) -> str:
-        """Show help information.
 
-        Args:
-            args: Not used
-
-        Returns:
-            Help text
-        """
-        return """PolyChat Commands:
+HELP_TEXT = """PolyChat Commands:
 
 Provider Shortcuts:
   /gpt                Switch to OpenAI GPT
@@ -102,13 +100,26 @@ Other:
   /help               Show this help
   /exit, /quit        Exit PolyChat"""
 
+
+class MiscCommandHandlers:
+    """Explicit handlers for help/exit commands."""
+
+    async def show_help(self, args: str) -> str:
+        """Show help information."""
+        return HELP_TEXT
+
     async def exit_app(self, args: str) -> CommandResult:
-        """Exit the application.
-
-        Args:
-            args: Not used
-
-        Returns:
-            Exit message (triggers exit in main loop)
-        """
+        """Exit the application."""
         return CommandSignal(kind="exit")
+
+
+class MiscCommandsMixin(_CommandDependencies):
+    """Legacy adapter exposing misc commands on CommandHandler."""
+
+    _misc_commands: MiscCommandHandlers
+
+    async def show_help(self, args: str) -> str:
+        return await self._misc_commands.show_help(args)
+
+    async def exit_app(self, args: str) -> CommandResult:
+        return await self._misc_commands.exit_app(args)

@@ -18,10 +18,23 @@ from .session import modes as session_modes
 from .session import persistence as session_persistence
 from .session import provider_cache as session_provider_cache
 from .session import settings as session_settings
+from .session.accessors import (
+    StateField,
+    state_get,
+    state_getitem,
+    state_setitem,
+    state_to_dict,
+)
 from .session.system_prompt import load_system_prompt as load_system_prompt_content
 from .session.timeouts import format_timeout as format_timeout_value
 from .session.timeouts import normalize_timeout
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
+
+
+def _validate_input_mode(value: str) -> None:
+    """Validate user input mode names accepted by REPL keybindings."""
+    if value not in ("quick", "compose"):
+        raise ValueError(f"Invalid input mode: {value}. Must be 'quick' or 'compose'")
 
 
 class SessionManager:
@@ -50,6 +63,23 @@ class SessionManager:
         print(manager["current_ai"])
         manager["input_mode"] = "compose"
     """
+
+    current_ai = StateField[str]("current_ai")
+    current_model = StateField[str]("current_model")
+    helper_ai = StateField[str]("helper_ai")
+    helper_model = StateField[str]("helper_model")
+    profile = StateField[dict[str, Any]]("profile", readonly=True)
+    chat = StateField[dict[str, Any]]("chat", readonly=True)
+    system_prompt = StateField[Optional[str]]("system_prompt")
+    system_prompt_path = StateField[Optional[str]]("system_prompt_path")
+    chat_path = StateField[Optional[str]]("chat_path")
+    profile_path = StateField[Optional[str]]("profile_path")
+    log_file = StateField[Optional[str]]("log_file")
+    input_mode = StateField[str]("input_mode", validator=_validate_input_mode)
+    retry_mode = StateField[bool]("retry_mode", coerce=bool)
+    secret_mode = StateField[bool]("secret_mode", coerce=bool)
+    search_mode = StateField[bool]("search_mode", coerce=bool)
+    hex_id_set = StateField[set[str]]("hex_id_set", readonly=True)
 
     def __init__(
         self,
@@ -111,149 +141,11 @@ class SessionManager:
         if chat and "messages" in chat:
             initialize_message_hex_ids(self._state)
 
-    # ===================================================================
-    # Property Access (Preferred Interface)
-    # ===================================================================
-
-    @property
-    def current_ai(self) -> str:
-        """Current AI provider name."""
-        return self._state.current_ai
-
-    @current_ai.setter
-    def current_ai(self, value: str) -> None:
-        self._state.current_ai = value
-
-    @property
-    def current_model(self) -> str:
-        """Current model name."""
-        return self._state.current_model
-
-    @current_model.setter
-    def current_model(self, value: str) -> None:
-        self._state.current_model = value
-
-    @property
-    def helper_ai(self) -> str:
-        """Helper AI provider name."""
-        return self._state.helper_ai
-
-    @helper_ai.setter
-    def helper_ai(self, value: str) -> None:
-        self._state.helper_ai = value
-
-    @property
-    def helper_model(self) -> str:
-        """Helper model name."""
-        return self._state.helper_model
-
-    @helper_model.setter
-    def helper_model(self, value: str) -> None:
-        self._state.helper_model = value
-
-    @property
-    def profile(self) -> dict[str, Any]:
-        """Profile dictionary."""
-        return self._state.profile
-
-    @property
-    def chat(self) -> dict[str, Any]:
-        """Current chat data."""
-        return self._state.chat
-
-    @property
-    def system_prompt(self) -> Optional[str]:
-        """System prompt text."""
-        return self._state.system_prompt
-
-    @system_prompt.setter
-    def system_prompt(self, value: Optional[str]) -> None:
-        self._state.system_prompt = value
-
-    @property
-    def system_prompt_path(self) -> Optional[str]:
-        """System prompt path."""
-        return self._state.system_prompt_path
-
-    @system_prompt_path.setter
-    def system_prompt_path(self, value: Optional[str]) -> None:
-        self._state.system_prompt_path = value
-
-    @property
-    def chat_path(self) -> Optional[str]:
-        """Current chat file path."""
-        return self._state.chat_path
-
-    @chat_path.setter
-    def chat_path(self, value: Optional[str]) -> None:
-        self._state.chat_path = value
-
-    @property
-    def profile_path(self) -> Optional[str]:
-        """Current profile file path."""
-        return self._state.profile_path
-
-    @profile_path.setter
-    def profile_path(self, value: Optional[str]) -> None:
-        self._state.profile_path = value
-
-    @property
-    def log_file(self) -> Optional[str]:
-        """Current log file path."""
-        return self._state.log_file
-
-    @log_file.setter
-    def log_file(self, value: Optional[str]) -> None:
-        self._state.log_file = value
-
-    @property
-    def input_mode(self) -> str:
-        """Input mode ("quick" or "compose")."""
-        return self._state.input_mode
-
-    @input_mode.setter
-    def input_mode(self, value: str) -> None:
-        if value not in ("quick", "compose"):
-            raise ValueError(f"Invalid input mode: {value}. Must be 'quick' or 'compose'")
-        self._state.input_mode = value
-
-    @property
-    def retry_mode(self) -> bool:
-        """Whether retry mode is active."""
-        return self._state.retry_mode
-
-    @retry_mode.setter
-    def retry_mode(self, value: bool) -> None:
-        self._state.retry_mode = bool(value)
-
-    @property
-    def secret_mode(self) -> bool:
-        """Whether secret mode is active."""
-        return self._state.secret_mode
-
-    @secret_mode.setter
-    def secret_mode(self, value: bool) -> None:
-        self._state.secret_mode = bool(value)
-
-    @property
-    def search_mode(self) -> bool:
-        """Whether search mode is active."""
-        return self._state.search_mode
-
-    @search_mode.setter
-    def search_mode(self, value: bool) -> None:
-        self._state.search_mode = bool(value)
-
     @property
     def message_hex_ids(self) -> dict[int, str]:
         """Message hex IDs (index → hex_id)."""
         messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
         return hex_id.build_hex_map(messages)
-
-    @property
-    def hex_id_set(self) -> set[str]:
-        """Set of all assigned hex IDs."""
-        return self._state.hex_id_set
 
     # ===================================================================
     # Dict-Like Access (Backward Compatibility)
@@ -261,48 +153,22 @@ class SessionManager:
 
     def __getitem__(self, key: str) -> Any:
         """Get state value by key (dict-like access)."""
-        if hasattr(self._state, key):
-            return getattr(self._state, key)
-        raise KeyError(f"Unknown session key: {key}")
+        return state_getitem(self._state, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set state value by key (dict-like access)."""
-        if hasattr(self._state, key):
-            setattr(self._state, key, value)
-        else:
-            raise KeyError(f"Unknown session key: {key}")
+        state_setitem(self._state, key, value)
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get state value with default (dict-like access)."""
-        try:
-            return self[key]
-        except KeyError:
-            return default
+        return state_get(self._state, key, default)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert state to a plain dictionary.
 
         Useful for diagnostics, snapshots, and tests.
         """
-        return {
-            "current_ai": self._state.current_ai,
-            "current_model": self._state.current_model,
-            "helper_ai": self._state.helper_ai,
-            "helper_model": self._state.helper_model,
-            "profile": self._state.profile,
-            "chat": self._state.chat,
-            "chat_path": self._state.chat_path,
-            "profile_path": self._state.profile_path,
-            "log_file": self._state.log_file,
-            "system_prompt": self._state.system_prompt,
-            "system_prompt_path": self._state.system_prompt_path,
-            "input_mode": self._state.input_mode,
-            "retry_mode": self._state.retry_mode,
-            "secret_mode": self._state.secret_mode,
-            "search_mode": self._state.search_mode,
-            "message_hex_ids": self.message_hex_ids,
-            "hex_id_set": self._state.hex_id_set,
-        }
+        return state_to_dict(self._state, message_hex_ids=self.message_hex_ids)
 
     # ===================================================================
     # Chat Management

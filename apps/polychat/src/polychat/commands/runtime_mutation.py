@@ -1,4 +1,4 @@
-"""Runtime command handlers for destructive chat-history mutations."""
+"""Runtime mutation handlers and compatibility adapters."""
 
 from typing import TYPE_CHECKING
 
@@ -12,10 +12,15 @@ else:
         pass
 
 
-class RuntimeMutationCommandsMixin(_CommandDependencies):
+class RuntimeMutationCommandHandlers:
+    """Explicit handlers for destructive history-mutation commands."""
+
+    def __init__(self, dependencies: _CommandDependencies) -> None:
+        self._deps = dependencies
+
     async def rewind_messages(self, args: str) -> str:
         """Rewind chat history by deleting a target message and all following."""
-        chat_data = self.manager.chat
+        chat_data = self._deps.manager.chat
 
         if not chat_data or "messages" not in chat_data:
             return "No chat is currently open"
@@ -65,12 +70,12 @@ class RuntimeMutationCommandsMixin(_CommandDependencies):
                 target_label = "selected target"
 
             print(f"WARNING: Rewind will delete from {target_label} onwards")
-            if not await self._confirm_yes("Type 'yes' to confirm rewind: "):
+            if not await self._deps._confirm_yes("Type 'yes' to confirm rewind: "):
                 return "Rewind cancelled"
 
             messages = chat_data["messages"]
             for index_to_remove in range(len(messages) - 1, index - 1, -1):
-                self.manager.remove_message_hex_id(index_to_remove)
+                self._deps.manager.remove_message_hex_id(index_to_remove)
 
             count = delete_message_and_following(chat_data, index)
 
@@ -85,7 +90,7 @@ class RuntimeMutationCommandsMixin(_CommandDependencies):
         if not args.strip():
             return "Usage: /purge <hex_id> [hex_id2 hex_id3 ...]"
 
-        chat_data = self._require_open_chat(need_messages=True)
+        chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
 
@@ -107,14 +112,26 @@ class RuntimeMutationCommandsMixin(_CommandDependencies):
 
         ids_for_prompt = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
         print(f"WARNING: Purging message(s) breaks conversation context: {ids_for_prompt}")
-        if not await self._confirm_yes("Type 'yes' to confirm purge: "):
+        if not await self._deps._confirm_yes("Type 'yes' to confirm purge: "):
             return "Purge cancelled"
 
         deleted_count = 0
         for msg_index, _hid in indices_to_delete:
-            self.manager.remove_message_hex_id(msg_index)
+            self._deps.manager.remove_message_hex_id(msg_index)
             del messages[msg_index]
             deleted_count += 1
 
         deleted_ids = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
         return f"Purged {deleted_count} message(s): {deleted_ids}"
+
+
+class RuntimeMutationCommandsMixin(_CommandDependencies):
+    """Legacy adapter exposing mutation commands on CommandHandler."""
+
+    _runtime_mutation_commands: RuntimeMutationCommandHandlers
+
+    async def rewind_messages(self, args: str) -> str:
+        return await self._runtime_mutation_commands.rewind_messages(args)
+
+    async def purge_messages(self, args: str) -> str:
+        return await self._runtime_mutation_commands.purge_messages(args)

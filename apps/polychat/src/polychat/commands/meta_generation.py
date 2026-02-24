@@ -1,4 +1,4 @@
-"""Metadata command handlers for helper-generated content and safety checks."""
+"""Metadata generation/safety handlers and compatibility adapters."""
 
 import logging
 from typing import TYPE_CHECKING, Optional, cast
@@ -23,7 +23,12 @@ else:
         pass
 
 
-class MetadataGenerationCommandsMixin(_CommandDependencies):
+class MetadataGenerationCommandHandlers:
+    """Explicit handlers for metadata generation and safety commands."""
+
+    def __init__(self, dependencies: _CommandDependencies) -> None:
+        self._deps = dependencies
+
     async def _invoke_helper_ai(
         self,
         helper_ai: str,
@@ -45,28 +50,28 @@ class MetadataGenerationCommandsMixin(_CommandDependencies):
                 messages,
                 system_prompt,
                 task=task,
-                session=self.manager,
+                session=self._deps.manager,
             ),
         )
 
     async def set_title(self, args: str) -> str:
         """Set chat title."""
-        chat_data = self._require_open_chat(need_metadata=True)
+        chat_data = self._deps._require_open_chat(need_metadata=True)
         if chat_data is None:
             return "No chat is currently open"
 
         if not args:
             return await self.generate_title(args)
         if args == "--":
-            await self._update_metadata_and_save(title=None)
+            await self._deps._update_metadata_and_save(title=None)
             return "Title cleared"
 
-        await self._update_metadata_and_save(title=args)
+        await self._deps._update_metadata_and_save(title=args)
         return f"Title set to: {args}"
 
     async def generate_title(self, args: str) -> str:
         """Generate title using helper AI."""
-        chat_data = self._require_open_chat(need_messages=True)
+        chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
 
@@ -81,31 +86,31 @@ class MetadataGenerationCommandsMixin(_CommandDependencies):
                 "role": "user",
                 "content": build_title_generation_prompt(
                     context_text,
-                    self.manager.profile.get("title_prompt"),
+                    self._deps.manager.profile.get("title_prompt"),
                 ),
             }
         ]
 
         try:
             title = await self._invoke_helper_ai(
-                self.manager.helper_ai,
-                self.manager.helper_model,
-                self.manager.profile,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
+                self._deps.manager.profile,
                 prompt_messages,
                 None,
                 task="title_generation",
             )
 
             title = title.strip().strip('"').strip("'")
-            await self._update_metadata_and_save(title=title)
+            await self._deps._update_metadata_and_save(title=title)
 
             return f"Title generated: {title}"
 
         except Exception as error:
             logging.error(
                 "Helper AI title generation failed (provider=%s, model=%s): %s",
-                self.manager.helper_ai,
-                self.manager.helper_model,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 error,
                 exc_info=True,
             )
@@ -113,22 +118,22 @@ class MetadataGenerationCommandsMixin(_CommandDependencies):
 
     async def set_summary(self, args: str) -> str:
         """Set chat summary."""
-        chat_data = self._require_open_chat(need_metadata=True)
+        chat_data = self._deps._require_open_chat(need_metadata=True)
         if chat_data is None:
             return "No chat is currently open"
 
         if not args:
             return await self.generate_summary(args)
         if args == "--":
-            await self._update_metadata_and_save(summary=None)
+            await self._deps._update_metadata_and_save(summary=None)
             return "Summary cleared"
 
-        await self._update_metadata_and_save(summary=args)
+        await self._deps._update_metadata_and_save(summary=args)
         return "Summary set"
 
     async def generate_summary(self, args: str) -> str:
         """Generate summary using helper AI."""
-        chat_data = self._require_open_chat(need_messages=True)
+        chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
 
@@ -143,29 +148,29 @@ class MetadataGenerationCommandsMixin(_CommandDependencies):
                 "role": "user",
                 "content": build_summary_generation_prompt(
                     context_text,
-                    self.manager.profile.get("summary_prompt"),
+                    self._deps.manager.profile.get("summary_prompt"),
                 ),
             }
         ]
 
         try:
             summary = await self._invoke_helper_ai(
-                self.manager.helper_ai,
-                self.manager.helper_model,
-                self.manager.profile,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
+                self._deps.manager.profile,
                 prompt_messages,
                 None,
                 task="summary_generation",
             )
 
-            await self._update_metadata_and_save(summary=summary)
+            await self._deps._update_metadata_and_save(summary=summary)
             return f"Summary generated:\n{summary}"
 
         except Exception as error:
             logging.error(
                 "Helper AI summary generation failed (provider=%s, model=%s): %s",
-                self.manager.helper_ai,
-                self.manager.helper_model,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 error,
                 exc_info=True,
             )
@@ -173,7 +178,7 @@ class MetadataGenerationCommandsMixin(_CommandDependencies):
 
     async def check_safety(self, args: str) -> str:
         """Check chat for unsafe content."""
-        chat_data = self._require_open_chat(need_messages=True)
+        chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
         messages = chat_data["messages"]
@@ -199,16 +204,16 @@ class MetadataGenerationCommandsMixin(_CommandDependencies):
                 "role": "user",
                 "content": build_safety_check_prompt(
                     content_to_check,
-                    self.manager.profile.get("safety_prompt"),
+                    self._deps.manager.profile.get("safety_prompt"),
                 ),
             }
         ]
 
         try:
             result = await self._invoke_helper_ai(
-                self.manager.helper_ai,
-                self.manager.helper_model,
-                self.manager.profile,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
+                self._deps.manager.profile,
                 prompt_messages,
                 None,
                 task="safety_check",
@@ -226,10 +231,31 @@ class MetadataGenerationCommandsMixin(_CommandDependencies):
         except Exception as error:
             logging.error(
                 "Helper AI safety check failed (provider=%s, model=%s, scope=%s): %s",
-                self.manager.helper_ai,
-                self.manager.helper_model,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 scope,
                 error,
                 exc_info=True,
             )
             return f"Error performing safety check: {error}"
+
+
+class MetadataGenerationCommandsMixin(_CommandDependencies):
+    """Legacy adapter exposing metadata generation commands on CommandHandler."""
+
+    _metadata_generation_commands: MetadataGenerationCommandHandlers
+
+    async def set_title(self, args: str) -> str:
+        return await self._metadata_generation_commands.set_title(args)
+
+    async def generate_title(self, args: str) -> str:
+        return await self._metadata_generation_commands.generate_title(args)
+
+    async def set_summary(self, args: str) -> str:
+        return await self._metadata_generation_commands.set_summary(args)
+
+    async def generate_summary(self, args: str) -> str:
+        return await self._metadata_generation_commands.generate_summary(args)
+
+    async def check_safety(self, args: str) -> str:
+        return await self._metadata_generation_commands.check_safety(args)

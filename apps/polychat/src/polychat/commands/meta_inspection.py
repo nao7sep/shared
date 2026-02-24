@@ -1,4 +1,4 @@
-"""Metadata command handlers for history and session inspection output."""
+"""Metadata inspection handlers and compatibility adapters."""
 
 from typing import TYPE_CHECKING
 
@@ -30,10 +30,15 @@ else:
         pass
 
 
-class MetadataInspectionCommandsMixin(_CommandDependencies):
+class MetadataInspectionCommandHandlers:
+    """Explicit handlers for history/message/status inspection commands."""
+
+    def __init__(self, dependencies: _CommandDependencies) -> None:
+        self._deps = dependencies
+
     async def show_history(self, args: str) -> str:
         """Show chat history."""
-        chat_data = self._require_open_chat(need_messages=True)
+        chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
         messages = chat_data["messages"]
@@ -86,7 +91,7 @@ class MetadataInspectionCommandsMixin(_CommandDependencies):
         output.append(header)
 
         history_formatter = create_history_formatter(
-            self._to_local_time,
+            self._deps._to_local_time,
             MESSAGE_PREVIEW_LENGTH,
         )
 
@@ -104,7 +109,7 @@ class MetadataInspectionCommandsMixin(_CommandDependencies):
         if not args.strip():
             return "Usage: /show <hex_id>"
 
-        chat_data = self._require_open_chat(need_messages=True)
+        chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
         messages = chat_data["messages"]
@@ -119,7 +124,7 @@ class MetadataInspectionCommandsMixin(_CommandDependencies):
         timestamp = msg.get("timestamp", "")
 
         if timestamp:
-            time_str = self._to_local_time(timestamp, DATETIME_FORMAT_FULL)
+            time_str = self._deps._to_local_time(timestamp, DATETIME_FORMAT_FULL)
         else:
             time_str = DISPLAY_UNKNOWN
 
@@ -140,18 +145,18 @@ class MetadataInspectionCommandsMixin(_CommandDependencies):
 
     async def show_status(self, args: str) -> str:
         """Show current session status and key paths."""
-        profile_data = self.manager.profile
+        profile_data = self._deps.manager.profile
 
-        profile_path = self.manager.profile_path or DISPLAY_UNKNOWN
-        chat_path = self.manager.chat_path
-        log_file = self.manager.log_file
+        profile_path = self._deps.manager.profile_path or DISPLAY_UNKNOWN
+        chat_path = self._deps.manager.chat_path
+        log_file = self._deps.manager.log_file
 
-        chat_data = self.manager.chat or {}
+        chat_data = self._deps.manager.chat or {}
         messages = chat_data.get("messages", []) if isinstance(chat_data, dict) else []
         metadata = chat_data.get("metadata", {}) if isinstance(chat_data, dict) else {}
 
         timeout = resolve_profile_timeout(profile_data)
-        timeout_display = self.manager.format_timeout(timeout)
+        timeout_display = self._deps.manager.format_timeout(timeout)
 
         chat_title = metadata.get("title") or DISPLAY_NONE
 
@@ -179,7 +184,7 @@ class MetadataInspectionCommandsMixin(_CommandDependencies):
         updated_local = DISPLAY_UNKNOWN
         updated_at = metadata.get("updated_at")
         if updated_at:
-            updated_local = self._to_local_time(updated_at, DATETIME_FORMAT_SHORT)
+            updated_local = self._deps._to_local_time(updated_at, DATETIME_FORMAT_SHORT)
 
         output = [
             "Session Status",
@@ -200,8 +205,8 @@ class MetadataInspectionCommandsMixin(_CommandDependencies):
             f"Updated:   {updated_local}",
             "",
             "Providers",
-            f"Assistant: {self.manager.current_ai} | {self.manager.current_model}",
-            f"Helper:    {self.manager.helper_ai} | {self.manager.helper_model}",
+            f"Assistant: {self._deps.manager.current_ai} | {self._deps.manager.current_model}",
+            f"Helper:    {self._deps.manager.helper_ai} | {self._deps.manager.helper_model}",
             "",
             "Prompts",
             f"System:    {system_prompt_display}",
@@ -210,12 +215,27 @@ class MetadataInspectionCommandsMixin(_CommandDependencies):
             f"Safety:    {safety_prompt}",
             "",
             "Modes",
-            f"Input:     {self.manager.input_mode}",
-            f"Retry:     {'ON' if self.manager.retry_mode else 'OFF'}",
-            f"Secret:    {'ON' if self.manager.secret_mode else 'OFF'}",
-            f"Search:    {'ON' if self.manager.search_mode else 'OFF'}",
+            f"Input:     {self._deps.manager.input_mode}",
+            f"Retry:     {'ON' if self._deps.manager.retry_mode else 'OFF'}",
+            f"Secret:    {'ON' if self._deps.manager.secret_mode else 'OFF'}",
+            f"Search:    {'ON' if self._deps.manager.search_mode else 'OFF'}",
             f"Timeout:   {timeout_display}",
             make_borderline(),
         ]
 
         return "\n".join(output)
+
+
+class MetadataInspectionCommandsMixin(_CommandDependencies):
+    """Legacy adapter exposing metadata inspection commands on CommandHandler."""
+
+    _metadata_inspection_commands: MetadataInspectionCommandHandlers
+
+    async def show_history(self, args: str) -> str:
+        return await self._metadata_inspection_commands.show_history(args)
+
+    async def show_message(self, args: str) -> str:
+        return await self._metadata_inspection_commands.show_message(args)
+
+    async def show_status(self, args: str) -> str:
+        return await self._metadata_inspection_commands.show_status(args)

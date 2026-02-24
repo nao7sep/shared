@@ -71,7 +71,7 @@ class Task:
             "note": self.note,
         }
 
-    # Dict-like compatibility for incremental migration.
+    # Dict-like interface kept for existing call sites.
     def __getitem__(self, key: str) -> Any:
         if key not in _TASK_FIELDS:
             raise KeyError(key)
@@ -177,7 +177,7 @@ class TaskStore:
             return True
         return False
 
-    # Dict-like compatibility for incremental migration.
+    # Dict-like interface kept for existing call sites.
     def __getitem__(self, key: str) -> Any:
         if key != "tasks":
             raise KeyError(key)
@@ -239,7 +239,7 @@ class Profile:
             "sync_on_exit": self.sync_on_exit,
         }
 
-    # Dict-like compatibility for incremental migration.
+    # Dict-like interface kept for existing call sites.
     def __getitem__(self, key: str) -> Any:
         if key not in _PROFILE_FIELDS:
             raise KeyError(key)

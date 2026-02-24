@@ -1,4 +1,4 @@
-"""Runtime command handlers for provider/model/helper and timeout selection."""
+"""Runtime model/timeout command handlers and compatibility adapters."""
 
 from typing import TYPE_CHECKING
 
@@ -19,7 +19,12 @@ else:
         pass
 
 
-class RuntimeModelCommandsMixin(_CommandDependencies):
+class RuntimeModelCommandHandlers:
+    """Explicit handlers for provider/model/helper/timeout commands."""
+
+    def __init__(self, dependencies: _CommandDependencies) -> None:
+        self._deps = dependencies
+
     async def _choose_model_from_candidates(
         self,
         query: str,
@@ -32,7 +37,7 @@ class RuntimeModelCommandsMixin(_CommandDependencies):
             prompt_lines.append(f"  {index}. {model_name} ({provider_name})")
         prompt_lines.append("Select one by number (press Enter to cancel).")
 
-        answer = (await self._prompt_text("\n".join(prompt_lines) + "\nSelection: ")).strip()
+        answer = (await self._deps._prompt_text("\n".join(prompt_lines) + "\nSelection: ")).strip()
         if not answer:
             return None, "Model selection cancelled."
         if not answer.isdigit():
@@ -72,21 +77,21 @@ class RuntimeModelCommandsMixin(_CommandDependencies):
             Confirmation message or model list
         """
         if not args:
-            provider = self.manager.current_ai
+            provider = self._deps.manager.current_ai
             available_models = get_models_for_provider(provider)
             return f"Available models for {provider}:\n" + "\n".join(
                 f"  - {m}" for m in available_models
             )
 
         if args == "default":
-            profile_data = self.manager.profile
+            profile_data = self._deps.manager.profile
             default_ai = profile_data["default_ai"]
             default_model = profile_data["models"][default_ai]
 
-            self.manager.current_ai = default_ai
-            self.manager.current_model = default_model
+            self._deps.manager.current_ai = default_ai
+            self._deps.manager.current_model = default_model
 
-            notices = self._reconcile_provider_modes(default_ai)
+            notices = self._deps._reconcile_provider_modes(default_ai)
             if notices:
                 return (
                     f"Reverted to profile default: {default_ai} ({default_model})\n"
@@ -106,13 +111,13 @@ class RuntimeModelCommandsMixin(_CommandDependencies):
         if model_provider is None:
             return f"No provider found for model '{selected_model}'."
 
-        self.manager.current_ai = model_provider
-        self.manager.current_model = selected_model
+        self._deps.manager.current_ai = model_provider
+        self._deps.manager.current_model = selected_model
 
         base_message = f"Switched to {model_provider} ({selected_model})"
         if selected_model != query:
             base_message += f" [matched from '{query}']"
-        notices = self._reconcile_provider_modes(model_provider)
+        notices = self._deps._reconcile_provider_modes(model_provider)
         if notices:
             return base_message + "\n" + "\n".join(notices)
         return base_message
@@ -127,17 +132,17 @@ class RuntimeModelCommandsMixin(_CommandDependencies):
             Confirmation message or current helper
         """
         if not args:
-            helper_ai = self.manager.helper_ai
-            helper_model = self.manager.helper_model
+            helper_ai = self._deps.manager.helper_ai
+            helper_model = self._deps.manager.helper_model
             return f"Current helper AI: {helper_ai} ({helper_model})"
 
         if args == "default":
-            profile_data = self.manager.profile
+            profile_data = self._deps.manager.profile
             helper_ai_name = profile_data.get("default_helper_ai", profile_data["default_ai"])
             helper_model_name = profile_data["models"][helper_ai_name]
 
-            self.manager.helper_ai = helper_ai_name
-            self.manager.helper_model = helper_model_name
+            self._deps.manager.helper_ai = helper_ai_name
+            self._deps.manager.helper_model = helper_model_name
 
             return f"Helper AI restored to profile default: {helper_ai_name} ({helper_model_name})"
 
@@ -146,19 +151,19 @@ class RuntimeModelCommandsMixin(_CommandDependencies):
 
         provider_shortcut = resolve_provider_shortcut(lowered)
         if provider_shortcut is not None:
-            provider_model = self.manager.profile["models"].get(provider_shortcut)
+            provider_model = self._deps.manager.profile["models"].get(provider_shortcut)
             if not provider_model:
                 return f"No model configured for {provider_shortcut} in profile"
-            self.manager.helper_ai = provider_shortcut
-            self.manager.helper_model = provider_model
+            self._deps.manager.helper_ai = provider_shortcut
+            self._deps.manager.helper_model = provider_model
             return f"Helper AI set to {provider_shortcut} ({provider_model})"
 
         if lowered in get_all_providers():
-            provider_model = self.manager.profile["models"].get(lowered)
+            provider_model = self._deps.manager.profile["models"].get(lowered)
             if not provider_model:
                 return f"No model configured for {lowered} in profile"
-            self.manager.helper_ai = lowered
-            self.manager.helper_model = provider_model
+            self._deps.manager.helper_ai = lowered
+            self._deps.manager.helper_model = provider_model
             return f"Helper AI set to {lowered} ({provider_model})"
 
         selected_model, resolution_error = await self._resolve_model_selection(query)
@@ -171,8 +176,8 @@ class RuntimeModelCommandsMixin(_CommandDependencies):
         if provider is None:
             return f"No provider found for model '{selected_model}'."
 
-        self.manager.helper_ai = provider
-        self.manager.helper_model = selected_model
+        self._deps.manager.helper_ai = provider
+        self._deps.manager.helper_model = selected_model
 
         message = f"Helper AI set to {provider} ({selected_model})"
         if selected_model != query:
@@ -189,18 +194,33 @@ class RuntimeModelCommandsMixin(_CommandDependencies):
             Confirmation message or current timeout
         """
         if not args:
-            timeout = resolve_profile_timeout(self.manager.profile)
-            return f"Current timeout: {self.manager.format_timeout(timeout)}"
+            timeout = resolve_profile_timeout(self._deps.manager.profile)
+            return f"Current timeout: {self._deps.manager.format_timeout(timeout)}"
 
         if args == "default":
-            default_timeout = self.manager.reset_timeout_to_default()
-            return f"Reverted to profile default: {self.manager.format_timeout(default_timeout)}"
+            default_timeout = self._deps.manager.reset_timeout_to_default()
+            return f"Reverted to profile default: {self._deps.manager.format_timeout(default_timeout)}"
 
         try:
-            timeout = self.manager.set_timeout(float(args))
-            return f"Timeout set to {self.manager.format_timeout(timeout)}"
+            timeout = self._deps.manager.set_timeout(float(args))
+            return f"Timeout set to {self._deps.manager.format_timeout(timeout)}"
 
         except ValueError:
             raise ValueError(
                 "Invalid timeout value. Use a number (e.g., /timeout 60) or 0 for no timeout."
             )
+
+
+class RuntimeModelCommandsMixin(_CommandDependencies):
+    """Legacy adapter exposing runtime model commands on CommandHandler."""
+
+    _runtime_model_commands: RuntimeModelCommandHandlers
+
+    async def set_model(self, args: str) -> str:
+        return await self._runtime_model_commands.set_model(args)
+
+    async def set_helper(self, args: str) -> str:
+        return await self._runtime_model_commands.set_helper(args)
+
+    async def set_timeout(self, args: str) -> str:
+        return await self._runtime_model_commands.set_timeout(args)

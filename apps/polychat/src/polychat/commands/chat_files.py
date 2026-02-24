@@ -1,4 +1,4 @@
-"""Chat file management command mixin."""
+"""Chat-file command handlers and compatibility adapters."""
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -19,7 +19,12 @@ else:
         pass
 
 
-class ChatFileCommandsMixin(_CommandDependencies):
+class ChatFileCommandHandlers:
+    """Explicit handlers for chat-file lifecycle commands."""
+
+    def __init__(self, dependencies: _CommandDependencies) -> None:
+        self._deps = dependencies
+
     @staticmethod
     def _is_yes_choice(answer: str) -> bool:
         return answer.strip().lower() in {"", "y", "yes"}
@@ -37,14 +42,14 @@ class ChatFileCommandsMixin(_CommandDependencies):
         Returns:
             Command text or typed new-chat control signal
         """
-        chats_dir = self.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile["chats_dir"]
 
         # Generate filename
         name = args.strip() if args else None
         new_path = generate_chat_filename(chats_dir, name)
 
-        if not self.manager.chat_path:
-            answer = await self._prompt_text(
+        if not self._deps.manager.chat_path:
+            answer = await self._deps._prompt_text(
                 "No chat is open. Open the new chat now? [Y/n]: "
             )
             if self._is_no_choice(answer):
@@ -66,18 +71,18 @@ class ChatFileCommandsMixin(_CommandDependencies):
         Returns:
             Typed open-chat control signal or error message
         """
-        chats_dir = self.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile["chats_dir"]
 
         selected_path: str | None
         if args.strip():
             # Path provided as argument
             try:
-                selected_path = self._resolve_chat_path_arg(args.strip(), chats_dir)
+                selected_path = self._deps._resolve_chat_path_arg(args.strip(), chats_dir)
             except ValueError as e:
                 return str(e)
         else:
             # Interactive selection
-            selected_path = await self._prompt_chat_selection(
+            selected_path = await self._deps._prompt_chat_selection(
                 chats_dir,
                 action="open",
                 allow_cancel=True,
@@ -116,7 +121,7 @@ class ChatFileCommandsMixin(_CommandDependencies):
         Returns:
             Typed close-chat control signal
         """
-        if not self.manager.chat_path:
+        if not self._deps.manager.chat_path:
             return "No chat is currently open. Use /new or /open."
 
         # Signal to REPL to close chat
@@ -131,21 +136,21 @@ class ChatFileCommandsMixin(_CommandDependencies):
         Returns:
             Command text or typed rename-current signal
         """
-        chats_dir = self.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile["chats_dir"]
 
         # Parse args
         parts = args.strip().split(None, 1)
 
         if not parts:
             # No args - prompt for chat to rename
-            selected_path = await self._prompt_chat_selection(
+            selected_path = await self._deps._prompt_chat_selection(
                 chats_dir, action="rename", allow_cancel=True
             )
 
             if not selected_path:
                 return "Rename cancelled"
 
-            new_name = (await self._prompt_text("Enter new name: ")).strip()
+            new_name = (await self._deps._prompt_text("Enter new name: ")).strip()
             if not new_name:
                 return "Rename cancelled"
 
@@ -154,7 +159,7 @@ class ChatFileCommandsMixin(_CommandDependencies):
                 new_path = rename_chat(selected_path, new_name, chats_dir)
 
                 # Check if this was the current chat
-                current_path = self.manager.chat_path
+                current_path = self._deps.manager.chat_path
                 if current_path and Path(current_path).resolve() == Path(selected_path).resolve():
                     # Signal to update current chat path
                     return CommandSignal(kind="rename_current", chat_path=new_path)
@@ -172,13 +177,13 @@ class ChatFileCommandsMixin(_CommandDependencies):
             return "Usage: /rename <chat_name|path|current> <new_name>"
 
         if target == "current":
-            current_path = self.manager.chat_path
+            current_path = self._deps.manager.chat_path
             if not current_path:
                 return "No chat is currently open"
             old_path = Path(current_path).resolve()
         else:
             try:
-                old_path = Path(self._resolve_chat_path_arg(target, chats_dir)).resolve()
+                old_path = Path(self._deps._resolve_chat_path_arg(target, chats_dir)).resolve()
             except ValueError as e:
                 return str(e)
 
@@ -186,7 +191,7 @@ class ChatFileCommandsMixin(_CommandDependencies):
             new_path = rename_chat(str(old_path), new_name, chats_dir)
 
             # Check if this was the current chat
-            current_path = self.manager.chat_path
+            current_path = self._deps.manager.chat_path
             if current_path and Path(current_path).resolve() == old_path.resolve():
                 return CommandSignal(kind="rename_current", chat_path=new_path)
             return f"Renamed: {old_path.name} → {Path(new_path).name}"
@@ -203,11 +208,11 @@ class ChatFileCommandsMixin(_CommandDependencies):
         Returns:
             Command text or typed delete-current signal
         """
-        chats_dir = self.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile["chats_dir"]
 
         if not args.strip():
             # Interactive selection
-            selected_path = await self._prompt_chat_selection(
+            selected_path = await self._deps._prompt_chat_selection(
                 chats_dir, action="delete", allow_cancel=True
             )
 
@@ -217,18 +222,18 @@ class ChatFileCommandsMixin(_CommandDependencies):
             # Parse argument
             name = args.strip()
             if name == "current":
-                current_path = self.manager.chat_path
+                current_path = self._deps.manager.chat_path
                 if not current_path:
                     return "No chat is currently open. Use /new or /open."
                 selected_path = current_path
             else:
                 try:
-                    selected_path = self._resolve_chat_path_arg(name, chats_dir)
+                    selected_path = self._deps._resolve_chat_path_arg(name, chats_dir)
                 except ValueError as e:
                     return str(e)
 
         # Check if this is the current chat
-        current_path = self.manager.chat_path
+        current_path = self._deps.manager.chat_path
         is_current = (
             current_path
             and Path(current_path).resolve() == Path(selected_path).resolve()
@@ -236,7 +241,7 @@ class ChatFileCommandsMixin(_CommandDependencies):
 
         # Confirm deletion
         print(f"\nWARNING: This will permanently delete: {Path(selected_path).name}")
-        if not await self._confirm_yes("Type 'yes' to confirm deletion: "):
+        if not await self._deps._confirm_yes("Type 'yes' to confirm deletion: "):
             return "Deletion cancelled"
 
         # Perform deletion
@@ -254,3 +259,27 @@ class ChatFileCommandsMixin(_CommandDependencies):
 
         except Exception as e:
             return f"Error deleting chat: {sanitize_error_message(str(e))}"
+
+
+class ChatFileCommandsMixin(_CommandDependencies):
+    """Legacy adapter exposing chat-file commands on CommandHandler."""
+
+    _chat_file_commands: ChatFileCommandHandlers
+
+    async def new_chat(self, args: str) -> CommandResult:
+        return await self._chat_file_commands.new_chat(args)
+
+    async def open_chat(self, args: str) -> CommandResult:
+        return await self._chat_file_commands.open_chat(args)
+
+    async def switch_chat(self, args: str) -> CommandResult:
+        return await self._chat_file_commands.switch_chat(args)
+
+    async def close_chat(self, args: str) -> CommandResult:
+        return await self._chat_file_commands.close_chat(args)
+
+    async def rename_chat_file(self, args: str) -> CommandResult:
+        return await self._chat_file_commands.rename_chat_file(args)
+
+    async def delete_chat_command(self, args: str) -> CommandResult:
+        return await self._chat_file_commands.delete_chat_command(args)

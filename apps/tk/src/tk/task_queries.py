@@ -1,10 +1,10 @@
-"""Task grouping/query helpers for presentation layers."""
+"""Task grouping and read-model helpers for presentation layers."""
 
 from typing import Any
 
 
 def group_tasks_for_display(tasks: list[Any]) -> dict[str, Any]:
-    """Group and sort tasks for display layers."""
+    """Group and sort tasks for TODO/history display."""
     result: dict[str, Any] = {
         "pending": [],
         "done": [],
@@ -34,7 +34,7 @@ def group_handled_tasks(
     *,
     include_unknown: bool,
 ) -> list[tuple[str, list[tuple[int, Any]]]]:
-    """Group handled tasks by subjective date and sort deterministically."""
+    """Group handled tasks by subjective date with deterministic ordering."""
     grouped: dict[str, list[tuple[int, Any]]] = {}
 
     for array_index, task in handled_with_indices:

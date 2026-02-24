@@ -7,9 +7,14 @@ from ..ai.helper_runtime import invoke_helper_ai
 from .base import CommandHandlerBaseMixin
 from .dispatcher import CommandDispatcher
 from .runtime import RuntimeCommandsMixin
+from .runtime_models import RuntimeModelCommandHandlers
+from .runtime_modes import RuntimeModeCommandHandlers
+from .runtime_mutation import RuntimeMutationCommandHandlers
+from .meta_generation import MetadataGenerationCommandHandlers
+from .meta_inspection import MetadataInspectionCommandHandlers
 from .metadata import MetadataCommandsMixin
-from .chat_files import ChatFileCommandsMixin
-from .misc import MiscCommandsMixin
+from .chat_files import ChatFileCommandHandlers, ChatFileCommandsMixin
+from .misc import MiscCommandHandlers, MiscCommandsMixin
 from .types import CommandResult
 from ..ui.interaction import UserInteractionPort
 
@@ -32,6 +37,13 @@ class CommandHandler(
         interaction: Optional[UserInteractionPort] = None,
     ) -> None:
         super().__init__(manager, interaction=interaction)
+        self._runtime_model_commands = RuntimeModelCommandHandlers(self)
+        self._runtime_mode_commands = RuntimeModeCommandHandlers(self)
+        self._runtime_mutation_commands = RuntimeMutationCommandHandlers(self)
+        self._metadata_generation_commands = MetadataGenerationCommandHandlers(self)
+        self._metadata_inspection_commands = MetadataInspectionCommandHandlers(self)
+        self._chat_file_commands = ChatFileCommandHandlers(self)
+        self._misc_commands = MiscCommandHandlers()
         self._dispatcher = CommandDispatcher(self)
 
     async def execute_command(self, text: str) -> CommandResult:

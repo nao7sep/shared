@@ -7,12 +7,19 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 - `src/polychat/ai/`
   - Owns provider integrations, model catalog/capabilities/pricing, request limits, AI cost estimation, and runtime orchestration (`runtime.py`, `helper_runtime.py`).
 
+- `src/polychat/domain/`
+  - Owns typed boundary models used by persistence and runtime adapters.
+  - Current domain models:
+    - `chat.py` (`ChatDocument`, `ChatMetadata`, `ChatMessage`)
+    - `profile.py` (`RuntimeProfile`)
+
 - `src/polychat/chat/`
   - Owns persisted chat storage schema, chat message mutations, and chat-file operations.
   - Root `chat_manager.py` is a compatibility facade over `chat/files.py`.
 
 - `src/polychat/session/`
   - Owns session state model and session-scoped operations (mode state, provider cache, persistence, lifecycle helpers).
+  - `accessors.py` owns SessionManager state access descriptors (`StateField`) and dict/snapshot helper functions.
   - `session_manager.py` is the public facade/composition entry for session operations.
 
 - `src/polychat/orchestration/`
@@ -28,6 +35,11 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/commands/`
   - Owns command handlers and dispatch.
+  - `context.py` owns explicit command dependency wiring (`CommandContext`).
+  - `misc.py` and `chat_files.py` use explicit handler objects with thin adapter mixins for compatibility.
+  - `runtime_models.py` and `runtime_modes.py` use explicit handler objects with thin adapter mixins for compatibility.
+  - `runtime_mutation.py` uses explicit handler objects with thin adapter mixins for compatibility.
+  - `meta_generation.py` and `meta_inspection.py` use explicit handler objects with thin adapter mixins for compatibility.
   - Runtime commands are split into:
     - `runtime_models.py`
     - `runtime_modes.py`

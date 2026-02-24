@@ -18,6 +18,7 @@ from .constants import (
     DEFAULT_CHATS_DIR,
     DEFAULT_LOGS_DIR,
 )
+from .domain.profile import RuntimeProfile
 from .path_utils import map_path
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 
@@ -110,7 +111,8 @@ def load_profile(path: str) -> dict[str, Any]:
         if isinstance(key_config, dict) and key_config.get("type") == "json":
             key_config["path"] = map_path(key_config["path"])
 
-    return profile
+    runtime_profile = RuntimeProfile.from_dict(profile)
+    return runtime_profile.to_dict()
 
 
 def validate_profile(profile: dict[str, Any]) -> None:
@@ -323,9 +325,12 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
         },
     }
 
+    runtime_profile = RuntimeProfile.from_dict(profile)
+    persistable_profile = runtime_profile.to_dict()
+
     # Save profile
     with open(profile_path, "w", encoding="utf-8") as f:
-        json.dump(profile, f, indent=2, ensure_ascii=False)
+        json.dump(persistable_profile, f, indent=2, ensure_ascii=False)
 
     # Add success and next steps messages
     messages.extend([
@@ -340,4 +345,4 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
         f"     uv run polychat -p {profile_path}",
     ])
 
-    return profile, messages
+    return persistable_profile, messages

@@ -10,12 +10,15 @@ from ..constants import CHAT_FILE_EXTENSION, DISPLAY_UNKNOWN
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
 from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort
+from .context import CommandContext
 
 if TYPE_CHECKING:
     from ..session_manager import SessionManager
 
 
 class CommandHandlerBaseMixin:
+    context: CommandContext
+
     def __init__(
         self,
         manager: "SessionManager",
@@ -26,8 +29,14 @@ class CommandHandlerBaseMixin:
         Args:
             manager: SessionManager instance for unified state access
         """
-        self.manager = manager
-        self.interaction = interaction or ThreadedConsoleInteraction()
+        resolved_interaction = interaction or ThreadedConsoleInteraction()
+        self.context = CommandContext(
+            manager=manager,
+            interaction=resolved_interaction,
+        )
+        # Backward-compatible aliases for existing command mixins/tests.
+        self.manager = self.context.manager
+        self.interaction = self.context.interaction
 
     def _require_open_chat(
         self, *, need_messages: bool = False, need_metadata: bool = False

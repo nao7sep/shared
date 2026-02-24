@@ -6,7 +6,41 @@ Implementation plan generated on 2026-02-23.
 
 Improve long-term maintainability of PolyChat by reducing hidden coupling, introducing strong typing at module boundaries, and decomposing oversized modules into focused units.
 
-## Baseline Findings (Current State)
+## Progress Update (2026-02-24)
+
+1. Baseline quality gates are now green:
+   - `pytest -q`: `533 passed, 3 deselected`
+   - `mypy src/polychat`: `Success: no issues found in 97 source files`
+   - `ruff check src tests`: pass
+2. Phase 1 now has typed domain boundaries for chat and profile:
+   - Added `src/polychat/domain/chat.py` and `src/polychat/domain/__init__.py`.
+   - Added `src/polychat/domain/profile.py`.
+   - `src/polychat/chat/storage.py` now normalizes via `ChatDocument`.
+   - `src/polychat/chat/messages.py` now constructs messages via `ChatMessage`.
+   - `src/polychat/profile.py` now crosses a typed boundary via `RuntimeProfile`.
+3. Added domain tests at `tests/test_domain_chat.py` and `tests/test_domain_profile.py`.
+4. Phase 2 started with explicit command dependency wiring:
+   - Added `src/polychat/commands/context.py` (`CommandContext`).
+   - `CommandHandlerBaseMixin` now composes dependencies through `self.context`.
+   - Added `tests/test_commands_context.py`.
+5. Phase 2 command migration (batch 1 and 2) is complete:
+   - `src/polychat/commands/misc.py` now uses explicit `MiscCommandHandlers` with adapter methods.
+   - `src/polychat/commands/chat_files.py` now uses explicit `ChatFileCommandHandlers` with adapter methods.
+   - `CommandHandler` now owns explicit handler instances and keeps existing command method surface.
+6. Phase 2 command migration (batch 3) is complete:
+   - `src/polychat/commands/runtime_models.py` now uses explicit `RuntimeModelCommandHandlers` with adapter methods.
+   - `src/polychat/commands/runtime_modes.py` now uses explicit `RuntimeModeCommandHandlers` with adapter methods.
+   - Added runtime-handler wiring assertions in `tests/test_commands_context.py`.
+7. Phase 2 command migration (batch 4) is complete:
+   - `src/polychat/commands/meta_generation.py` now uses explicit `MetadataGenerationCommandHandlers`.
+   - `src/polychat/commands/meta_inspection.py` now uses explicit `MetadataInspectionCommandHandlers`.
+   - `src/polychat/commands/runtime_mutation.py` also now uses explicit `RuntimeMutationCommandHandlers` for consistency.
+8. Phase 3 started with SessionManager facade thinning:
+   - Added `src/polychat/session/accessors.py` for typed state descriptors and dict/snapshot helpers.
+   - `src/polychat/session_manager.py` now delegates state access via `StateField` and access helpers.
+   - `session_manager.py` reduced from 633 to 499 lines while preserving public API behavior.
+
+## Baseline Findings (At Plan Creation)
 
 1. Large modules with mixed responsibilities:
    - `src/polychat/session_manager.py` (736 lines)
@@ -240,37 +274,37 @@ Rationale:
 
 ### Phase 0: Safety rails and baselines
 
-- [ ] Capture frozen baseline:
+- [x] Capture frozen baseline:
   - `pytest -q`
   - `mypy src/polychat` error report snapshot
   - file-size hotspot snapshot
-- [ ] Add temporary architecture notes in `docs/` for migration scope and invariants.
+- [x] Add temporary architecture notes in `docs/` for migration scope and invariants.
 
 ### Phase 1: Typed domain layer
 
-- [ ] Implement domain models and serializers.
-- [ ] Migrate `chat.py` and `profile.py` boundaries first.
-- [ ] Update unit tests for model parsing and backward-compatible JSON shape handling.
+- [x] Implement domain models and serializers.
+- [x] Migrate `chat` and `profile` boundaries first.
+- [x] Update unit tests for model parsing and backward-compatible JSON shape handling.
 
 Dependencies:
 - none
 
 ### Phase 2: Command subsystem refactor
 
-- [ ] Add `CommandContext` and explicit command handler contracts.
-- [ ] Port commands from mixin methods to explicit command handlers in small batches:
-  1. misc/help/exit
-  2. chat file commands
-  3. runtime model/mode commands
-  4. metadata/history/safety commands
-- [ ] Keep legacy adapter layer until all handlers are migrated.
+- [x] Add `CommandContext` and explicit command handler contracts.
+- [x] Port commands from mixin methods to explicit command handlers in small batches:
+  - [x] misc/help/exit
+  - [x] chat file commands
+  - [x] runtime model/mode commands
+  - [x] metadata/history/safety commands
+- [x] Keep legacy adapter layer until all handlers are migrated.
 
 Dependencies:
 - Phase 1 typed models (partial)
 
 ### Phase 3: Session/orchestrator decomposition
 
-- [ ] Extract `session/` submodules and reduce `SessionManager` to facade.
+- [x] Extract `session/` submodules and reduce `SessionManager` to facade.
 - [ ] Extract orchestration mode handlers and signal routing.
 - [ ] Add transition-invariant tests:
   - retry mode entry/exit
@@ -324,10 +358,9 @@ Dependencies:
 
 1. PR-1: Domain models + boundary adapters (`chat.py`, `profile.py`)
 2. PR-2: Command context + first command batch
-3. PR-3: Remaining command migration + legacy adapter cleanup
+3. PR-3: Remaining command migration + optional legacy adapter cleanup
 4. PR-4: Session decomposition
 5. PR-5: Orchestrator decomposition + transition tests
 6. PR-6: Provider shared utilities
 7. PR-7: Logging split
 8. PR-8: Docs/help generator + staged mypy gate
-

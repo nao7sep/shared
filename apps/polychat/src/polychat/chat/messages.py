@@ -2,23 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
-from ..formatting.text import text_to_lines
+from ..ai.types import Citation
+from ..domain.chat import ChatMessage
 
 
 def add_user_message(data: dict[str, Any], content: str) -> None:
     """Add user message to chat."""
-    lines = text_to_lines(content)
-
-    message = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "role": "user",
-        "content": lines,
-    }
-
-    data["messages"].append(message)
+    message = ChatMessage.new_user(content)
+    data["messages"].append(message.to_dict())
 
 
 def add_assistant_message(
@@ -28,36 +21,37 @@ def add_assistant_message(
     citations: list[dict[str, Any]] | None = None,
 ) -> None:
     """Add assistant message to chat."""
-    lines = text_to_lines(content)
-
-    message: dict[str, Any] = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "role": "assistant",
-        "model": model,
-        "content": lines,
-    }
+    normalized_citations: list[Citation] | None = None
     if citations:
-        message["citations"] = citations
+        normalized: list[Citation] = []
+        for citation in citations:
+            if not isinstance(citation, dict):
+                continue
+            number = citation.get("number")
+            record: Citation = {
+                "title": citation.get("title"),
+                "url": citation.get("url"),
+            }
+            if isinstance(number, int):
+                record["number"] = number
+            normalized.append(record)
+        if normalized:
+            normalized_citations = normalized
 
-    data["messages"].append(message)
+    message = ChatMessage.new_assistant(
+        content,
+        model=model,
+        citations=normalized_citations,
+    )
+    data["messages"].append(message.to_dict())
 
 
 def add_error_message(
     data: dict[str, Any], content: str, details: dict[str, Any] | None = None
 ) -> None:
     """Add error message to chat."""
-    lines = text_to_lines(content)
-
-    message: dict[str, Any] = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "role": "error",
-        "content": lines,
-    }
-
-    if details:
-        message["details"] = details
-
-    data["messages"].append(message)
+    message = ChatMessage.new_error(content, details=details)
+    data["messages"].append(message.to_dict())
 
 
 def delete_message_and_following(data: dict[str, Any], index: int) -> int:
