@@ -11,7 +11,8 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 ### Responsibility Splitting
 
 - Files or classes doing more than one job. If a module handles both HTTP requests and database queries, those should separate.
-- Functions longer than ~50 lines that contain distinct logical phases.
+- Function length is a weak signal, not evidence by itself.
+- Recommend extraction only when there is concrete complexity: mixed abstraction levels, multiple distinct phases, heavy branching, or unrelated side effects.
 - File size is a weak smell, not evidence by itself.
 - Split only when boundaries are clear and each extracted module has one reason to change.
 - Prefer no split when the file is large but cohesive and extraction would increase coupling.
