@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from ..session.state import has_pending_error, pending_error_guidance
-from ..orchestrator_types import (
+from .types import (
     ActionMode,
     OrchestratorAction,
     PrintAction,

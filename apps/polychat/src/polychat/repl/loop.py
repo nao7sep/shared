@@ -22,7 +22,7 @@ from ..constants import (
 )
 from ..logging import log_event, summarize_command_args
 from ..orchestrator import ChatOrchestrator
-from ..orchestrator_types import (
+from ..orchestration.types import (
     BreakAction,
     ContinueAction,
     PrintAction,

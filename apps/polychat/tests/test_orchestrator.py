@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from polychat.commands.types import CommandSignal
 from polychat.orchestrator import ChatOrchestrator
-from polychat.orchestrator_types import (
+from polychat.orchestration.types import (
     BreakAction,
     ContinueAction,
     PrintAction,

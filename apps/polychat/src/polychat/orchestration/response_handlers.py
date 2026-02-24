@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional, cast
 
 from ..logging import sanitize_error_message
-from ..orchestrator_types import ActionMode, ContinueAction, OrchestratorAction, PrintAction
+from .types import ActionMode, ContinueAction, OrchestratorAction, PrintAction
 from ..ai.types import Citation
 
 if TYPE_CHECKING:

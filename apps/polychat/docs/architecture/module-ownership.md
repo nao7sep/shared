@@ -28,6 +28,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/orchestration/`
   - Owns REPL orchestration flow handlers:
+    - shared orchestration action/transition types (`types.py`)
     - command signals (`signals.py`, dispatch table + payload validation + retry-apply replacement policy helpers)
     - chat lifecycle transitions (`chat_switching.py`, new/open/close/rename/delete)
     - user message entry/send action preparation (`message_entry.py`)

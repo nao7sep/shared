@@ -14,7 +14,7 @@ from ..formatting.costs import format_cost_line, format_cost_usd
 from ..formatting.citations import format_citation_list
 from ..logging import log_event
 from ..orchestrator import ChatOrchestrator
-from ..orchestrator_types import PrintAction, SendAction
+from ..orchestration.types import PrintAction, SendAction
 from ..session_manager import SessionManager
 from ..streaming import display_streaming_response
 

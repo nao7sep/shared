@@ -4,7 +4,7 @@ from typing import cast
 
 import pytest
 
-from polychat.orchestrator_types import ActionMode
+from polychat.orchestration.types import ActionMode
 from polychat.orchestration.response_handlers import (
     build_transition_state,
     can_mutate_normal_chat,

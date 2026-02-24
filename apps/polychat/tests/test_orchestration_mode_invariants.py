@@ -9,7 +9,7 @@ import pytest
 
 from polychat.commands.types import CommandSignal
 from polychat.orchestrator import ChatOrchestrator
-from polychat.orchestrator_types import ContinueAction, PrintAction, SendAction
+from polychat.orchestration.types import ContinueAction, PrintAction, SendAction
 from polychat.session_manager import SessionManager
 
 

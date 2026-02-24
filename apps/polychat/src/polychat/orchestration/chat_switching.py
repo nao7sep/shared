@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from ..logging import log_event
-from ..orchestrator_types import ContinueAction, OrchestratorAction
+from .types import ContinueAction, OrchestratorAction
 
 if TYPE_CHECKING:
     from ..session_manager import SessionManager

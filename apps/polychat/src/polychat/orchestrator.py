@@ -9,7 +9,7 @@ from .commands.types import CommandResult, CommandSignal
 from .orchestration.message_entry import MessageEntryHandlersMixin
 from .orchestration.response_handlers import ResponseHandlersMixin
 from .orchestration.signals import CommandSignalHandlersMixin
-from .orchestrator_types import ContinueAction, OrchestratorAction, PrintAction
+from .orchestration.types import ContinueAction, OrchestratorAction, PrintAction
 from .session_manager import SessionManager
 
 

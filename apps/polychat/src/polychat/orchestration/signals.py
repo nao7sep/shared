@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 
 from ..commands.types import CommandSignal
 from ..formatting.text import text_to_lines
-from ..orchestrator_types import (
+from .types import (
     BreakAction,
     ContinueAction,
     OrchestratorAction,
