@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from polychat.helper_ai import invoke_helper_ai
+from polychat.ai.helper_runtime import invoke_helper_ai
 
 
 @pytest.mark.asyncio
@@ -22,7 +22,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
     session = object()
 
     with patch("polychat.keys.loader.load_api_key", return_value="test-key") as mock_load_key:
-        with patch("polychat.ai_runtime.get_provider_instance", return_value=provider) as mock_get_provider:
+        with patch("polychat.ai.runtime.get_provider_instance", return_value=provider) as mock_get_provider:
             with patch("polychat.logging.log_event") as mock_log_event:
                 response = await invoke_helper_ai(
                     helper_ai="claude",
@@ -79,7 +79,7 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
     provider.get_full_response = AsyncMock(return_value=("ok", {"usage": {}}))
 
     with patch("polychat.keys.loader.load_api_key", return_value="test-key"):
-        with patch("polychat.ai_runtime.get_provider_instance", return_value=provider):
+        with patch("polychat.ai.runtime.get_provider_instance", return_value=provider):
             with patch("polychat.logging.log_event"):
                 await invoke_helper_ai(
                     helper_ai="claude",

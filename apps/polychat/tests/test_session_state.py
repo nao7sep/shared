@@ -1,6 +1,6 @@
 """Tests for session state management."""
 
-from polychat.app_state import (
+from polychat.session.state import (
     SessionState,
     initialize_message_hex_ids,
     assign_new_message_hex_id,

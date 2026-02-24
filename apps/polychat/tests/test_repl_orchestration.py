@@ -1,6 +1,6 @@
 """Tests for REPL/session orchestration state transitions."""
 
-from polychat.app_state import (
+from polychat.session.state import (
     SessionState,
     initialize_message_hex_ids,
 )

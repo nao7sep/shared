@@ -176,7 +176,8 @@ async def test_safe_command_error_handling(command_handler_safe, mock_session_ma
 @pytest.mark.asyncio
 async def test_format_message_for_safety_check(command_handler_safe, mock_session_manager_safe):
     """Test message formatting for safety check."""
-    from polychat.text_formatting import format_message_for_safety_check, format_messages
+    from polychat.formatting.history import format_message_for_safety_check
+    from polychat.formatting.text import format_messages
 
     messages = [
         {"role": "user", "content": ["Test message 1"]},
@@ -193,7 +194,7 @@ async def test_format_message_for_safety_check(command_handler_safe, mock_sessio
 @pytest.mark.asyncio
 async def test_format_message_with_hex_ids(command_handler_safe, mock_session_manager_safe):
     """Safety formatting should not include hex IDs."""
-    from polychat.text_formatting import format_for_safety_check
+    from polychat.formatting.history import format_for_safety_check
 
     # Use messages with hex IDs from session
     messages = mock_session_manager_safe.chat["messages"][:1]

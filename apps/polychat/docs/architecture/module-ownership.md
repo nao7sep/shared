@@ -5,8 +5,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 ## Package Boundaries
 
 - `src/polychat/ai/`
-  - Owns provider integrations, model catalog/capabilities/pricing, request limits, and AI cost estimation.
-  - Runtime send/validate orchestration is still partially rooted in compatibility modules and should converge under `ai/`.
+  - Owns provider integrations, model catalog/capabilities/pricing, request limits, AI cost estimation, and runtime orchestration (`runtime.py`, `helper_runtime.py`).
 
 - `src/polychat/chat/`
   - Owns persisted chat storage schema, chat message mutations, and chat-file operations.
@@ -14,7 +13,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/session/`
   - Owns session state model and session-scoped operations (mode state, provider cache, persistence, lifecycle helpers).
-  - Root `app_state.py` is a compatibility facade over `session/state.py`.
+  - `session_manager.py` is the public facade/composition entry for session operations.
 
 - `src/polychat/orchestration/`
   - Owns REPL orchestration flow handlers:
@@ -41,28 +40,25 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 - `src/polychat/formatting/`
   - Owns all display and text formatting helpers:
     - `text.py`, `history.py`, `chat_list.py`, `citations.py`, `costs.py`
-  - Root `text_formatting.py` is a compatibility facade.
 
 - `src/polychat/prompts/`
   - Owns prompt template builders (`templates.py`) and prompt assets (`prompts/system/*`).
   - `prompts/__init__.py` re-exports compatibility symbols, including `_load_prompt_from_path` for existing patch points.
 
 - `src/polychat/logging/`
-  - Owns logging implementation.
-  - Root `logging_utils.py` is compatibility facade only.
+  - Owns logging implementation (`events.py`, `formatter.py`, `sanitization.py`).
 
 ## Facade Policy
 
 - Root-level modules are allowed only when they are:
   - thin entry points (`cli.py`, `orchestrator.py`, `polychat.repl` package entry)
-  - compatibility re-export facades (`models.py`, `costs.py`, `text_formatting.py`, `chat_manager.py`, `app_state.py`, `logging_utils.py`)
+  - thin facades/composition entry points (`chat_manager.py`, `session_manager.py`)
 - New domain logic should be added to feature packages, not root facades.
 
 ## Refactor Completion Criteria
 
 - No new business logic is added to compatibility facades.
 - Internal imports prefer feature-package modules over root facades.
-- Shims are removed only after:
+- Legacy shims are removed only after:
   - no in-repo imports depend on them
-  - compatibility tests are updated/retired
-  - release notes document breaking import-path changes.
+  - compatibility tests are updated/retired.

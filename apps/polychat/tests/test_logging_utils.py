@@ -2,7 +2,7 @@
 
 import logging
 
-from polychat.logging_utils import StructuredTextFormatter
+from polychat.logging import StructuredTextFormatter
 
 
 def test_structured_formatter_extracts_httpx_request_fields():

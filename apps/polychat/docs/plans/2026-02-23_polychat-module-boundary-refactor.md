@@ -335,12 +335,13 @@ Target package map (incremental):
 - [x] Add `formatting/` package and move text/history/chat/citation/cost display formatters.
 - [x] Rename `setup.py` to `setup_wizard.py` and migrate internal CLI usage to `setup_wizard`.
 - [x] Move `prompts.py` content to explicit template module path.
-- [x] Retain `logging_utils.py` as compatibility facade only.
+- [x] Migrate logging imports to `src/polychat/logging/` package and retire `logging_utils.py`.
 
 ### Phase 6: Cleanup and hardening
 
 - [x] Remove obsolete shims after all references are migrated.
-- [x] Move AI runtime composition into `src/polychat/ai/runtime.py` and helper orchestration into `src/polychat/ai/helper_runtime.py`, keeping root compatibility shims (`ai_runtime.py`, `helper_ai.py`).
+- [x] Move AI runtime composition into `src/polychat/ai/runtime.py` and helper orchestration into `src/polychat/ai/helper_runtime.py`.
+- [x] Remove retired root facades (`ai_runtime.py`, `helper_ai.py`, `app_state.py`, `logging_utils.py`, `text_formatting.py`, `models.py`, `costs.py`) and retire compatibility-only tests.
 - [x] Run full test suite and static checks.
 - [x] Add architecture notes describing package ownership boundaries.
 
