@@ -9,7 +9,6 @@ This test validates the complete flow:
 5. Verify data integrity by asking AI to count interactions
 """
 
-import asyncio
 import json
 import tempfile
 import time
@@ -18,7 +17,6 @@ from datetime import datetime
 
 import pytest
 
-from polychat.profile import load_profile
 from polychat.chat import (
     load_chat,
     save_chat,
@@ -64,9 +62,6 @@ async def send_and_receive(provider, messages: list, model: str, provider_name: 
         Tuple of (full_response, elapsed_seconds, chunk_count, chunk_timings, usage_metadata)
     """
     start = time.time()
-    chunks = []
-    chunk_timings = []  # Track when each chunk arrives
-
     # Get full response with metadata (non-streaming to get usage data reliably)
     content, metadata = await provider.get_full_response(messages, model)
 
@@ -181,7 +176,7 @@ async def test_full_chat_flow():
         log("PHASE 1: Setup", indent=0)
         log("-" * 80)
 
-        profile_path = create_temp_profile(test_config, temp_path)
+        create_temp_profile(test_config, temp_path)
         chat_file_path = temp_path / "chats" / "integration-test.json"
 
         log("")
@@ -254,7 +249,6 @@ async def test_full_chat_flow():
 
             # Send and receive
             try:
-                start = time.time()
                 response, elapsed, chunks, timings, usage = await send_and_receive(provider, messages, model, provider_name)
                 total_time += elapsed
 
@@ -386,7 +380,6 @@ async def test_full_chat_flow():
         add_user_message(loaded_chat, verification_prompt)
         messages = get_messages_for_ai(loaded_chat)
 
-        verify_start = time.time()
         verification_response, verify_elapsed, verify_chunks, verify_timings, verify_usage = await send_and_receive(
             verify_provider,
             messages,
@@ -435,7 +428,7 @@ async def test_full_chat_flow():
                 else:
                     log(f"⚠ Count mismatch ({reported_count} vs {actual_user_count}) - but AI read and understood the chat", indent=1)
             else:
-                log(f"✓ AI provided summary (could not parse count, but response shows chat understanding)", indent=1)
+                log("✓ AI provided summary (could not parse count, but response shows chat understanding)", indent=1)
 
         except Exception as e:
             log(f"✓ AI provided summary (count parsing error: {e})", indent=1)
@@ -451,8 +444,8 @@ async def test_full_chat_flow():
         log(f"✓ Tested {len(available_ais)} AI provider(s)")
         log(f"✓ Successful interactions: {interaction_count}")
         log(f"✓ Total messages in chat: {len(chat['messages'])}")
-        log(f"✓ Chat saved and loaded successfully")
-        log(f"✓ Data integrity verified")
+        log("✓ Chat saved and loaded successfully")
+        log("✓ Data integrity verified")
         log(f"✓ Total test time: {time.time() - test_start_time:.2f}s")
         log("=" * 80)
         log("INTEGRATION TEST PASSED")

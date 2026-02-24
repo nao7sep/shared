@@ -1,9 +1,14 @@
 """Windows Credential Manager API key loading for PolyChat."""
 
+from typing import Any
+
+_keyring: Any | None
 try:
-    import keyring
+    import keyring as _keyring
 except ImportError:
-    keyring = None
+    _keyring = None
+
+keyring = _keyring
 
 
 def load_from_credential_manager(service: str, account: str) -> str:
@@ -36,7 +41,7 @@ def load_from_credential_manager(service: str, account: str) -> str:
             f"Service: {service}, Account: {account}"
         )
 
-    if not key:
+    if not isinstance(key, str) or not key:
         raise ValueError(
             f"API key not found in Windows Credential Manager.\n"
             f"Service: {service}, Account: {account}\n"

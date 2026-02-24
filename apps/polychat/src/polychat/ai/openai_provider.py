@@ -5,7 +5,7 @@ See: https://platform.openai.com/docs/guides/text
 """
 
 import logging
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from openai import AsyncOpenAI
 from openai import (
     APIConnectionError,
@@ -22,8 +22,8 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from ..logging_utils import before_sleep_log_event, log_event
-from ..text_formatting import lines_to_text
+from ..logging import before_sleep_log_event, log_event
+from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -32,7 +32,7 @@ from ..timeouts import (
     build_ai_httpx_timeout,
 )
 from .tools import openai_web_search_tools
-from .types import AIResponseMetadata
+from .types import AIResponseMetadata, Citation
 
 
 class OpenAIProvider:
@@ -48,7 +48,7 @@ class OpenAIProvider:
         timeout_config = build_ai_httpx_timeout(timeout)
 
         # Disable default retries - we handle retries explicitly
-        self.client = AsyncOpenAI(
+        self.client: Any = AsyncOpenAI(
             api_key=api_key, timeout=timeout_config, max_retries=0
         )
         self.api_key = api_key
@@ -192,7 +192,7 @@ class OpenAIProvider:
 
                     # Extract citations from response.output items
                     if search and event.response and metadata is not None:
-                        citations = []
+                        citations: list[Citation] = []
                         for item in event.response.output:
                             if item.type == "message":
                                 for content in item.content:
@@ -327,16 +327,15 @@ class OpenAIProvider:
 
             # Extract metadata
             # Note: Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
-            metadata = {
+            usage_summary = {
+                "prompt_tokens": response.usage.input_tokens if response.usage else 0,
+                "completion_tokens": response.usage.output_tokens if response.usage else 0,
+                "total_tokens": response.usage.total_tokens if response.usage else 0,
+            }
+            metadata: dict[str, Any] = {
                 "model": response.model if hasattr(response, 'model') else model,
                 "finish_status": finish_status,
-                "usage": {
-                    "prompt_tokens": response.usage.input_tokens if response.usage else 0,
-                    "completion_tokens": (
-                        response.usage.output_tokens if response.usage else 0
-                    ),
-                    "total_tokens": response.usage.total_tokens if response.usage else 0,
-                },
+                "usage": usage_summary,
             }
 
             # Add cached tokens if available
@@ -355,7 +354,7 @@ class OpenAIProvider:
 
             # Extract citations if search was enabled
             if search:
-                citations = []
+                citations: list[Citation] = []
                 for item in response.output:
                     if item.type == "message":
                         for content in item.content:

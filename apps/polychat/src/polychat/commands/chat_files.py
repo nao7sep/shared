@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..chat import load_chat, save_chat
-from ..chat_manager import (
+from ..chat.files import (
     delete_chat as delete_chat_file,
     generate_chat_filename,
     rename_chat,
 )
-from ..logging_utils import sanitize_error_message
+from ..logging import sanitize_error_message
 from .types import CommandResult, CommandSignal
 
 if TYPE_CHECKING:

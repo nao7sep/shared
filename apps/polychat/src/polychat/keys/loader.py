@@ -1,6 +1,6 @@
 """Unified API key loading interface for PolyChat."""
 
-from typing import Any
+from typing import Any, cast
 
 
 def load_api_key(provider: str, config: dict[str, Any]) -> str:
@@ -27,27 +27,33 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
 
     if key_type == "direct":
         # Direct value (for testing)
-        return config["value"]
+        return cast(str, config["value"])
 
     elif key_type == "env":
         from .env_vars import load_from_env
 
-        return load_from_env(config["key"])
+        return load_from_env(cast(str, config["key"]))
 
     elif key_type == "keychain":
         from .keychain import load_from_keychain
 
-        return load_from_keychain(config["service"], config["account"])
+        return load_from_keychain(
+            cast(str, config["service"]),
+            cast(str, config["account"]),
+        )
 
     elif key_type == "credential":
         from .credential_manager import load_from_credential_manager
 
-        return load_from_credential_manager(config["service"], config["account"])
+        return load_from_credential_manager(
+            cast(str, config["service"]),
+            cast(str, config["account"]),
+        )
 
     elif key_type == "json":
         from .json_files import load_from_json
 
-        return load_from_json(config["path"], config["key"])
+        return load_from_json(cast(str, config["path"]), cast(str, config["key"]))
 
     else:
         raise ValueError(f"Unknown key type '{key_type}' for provider '{provider}'")

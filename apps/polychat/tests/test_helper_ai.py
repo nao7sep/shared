@@ -23,7 +23,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
 
     with patch("polychat.keys.loader.load_api_key", return_value="test-key") as mock_load_key:
         with patch("polychat.ai_runtime.get_provider_instance", return_value=provider) as mock_get_provider:
-            with patch("polychat.logging_utils.log_event") as mock_log_event:
+            with patch("polychat.logging.log_event") as mock_log_event:
                 response = await invoke_helper_ai(
                     helper_ai="claude",
                     helper_model="claude-haiku-4-5",
@@ -53,7 +53,7 @@ async def test_invoke_helper_ai_missing_api_key_raises_value_error():
     """Missing helper API key should fail with clear ValueError."""
     profile_data = {"api_keys": {}}
 
-    with patch("polychat.logging_utils.log_event"):
+    with patch("polychat.logging.log_event"):
         with pytest.raises(ValueError, match="No API key configured for helper AI: claude"):
             await invoke_helper_ai(
                 helper_ai="claude",
@@ -80,7 +80,7 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
 
     with patch("polychat.keys.loader.load_api_key", return_value="test-key"):
         with patch("polychat.ai_runtime.get_provider_instance", return_value=provider):
-            with patch("polychat.logging_utils.log_event"):
+            with patch("polychat.logging.log_event"):
                 await invoke_helper_ai(
                     helper_ai="claude",
                     helper_model="claude-haiku-4-5",

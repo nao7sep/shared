@@ -113,16 +113,18 @@ def assign_new_message_hex_id(session: SessionState, message_index: int) -> str:
     return new_hex_id
 
 
-def has_pending_error(chat_data: dict) -> bool:
+def has_pending_error(chat_data: dict[str, Any] | None) -> bool:
     """Check if chat has a pending error that blocks normal conversation."""
     if not chat_data or "messages" not in chat_data:
         return False
 
     messages = chat_data["messages"]
-    if not messages:
+    if not isinstance(messages, list) or not messages:
         return False
-
-    return messages[-1].get("role") == "error"
+    last_message = messages[-1]
+    if not isinstance(last_message, dict):
+        return False
+    return bool(last_message.get("role") == "error")
 
 
 def pending_error_guidance(*, compact: bool = False) -> str:
@@ -135,4 +137,3 @@ def pending_error_guidance(*, compact: bool = False) -> str:
         "Use /retry to rerun the same message.\n"
         "Use /rewind to remove the failed error/turn."
     )
-

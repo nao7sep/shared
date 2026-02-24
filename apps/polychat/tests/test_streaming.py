@@ -60,7 +60,7 @@ async def test_display_streaming_response_empty():
     """Test streaming with empty chunks."""
     stream = async_generator([])
 
-    with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+    with patch("sys.stdout", new_callable=StringIO):
         result, first_token_time = await display_streaming_response(stream)
 
     assert result == ""
@@ -72,7 +72,7 @@ async def test_display_streaming_response_single_chunk():
     """Test streaming with single chunk."""
     stream = async_generator(["Single"])
 
-    with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+    with patch("sys.stdout", new_callable=StringIO):
         result, first_token_time = await display_streaming_response(stream)
 
     assert result == "Single"
@@ -85,7 +85,7 @@ async def test_display_streaming_response_multiline():
     chunks = ["Line 1\n", "Line 2\n", "Line 3"]
     stream = async_generator(chunks)
 
-    with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+    with patch("sys.stdout", new_callable=StringIO):
         result, first_token_time = await display_streaming_response(stream)
 
     assert result == "Line 1\nLine 2\nLine 3"

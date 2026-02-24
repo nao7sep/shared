@@ -3,7 +3,7 @@
 from typing import Optional, TYPE_CHECKING
 
 from ..chat import save_chat
-from ..helper_ai import invoke_helper_ai
+from ..ai.helper_runtime import invoke_helper_ai
 from .base import CommandHandlerBaseMixin
 from .dispatcher import CommandDispatcher
 from .runtime import RuntimeCommandsMixin

@@ -5,10 +5,11 @@ import asyncio
 import logging
 import sys
 import time
+from typing import cast
 
-from . import chat, profile, setup
+from . import chat, profile, setup_wizard
 from .constants import DISPLAY_UNKNOWN
-from .logging_utils import (
+from .logging import (
     build_run_log_path,
     log_event,
     sanitize_error_message,
@@ -38,7 +39,7 @@ def _map_cli_arg(path: str | None, arg_name: str) -> str | None:
     if path is None:
         return None
     try:
-        return map_path(path)
+        return cast(str, map_path(path))
     except ValueError as e:
         raise ValueError(f"Invalid {arg_name} path: {e}")
 
@@ -88,6 +89,8 @@ def main() -> None:
             sys.exit(1)
         try:
             mapped_init_profile_path = _map_cli_arg(args.profile, "profile")
+            if mapped_init_profile_path is None:
+                raise ValueError("Invalid profile path: path is required")
             _, messages = profile.create_profile(mapped_init_profile_path)
             # Display status messages returned by create_profile
             for message in messages:
@@ -106,7 +109,7 @@ def main() -> None:
             print("Usage: polychat setup")
             sys.exit(1)
 
-        result = setup.run_setup_wizard()
+        result = setup_wizard.run_setup_wizard()
         if result is None:
             sys.exit(1)
 
@@ -135,6 +138,8 @@ def main() -> None:
         mapped_profile_path = _map_cli_arg(args.profile, "profile")
         mapped_chat_path = _map_cli_arg(args.chat, "chat")
         mapped_log_path = _map_cli_arg(args.log, "log")
+        if mapped_profile_path is None:
+            raise ValueError("Invalid profile path: path is required")
 
         profile_data = profile.load_profile(mapped_profile_path)
         effective_log_path = mapped_log_path or build_run_log_path(profile_data["logs_dir"])

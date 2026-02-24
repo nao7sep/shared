@@ -310,43 +310,47 @@ Target package map (incremental):
 
 ### Phase 2: Chat and session boundary alignment
 
-- [ ] Introduce `chat/` package (`storage.py`, `messages.py`, `files.py`).
+- [x] Introduce `chat/` package (`storage.py`, `messages.py`, `files.py`).
 - [x] Move state internals from `app_state.py` to `session/state.py` and add shim.
 - [x] Extract `session/chat_lifecycle.py` and `session/provider_cache.py`.
-- [ ] Keep `session_manager.py` as facade, remove internal duplication.
+- [x] Keep `session_manager.py` as facade, remove internal duplication.
 
 ### Phase 3: Orchestration and REPL decomposition
 
-- [ ] Create `orchestration/` package and split current orchestrator responsibilities.
-- [ ] Create `repl/` package (`loop.py`, `input.py`, `send_pipeline.py`, `status_banners.py`).
-- [ ] Keep root `orchestrator.py` and `repl.py` as thin compatibility entry points.
-- [ ] Add/adjust tests around send pipeline and mode transitions.
+- Progress: orchestration mixins now live under `src/polychat/orchestration/` (`signals.py`, `message_entry.py`, `response_handlers.py`), and `src/polychat/orchestrator.py` is now a thin composer.
+- [x] Create `orchestration/` package and split current orchestrator responsibilities.
+- [x] Create `repl/` package (`loop.py`, `input.py`, `send_pipeline.py`, `status_banners.py`).
+- [x] Keep `orchestrator.py` and `polychat.repl` entrypoint thin compatibility layers.
+- [x] Validate send pipeline and mode transition behavior with targeted orchestration/command tests.
 
 ### Phase 4: Command module decomposition
 
-- [ ] Split `commands/runtime.py` into focused runtime family modules.
-- [ ] Split `commands/metadata.py` into generation vs inspection modules.
-- [ ] Keep `commands/registry.py` as command source of truth.
-- [ ] Ensure command help and behavior remain unchanged.
+- [x] Split `commands/runtime.py` into focused runtime family modules.
+- [x] Split `commands/metadata.py` into generation vs inspection modules.
+- [x] Keep `commands/registry.py` as command source of truth.
+- [x] Ensure command help and behavior remain unchanged.
 
 ### Phase 5: Formatting extraction and naming cleanup
 
-- [ ] Add `formatting/` package and move text/history/chat/citation/cost display formatters.
-- [ ] Rename `setup.py` to `setup_wizard.py` with compatibility shim.
-- [ ] Move `prompts.py` content to explicit template module path.
-- [ ] Retain `logging_utils.py` as compatibility facade only.
+- [x] Add `formatting/` package and move text/history/chat/citation/cost display formatters.
+- [x] Rename `setup.py` to `setup_wizard.py` and migrate internal CLI usage to `setup_wizard`.
+- [x] Move `prompts.py` content to explicit template module path.
+- [x] Retain `logging_utils.py` as compatibility facade only.
 
 ### Phase 6: Cleanup and hardening
 
-- [ ] Remove obsolete shims after all references are migrated.
-- [ ] Run full test suite and static checks.
-- [ ] Add architecture notes describing package ownership boundaries.
+- [x] Remove obsolete shims after all references are migrated.
+- [x] Move AI runtime composition into `src/polychat/ai/runtime.py` and helper orchestration into `src/polychat/ai/helper_runtime.py`, keeping root compatibility shims (`ai_runtime.py`, `helper_ai.py`).
+- [x] Run full test suite and static checks.
+- [x] Add architecture notes describing package ownership boundaries.
 
 ## Validation Gates Per Phase
 
-- [ ] `cd /Users/nao7sep/code/shared/apps/polychat && .venv/bin/pytest -q`
-- [ ] `cd /Users/nao7sep/code/shared/apps/polychat && .venv/bin/ruff check src tests`
-- [ ] `cd /Users/nao7sep/code/shared/apps/polychat && mypy src/polychat` (or scoped package checks during migration)
+- [x] `cd /Users/nao7sep/code/shared/apps/polychat && .venv/bin/pytest -q`
+- [x] `cd /Users/nao7sep/code/shared/apps/polychat && .venv/bin/ruff check src`
+- [x] `cd /Users/nao7sep/code/shared/apps/polychat && .venv/bin/ruff check src tests`
+- [x] Scoped mypy gate: `cd /Users/nao7sep/code/shared/apps/polychat && .venv/bin/mypy --follow-imports=skip src/polychat/orchestration src/polychat/repl src/polychat/commands/runtime.py src/polychat/commands/runtime_models.py src/polychat/commands/runtime_modes.py src/polychat/commands/runtime_mutation.py src/polychat/commands/metadata.py src/polychat/commands/meta_generation.py src/polychat/commands/meta_inspection.py src/polychat/formatting src/polychat/chat/files.py src/polychat/chat/messages.py src/polychat/chat/storage.py src/polychat/setup_wizard.py src/polychat/cli.py`
+- [x] Full mypy gate: `cd /Users/nao7sep/code/shared/apps/polychat && .venv/bin/mypy src/polychat`
 
 ## Risks and Mitigations
 

@@ -20,8 +20,8 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from ..logging_utils import before_sleep_log_event, log_event
-from ..text_formatting import lines_to_text
+from ..logging import before_sleep_log_event, log_event
+from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -31,7 +31,7 @@ from ..timeouts import (
 )
 from .limits import claude_effective_max_output_tokens
 from .tools import claude_web_search_tools
-from .types import AIResponseMetadata
+from .types import AIResponseMetadata, Citation
 
 
 class ClaudeProvider:
@@ -227,7 +227,7 @@ class ClaudeProvider:
 
                 # Extract citations from final_message if search was enabled
                 if search and metadata is not None:
-                    citations = []
+                    citations: list[Citation] = []
                     for block in final_message.content:
                         if hasattr(block, "citations"):
                             for citation in (block.citations or []):

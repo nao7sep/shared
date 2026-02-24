@@ -4,7 +4,7 @@ Note: Mistral uses OpenAI-compatible API.
 """
 
 import logging
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from openai import (
     APIConnectionError,
     RateLimitError,
@@ -21,8 +21,8 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from ..logging_utils import before_sleep_log_event, log_event
-from ..text_formatting import lines_to_text
+from ..logging import before_sleep_log_event, log_event
+from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -54,7 +54,7 @@ class MistralProvider:
         self.timeout = timeout
 
         # Disable SDK retries - we handle retries explicitly with tenacity
-        self.client = AsyncOpenAI(
+        self.client: Any = AsyncOpenAI(
             api_key=api_key,
             base_url="https://api.mistral.ai/v1",
             timeout=timeout_config,

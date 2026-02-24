@@ -4,7 +4,7 @@ Note: Grok uses OpenAI-compatible API.
 """
 
 import logging
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from openai import (
     AsyncOpenAI,
     APIConnectionError,
@@ -21,8 +21,8 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from ..logging_utils import before_sleep_log_event, log_event
-from ..text_formatting import lines_to_text
+from ..logging import before_sleep_log_event, log_event
+from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -31,7 +31,7 @@ from ..timeouts import (
     build_ai_httpx_timeout,
 )
 from .tools import grok_web_search_tools
-from .types import AIResponseMetadata
+from .types import AIResponseMetadata, Citation
 
 
 class GrokProvider:
@@ -53,7 +53,7 @@ class GrokProvider:
         self.timeout = timeout
 
         # Disable default retries - we handle retries explicitly
-        self.client = AsyncOpenAI(
+        self.client: Any = AsyncOpenAI(
             api_key=api_key,
             base_url="https://api.x.ai/v1",
             timeout=timeout_config,
@@ -104,8 +104,8 @@ class GrokProvider:
         return await self.client.responses.create(**kwargs)
 
     @staticmethod
-    def _extract_citations_from_response(payload: object) -> tuple[list[dict], object]:
-        citations = []
+    def _extract_citations_from_response(payload: object) -> tuple[list[Citation], object]:
+        citations: list[Citation] = []
         raw_citations = getattr(payload, "citations", None) or []
         for c in raw_citations:
             if isinstance(c, dict):
@@ -117,8 +117,9 @@ class GrokProvider:
                         "title": getattr(c, "title", None),
                     }
                 )
-        if not citations and getattr(payload, "output", None):
-            for item in payload.output:
+        output_items = getattr(payload, "output", None)
+        if not citations and isinstance(output_items, list):
+            for item in output_items:
                 if getattr(item, "type", None) == "message":
                     for content in getattr(item, "content", []):
                         for annotation in getattr(content, "annotations", []):
@@ -284,14 +285,15 @@ class GrokProvider:
                         finish_status = "failed"
 
             usage = getattr(response, "usage", None)
-            metadata = {
+            usage_summary = {
+                "prompt_tokens": usage.input_tokens if usage else 0,
+                "completion_tokens": usage.output_tokens if usage else 0,
+                "total_tokens": usage.total_tokens if usage else 0,
+            }
+            metadata: dict[str, Any] = {
                 "model": getattr(response, "model", model),
                 "finish_status": finish_status,
-                "usage": {
-                    "prompt_tokens": usage.input_tokens if usage else 0,
-                    "completion_tokens": usage.output_tokens if usage else 0,
-                    "total_tokens": usage.total_tokens if usage else 0,
-                },
+                "usage": usage_summary,
             }
 
             if usage and hasattr(usage, "input_tokens_details"):

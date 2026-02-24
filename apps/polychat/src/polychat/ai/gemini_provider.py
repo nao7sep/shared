@@ -1,7 +1,7 @@
 """Gemini (Google) provider implementation for PolyChat."""
 
 import logging
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from google import genai
 from google.genai import types
 from google.genai.errors import (
@@ -10,8 +10,8 @@ from google.genai.errors import (
 )
 
 from ..constants import DISPLAY_UNKNOWN
-from ..logging_utils import log_event
-from ..text_formatting import lines_to_text
+from ..logging import log_event
+from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_EXP_BASE,
@@ -21,7 +21,7 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
 )
 from .tools import gemini_web_search_tools
-from .types import AIResponseMetadata
+from .types import AIResponseMetadata, Citation
 
 
 class GeminiProvider:
@@ -110,13 +110,11 @@ class GeminiProvider:
 
             # Build config with system instruction and tools if provided
             tools = gemini_web_search_tools(types) if search else None
-            config_kwargs: dict[str, object] = {
-                "system_instruction": system_prompt if system_prompt else None,
-                "tools": tools,
-            }
-            if max_output_tokens is not None:
-                config_kwargs["max_output_tokens"] = max_output_tokens
-            config = types.GenerateContentConfig(**config_kwargs)
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt if system_prompt else None,
+                tools=tools,
+                max_output_tokens=max_output_tokens,
+            )
 
             # Timeout and retry are configured in the Client via http_options
             response = await self.client.aio.models.generate_content_stream(
@@ -168,14 +166,15 @@ class GeminiProvider:
             # Populate metadata with usage info from final chunk if available
             if metadata is not None and final_chunk and hasattr(final_chunk, "usage_metadata"):
                 usage_meta = final_chunk.usage_metadata
-                metadata["usage"] = {
-                    "prompt_tokens": getattr(usage_meta, "prompt_token_count", 0),
-                    "completion_tokens": getattr(usage_meta, "candidates_token_count", 0),
-                    "total_tokens": getattr(usage_meta, "total_token_count", 0),
-                }
-                cached = getattr(usage_meta, "cached_content_token_count", None)
-                if cached:
-                    metadata["usage"]["cached_tokens"] = cached
+                if usage_meta is not None:
+                    metadata["usage"] = {
+                        "prompt_tokens": getattr(usage_meta, "prompt_token_count", 0),
+                        "completion_tokens": getattr(usage_meta, "candidates_token_count", 0),
+                        "total_tokens": getattr(usage_meta, "total_token_count", 0),
+                    }
+                    cached = getattr(usage_meta, "cached_content_token_count", None)
+                    if cached:
+                        metadata["usage"]["cached_tokens"] = cached
 
             # Extract citations from grounding_metadata if search was enabled
             if search and metadata is not None and final_chunk and final_chunk.candidates:
@@ -183,7 +182,7 @@ class GeminiProvider:
                 if hasattr(candidate, "grounding_metadata"):
                     grounding = candidate.grounding_metadata
                     chunks = getattr(grounding, "grounding_chunks", None) or []
-                    citations = [
+                    citations: list[Citation] = [
                         {"url": chunk.web.uri, "title": chunk.web.title}
                         for chunk in chunks if hasattr(chunk, "web")
                     ]
@@ -255,13 +254,11 @@ class GeminiProvider:
 
             # Build config with system instruction and tools if provided
             tools = gemini_web_search_tools(types) if search else None
-            config_kwargs: dict[str, object] = {
-                "system_instruction": system_prompt if system_prompt else None,
-                "tools": tools,
-            }
-            if max_output_tokens is not None:
-                config_kwargs["max_output_tokens"] = max_output_tokens
-            config = types.GenerateContentConfig(**config_kwargs)
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt if system_prompt else None,
+                tools=tools,
+                max_output_tokens=max_output_tokens,
+            )
 
             # Timeout and retry are configured in the Client via http_options
             response = await self.client.aio.models.generate_content(
@@ -308,24 +305,19 @@ class GeminiProvider:
                     content = response.text if response.text else ""
 
             # Extract metadata
-            metadata = {
+            usage_meta = response.usage_metadata if hasattr(response, "usage_metadata") else None
+            metadata: dict[str, Any] = {
                 "model": model,
                 "finish_reason": finish_reason,
                 "usage": {
                     "prompt_tokens": (
-                        response.usage_metadata.prompt_token_count
-                        if hasattr(response, "usage_metadata")
-                        else 0
+                        usage_meta.prompt_token_count if usage_meta is not None else 0
                     ),
                     "completion_tokens": (
-                        response.usage_metadata.candidates_token_count
-                        if hasattr(response, "usage_metadata")
-                        else 0
+                        usage_meta.candidates_token_count if usage_meta is not None else 0
                     ),
                     "total_tokens": (
-                        response.usage_metadata.total_token_count
-                        if hasattr(response, "usage_metadata")
-                        else 0
+                        usage_meta.total_token_count if usage_meta is not None else 0
                     ),
                 },
             }
@@ -336,7 +328,7 @@ class GeminiProvider:
                 if hasattr(candidate, "grounding_metadata"):
                     grounding = candidate.grounding_metadata
                     chunks = getattr(grounding, "grounding_chunks", None) or []
-                    citations = [
+                    citations: list[Citation] = [
                         {"url": chunk.web.uri, "title": chunk.web.title}
                         for chunk in chunks if hasattr(chunk, "web")
                     ]

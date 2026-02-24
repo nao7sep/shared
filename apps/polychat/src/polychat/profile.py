@@ -6,6 +6,7 @@ Path mapping is handled by the path_utils module.
 
 import json
 from pathlib import Path
+from typing import cast
 from typing import Any
 
 from .constants import (
@@ -86,7 +87,7 @@ def load_profile(path: str) -> dict[str, Any]:
 
     # Load JSON
     with open(profile_path, "r", encoding="utf-8") as f:
-        profile = json.load(f)
+        profile = cast(dict[str, Any], json.load(f))
 
     # Validate required fields
     validate_profile(profile)

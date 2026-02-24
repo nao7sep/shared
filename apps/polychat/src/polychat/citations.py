@@ -7,6 +7,7 @@ import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
+from .ai.types import Citation
 from .timeouts import (
     CITATION_REDIRECT_RESOLVE_CONCURRENCY,
     CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC,
@@ -69,12 +70,12 @@ def _domain_like_title(title: str | None) -> str | None:
         return None
     if candidate.startswith("http://") or candidate.startswith("https://"):
         candidate = urlparse(candidate).netloc.lower()
-    candidate = _normalize_host(candidate)
-    if not candidate:
+    normalized_candidate = _normalize_host(candidate)
+    if not normalized_candidate:
         return None
-    if not _HOST_LIKE_TITLE_RE.fullmatch(candidate):
+    if not _HOST_LIKE_TITLE_RE.fullmatch(normalized_candidate):
         return None
-    return candidate
+    return normalized_candidate
 
 
 def _is_host_like_title_for_url(title: str | None, url: str | None) -> bool:
@@ -120,13 +121,15 @@ def _clean_url(raw_url: object) -> str | None:
     return url if _is_valid_http_url(url) else None
 
 
-def _dedupe_and_number(citations: list[dict[str, object]]) -> list[dict[str, object]]:
-    deduped: list[dict[str, object]] = []
+def _dedupe_and_number(citations: list[Citation]) -> list[Citation]:
+    deduped: list[Citation] = []
     seen: set[tuple[str | None, str | None]] = set()
 
     for citation in citations:
-        url = citation.get("url") if isinstance(citation.get("url"), str) else None
-        title = citation.get("title") if isinstance(citation.get("title"), str) else None
+        raw_url = citation.get("url")
+        raw_title = citation.get("title")
+        url = raw_url if isinstance(raw_url, str) else None
+        title = raw_title if isinstance(raw_title, str) else None
         if _is_host_like_title_for_url(title, url):
             title = None
         normalized_key = _normalized_url_key(url)
@@ -148,7 +151,7 @@ def _dedupe_and_number(citations: list[dict[str, object]]) -> list[dict[str, obj
     return deduped
 
 
-def normalize_citations(citations: object) -> list[dict[str, object]]:
+def normalize_citations(citations: object) -> list[Citation]:
     """Normalize citation shape, numbering, and deduplicate.
 
     Output dict key order is: number, title, url.
@@ -156,7 +159,7 @@ def normalize_citations(citations: object) -> list[dict[str, object]]:
     if not isinstance(citations, list):
         return []
 
-    normalized: list[dict[str, object]] = []
+    normalized: list[Citation] = []
     for item in citations:
         if isinstance(item, dict):
             raw_url = item.get("url", item.get("uri"))
@@ -204,11 +207,11 @@ async def _resolve_vertex_via_http(client: httpx.AsyncClient, url: str) -> str |
 
 
 async def resolve_vertex_citation_urls(
-    citations: list[dict[str, object]],
+    citations: list[Citation],
     *,
     timeout_sec: float = CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC,
     concurrency: int = CITATION_REDIRECT_RESOLVE_CONCURRENCY,
-) -> list[dict[str, object]]:
+) -> list[Citation]:
     """Resolve vertex redirect URLs to destination URLs via HTTP redirect headers.
 
     Vertex URLs contain base64-encoded data and require an HTTP request
@@ -217,13 +220,19 @@ async def resolve_vertex_citation_urls(
     if not citations:
         return citations
 
-    updated = [dict(c) for c in citations]
+    updated: list[Citation] = []
+    for c in citations:
+        copied: Citation = {"title": c.get("title"), "url": c.get("url")}
+        number = c.get("number")
+        if isinstance(number, int):
+            copied["number"] = number
+        updated.append(copied)
     timeout = httpx.Timeout(timeout_sec)
     semaphore = asyncio.Semaphore(max(1, concurrency))
 
     async with httpx.AsyncClient(timeout=timeout) as client:
 
-        async def resolve_one(index: int, citation: dict[str, object]) -> None:
+        async def resolve_one(index: int, citation: Citation) -> None:
             url = citation.get("url")
             if not isinstance(url, str) or not _is_valid_http_url(url):
                 return

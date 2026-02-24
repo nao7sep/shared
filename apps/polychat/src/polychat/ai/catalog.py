@@ -123,9 +123,10 @@ def find_models_by_subsequence(
     if provider:
         candidates = MODEL_REGISTRY.get(provider, [])
     else:
-        candidates: list[str] = []
+        all_candidates: list[str] = []
         for provider_models in MODEL_REGISTRY.values():
-            candidates.extend(provider_models)
+            all_candidates.extend(provider_models)
+        candidates = all_candidates
 
     matches: list[str] = []
     for model in candidates:
@@ -183,4 +184,3 @@ def get_provider_shortcut(provider: str) -> Optional[str]:
         if prov == provider:
             return shortcut
     return None
-

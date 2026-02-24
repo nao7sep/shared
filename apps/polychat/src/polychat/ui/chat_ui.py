@@ -1,9 +1,10 @@
 """Chat UI presentation and interaction functions."""
 
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
-from ..chat_manager import list_chats
-from ..text_formatting import format_chat_list_item, make_borderline
+from ..chat.files import list_chats
+from ..formatting.chat_list import format_chat_list_item
+from ..formatting.text import make_borderline
 
 
 def format_chat_info(chat: dict[str, Any], index: int) -> str:
@@ -64,7 +65,7 @@ def prompt_chat_selection(
         try:
             index = int(selection)
             if 1 <= index <= len(chats):
-                return chats[index - 1]["path"]
+                return cast(Optional[str], chats[index - 1]["path"])
             else:
                 print(f"Invalid number. Choose 1-{len(chats)}")
                 continue

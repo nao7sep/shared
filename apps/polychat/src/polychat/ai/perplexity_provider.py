@@ -4,7 +4,7 @@ Note: Perplexity uses OpenAI-compatible API.
 """
 
 import logging
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from openai import (
     APIConnectionError,
     RateLimitError,
@@ -20,8 +20,8 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from ..logging_utils import before_sleep_log_event, log_event
-from ..text_formatting import lines_to_text
+from ..logging import before_sleep_log_event, log_event
+from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -29,7 +29,7 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
-from .types import AIResponseMetadata
+from .types import AIResponseMetadata, Citation
 
 
 class PerplexityProvider:
@@ -53,7 +53,7 @@ class PerplexityProvider:
         self.timeout = timeout
 
         # Disable SDK retries - we handle retries explicitly with tenacity
-        self.client = AsyncOpenAI(
+        self.client: Any = AsyncOpenAI(
             api_key=api_key,
             base_url="https://api.perplexity.ai",
             timeout=timeout_config,
@@ -82,7 +82,7 @@ class PerplexityProvider:
         Returns:
             Messages in Perplexity format with role alternation enforced
         """
-        formatted = []
+        formatted: list[dict[str, str]] = []
         for msg in chat_messages:
             content = lines_to_text(msg["content"])
             new_msg = {"role": msg["role"], "content": content}
@@ -106,25 +106,23 @@ class PerplexityProvider:
         return formatted
 
     @staticmethod
-    def _extract_search_results(payload: object) -> list[dict]:
+    def _extract_search_results(payload: object) -> list[Citation]:
         """Extract Perplexity search_results into normalized citation-like records."""
         results = getattr(payload, "search_results", None) or []
-        normalized = []
+        normalized: list[Citation] = []
         for item in results:
             if isinstance(item, dict):
                 url = item.get("url")
                 title = item.get("title")
-                date = item.get("date")
             else:
                 url = getattr(item, "url", None)
                 title = getattr(item, "title", None)
-                date = getattr(item, "date", None)
             if url:
-                normalized.append({"url": url, "title": title, "date": date})
+                normalized.append({"url": url, "title": title})
         return normalized
 
     @classmethod
-    def _extract_citations(cls, payload: object) -> list[dict]:
+    def _extract_citations(cls, payload: object) -> list[Citation]:
         """Extract citations with best available title information."""
         # Prefer search_results, which include titles in current Perplexity API.
         search_results = cls._extract_search_results(payload)
@@ -133,7 +131,7 @@ class PerplexityProvider:
 
         # Fallback to legacy citations field.
         citations = getattr(payload, "citations", None) or []
-        normalized = []
+        normalized: list[Citation] = []
         for c in citations:
             if isinstance(c, dict):
                 url = c.get("url")

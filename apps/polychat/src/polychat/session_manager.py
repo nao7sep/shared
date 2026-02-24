@@ -15,7 +15,9 @@ from .session import chat_lifecycle as session_chat_lifecycle
 from . import hex_id
 from .session import messages as session_messages
 from .session import modes as session_modes
+from .session import persistence as session_persistence
 from .session import provider_cache as session_provider_cache
+from .session import settings as session_settings
 from .session.system_prompt import load_system_prompt as load_system_prompt_content
 from .session.timeouts import format_timeout as format_timeout_value
 from .session.timeouts import normalize_timeout
@@ -382,16 +384,11 @@ class SessionManager:
         Returns:
             True when a save was performed, False when skipped.
         """
-        path = chat_path if chat_path is not None else self._state.chat_path
-        data = chat_data if chat_data is not None else self._state.chat
-
-        if not path or not isinstance(data, dict):
-            return False
-
-        from . import chat as chat_module
-
-        await chat_module.save_chat(path, data)
-        return True
+        return await session_persistence.save_current_chat(
+            self._state,
+            chat_path=chat_path,
+            chat_data=chat_data,
+        )
 
     @staticmethod
     def load_system_prompt(
@@ -625,8 +622,7 @@ class SessionManager:
             provider_name: Name of the provider
             model_name: Name of the model
         """
-        self._state.current_ai = provider_name
-        self._state.current_model = model_name
+        session_settings.switch_provider(self._state, provider_name, model_name)
 
     def toggle_input_mode(self) -> str:
         """Toggle input mode between quick and compose.
@@ -634,8 +630,4 @@ class SessionManager:
         Returns:
             New input mode
         """
-        if self._state.input_mode == "quick":
-            self._state.input_mode = "compose"
-        else:
-            self._state.input_mode = "quick"
-        return self._state.input_mode
+        return session_settings.toggle_input_mode(self._state)
