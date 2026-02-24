@@ -9,8 +9,8 @@ Improve long-term maintainability of PolyChat by reducing hidden coupling, intro
 ## Progress Update (2026-02-24)
 
 1. Baseline quality gates are now green:
-   - `pytest -q`: `544 passed, 3 deselected`
-   - `mypy src/polychat`: `Success: no issues found in 98 source files`
+   - `pytest -q`: `566 passed, 3 deselected`
+   - `mypy src/polychat`: `Success: no issues found in 102 source files`
    - `ruff check src tests`: pass
 2. Phase 1 now has typed domain boundaries for chat and profile:
    - Added `src/polychat/domain/chat.py` and `src/polychat/domain/__init__.py`.
@@ -46,6 +46,21 @@ Improve long-term maintainability of PolyChat by reducing hidden coupling, intro
 10. Phase 3 signal routing hardening continued:
    - `src/polychat/orchestration/signals.py` now uses an explicit command-signal dispatch table.
    - Added payload validation tests for missing/invalid command signal fields in `tests/test_orchestrator.py`.
+11. Phase 3 response-mode transition extraction continued:
+   - Added `src/polychat/orchestration/response_transitions.py` for normal/retry/secret release/pop/rollback policies.
+   - `src/polychat/orchestration/response_handlers.py` now delegates transition decisions to explicit helper functions.
+   - Added focused transition tests in `tests/test_orchestration_response_transitions.py`.
+12. Phase 3 orchestration boundary split and invariants advanced:
+   - Added `src/polychat/orchestration/chat_switching.py` for new/open/close/rename/delete transitions.
+   - `src/polychat/orchestration/signals.py` now focuses on signal dispatch/payload validation plus retry/secret control actions.
+   - Added focused mode invariant coverage in `tests/test_orchestration_mode_invariants.py` for retry apply/cancel semantics, secret persistence boundaries, and pending-error gating bypass in retry/secret mode.
+13. Phase 4 provider consolidation started:
+   - Added `src/polychat/ai/provider_utils.py` for shared chat-message formatting.
+   - Migrated provider `format_messages` implementations in `claude_provider.py`, `openai_provider.py`, `grok_provider.py`, `perplexity_provider.py`, `mistral_provider.py`, `deepseek_provider.py`, and `gemini_provider.py` to use the shared utility.
+14. Phase 4 provider logging consolidation continued:
+   - Added `src/polychat/ai/provider_logging.py` for standardized provider error log emission and message templates.
+   - Migrated provider exception logging paths across all provider modules to the shared helper while preserving existing message text.
+   - Added focused helper coverage in `tests/test_provider_logging.py`.
 
 ## Baseline Findings (At Plan Creation)
 
@@ -312,14 +327,17 @@ Dependencies:
 ### Phase 3: Session/orchestrator decomposition
 
 - [x] Extract `session/` submodules and reduce `SessionManager` to facade.
-- [ ] Extract orchestration mode handlers and signal routing.
+- [x] Extract orchestration mode handlers and signal routing.
+  - [x] Extract chat lifecycle transition handlers (`new/open/close/rename/delete`) to dedicated module.
   - [x] Extract retry-apply transition rules to dedicated helper module.
   - [x] Replace command-signal `if` chain with explicit dispatch table and payload validators.
-- [ ] Add transition-invariant tests:
-  - retry mode entry/exit
-  - apply/cancel semantics
-  - secret mode persistence boundaries
-  - pending-error gating behavior
+  - [x] Extract response-mode transition policy helpers (error/cancel/rollback) to dedicated module.
+- [x] Add transition-invariant tests:
+  - [x] retry mode entry/exit
+  - [x] apply/cancel semantics
+  - [x] response transition policy invariants (normal/retry/secret)
+  - [x] secret mode persistence boundaries
+  - [x] pending-error gating behavior
 
 Dependencies:
 - Phase 2 command contracts
@@ -327,6 +345,8 @@ Dependencies:
 ### Phase 4: Provider/logging consolidation
 
 - [ ] Extract shared provider utilities and migrate providers one by one.
+  - [x] Extract shared provider message-formatting utility and migrate provider formatters.
+  - [x] Extract shared provider error logging/message helper and migrate provider exception paths.
 - [ ] Split logging module into schema/formatter/sanitization components.
 - [ ] Preserve log field compatibility for existing parsers.
 

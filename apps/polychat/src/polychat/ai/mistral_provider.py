@@ -22,7 +22,6 @@ from tenacity import (
 )
 
 from ..logging import before_sleep_log_event, log_event
-from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -30,6 +29,14 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
+from .provider_logging import (
+    api_error_after_retries_message,
+    authentication_failed_message,
+    bad_request_message,
+    log_provider_error,
+    unexpected_error_message,
+)
+from .provider_utils import format_chat_messages
 from .types import AIResponseMetadata
 
 
@@ -63,11 +70,7 @@ class MistralProvider:
 
     def format_messages(self, chat_messages: list[dict]) -> list[dict]:
         """Convert Chat format to Mistral format."""
-        formatted = []
-        for msg in chat_messages:
-            content = lines_to_text(msg["content"])
-            formatted.append({"role": msg["role"], "content": content})
-        return formatted
+        return format_chat_messages(chat_messages)
 
     @retry(
         retry=retry_if_exception_type(
@@ -201,31 +204,19 @@ class MistralProvider:
 
         except UnprocessableEntityError as e:
             # 422 - Common with Mistral for config mismatches (e.g., stream_options)
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=(
+            log_provider_error(
+                "mistral",
+                (
                     f"Unprocessable entity (422): {e}. "
                     "Check for unsupported parameters like stream_options."
                 ),
             )
             raise
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("mistral", authentication_failed_message(e))
             raise
         except BadRequestError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"Bad request (check parameters): {e}",
-            )
+            log_provider_error("mistral", bad_request_message(e, detail="check parameters"))
             raise
         except (
             APIConnectionError,
@@ -234,20 +225,10 @@ class MistralProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("mistral", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("mistral", unexpected_error_message(e))
             raise
 
     async def get_full_response(
@@ -322,31 +303,19 @@ class MistralProvider:
 
         except UnprocessableEntityError as e:
             # 422 - Common with Mistral for config mismatches (e.g., stream_options)
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=(
+            log_provider_error(
+                "mistral",
+                (
                     f"Unprocessable entity (422): {e}. "
                     "Check for unsupported parameters like stream_options."
                 ),
             )
             raise
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("mistral", authentication_failed_message(e))
             raise
         except BadRequestError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"Bad request (check parameters): {e}",
-            )
+            log_provider_error("mistral", bad_request_message(e, detail="check parameters"))
             raise
         except (
             APIConnectionError,
@@ -355,18 +324,8 @@ class MistralProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("mistral", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="mistral",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("mistral", unexpected_error_message(e))
             raise

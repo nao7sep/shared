@@ -317,7 +317,7 @@ Target package map (incremental):
 
 ### Phase 3: Orchestration and REPL decomposition
 
-- Progress: orchestration mixins now live under `src/polychat/orchestration/` (`signals.py`, `message_entry.py`, `response_handlers.py`), and `src/polychat/orchestrator.py` is now a thin composer.
+- Progress: orchestration mixins now live under `src/polychat/orchestration/` (`signals.py`, `chat_switching.py`, `message_entry.py`, `response_handlers.py`), transition rules are extracted to `retry_transitions.py` and `response_transitions.py`, and `src/polychat/orchestrator.py` is now a thin composer.
 - [x] Create `orchestration/` package and split current orchestrator responsibilities.
 - [x] Create `repl/` package (`loop.py`, `input.py`, `send_pipeline.py`, `status_banners.py`).
 - [x] Keep `orchestrator.py` and `polychat.repl` entrypoint thin compatibility layers.

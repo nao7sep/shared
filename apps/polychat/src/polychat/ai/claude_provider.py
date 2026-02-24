@@ -21,7 +21,6 @@ from tenacity import (
 )
 
 from ..logging import before_sleep_log_event, log_event
-from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -30,6 +29,14 @@ from ..timeouts import (
     build_ai_httpx_timeout,
 )
 from .limits import claude_effective_max_output_tokens
+from .provider_logging import (
+    api_error_after_retries_message,
+    authentication_failed_message,
+    bad_request_message,
+    log_provider_error,
+    unexpected_error_message,
+)
+from .provider_utils import format_chat_messages
 from .tools import claude_web_search_tools
 from .types import AIResponseMetadata, Citation
 
@@ -80,11 +87,7 @@ class ClaudeProvider:
         Returns:
             Messages in Claude format
         """
-        formatted = []
-        for msg in chat_messages:
-            content = lines_to_text(msg["content"])
-            formatted.append({"role": msg["role"], "content": content})
-        return formatted
+        return format_chat_messages(chat_messages)
 
     @retry(
         retry=retry_if_exception_type(
@@ -253,75 +256,38 @@ class ClaudeProvider:
         except APIStatusError as e:
             # Check for 529 - System overloaded (critical error)
             if e.status_code == 529:
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="claude",
-                    message=(
+                log_provider_error(
+                    "claude",
+                    (
                         f"Anthropic system overloaded (529): {e}. "
                         "System is under heavy load; consider backoff or fallback."
                     ),
                 )
             else:
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="claude",
-                    message=f"API status error ({e.status_code}): {e}",
-                )
+                log_provider_error("claude", f"API status error ({e.status_code}): {e}")
             raise
         except RateLimitError as e:
             # 429 - Rate limit exceeded, SDK will retry but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Rate limit exceeded after retries: {e}",
-            )
+            log_provider_error("claude", f"Rate limit exceeded after retries: {e}")
             raise
         except BadRequestError as e:
             # 400 - Invalid request, don't retry
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Bad request: {e}",
-            )
+            log_provider_error("claude", bad_request_message(e))
             raise
         except AuthenticationError as e:
             # 401 - Invalid API key
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("claude", authentication_failed_message(e))
             raise
         except PermissionDeniedError as e:
             # 403 - No access to resource
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Permission denied: {e}",
-            )
+            log_provider_error("claude", f"Permission denied: {e}")
             raise
         except (APIConnectionError, APITimeoutError, InternalServerError) as e:
             # Network/timeout/server errors - SDK will retry, but if all fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("claude", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("claude", unexpected_error_message(e))
             raise
 
     async def get_full_response(
@@ -450,73 +416,36 @@ class ClaudeProvider:
         except APIStatusError as e:
             # Check for 529 - System overloaded (critical error)
             if e.status_code == 529:
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="claude",
-                    message=(
+                log_provider_error(
+                    "claude",
+                    (
                         f"Anthropic system overloaded (529): {e}. "
                         "System is under heavy load; consider backoff or fallback."
                     ),
                 )
             else:
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="claude",
-                    message=f"API status error ({e.status_code}): {e}",
-                )
+                log_provider_error("claude", f"API status error ({e.status_code}): {e}")
             raise
         except RateLimitError as e:
             # 429 - Rate limit exceeded, SDK will retry but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Rate limit exceeded after retries: {e}",
-            )
+            log_provider_error("claude", f"Rate limit exceeded after retries: {e}")
             raise
         except BadRequestError as e:
             # 400 - Invalid request, don't retry
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Bad request: {e}",
-            )
+            log_provider_error("claude", bad_request_message(e))
             raise
         except AuthenticationError as e:
             # 401 - Invalid API key
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("claude", authentication_failed_message(e))
             raise
         except PermissionDeniedError as e:
             # 403 - No access to resource
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Permission denied: {e}",
-            )
+            log_provider_error("claude", f"Permission denied: {e}")
             raise
         except (APIConnectionError, APITimeoutError, InternalServerError) as e:
             # Network/timeout/server errors - SDK will retry, but if all fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("claude", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="claude",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("claude", unexpected_error_message(e))
             raise

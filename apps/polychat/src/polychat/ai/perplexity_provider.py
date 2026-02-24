@@ -21,7 +21,6 @@ from tenacity import (
 )
 
 from ..logging import before_sleep_log_event, log_event
-from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -29,6 +28,14 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
+from .provider_logging import (
+    api_error_after_retries_message,
+    authentication_failed_message,
+    bad_request_message,
+    log_provider_error,
+    unexpected_error_message,
+)
+from .provider_utils import format_chat_messages
 from .types import AIResponseMetadata, Citation
 
 
@@ -83,9 +90,8 @@ class PerplexityProvider:
             Messages in Perplexity format with role alternation enforced
         """
         formatted: list[dict[str, str]] = []
-        for msg in chat_messages:
-            content = lines_to_text(msg["content"])
-            new_msg = {"role": msg["role"], "content": content}
+        for msg in format_chat_messages(chat_messages):
+            new_msg = {"role": msg["role"], "content": msg["content"]}
 
             # If this message has the same role as the previous one, merge them
             if formatted and formatted[-1]["role"] == new_msg["role"]:
@@ -280,31 +286,19 @@ class PerplexityProvider:
 
         except APITimeoutError as e:
             # Special handling for timeouts - common with long search operations
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=(
+            log_provider_error(
+                "perplexity",
+                (
                     f"Timeout error (Perplexity search took too long): {e}. "
                     "Consider increasing timeout for search-heavy models like sonar-pro."
                 ),
             )
             raise
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("perplexity", authentication_failed_message(e))
             raise
         except BadRequestError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"Bad request (check parameters): {e}",
-            )
+            log_provider_error("perplexity", bad_request_message(e, detail="check parameters"))
             raise
         except (
             APIConnectionError,
@@ -312,20 +306,10 @@ class PerplexityProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("perplexity", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("perplexity", unexpected_error_message(e))
             raise
 
     async def get_full_response(
@@ -412,31 +396,19 @@ class PerplexityProvider:
 
         except APITimeoutError as e:
             # Special handling for timeouts - common with long search operations
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=(
+            log_provider_error(
+                "perplexity",
+                (
                     f"Timeout error (Perplexity search took too long): {e}. "
                     "Consider increasing timeout for search-heavy models like sonar-pro."
                 ),
             )
             raise
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("perplexity", authentication_failed_message(e))
             raise
         except BadRequestError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"Bad request (check parameters): {e}",
-            )
+            log_provider_error("perplexity", bad_request_message(e, detail="check parameters"))
             raise
         except (
             APIConnectionError,
@@ -444,18 +416,8 @@ class PerplexityProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("perplexity", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="perplexity",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("perplexity", unexpected_error_message(e))
             raise

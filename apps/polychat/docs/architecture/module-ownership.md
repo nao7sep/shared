@@ -6,6 +6,8 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/ai/`
   - Owns provider integrations, model catalog/capabilities/pricing, request limits, AI cost estimation, and runtime orchestration (`runtime.py`, `helper_runtime.py`).
+  - `provider_utils.py` owns shared provider-side message formatting helpers.
+  - `provider_logging.py` owns shared provider error log emission/message helpers.
 
 - `src/polychat/domain/`
   - Owns typed boundary models used by persistence and runtime adapters.
@@ -25,8 +27,10 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 - `src/polychat/orchestration/`
   - Owns REPL orchestration flow handlers:
     - command signals (`signals.py`, dispatch table + payload validation)
+    - chat lifecycle transitions (`chat_switching.py`, new/open/close/rename/delete)
     - user message entry/send action preparation (`message_entry.py`)
     - response/error/cancel post-send mutations (`response_handlers.py`)
+    - response-mode transition policies (`response_transitions.py`)
     - retry apply transition construction (`retry_transitions.py`)
   - Root `orchestrator.py` is a thin composer facade.
 

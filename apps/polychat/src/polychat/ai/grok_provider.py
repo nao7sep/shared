@@ -22,7 +22,6 @@ from tenacity import (
 )
 
 from ..logging import before_sleep_log_event, log_event
-from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -30,6 +29,14 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
+from .provider_logging import (
+    api_error_after_retries_message,
+    authentication_failed_message,
+    bad_request_message,
+    log_provider_error,
+    unexpected_error_message,
+)
+from .provider_utils import format_chat_messages
 from .tools import grok_web_search_tools
 from .types import AIResponseMetadata, Citation
 
@@ -62,11 +69,7 @@ class GrokProvider:
 
     def format_messages(self, chat_messages: list[dict]) -> list[dict]:
         """Convert Chat format to Grok format."""
-        formatted = []
-        for msg in chat_messages:
-            content = lines_to_text(msg["content"])
-            formatted.append({"role": msg["role"], "content": content})
-        return formatted
+        return format_chat_messages(chat_messages)
 
     @retry(
         retry=retry_if_exception_type(
@@ -201,19 +204,12 @@ class GrokProvider:
                             metadata["citations"] = citations
 
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("grok", authentication_failed_message(e))
             raise
         except BadRequestError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"Bad request (check parameters, unsupported features): {e}",
+            log_provider_error(
+                "grok",
+                bad_request_message(e, detail="check parameters, unsupported features"),
             )
             raise
         except (
@@ -223,20 +219,10 @@ class GrokProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("grok", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("grok", unexpected_error_message(e))
             raise
 
     async def get_full_response(
@@ -321,19 +307,12 @@ class GrokProvider:
             return content, metadata
 
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("grok", authentication_failed_message(e))
             raise
         except BadRequestError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"Bad request (check parameters, unsupported features): {e}",
+            log_provider_error(
+                "grok",
+                bad_request_message(e, detail="check parameters, unsupported features"),
             )
             raise
         except (
@@ -343,18 +322,8 @@ class GrokProvider:
             InternalServerError,
         ) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("grok", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="grok",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("grok", unexpected_error_message(e))
             raise

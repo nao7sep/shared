@@ -11,7 +11,6 @@ from google.genai.errors import (
 
 from ..constants import DISPLAY_UNKNOWN
 from ..logging import log_event
-from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_EXP_BASE,
@@ -20,6 +19,8 @@ from ..timeouts import (
     RETRY_BACKOFF_MAX_SEC,
     STANDARD_RETRY_ATTEMPTS,
 )
+from .provider_logging import log_provider_error, unexpected_error_message
+from .provider_utils import format_chat_messages
 from .tools import gemini_web_search_tools
 from .types import AIResponseMetadata, Citation
 
@@ -70,11 +71,10 @@ class GeminiProvider:
             Messages in Gemini format
         """
         formatted = []
-        for msg in chat_messages:
-            content = lines_to_text(msg["content"])
+        for msg in format_chat_messages(chat_messages):
             # Gemini uses "user" and "model" roles
             role = "model" if msg["role"] == "assistant" else "user"
-            formatted.append(types.Content(role=role, parts=[types.Part(text=content)]))
+            formatted.append(types.Content(role=role, parts=[types.Part(text=msg["content"])]))
         return formatted
 
     async def send_message(
@@ -199,30 +199,15 @@ class GeminiProvider:
                 message += " Permission denied - check API key and access."
             elif status_code == 429:
                 message += " Rate limit exceeded - retries exhausted."
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="gemini",
-                message=message,
-            )
+            log_provider_error("gemini", message)
             raise
         except ServerError as e:
             # 500-599 errors - retry handled by SDK, but if all retries fail:
             status_code = getattr(e, "status_code", DISPLAY_UNKNOWN)
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="gemini",
-                message=f"Server error ({status_code}) after retries: {e}",
-            )
+            log_provider_error("gemini", f"Server error ({status_code}) after retries: {e}")
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="gemini",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("gemini", unexpected_error_message(e))
             raise
 
     async def get_full_response(
@@ -357,28 +342,13 @@ class GeminiProvider:
                 message += " Permission denied - check API key and access."
             elif status_code == 429:
                 message += " Rate limit exceeded - retries exhausted."
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="gemini",
-                message=message,
-            )
+            log_provider_error("gemini", message)
             raise
         except ServerError as e:
             # 500-599 errors - retry handled by SDK, but if all retries fail:
             status_code = getattr(e, "status_code", DISPLAY_UNKNOWN)
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="gemini",
-                message=f"Server error ({status_code}) after retries: {e}",
-            )
+            log_provider_error("gemini", f"Server error ({status_code}) after retries: {e}")
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="gemini",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("gemini", unexpected_error_message(e))
             raise

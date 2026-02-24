@@ -22,7 +22,6 @@ from tenacity import (
 )
 
 from ..logging import before_sleep_log_event, log_event
-from ..formatting.text import lines_to_text
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,
     RETRY_BACKOFF_INITIAL_SEC,
@@ -30,6 +29,14 @@ from ..timeouts import (
     STANDARD_RETRY_ATTEMPTS,
     build_ai_httpx_timeout,
 )
+from .provider_logging import (
+    api_error_after_retries_message,
+    authentication_failed_message,
+    bad_request_message,
+    log_provider_error,
+    unexpected_error_message,
+)
+from .provider_utils import format_chat_messages
 from .types import AIResponseMetadata
 
 
@@ -64,11 +71,7 @@ class DeepSeekProvider:
 
     def format_messages(self, chat_messages: list[dict]) -> list[dict]:
         """Convert chat format to DeepSeek format."""
-        formatted = []
-        for msg in chat_messages:
-            content = lines_to_text(msg["content"])
-            formatted.append({"role": msg["role"], "content": content})
-        return formatted
+        return format_chat_messages(chat_messages)
 
     @retry(
         retry=retry_if_exception_type(
@@ -217,40 +220,32 @@ class DeepSeekProvider:
             # DeepSeek-specific error handling
             if e.status_code == 503:
                 # Most common DeepSeek error - server overloaded
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="deepseek",
-                    message=(
+                log_provider_error(
+                    "deepseek",
+                    (
                         f"DeepSeek server overloaded (503) after retries: {e}. "
                         "Peak load on DeepSeek infrastructure; consider retry or fallback."
                     ),
                 )
             elif e.status_code == 402:
                 # Payment required - prepaid balance exhausted
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="deepseek",
-                    message=(
+                log_provider_error(
+                    "deepseek",
+                    (
                         f"DeepSeek account balance exhausted (402): {e}. "
                         "Top up DeepSeek prepaid balance."
                     ),
                 )
             else:
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="deepseek",
-                    message=f"DeepSeek API error ({e.status_code}) after retries: {e}",
+                log_provider_error(
+                    "deepseek",
+                    f"DeepSeek API error ({e.status_code}) after retries: {e}",
                 )
             raise
         except APITimeoutError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=(
+            log_provider_error(
+                "deepseek",
+                (
                     f"Timeout error (reasoning model took too long): {e}. "
                     "Consider increasing timeout for R1/reasoning models."
                 ),
@@ -258,37 +253,20 @@ class DeepSeekProvider:
             raise
         except BadRequestError as e:
             # 400 often means reasoning_content was included in history
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"Bad request (check if reasoning_content in history): {e}",
+            log_provider_error(
+                "deepseek",
+                bad_request_message(e, detail="check if reasoning_content in history"),
             )
             raise
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("deepseek", authentication_failed_message(e))
             raise
         except (APIConnectionError, RateLimitError, InternalServerError) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("deepseek", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("deepseek", unexpected_error_message(e))
             raise
 
     async def get_full_response(
@@ -380,40 +358,32 @@ class DeepSeekProvider:
             # DeepSeek-specific error handling
             if e.status_code == 503:
                 # Most common DeepSeek error - server overloaded
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="deepseek",
-                    message=(
+                log_provider_error(
+                    "deepseek",
+                    (
                         f"DeepSeek server overloaded (503) after retries: {e}. "
                         "Peak load on DeepSeek infrastructure; consider retry or fallback."
                     ),
                 )
             elif e.status_code == 402:
                 # Payment required - prepaid balance exhausted
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="deepseek",
-                    message=(
+                log_provider_error(
+                    "deepseek",
+                    (
                         f"DeepSeek account balance exhausted (402): {e}. "
                         "Top up DeepSeek prepaid balance."
                     ),
                 )
             else:
-                log_event(
-                    "provider_log",
-                    level=logging.ERROR,
-                    provider="deepseek",
-                    message=f"DeepSeek API error ({e.status_code}) after retries: {e}",
+                log_provider_error(
+                    "deepseek",
+                    f"DeepSeek API error ({e.status_code}) after retries: {e}",
                 )
             raise
         except APITimeoutError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=(
+            log_provider_error(
+                "deepseek",
+                (
                     f"Timeout error (reasoning model took too long): {e}. "
                     "Consider increasing timeout for R1/reasoning models."
                 ),
@@ -421,35 +391,18 @@ class DeepSeekProvider:
             raise
         except BadRequestError as e:
             # 400 often means reasoning_content was included in history
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"Bad request (check if reasoning_content in history): {e}",
+            log_provider_error(
+                "deepseek",
+                bad_request_message(e, detail="check if reasoning_content in history"),
             )
             raise
         except AuthenticationError as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"Authentication failed: {e}",
-            )
+            log_provider_error("deepseek", authentication_failed_message(e))
             raise
         except (APIConnectionError, RateLimitError, InternalServerError) as e:
             # These are handled by retry decorator, but if all retries fail:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"API error after retries: {type(e).__name__}: {e}",
-            )
+            log_provider_error("deepseek", api_error_after_retries_message(e))
             raise
         except Exception as e:
-            log_event(
-                "provider_log",
-                level=logging.ERROR,
-                provider="deepseek",
-                message=f"Unexpected error: {type(e).__name__}: {e}",
-            )
+            log_provider_error("deepseek", unexpected_error_message(e))
             raise

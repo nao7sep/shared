@@ -7,6 +7,15 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 from ..logging import sanitize_error_message
 from ..orchestrator_types import ActionMode, ContinueAction, OrchestratorAction, PrintAction
 from ..ai.types import Citation
+from .response_transitions import (
+    build_transition_state,
+    can_mutate_normal_chat,
+    has_trailing_user_message,
+    should_release_for_cancel,
+    should_release_for_error,
+    should_release_for_rollback,
+    should_rollback_pre_send,
+)
 
 if TYPE_CHECKING:
     from ..session_manager import SessionManager
@@ -47,8 +56,16 @@ class ResponseHandlersMixin:
             return ContinueAction()
 
         if mode == "normal":
-            if not chat_path or not isinstance(chat_data, dict):
+            transition = build_transition_state(
+                mode,
+                chat_path=chat_path,
+                chat_data=chat_data,
+                assistant_hex_id=assistant_hex_id,
+            )
+            if not can_mutate_normal_chat(transition):
                 return PrintAction(message="\nError: chat context missing for normal-mode response.")
+            assert chat_path is not None
+            assert isinstance(chat_data, dict)
             orchestrator_module.chat.add_assistant_message(
                 chat_data,
                 response_text,
@@ -78,17 +95,24 @@ class ResponseHandlersMixin:
         assistant_hex_id: Optional[str] = None,
     ) -> bool:
         """Rollback pre-send normal-mode state when provider validation fails."""
-        if assistant_hex_id:
+        transition = build_transition_state(
+            mode,
+            chat_path=chat_path,
+            chat_data=cast(Optional[dict[str, Any]], chat_data),
+            assistant_hex_id=assistant_hex_id,
+        )
+
+        if assistant_hex_id and should_release_for_rollback(transition):
             self.manager.release_hex_id(assistant_hex_id)
 
-        if mode != "normal" or not chat_path or not isinstance(chat_data, dict):
+        if not should_rollback_pre_send(
+            transition,
+            cast(Optional[dict[str, Any]], chat_data),
+        ):
             return False
 
-        messages = chat_data.get("messages")
-        if not isinstance(messages, list) or not messages:
-            return False
-        if messages[-1].get("role") != "user":
-            return False
+        assert chat_path is not None
+        assert isinstance(chat_data, dict)
 
         self.manager.pop_message(-1, chat_data)
         await self.manager.save_current_chat(
@@ -108,12 +132,21 @@ class ResponseHandlersMixin:
         """Handle AI error and return a user-facing action."""
         from .. import orchestrator as orchestrator_module
 
+        transition = build_transition_state(
+            mode,
+            chat_path=chat_path,
+            chat_data=chat_data,
+            assistant_hex_id=assistant_hex_id,
+        )
+
         if mode == "normal":
-            if not chat_path or not isinstance(chat_data, dict):
+            if not can_mutate_normal_chat(transition):
                 return PrintAction(message=f"\nError: {error}")
-            if assistant_hex_id:
+            assert chat_path is not None
+            assert isinstance(chat_data, dict)
+            if assistant_hex_id and should_release_for_error(transition):
                 self.manager.release_hex_id(assistant_hex_id)
-            if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
+            if has_trailing_user_message(chat_data):
                 self.manager.pop_message(-1, chat_data)
 
             sanitized_error = sanitize_error_message(str(error))
@@ -128,7 +161,7 @@ class ResponseHandlersMixin:
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
-        elif assistant_hex_id:
+        elif assistant_hex_id and should_release_for_error(transition):
             self.manager.release_hex_id(assistant_hex_id)
 
         return PrintAction(message=f"\nError: {error}")
@@ -141,19 +174,28 @@ class ResponseHandlersMixin:
         assistant_hex_id: Optional[str] = None,
     ) -> PrintAction:
         """Handle user cancellation during streamed AI response."""
+        transition = build_transition_state(
+            mode,
+            chat_path=chat_path,
+            chat_data=chat_data,
+            assistant_hex_id=assistant_hex_id,
+        )
+
         if mode == "normal":
-            if not chat_path or not isinstance(chat_data, dict):
+            if not can_mutate_normal_chat(transition):
                 return PrintAction(message="\n[Message cancelled]")
-            if assistant_hex_id:
+            assert chat_path is not None
+            assert isinstance(chat_data, dict)
+            if assistant_hex_id and should_release_for_cancel(transition):
                 self.manager.release_hex_id(assistant_hex_id)
-            if chat_data["messages"] and chat_data["messages"][-1]["role"] == "user":
+            if has_trailing_user_message(chat_data):
                 self.manager.pop_message(-1, chat_data)
             await self.manager.save_current_chat(
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
 
-        if mode in ("retry", "secret") and assistant_hex_id:
+        if mode in ("retry", "secret") and assistant_hex_id and should_release_for_cancel(transition):
             self.manager.release_hex_id(assistant_hex_id)
 
         return PrintAction(message="\n[Message cancelled]")
