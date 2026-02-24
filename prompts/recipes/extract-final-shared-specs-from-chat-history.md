@@ -44,9 +44,24 @@ Use a single markdown file with:
 
 ## Output
 
-Save as `{YYYY-MM-DD}_{short-description}.md` in `shared/prompts/specs/` unless the user asks for a different location.
+Save as `{short-description}.md` in `shared/prompts/specs/` unless the user asks for a different location.
 
 Derive the filename description from the specification title.
+
+Filename rules:
+- Use stable topic-based kebab-case names.
+- Do not include dates or timestamps.
+- Do not include source chat history filenames or path fragments.
+- Avoid redundant suffix/prefix words like `shared`, `spec`, or `specification` when the directory already conveys that context.
+
+Source-reference rules:
+- Do not mention `secrets` repository paths or `secrets` directory structure in the generated shared spec.
+- Do not mention the original chat history filename in the generated shared spec.
+- If source provenance is needed, reference only high-level conversation context (for example, date and topic), unless the user explicitly requests exact paths/filenames.
+
+Examples:
+- `Retry and Timeout Policy` -> `retry-and-timeout-policy.md`
+- `File Import Conflict Resolution` -> `file-import-conflict-resolution.md`
 
 ## Principles
 
