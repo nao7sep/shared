@@ -8,8 +8,8 @@ from typing import Optional
 
 from ..ai.types import Citation
 from ..ai.costing import estimate_cost
+from ..ai.citations import normalize_citations, resolve_vertex_citation_urls
 from ..ai.runtime import send_message_to_ai, validate_and_get_provider
-from ..citations import normalize_citations, resolve_vertex_citation_urls
 from ..formatting.costs import format_cost_line, format_cost_usd
 from ..formatting.citations import format_citation_list
 from ..logging import log_event

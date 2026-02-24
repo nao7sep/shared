@@ -5,19 +5,19 @@ from __future__ import annotations
 try:  # pragma: no cover - fallback used by standalone doc generator script
     from .command_docs_data import (
         COMMAND_DOC_SECTIONS,
+        CommandDocSection,
         README_CHAT_FILE_NOTE,
         README_COMMANDS_FOOTER,
         README_LAST_INTERACTION_BLOCK,
     )
-    from .command_docs_models import CommandDocSection
 except ImportError:  # pragma: no cover
     from command_docs_data import (  # type: ignore[import-not-found,no-redef]
         COMMAND_DOC_SECTIONS,
+        CommandDocSection,
         README_CHAT_FILE_NOTE,
         README_COMMANDS_FOOTER,
         README_LAST_INTERACTION_BLOCK,
     )
-    from command_docs_models import CommandDocSection  # type: ignore[import-not-found,no-redef]
 
 README_COMMANDS_BEGIN_MARKER = "<!-- BEGIN GENERATED:COMMANDS -->"
 README_COMMANDS_END_MARKER = "<!-- END GENERATED:COMMANDS -->"

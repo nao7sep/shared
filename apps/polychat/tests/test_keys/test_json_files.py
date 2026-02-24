@@ -2,7 +2,7 @@
 
 import json
 import pytest
-from polychat.keys.json_files import load_from_json
+from polychat.keys.backends import load_from_json
 
 
 def test_load_from_json_success(tmp_path):

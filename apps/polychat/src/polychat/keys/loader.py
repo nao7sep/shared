@@ -30,12 +30,12 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
         return cast(str, config["value"])
 
     elif key_type == "env":
-        from .env_vars import load_from_env
+        from .backends import load_from_env
 
         return load_from_env(cast(str, config["key"]))
 
     elif key_type == "keychain":
-        from .keychain import load_from_keychain
+        from .backends import load_from_keychain
 
         return load_from_keychain(
             cast(str, config["service"]),
@@ -43,7 +43,7 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
         )
 
     elif key_type == "credential":
-        from .credential_manager import load_from_credential_manager
+        from .backends import load_from_credential_manager
 
         return load_from_credential_manager(
             cast(str, config["service"]),
@@ -51,7 +51,7 @@ def load_api_key(provider: str, config: dict[str, Any]) -> str:
         )
 
     elif key_type == "json":
-        from .json_files import load_from_json
+        from .backends import load_from_json
 
         return load_from_json(cast(str, config["path"]), cast(str, config["key"]))
 

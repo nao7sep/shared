@@ -6,6 +6,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/ai/`
   - Owns provider integrations, model catalog/capabilities/pricing, request limits, AI cost estimation, and runtime orchestration (`runtime.py`, `helper_runtime.py`).
+  - `citations.py` owns citation normalization and redirect-resolution runtime helpers.
   - `provider_utils.py` owns shared provider-side message formatting helpers.
   - `provider_logging.py` owns shared provider error log emission/message helpers.
 
@@ -21,26 +22,27 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 
 - `src/polychat/session/`
   - Owns session state model and session-scoped operations (mode state, provider cache, persistence, lifecycle helpers).
+  - `operations.py` owns consolidated session runtime operations (chat lifecycle, modes, hex-id mutations, persistence, cache, settings, and system prompt loading).
   - `accessors.py` owns SessionManager state access descriptors (`StateField`) and dict/snapshot helper functions.
   - `session_manager.py` is the public facade/composition entry for session operations.
 
 - `src/polychat/orchestration/`
   - Owns REPL orchestration flow handlers:
-    - command signals (`signals.py`, dispatch table + payload validation)
+    - command signals (`signals.py`, dispatch table + payload validation + retry-apply replacement policy helpers)
     - chat lifecycle transitions (`chat_switching.py`, new/open/close/rename/delete)
     - user message entry/send action preparation (`message_entry.py`)
-    - response/error/cancel post-send mutations (`response_handlers.py`)
-    - response-mode transition policies (`response_transitions.py`)
-    - retry apply transition construction (`retry_transitions.py`)
+    - response/error/cancel post-send mutations and response-mode transition policies (`response_handlers.py`)
   - Root `orchestrator.py` is a thin composer facade.
 
 - `src/polychat/repl/`
   - Owns interactive loop wiring, input/keybindings, status banners, and send pipeline execution.
+  - `loop.py` is the consolidated REPL runtime entry that owns prompt/input/banner helpers and main loop control flow.
   - Public entry point is `polychat.repl` package (`repl_loop` re-exported from `repl/__init__.py`).
 
 - `src/polychat/commands/`
   - Owns command handlers and dispatch.
-  - `command_docs.py`, `command_docs_data.py`, and `command_docs_models.py` own single-source command documentation metadata/renderers for `/help` and README command listings.
+  - `command_docs.py` and `command_docs_data.py` own single-source command documentation metadata/renderers for `/help` and README command listings.
+  - `dispatch.py` owns command registration metadata and dispatch orchestration.
   - `context.py` owns explicit command dependency wiring (`CommandContext`).
   - `misc.py` and `chat_files.py` use explicit handler objects with thin adapter mixins for compatibility.
   - `runtime_models.py` and `runtime_modes.py` use explicit handler objects with thin adapter mixins for compatibility.
@@ -53,7 +55,11 @@ This document defines package-level ownership boundaries after the 2026-02 refac
   - Metadata commands are split into:
     - `meta_generation.py`
     - `meta_inspection.py`
-  - `runtime.py` and `metadata.py` are composition facades.
+
+- `src/polychat/keys/`
+  - Owns API key loading/validation and credential backend integrations.
+  - `backends.py` owns concrete environment/json/keychain/credential-manager backend helpers.
+  - `loader.py` is the public backend-selection/validation API.
 
 - `src/polychat/formatting/`
   - Owns all display and text formatting helpers:

@@ -5,14 +5,12 @@ from typing import Optional, TYPE_CHECKING
 from ..chat import save_chat
 from ..ai.helper_runtime import invoke_helper_ai
 from .base import CommandHandlerBaseMixin
-from .dispatcher import CommandDispatcher
-from .runtime import RuntimeCommandsMixin
-from .runtime_models import RuntimeModelCommandHandlers
-from .runtime_modes import RuntimeModeCommandHandlers
-from .runtime_mutation import RuntimeMutationCommandHandlers
-from .meta_generation import MetadataGenerationCommandHandlers
-from .meta_inspection import MetadataInspectionCommandHandlers
-from .metadata import MetadataCommandsMixin
+from .dispatch import CommandDispatcher
+from .runtime_models import RuntimeModelCommandHandlers, RuntimeModelCommandsMixin
+from .runtime_modes import RuntimeModeCommandHandlers, RuntimeModeCommandsMixin
+from .runtime_mutation import RuntimeMutationCommandHandlers, RuntimeMutationCommandsMixin
+from .meta_generation import MetadataGenerationCommandHandlers, MetadataGenerationCommandsMixin
+from .meta_inspection import MetadataInspectionCommandHandlers, MetadataInspectionCommandsMixin
 from .chat_files import ChatFileCommandHandlers, ChatFileCommandsMixin
 from .misc import MiscCommandHandlers, MiscCommandsMixin
 from .types import CommandResult
@@ -24,8 +22,11 @@ if TYPE_CHECKING:
 
 class CommandHandler(
     CommandHandlerBaseMixin,
-    RuntimeCommandsMixin,
-    MetadataCommandsMixin,
+    RuntimeModelCommandsMixin,
+    RuntimeModeCommandsMixin,
+    RuntimeMutationCommandsMixin,
+    MetadataGenerationCommandsMixin,
+    MetadataInspectionCommandsMixin,
     ChatFileCommandsMixin,
     MiscCommandsMixin,
 ):

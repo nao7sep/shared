@@ -1,10 +1,11 @@
-"""Command registration metadata and map builder."""
+"""Command registration metadata and dispatch orchestration."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Awaitable, Callable
 
+from ..ai.catalog import PROVIDER_SHORTCUTS
 from .types import CommandResult
 
 if TYPE_CHECKING:
@@ -64,3 +65,25 @@ def build_command_map(handler: "CommandHandler") -> dict[str, CommandCallable]:
             command_map[alias] = method
 
     return command_map
+
+
+@dataclass(slots=True)
+class CommandDispatcher:
+    """Resolve and dispatch parsed commands to handler methods."""
+
+    handler: "CommandHandler"
+    _command_map: dict[str, CommandCallable] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._command_map = build_command_map(self.handler)
+
+    async def dispatch(self, command: str, args: str) -> CommandResult:
+        """Dispatch one command with already-parsed args."""
+        if command in PROVIDER_SHORTCUTS:
+            return self.handler.switch_provider_shortcut(command)
+
+        command_handler = self._command_map.get(command)
+        if command_handler is not None:
+            return await command_handler(args)
+
+        raise ValueError(f"Unknown command: /{command}")

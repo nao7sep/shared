@@ -11,13 +11,8 @@ from .session.state import (
     assign_new_message_hex_id,
     initialize_message_hex_ids,
 )
-from .session import chat_lifecycle as session_chat_lifecycle
+from .session import operations as session_ops
 from . import hex_id
-from .session import messages as session_messages
-from .session import modes as session_modes
-from .session import persistence as session_persistence
-from .session import provider_cache as session_provider_cache
-from .session import settings as session_settings
 from .session.accessors import (
     StateField,
     state_get,
@@ -25,10 +20,7 @@ from .session.accessors import (
     state_setitem,
     state_to_dict,
 )
-from .session.system_prompt import load_system_prompt as load_system_prompt_content
-from .session.timeouts import format_timeout as format_timeout_value
-from .session.timeouts import normalize_timeout
-from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
+from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC, format_timeout, normalize_timeout
 
 
 def _validate_input_mode(value: str) -> None:
@@ -186,7 +178,7 @@ class SessionManager:
             chat_path: Path to the new chat file
             chat_data: Chat data dictionary
         """
-        session_chat_lifecycle.switch_chat(
+        session_ops.switch_chat(
             self._state,
             chat_path,
             chat_data,
@@ -195,11 +187,11 @@ class SessionManager:
 
     def close_chat(self) -> None:
         """Close current chat and clear related state."""
-        session_chat_lifecycle.close_chat(self._state)
+        session_ops.close_chat(self._state)
 
     def _clear_chat_scoped_state(self) -> None:
         """Clear state that shouldn't leak across chat boundaries."""
-        session_modes.clear_chat_scoped_state(self._state)
+        session_ops.clear_chat_scoped_state(self._state)
 
     def clear_chat_scoped_state(self) -> None:
         """Public wrapper to clear retry/secret state."""
@@ -213,7 +205,7 @@ class SessionManager:
     @staticmethod
     def format_timeout(timeout: int | float) -> str:
         """Format timeout value for user-facing messages."""
-        return format_timeout_value(timeout)
+        return format_timeout(timeout)
 
     @property
     def default_timeout(self) -> int | float:
@@ -233,7 +225,7 @@ class SessionManager:
 
     def clear_provider_cache(self) -> None:
         """Clear all cached provider instances."""
-        session_provider_cache.clear_provider_cache(self._state)
+        session_ops.clear_provider_cache(self._state)
 
     async def save_current_chat(
         self,
@@ -250,7 +242,7 @@ class SessionManager:
         Returns:
             True when a save was performed, False when skipped.
         """
-        return await session_persistence.save_current_chat(
+        return await session_ops.save_current_chat(
             self._state,
             chat_path=chat_path,
             chat_data=chat_data,
@@ -272,7 +264,7 @@ class SessionManager:
         Returns:
             Tuple of (system_prompt_text, system_prompt_path, warning_message)
         """
-        return load_system_prompt_content(
+        return session_ops.load_system_prompt(
             profile_data,
             profile_path=profile_path,
             strict=strict,
@@ -289,7 +281,7 @@ class SessionManager:
             base_messages: Frozen message context (all messages except last assistant)
             target_index: Index of the message that /apply should replace
         """
-        session_modes.enter_retry_mode(
+        session_ops.enter_retry_mode(
             self._state,
             base_messages,
             target_index=target_index,
@@ -304,7 +296,7 @@ class SessionManager:
         Raises:
             ValueError: If not in retry mode
         """
-        return session_modes.get_retry_context(self._state)
+        return session_ops.get_retry_context(self._state)
 
     def add_retry_attempt(
         self,
@@ -314,7 +306,7 @@ class SessionManager:
         citations: Optional[list[dict[str, Any]]] = None,
     ) -> str:
         """Store a retry attempt and return its runtime hex ID."""
-        return session_modes.add_retry_attempt(
+        return session_ops.add_retry_attempt(
             self._state,
             user_msg,
             assistant_msg,
@@ -324,27 +316,27 @@ class SessionManager:
 
     def get_retry_attempt(self, retry_hex_id: str) -> Optional[dict[str, Any]]:
         """Get one retry attempt by runtime hex ID."""
-        return session_modes.get_retry_attempt(self._state, retry_hex_id)
+        return session_ops.get_retry_attempt(self._state, retry_hex_id)
 
     def get_latest_retry_attempt_id(self) -> Optional[str]:
         """Get the most recently generated retry attempt hex ID."""
-        return session_modes.get_latest_retry_attempt_id(self._state)
+        return session_ops.get_latest_retry_attempt_id(self._state)
 
     def get_retry_target_index(self) -> Optional[int]:
         """Get the chat message index that /apply should replace."""
-        return session_modes.get_retry_target_index(self._state)
+        return session_ops.get_retry_target_index(self._state)
 
     def reserve_hex_id(self) -> str:
         """Reserve a runtime hex ID for an in-flight assistant response."""
-        return session_modes.reserve_hex_id(self._state)
+        return session_ops.reserve_hex_id(self._state)
 
     def release_hex_id(self, message_hex_id: str) -> None:
         """Release a runtime hex ID that was reserved but not persisted."""
-        session_modes.release_hex_id(self._state, message_hex_id)
+        session_ops.release_hex_id(self._state, message_hex_id)
 
     def exit_retry_mode(self) -> None:
         """Exit retry mode and clear retry state."""
-        session_modes.exit_retry_mode(self._state)
+        session_ops.exit_retry_mode(self._state)
 
     # ===================================================================
     # Secret Mode Management
@@ -356,7 +348,7 @@ class SessionManager:
         Args:
             base_messages: Current persisted message context
         """
-        session_modes.enter_secret_mode(self._state, base_messages)
+        session_ops.enter_secret_mode(self._state, base_messages)
 
     def get_secret_context(self) -> list[dict]:
         """Get stored secret-mode context snapshot.
@@ -367,11 +359,11 @@ class SessionManager:
         Raises:
             ValueError: If not in secret mode
         """
-        return session_modes.get_secret_context(self._state)
+        return session_ops.get_secret_context(self._state)
 
     def exit_secret_mode(self) -> None:
         """Exit secret mode and clear secret state."""
-        session_modes.exit_secret_mode(self._state)
+        session_ops.exit_secret_mode(self._state)
 
     # ===================================================================
     # Hex ID Management
@@ -397,7 +389,7 @@ class SessionManager:
         Returns:
             Hex ID or None if not assigned
         """
-        return session_messages.get_message_hex_id(self._state, message_index)
+        return session_ops.get_message_hex_id(self._state, message_index)
 
     def remove_message_hex_id(self, message_index: int) -> None:
         """Remove hex ID for a message.
@@ -405,7 +397,7 @@ class SessionManager:
         Args:
             message_index: Index of the message
         """
-        session_messages.remove_message_hex_id(self._state, message_index)
+        session_ops.remove_message_hex_id(self._state, message_index)
 
     def pop_message(
         self,
@@ -421,7 +413,7 @@ class SessionManager:
         Returns:
             Popped message dict, or None when the chat has no messages.
         """
-        return session_messages.pop_message(
+        return session_ops.pop_message(
             self._state,
             message_index=message_index,
             chat_data=chat_data,
@@ -447,7 +439,7 @@ class SessionManager:
         Returns:
             Cached provider instance or None
         """
-        return session_provider_cache.get_cached_provider(
+        return session_ops.get_cached_provider(
             self._state,
             provider_name,
             api_key,
@@ -469,7 +461,7 @@ class SessionManager:
             instance: Provider instance to cache
             timeout_sec: Effective timeout used to build provider instance
         """
-        session_provider_cache.cache_provider(
+        session_ops.cache_provider(
             self._state,
             provider_name,
             api_key,
@@ -488,7 +480,7 @@ class SessionManager:
             provider_name: Name of the provider
             model_name: Name of the model
         """
-        session_settings.switch_provider(self._state, provider_name, model_name)
+        session_ops.switch_provider(self._state, provider_name, model_name)
 
     def toggle_input_mode(self) -> str:
         """Toggle input mode between quick and compose.
@@ -496,4 +488,4 @@ class SessionManager:
         Returns:
             New input mode
         """
-        return session_settings.toggle_input_mode(self._state)
+        return session_ops.toggle_input_mode(self._state)

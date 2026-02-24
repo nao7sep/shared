@@ -15,7 +15,7 @@ from polychat.commands.command_docs import (
     render_readme_commands_block,
 )
 from polychat.commands.misc import MiscCommandHandlers
-from polychat.commands.registry import COMMAND_SPECS
+from polychat.commands.dispatch import COMMAND_SPECS
 
 
 def test_command_docs_cover_registered_commands_and_shortcuts() -> None:

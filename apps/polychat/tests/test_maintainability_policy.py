@@ -10,7 +10,6 @@ MAX_MODULE_LINES = 500
 REFORMATTED_TYPED_TARGETS = (
     "src/polychat/commands/command_docs.py",
     "src/polychat/commands/command_docs_data.py",
-    "src/polychat/commands/command_docs_models.py",
     "src/polychat/ai/provider_logging.py",
     "src/polychat/ai/provider_utils.py",
     "src/polychat/logging/schema.py",

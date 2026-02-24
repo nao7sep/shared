@@ -1,13 +1,25 @@
-"""Main PolyChat REPL event loop."""
+"""Main PolyChat REPL event loop and local loop helpers."""
 
 from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from typing import Optional
+
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
 
 from .. import chat
 from ..commands import CommandHandler
+from ..constants import (
+    BORDERLINE_CHAR,
+    BORDERLINE_WIDTH,
+    EMOJI_MODE_RETRY,
+    EMOJI_MODE_SECRET,
+    REPL_HISTORY_FILE,
+)
 from ..logging import log_event, summarize_command_args
 from ..orchestrator import ChatOrchestrator
 from ..orchestrator_types import (
@@ -16,12 +28,104 @@ from ..orchestrator_types import (
     PrintAction,
     SendAction,
 )
+from ..path_utils import map_path
+from ..session.state import has_pending_error, pending_error_guidance
 from ..session_manager import SessionManager
 from ..timeouts import resolve_profile_timeout
 from ..ui.interaction import ThreadedConsoleInteraction
-from .input import create_prompt_session
 from .send_pipeline import execute_send_action
-from .status_banners import print_mode_banner, print_startup_banner
+
+
+def build_key_bindings(manager: SessionManager) -> KeyBindings:
+    """Build key bindings for quick/compose input modes."""
+    key_bindings = KeyBindings()
+
+    @key_bindings.add("enter", eager=True)
+    def _handle_enter(event) -> None:
+        mode = manager.input_mode
+        if mode == "quick":
+            buffer_text = event.current_buffer.text
+            if buffer_text and buffer_text.strip():
+                event.current_buffer.validate_and_handle()
+            elif buffer_text and not buffer_text.strip():
+                event.current_buffer.reset()
+        else:
+            event.current_buffer.insert_text("\n")
+
+    @key_bindings.add("escape", "enter", eager=True)
+    def _handle_alt_enter(event) -> None:
+        mode = manager.input_mode
+        if mode == "quick":
+            event.current_buffer.insert_text("\n")
+        else:
+            event.current_buffer.validate_and_handle()
+
+    @key_bindings.add("c-j", eager=True)
+    def _handle_ctrl_j(event) -> None:
+        event.current_buffer.validate_and_handle()
+
+    return key_bindings
+
+
+def ensure_history_file() -> Path:
+    """Ensure the REPL history file path exists and return it."""
+    history_file = Path(map_path(REPL_HISTORY_FILE))
+    history_file.parent.mkdir(parents=True, exist_ok=True)
+    return history_file
+
+
+def create_prompt_session(manager: SessionManager) -> PromptSession:
+    """Create prompt-toolkit session for REPL input."""
+    history_file = ensure_history_file()
+    return PromptSession(
+        history=FileHistory(str(history_file)),
+        key_bindings=build_key_bindings(manager),
+        multiline=True,
+    )
+
+
+def print_startup_banner(
+    manager: SessionManager,
+    profile_data: dict,
+    chat_path: Optional[str],
+) -> None:
+    """Print REPL startup context and key usage hints."""
+    configured_ais = []
+    for provider, model in profile_data["models"].items():
+        if provider in profile_data.get("api_keys", {}):
+            configured_ais.append(f"{provider} ({model})")
+
+    borderline = BORDERLINE_CHAR * BORDERLINE_WIDTH
+
+    print(borderline)
+    print("PolyChat - Multi-AI CLI Chat Tool")
+    print(borderline)
+    print(f"Current Provider: {manager.current_ai}")
+    print(f"Current Model:    {manager.current_model}")
+    print(f"Configured AIs:   {', '.join(configured_ais)}")
+    if chat_path:
+        print(f"Chat:             {Path(chat_path).name}")
+    else:
+        print("Chat:             None (use /new or /open)")
+    print()
+    if manager.input_mode == "quick":
+        print("Input Mode:       quick (Enter sends | Option/Alt+Enter inserts new line)")
+    else:
+        print("Input Mode:       compose (Enter inserts new line | Option/Alt+Enter sends)")
+    print("Ctrl+J also sends in both modes")
+    print("Type /help for commands • Ctrl+D to exit")
+    print(borderline)
+    print()
+
+
+def print_mode_banner(manager: SessionManager, chat_data: Optional[dict]) -> None:
+    """Print mode-state banner shown before each prompt."""
+    if has_pending_error(chat_data) and not manager.retry_mode:
+        print(pending_error_guidance(compact=True))
+    elif manager.retry_mode:
+        print(f"{EMOJI_MODE_RETRY} RETRY MODE - Use /apply to accept, /cancel to abort")
+    elif manager.secret_mode:
+        print(f"{EMOJI_MODE_SECRET} SECRET MODE - Messages not saved to history")
 
 
 async def repl_loop(

@@ -7,8 +7,8 @@ import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
-from .ai.types import Citation
-from .timeouts import (
+from .types import Citation
+from ..timeouts import (
     CITATION_REDIRECT_RESOLVE_CONCURRENCY,
     CITATION_REDIRECT_RESOLVE_TIMEOUT_SEC,
 )

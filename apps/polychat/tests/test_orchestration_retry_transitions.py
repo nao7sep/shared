@@ -2,7 +2,7 @@
 
 import pytest
 
-from polychat.orchestration.retry_transitions import (
+from polychat.orchestration.signals import (
     build_retry_replacement_plan,
     resolve_replace_start,
 )

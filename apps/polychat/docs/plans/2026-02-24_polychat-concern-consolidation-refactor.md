@@ -189,62 +189,104 @@ Rationale:
 
 ### Phase 0: Safety and invariants
 
-- [ ] Freeze baseline quality gates before structural merges:
+- [x] Freeze baseline quality gates before structural merges:
   - `ruff check src tests`
   - `mypy src/polychat`
   - `pytest -q`
-- [ ] Document merge rationale in `docs/architecture/module-ownership.md` before deleting any module-level shims.
+- [x] Document merge rationale in `docs/architecture/module-ownership.md` before deleting any module-level shims.
 
 ### Phase 1: Session consolidation
 
-- [ ] Introduce `src/polychat/session/operations.py` and move helpers from session micro-modules (except `state.py`).
-- [ ] Update `session_manager.py` imports/calls to new module.
-- [ ] Keep temporary re-export shims for moved module paths if tests/importers rely on old targets.
-- [ ] Run focused tests:
+- [x] Introduce `src/polychat/session/operations.py` and move helpers from session micro-modules (except `state.py`).
+- [x] Update `session_manager.py` imports/calls to new module.
+- [x] Keep temporary re-export shims for moved module paths if tests/importers rely on old targets.
+- [x] Run focused tests:
   - `tests/test_session_manager.py`
   - `tests/test_session_state.py`
   - orchestration mode invariant tests.
 
 ### Phase 2: Orchestration consolidation
 
-- [ ] Merge transition helper modules into flow modules (`signals` and `response_handlers`).
-- [ ] Update or replace transition-module tests to assert equivalent behavior through merged symbols.
-- [ ] Keep compatibility imports briefly if needed, then remove once references are migrated.
+- [x] Merge transition helper modules into flow modules (`signals` and `response_handlers`).
+- [x] Update or replace transition-module tests to assert equivalent behavior through merged symbols.
+- [x] Keep compatibility imports briefly if needed, then remove once references are migrated.
 
 ### Phase 3: REPL consolidation
 
-- [ ] Merge `repl/input.py` and `repl/status_banners.py` into `repl/loop.py`.
-- [ ] Preserve `repl/__init__.py` public entrypoint.
-- [ ] Run focused tests:
+- [x] Merge `repl/input.py` and `repl/status_banners.py` into `repl/loop.py`.
+- [x] Preserve `repl/__init__.py` public entrypoint.
+- [x] Run focused tests:
   - `tests/test_streaming.py`
   - `tests/test_repl_orchestration.py`
 
 ### Phase 4: Commands consolidation
 
-- [ ] Remove composition-only wrappers (`commands/runtime.py`, `commands/metadata.py`) and compose directly in `commands/__init__.py`.
-- [ ] Merge `commands/registry.py` + `commands/dispatcher.py` into one dispatch module.
-- [ ] Merge `commands/command_docs_models.py` into `commands/command_docs.py`.
-- [ ] Update tests that import concrete handler classes from old module paths.
+- [x] Remove composition-only wrappers (`commands/runtime.py`, `commands/metadata.py`) and compose directly in `commands/__init__.py`.
+- [x] Merge `commands/registry.py` + `commands/dispatcher.py` into one dispatch module.
+- [x] Merge `commands/command_docs_models.py` into `commands/command_docs_data.py`.
+- [x] Update tests that import concrete handler classes from old module paths.
 
 ### Phase 5: Keys and placement cleanup
 
-- [ ] Create `keys/backends.py` and migrate backend loader/store logic.
-- [ ] Move citation runtime logic to `ai/citations.py` with root-level shim.
-- [ ] Consolidate timeout policy onto root `timeouts.py` and remove session duplicate.
+- [x] Create `keys/backends.py` and migrate backend loader/store logic.
+- [x] Move citation runtime logic to `ai/citations.py`, migrate imports, and retire the root shim.
+- [x] Consolidate timeout policy onto root `timeouts.py` and remove session duplicate.
 
 ### Phase 6: Shim retirement and policy alignment
 
-- [ ] Remove temporary compatibility shims once no in-repo imports depend on them.
-- [ ] Update `docs/architecture/module-ownership.md` with merged module ownership.
-- [ ] Revisit maintainability policy thresholds/tests if they enforce fragmentation over cohesion.
+- [x] Remove temporary compatibility shims once no in-repo imports depend on them.
+- [x] Update `docs/architecture/module-ownership.md` with merged module ownership.
+- [x] Revisit maintainability policy thresholds/tests if they enforce fragmentation over cohesion.
 
 ### Phase 7: Final validation
 
-- [ ] Run full gates:
+- [x] Run full gates:
   - `ruff check src tests`
   - `mypy src/polychat`
   - `pytest -q`
-- [ ] Record final module map and changed ownership boundaries.
+- [x] Record final module map and changed ownership boundaries.
+
+## Completion Update (2026-02-24)
+
+Validation results:
+- `ruff check src tests`: pass
+- `mypy src/polychat`: `Success: no issues found in 89 source files`
+- `pytest -q`: `575 passed, 3 deselected, 1 warning`
+
+Final module map updates:
+- Session runtime helpers consolidated into `src/polychat/session/operations.py`.
+- Orchestration transition helpers consolidated into:
+  - `src/polychat/orchestration/signals.py`
+  - `src/polychat/orchestration/response_handlers.py`
+- REPL input/banner helpers consolidated into `src/polychat/repl/loop.py`.
+- Commands dispatch consolidated into `src/polychat/commands/dispatch.py`.
+- Command docs models consolidated into `src/polychat/commands/command_docs_data.py`.
+- Key backend loaders consolidated into `src/polychat/keys/backends.py`.
+- Citation runtime moved to `src/polychat/ai/citations.py`; root shim removed.
+- Session timeout duplication removed; canonical timeout validation/formatting now lives in `src/polychat/timeouts.py`.
+
+Removed modules:
+- `src/polychat/session/chat_lifecycle.py`
+- `src/polychat/session/messages.py`
+- `src/polychat/session/modes.py`
+- `src/polychat/session/persistence.py`
+- `src/polychat/session/provider_cache.py`
+- `src/polychat/session/settings.py`
+- `src/polychat/session/system_prompt.py`
+- `src/polychat/session/timeouts.py`
+- `src/polychat/orchestration/retry_transitions.py`
+- `src/polychat/orchestration/response_transitions.py`
+- `src/polychat/repl/input.py`
+- `src/polychat/repl/status_banners.py`
+- `src/polychat/commands/runtime.py`
+- `src/polychat/commands/metadata.py`
+- `src/polychat/commands/dispatcher.py`
+- `src/polychat/commands/command_docs_models.py`
+- `src/polychat/keys/env_vars.py`
+- `src/polychat/keys/json_files.py`
+- `src/polychat/keys/keychain.py`
+- `src/polychat/keys/credential_manager.py`
+- `src/polychat/citations.py`
 
 ## Rollback Strategy
 
