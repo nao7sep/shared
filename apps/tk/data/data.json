@@ -466,11 +466,11 @@
     },
     {
       "text": "zip/rar archiver that works just like i want it to",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-19T00:18:32.153155+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-25T03:09:31.172558+00:00",
+      "subjective_date": "2026-02-25",
+      "note": "wrote revzip, a more specific app"
     },
     {
       "text": "system to save done-on-mac files on windows persistently",
@@ -594,11 +594,11 @@
     },
     {
       "text": "time to refine anything and everything in current repos. moving on to typescript soon",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T05:11:34.425073+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-25T03:11:54.441082+00:00",
+      "subjective_date": "2026-02-25",
+      "note": "a looot of refactoring done. sure, i did it all by myself. 100 commits in a day or two. absolutely no ais. i am a proud developer... well, used to be :D"
     },
     {
       "text": "it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?",
@@ -610,27 +610,27 @@
     },
     {
       "text": "time to build an unified system to work on 3+ projects at once. 2 worked well yesterday",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-19T05:15:05.405641+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-25T03:15:11.170283+00:00",
+      "subjective_date": "2026-02-25",
+      "note": "polychat + recipes + shared prompts + codex app + beyond compare + revzip"
     },
     {
       "text": "polychat: notifications?",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-21T21:45:41.392105+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-25T03:16:09.746422+00:00",
+      "subjective_date": "2026-02-25",
+      "note": "not an agentic tool. responses return in ~10 seconds"
     },
     {
       "text": "polychat: copy command to copy selected message to clipboard?",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-21T21:46:07.777124+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-25T03:16:55.061278+00:00",
+      "subjective_date": "2026-02-25",
+      "note": "i usually give the entire chat history file rather than a specific message"
     },
     {
       "text": "polychat: adjustable ttl values?",
@@ -642,8 +642,40 @@
     },
     {
       "text": "polychat: metadata is updated when mode is switched (bug)",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-23T06:24:15.893882+00:00",
+      "handled_at": "2026-02-25T03:17:11.186997+00:00",
+      "subjective_date": "2026-02-25",
+      "note": "fixed"
+    },
+    {
+      "text": "generalize publish.py as a any-python-app tool",
+      "status": "pending",
+      "created_at": "2026-02-25T03:19:25.480174+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "ensure windows compatibility of polychat",
+      "status": "pending",
+      "created_at": "2026-02-25T03:20:03.610689+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "prepare to end gemini subscription + maybe report how",
+      "status": "pending",
+      "created_at": "2026-02-25T03:23:09.909311+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "extract tasks and ideas from voice recordings",
+      "status": "pending",
+      "created_at": "2026-02-25T03:25:44.330847+00:00",
       "handled_at": null,
       "subjective_date": null,
       "note": null
