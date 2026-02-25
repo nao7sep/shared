@@ -3,7 +3,28 @@
 from __future__ import annotations
 
 from .constants import ERROR_PREFIX, LIST_SEPARATOR, MAIN_MENU_TEXT, WARNING_PREFIX
-from .models import SnapshotRecord, SnapshotWarning
+from .models import IgnoreRuleSet, ResolvedPaths, SnapshotRecord, SnapshotWarning
+
+
+def render_app_banner() -> str:
+    return "revzip"
+
+
+def render_loaded_parameters(
+    *, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet
+) -> list[str]:
+    ignore_file = (
+        str(resolved_paths.ignore_file_abs)
+        if resolved_paths.ignore_file_abs is not None
+        else "(none)"
+    )
+    return [
+        "Loaded parameters:",
+        f"Source: {resolved_paths.source_dir_abs}",
+        f"Destination: {resolved_paths.dest_dir_abs}",
+        f"Ignore file: {ignore_file}",
+        f"Ignore patterns: {len(ignore_rule_set.patterns_raw)}",
+    ]
 
 
 def render_main_menu() -> str:

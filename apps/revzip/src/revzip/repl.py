@@ -7,7 +7,9 @@ from .errors import RevzipError
 from .extract_service import restore_snapshot
 from .models import IgnoreRuleSet, ResolvedPaths, SnapshotRecord
 from .presenters import (
+    render_app_banner,
     render_error,
+    render_loaded_parameters,
     render_main_menu,
     render_snapshot_rows,
     render_snapshot_warning_lines,
@@ -18,12 +20,23 @@ from .snapshot_catalog_service import discover_snapshots
 
 
 def run_repl(*, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet) -> int:
+    print(render_app_banner())
+    print()
+    for line in render_loaded_parameters(
+        resolved_paths=resolved_paths,
+        ignore_rule_set=ignore_rule_set,
+    ):
+        print(line)
+    print()
+
+    is_first_menu = True
     while True:
-        print()
+        if not is_first_menu:
+            print()
+        is_first_menu = False
         print(render_main_menu())
         choice_raw = _read_line("Select option: ")
         if choice_raw is None:
-            print()
             print("Exiting.")
             return 0
         choice = choice_raw.strip()
@@ -92,9 +105,13 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
         print("No valid snapshots available for extraction.")
         return
 
+    if snapshot_warnings:
+        print()
     print("Available snapshots:")
+    print()
     for row in render_snapshot_rows(snapshot_records):
         print(row)
+    print()
 
     selected_record = _prompt_snapshot_selection(snapshot_records)
     if selected_record is None:

@@ -46,7 +46,12 @@ revzip --source /absolute/source --dest /absolute/dest [--ignore /absolute/ignor
 
 ## REPL Menu
 
-After startup validation, the app shows only:
+After startup validation, the app prints:
+
+- app banner
+- loaded parameter block (source, destination, ignore file, ignore pattern count)
+
+Then it shows only this REPL menu:
 
 1. Archive
 2. Extract
@@ -84,6 +89,8 @@ After startup validation, the app shows only:
 - During archive, one in-place line is updated after each archived file:
   - `Archived: X / Y files`
 - Ignored paths are not counted in those progress counters.
+- Created archive output line uses:
+  - `Created ZIP: ...`
 
 ## Ignore File Semantics
 
@@ -103,6 +110,7 @@ After startup validation, the app shows only:
 - Invalid metadata JSON or missing corresponding zip are warned loudly and skipped.
 - Valid snapshots are sorted by `created_utc` descending.
 - Snapshot list rows use left-padded indices and `|` separators.
+- Snapshot list block is visually isolated with one empty line above and below rows.
 - Restore requires:
   - numeric selection
   - exact `yes` confirmation
