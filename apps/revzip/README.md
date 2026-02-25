@@ -68,9 +68,13 @@ Then it shows only this REPL menu:
   - uses `strip()`
   - preserves trimmed input text
 - Filename comment segment:
-  - replaces spaces/newlines and reserved characters `/ \ : * ? " < > |` with `-`
+  - slugifies base and extension separately
+  - lowercases both base and extension
+  - preserves Unicode letters, Unicode numbers, `_`, `-`, and `.`
+  - replaces all other characters (including whitespace, punctuation, `+`, `@`, emojis) with `-`
   - merges every consecutive hyphen run into one `-`
-  - trims leading/trailing `-` after replacement
+  - trims leading/trailing `-` and `.` from the base name
+  - reattaches the extension after slugification
   - fails archive if sanitized segment becomes empty
 - Snapshot filename format:
   - `YYYY-MM-DD_HH-MM-SS_comment-segment.zip` (local time)

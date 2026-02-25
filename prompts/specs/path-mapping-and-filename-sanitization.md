@@ -1,94 +1,117 @@
-# Shared Spec: Path Mapping and Filename Sanitization
+# Path Mapping and Filename Sanitization
 
-Specification distilled from conversation on 2026-02-24.
+Specification distilled from a conversation on 2026-02-24 to 2026-02-25.
 
 ## Purpose
 
-Define cross-platform path mapping and filename sanitization behavior in a language-agnostic way so different AIs can implement the same policy consistently.
+Define language-agnostic behavior for:
+- Mapping user path inputs without any CWD dependence.
+- Sanitizing filename segments with `os-safe` mode for cross-platform filesystem validity.
+- Sanitizing filename segments with `slugify` mode for semantic, CLI-friendly names.
 
 ## Scope
 
-- Path mapping for user-provided path strings, including `~`, `@`, absolute paths, and relative paths.
-- Filename sanitization for individual file or directory name segments.
-- Explicit handling and rejection rules for ambiguous or unsafe inputs.
+- Path mapping for user-provided strings (`~`, `@`, absolute, relative).
+- Filename sanitization for one file or directory name segment at a time.
+- Rejection behavior for ambiguous, invalid, or empty results.
 
 ## Terms
 
-- **App root**: the distributed application root, not the repository root where project config files live.
-- **Base directory**: an explicitly provided absolute directory used to resolve pure relative paths.
-- **Filename segment**: one file or folder name only, not a full path string.
+- App root: distributed application root, not the repository root.
+- Base directory: explicitly provided absolute directory used for resolving pure relative paths.
+- Filename segment: one file or folder name only, not a full path.
+- `os-safe` mode: sanitization targeting Windows-compatible object names.
+- `slugify` mode: sanitization targeting readable CLI/search-friendly naming.
 
 ## Requirements
 
-### Core Path Rules
+### Path Mapping
 
-- The current working directory (CWD) must never be used for path resolution.
-- App root must be provided as an absolute path.
-- Absolute paths are accepted as-is.
-- Pure relative paths require an explicitly provided absolute base directory.
-- `~` maps to the user home directory.
-- `@` maps to the distributed app root.
-- Windows rooted-but-not-fully-qualified paths (for example `\temp` or `C:temp`) must be rejected.
-- Input containing NUL (`\0`) must be rejected.
-- Unicode normalization from NFD to NFC happens before path mapping checks.
-- Dot-segment resolution (`.` and `..`) happens only after mapping to an explicit absolute root/base.
-- Processing must be Unicode-safe (no byte-level truncation or replacement).
+- Normalize incoming path text from NFD to NFC before mapping checks.
+- Reject any input containing NUL (`\0`).
+- Never use the current working directory for mapping or resolution.
+- Require `app_root` to be absolute.
+- Accept absolute paths as-is.
+- Map `~` to the user home directory.
+- Map `@` to the distributed app root.
+- Pure relative paths require an explicit absolute `base_dir`.
+- Pure relative paths without `base_dir` must be rejected.
+- Reject Windows rooted-but-not-fully-qualified forms such as `\temp` and `C:temp`.
+- Resolve dot segments (`.` and `..`) only after mapping onto an explicit absolute context.
 
-### Path Mapping Decision Matrix
+### Path Tolerance
+
+- Accept forward and backward slash input styles.
+- Accept repeated separators.
+- Do not enforce case normalization.
+- Preserve Unicode safely (no byte-level truncation/replacement).
+
+### Filename Sanitization: Shared Rules
+
+- Apply sanitization to filename segments only, never to full paths.
+- Use explicit mode selection (`os-safe` or `slugify`).
+- If sanitization produces an empty result, raise an error (no automatic fallback name).
+
+### `os-safe` Mode (Windows-Strict)
+
+- Treat `< > : " / \ | ? *` and ASCII control characters `0-31` plus `127` as invalid characters.
+- Replace invalid characters with a configured replacement token.
+- Support a toggle to merge consecutive invalid-character runs into one replacement token.
+- Strip trailing periods and trailing Unicode whitespace.
+- Check reserved Windows device names using the base name before the first period, case-insensitive: `CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9`.
+- If matched, prepend a safety prefix (for example `safe_`).
+
+### `slugify` Mode (Semantic/CLI-Friendly)
+
+- Split filename into base name and extension before slugification.
+- Lowercase base and extension.
+- Preserve Unicode letters, Unicode numbers, `_`, `-`, and `.`.
+- Replace all other characters with `-`, including whitespace, punctuation/operators (for example `&`, `?`, `+`, `@`, quotes, brackets), and emojis/symbol-only glyphs.
+- Collapse repeated replacement runs to a single `-`.
+- Trim leading/trailing hyphens and periods from the base name.
+- Reattach the extension after slugification.
+
+## Decision Tables
+
+### Path Mapping Outcomes
 
 | Input condition | Outcome |
 |---|---|
 | Contains NUL (`\0`) | Reject |
-| Starts with `~` | Convert to absolute path under user home |
-| Starts with `@` | Convert to absolute path under app root |
+| Starts with `~` | Map to absolute user-home-based path |
+| Starts with `@` | Map to absolute app-root-based path |
 | Fully absolute path | Accept as-is |
-| Pure relative path with explicit absolute base directory | Convert to base directory + relative path |
-| Pure relative path without base directory | Reject |
-| Windows rooted-not-qualified path (`\name`, `C:name`) | Reject |
-| Contains `.` or `..` | Resolve only after mapping to explicit absolute context |
+| Pure relative + absolute `base_dir` | Map using `base_dir` |
+| Pure relative + no `base_dir` | Reject |
+| Windows rooted-not-qualified (`\name`, `C:name`) | Reject |
+| Contains `.` or `..` | Resolve only after absolute-context mapping |
 
-### Tolerance Rules
+### Sanitization Mode Outcomes
 
-- Accept both slash styles as input where possible.
-- Accept repeated separators.
-- Do not force case normalization; let filesystem semantics decide.
-
-### Filename Sanitization (Segment Only)
-
-Apply this pipeline to individual file/folder names only, never to full path strings.
-The sequence is mandatory.
-
-1. Identify invalid characters:
-- Windows forbidden characters: `< > : " / \ | ? *`
-- ASCII control characters: code points 0-31 and 127
-
-2. Replace invalid characters with a safe replacement token.
-- Support an option to merge consecutive invalid-character runs into a single replacement token.
-
-3. Strip trailing periods and all trailing Unicode whitespace.
-
-4. Handle Windows reserved names:
-- Check base name (text before first `.`), case-insensitive, against `CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9`.
-- If matched, prepend a safety modifier (for example `safe_`) to avoid reserved-name collisions.
-
-5. Apply fallback when the result is empty.
-- Use a default placeholder name (for example `unnamed_file`).
+| Mode | Primary goal | Invalid/converted set | Empty result |
+|---|---|---|---|
+| `os-safe` | Filesystem validity across platforms | Windows-forbidden chars + ASCII controls; trailing dot/Unicode whitespace stripped | Error |
+| `slugify` | Semantic readable names | Any non-letter/number/`_`/`-`/`.` converted to `-` and collapsed | Error |
 
 ## Conformance Examples
 
-- `@/prompts/system.txt` -> `{app_root}/prompts/system.txt` (absolute).
-- Relative `../config` with base `/var/app/data` -> map first, then resolve to `/var/app/config`.
-- `file<:*name` with merge enabled -> `file_name`; with merge disabled -> `file___name`.
-- `test_file` followed by ideographic space + `.` at end -> trailing Unicode whitespace and `.` removed.
-- `con.txt` -> prefixed with safety modifier to avoid reserved Windows device name.
+- `@/prompts/system.txt` maps to `{app_root}/prompts/system.txt`.
+- Relative `../config` with base `/var/app/data` maps first, then resolves to `/var/app/config`.
+- `file<:*name` in `os-safe` with merge enabled becomes `file_name`.
+- `file<:*name` in `os-safe` with merge disabled becomes `file___name`.
+- `test_file` followed by ideographic space and `.` in `os-safe` becomes `test_file`.
+- `con.txt` in `os-safe` is prefixed to avoid reserved device-name collision.
+- `done & checked.txt` in `slugify` becomes `done-checked.txt`.
 
 ## Out of Scope
 
-- Applying filename sanitization to whole path strings.
-- UI-focused bidi/RTL cleanup and other visual-text normalization beyond the stated filesystem policy.
-- Inferring base directory from CWD.
-- Treating repository root as app root for `@`.
+- Applying filename sanitization to full path strings.
+- Inferring `base_dir` from CWD.
+- Treating repository root as app root.
+- UI/visual-text hardening (for example bidi/RTL control cleanup).
+- Automatic fallback placeholders such as `unnamed_file`.
 
 ## Open Questions
 
-- Should post-resolution boundary checks (for example allowlisted roots) be mandatory in this shared spec or defined per application?
+- Should slugified names also require reserved-device-name handling when used directly as filesystem object names?
+- Should post-resolution boundary checks (allowlisted roots) be mandatory in this shared spec?

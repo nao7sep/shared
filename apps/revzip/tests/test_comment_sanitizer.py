@@ -35,4 +35,20 @@ def test_validate_and_sanitize_comment_merges_all_hyphen_runs() -> None:
         "   ^\\-\\-\\-\\^- adf aasd fasd   "
     )
     assert comment == "^\\-\\-\\-\\^- adf aasd fasd"
-    assert filename_segment == "^-^-adf-aasd-fasd"
+    assert filename_segment == "adf-aasd-fasd"
+
+
+def test_validate_and_sanitize_comment_slugifies_connector_symbols() -> None:
+    comment, filename_segment = validate_and_sanitize_comment("  revzip done & checked  ")
+    assert comment == "revzip done & checked"
+    assert filename_segment == "revzip-done-checked"
+
+
+def test_validate_and_sanitize_comment_replaces_plus_and_at() -> None:
+    _, filename_segment = validate_and_sanitize_comment("A+B@C")
+    assert filename_segment == "a-b-c"
+
+
+def test_validate_and_sanitize_comment_lowercases_base_and_extension() -> None:
+    _, filename_segment = validate_and_sanitize_comment("MIXED.Name.TXT")
+    assert filename_segment == "mixed.name.txt"
