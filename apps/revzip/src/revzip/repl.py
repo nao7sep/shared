@@ -77,7 +77,7 @@ def _run_archive_action(
         f"{archive_result.archived_file_count} file(s) and "
         f"{archive_result.empty_directory_count} empty directory(s)."
     )
-    print(f"Created zip: {archive_result.zip_path.name}")
+    print(f"Created ZIP: {archive_result.zip_path.name}")
     print(f"Created metadata: {archive_result.metadata_path.name}")
 
 

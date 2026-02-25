@@ -80,9 +80,9 @@ After startup validation, the app shows only:
 - Zip entry names are source-relative and never include the source directory name.
 - If nothing matches (no files and no empty directories), no snapshot is created.
 - During scan, one in-place line is updated after each scanned directory:
-  - `scanned: X dirs | Y files`
+  - `Scanned: X dirs | Y files`
 - During archive, one in-place line is updated after each archived file:
-  - `archived: X / Y files`
+  - `Archived: X / Y files`
 - Ignored paths are not counted in those progress counters.
 
 ## Ignore File Semantics

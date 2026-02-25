@@ -40,10 +40,6 @@ def collect_archive_inventory(
                 if current_rel is None
                 else current_rel / child_abs.name
             )
-            if child_abs.is_symlink():
-                skipped_symlinks_rel.append(child_rel)
-                continue
-
             if is_default_ignored_name(child_abs.name):
                 continue
             if matches_ignore_rules(
@@ -51,6 +47,9 @@ def collect_archive_inventory(
                 raw_source_argument=raw_source_argument,
                 ignore_rule_set=ignore_rule_set,
             ):
+                continue
+            if child_abs.is_symlink():
+                skipped_symlinks_rel.append(child_rel)
                 continue
 
             if child_abs.is_file():

@@ -11,13 +11,13 @@ class ConsoleProgressReporter:
         self._archive_line_open = False
 
     def report_scanned(self, scanned_dirs: int, scanned_files: int, final: bool) -> None:
-        line = f"scanned: {scanned_dirs:,} dirs | {scanned_files:,} files"
+        line = f"Scanned: {scanned_dirs:,} dirs | {scanned_files:,} files"
         self._render_line(line=line, phase="scan", final=final)
 
     def report_archived(
         self, archived_files: int, total_files: int, final: bool
     ) -> None:
-        line = f"archived: {archived_files:,} / {total_files:,} files"
+        line = f"Archived: {archived_files:,} / {total_files:,} files"
         self._render_line(line=line, phase="archive", final=final)
 
     def close_open_lines(self) -> None:
