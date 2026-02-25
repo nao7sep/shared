@@ -40,6 +40,7 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 - Style issues, naming preferences, or formatting — unless they affect clarity.
 - Micro-optimizations with no measurable impact.
 - Refactoring opportunities — these belong in a separate refactor-code pass.
+- Code you cannot demonstrate to be wrong. Unclear intent is not a finding.
 
 ## Output
 

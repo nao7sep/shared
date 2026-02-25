@@ -20,7 +20,7 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 
 - No interfaces/protocols for a single implementation — that's premature.
 - When two or more concrete implementations exist (or clearly will), extract a shared protocol.
-- Three repeated code blocks are better than a bad abstraction, but five repeated blocks probably need one.
+- Duplication is acceptable until you can name a clean, general abstraction that doesn't force unnatural coupling. If the abstraction introduces awkward parameters or mixed concerns, leave the duplication.
 
 ### Dead Code
 

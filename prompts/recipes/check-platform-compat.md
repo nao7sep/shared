@@ -9,7 +9,10 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 Before starting, determine which platforms are relevant by checking:
 - README or docs for stated platform support
 - CI configuration for tested platforms
-- If neither exists, assume the project should work on macOS, Linux, and Windows
+- If neither exists, infer from the project type:
+  - Local apps (CLI tools, desktop utilities): macOS is primary; Windows support is optional but worth flagging.
+  - Server or remote apps: Linux is the target.
+  - If the type is unclear, default to macOS + Linux.
 
 ## What To Check
 

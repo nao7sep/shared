@@ -10,9 +10,9 @@ Before starting, identify the project's package manager and ecosystem:
 |---|---|---|
 | `pyproject.toml` + `uv.lock` | Python | `uv` |
 | `pyproject.toml` (no uv.lock) | Python | `uv` (initialize lock) |
+| `package.json` + `pnpm-lock.yaml` | Node.js | `pnpm` |
 | `package.json` + `package-lock.json` | Node.js | `npm` |
 | `package.json` + `yarn.lock` | Node.js | `yarn` |
-| `package.json` + `pnpm-lock.yaml` | Node.js | `pnpm` |
 | `*.csproj` / `*.sln` | C# / .NET | `dotnet` |
 
 If multiple ecosystems are present, update each independently.

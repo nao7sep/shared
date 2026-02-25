@@ -55,7 +55,7 @@ Never use raw dicts for structured data. If data has more than one field and liv
 
 - One-shot scripts: optimize for directness and clarity.
 - Systems with persistent state, sessions, multiple subsystems, or cross-layer data flow: define boundaries early.
-- Separation of concerns is the highest priority for code structure, especially in Python.
+- Separation of concerns is the highest priority for code structure.
 - Keep layers strictly distinct: input handling, business logic, data access, output.
 - Reject tangled designs that mix responsibilities just to reduce line count.
 - Start concrete. Introduce Protocol/interface when there are two or more implementations.
@@ -78,6 +78,12 @@ Never use raw dicts for structured data. If data has more than one field and liv
 4. Fit with existing codebase
 5. Style (only when clarity is affected)
 
+## Pragmatism
+
+- Well-separated concerns and passing tests are the primary release signal. Do not block shipping on hypothetical improvements.
+- Do not fix what you cannot demonstrate to be wrong. Unclear code is not broken code.
+- Real bugs come from real users. Compensable damage is preferable to over-engineered prevention that delays release.
+
 ## Tooling
 
 ### Python
@@ -91,6 +97,9 @@ Never use raw dicts for structured data. If data has more than one field and liv
 
 - `pnpm` for new projects (preferred: strict dependency resolution, fast, disk-efficient — the Node.js equivalent of `uv`).
 - `npm` when working on existing projects that already use it.
+- `eslint` (with `@typescript-eslint`) for linting.
+- `tsc` for type checking.
+- `vitest` for testing (preferred: fast, native TypeScript support, Jest-compatible API); `jest` as an alternative for projects with an existing Jest ecosystem.
 
 ## Guardrails
 
