@@ -54,8 +54,6 @@ def render_snapshot_rows(snapshot_records: list[SnapshotRecord]) -> list[str]:
             (
                 f"{index:>{width}}",
                 record.metadata.created_at,
-                f"files={len(record.metadata.archived_files)}",
-                f"empty-dirs={len(record.metadata.empty_directories)}",
                 record.metadata.comment.replace("\n", "\\n"),
             )
         )

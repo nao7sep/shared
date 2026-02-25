@@ -109,7 +109,7 @@ Then it shows only this REPL menu:
 - Snapshot candidates are discovered from metadata JSON files in destination.
 - Invalid metadata JSON or missing corresponding zip are warned loudly and skipped.
 - Valid snapshots are sorted by `created_utc` descending.
-- Snapshot list rows use left-padded indices and `|` separators.
+- Snapshot list rows show index, timestamp, and comment using `|` separators.
 - Snapshot list block is visually isolated with one empty line above and below rows.
 - Restore requires:
   - numeric selection
