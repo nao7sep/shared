@@ -24,6 +24,9 @@ Or:
 ./scripts/install.command
 ```
 
+`.command` files are zsh convenience wrappers (for example on macOS).
+On other platforms, run the equivalent `uv` commands directly.
+
 ## Run
 
 ```bash
@@ -63,7 +66,7 @@ Then it shows only this REPL menu:
 - Comment input is a single prompt line.
 - Stored metadata comment:
   - uses `strip()`
-  - preserves input text as entered
+  - preserves trimmed input text
 - Filename comment segment:
   - replaces spaces/newlines and reserved characters `/ \ : * ? " < > |` with `-`
   - merges every consecutive hyphen run into one `-`
