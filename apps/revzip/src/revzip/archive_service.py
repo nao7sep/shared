@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -20,14 +21,31 @@ def create_snapshot(
     ignore_rule_set: IgnoreRuleSet,
     comment_raw: str,
     now_utc_dt: datetime | None = None,
+    on_scan_progress: Callable[[int, int, bool], None] | None = None,
+    on_archive_progress: Callable[[int, int, bool], None] | None = None,
 ) -> ArchiveResult:
     comment, comment_filename_segment = validate_and_sanitize_comment(comment_raw)
+    on_directory_scanned = None
+    if on_scan_progress is not None:
+        on_directory_scanned = (
+            lambda scanned_dirs, scanned_files: on_scan_progress(
+                scanned_dirs, scanned_files, False
+            )
+        )
 
     archive_inventory = collect_archive_inventory(
         source_dir_abs=resolved_paths.source_dir_abs,
         raw_source_argument=resolved_paths.source_arg_raw,
         ignore_rule_set=ignore_rule_set,
+        on_directory_scanned=on_directory_scanned,
     )
+    if on_scan_progress is not None:
+        on_scan_progress(
+            archive_inventory.scanned_directories_count,
+            archive_inventory.scanned_files_count,
+            True,
+        )
+
     archived_file_count = len(archive_inventory.archived_files_rel)
     empty_directory_count = len(archive_inventory.empty_directories_rel)
     if archived_file_count == 0 and empty_directory_count == 0:
@@ -56,12 +74,27 @@ def create_snapshot(
     )
 
     try:
+        archived_files_written = 0
+
+        def _on_file_archived(written_count: int, total_count: int) -> None:
+            nonlocal archived_files_written
+            archived_files_written = written_count
+            if on_archive_progress is not None:
+                on_archive_progress(written_count, total_count, False)
+
         write_snapshot_zip(
             source_dir_abs=resolved_paths.source_dir_abs,
             zip_path_abs=zip_path,
             archived_files_rel=archive_inventory.archived_files_rel,
             empty_directories_rel=archive_inventory.empty_directories_rel,
+            on_file_archived=(
+                _on_file_archived
+                if on_archive_progress is not None
+                else None
+            ),
         )
+        if on_archive_progress is not None:
+            on_archive_progress(archived_files_written, archived_file_count, True)
         write_snapshot_metadata(
             metadata_path_abs=metadata_path,
             snapshot_metadata=snapshot_metadata,

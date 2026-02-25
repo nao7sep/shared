@@ -55,10 +55,10 @@ After startup validation, the app shows only:
 ## Archive Behavior
 
 - Archive comment is required.
-- Comment input accepts multiline text; input ends with an empty line.
+- Comment input is a single prompt line.
 - Stored metadata comment:
   - uses `strip()`
-  - preserves internal newlines
+  - preserves input text as entered
 - Filename comment segment:
   - replaces spaces/newlines and reserved characters `/ \ : * ? " < > |` with `-`
   - merges consecutive replacement runs into one `-`
@@ -79,6 +79,11 @@ After startup validation, the app shows only:
   - empty directories
 - Zip entry names are source-relative and never include the source directory name.
 - If nothing matches (no files and no empty directories), no snapshot is created.
+- During scan, one in-place line is updated after each scanned directory:
+  - `scanned: X dirs | Y files`
+- During archive, one in-place line is updated after each archived file:
+  - `archived: X / Y files`
+- Ignored paths are not counted in those progress counters.
 
 ## Ignore File Semantics
 

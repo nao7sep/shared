@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import shutil
 from pathlib import Path
 
@@ -15,12 +16,18 @@ def collect_archive_inventory(
     source_dir_abs: Path,
     raw_source_argument: str,
     ignore_rule_set: IgnoreRuleSet,
+    on_directory_scanned: Callable[[int, int], None] | None = None,
 ) -> ArchiveInventory:
     archived_files_rel: list[Path] = []
     empty_directories_rel: list[Path] = []
     skipped_symlinks_rel: list[Path] = []
+    scanned_directories_count = 0
+    scanned_files_count = 0
 
     def walk_dir(current_dir_abs: Path, current_rel: Path | None) -> bool:
+        nonlocal scanned_directories_count
+        nonlocal scanned_files_count
+
         has_archivable_entries = False
         try:
             children = sorted(current_dir_abs.iterdir(), key=lambda p: p.name)
@@ -48,6 +55,7 @@ def collect_archive_inventory(
 
             if child_abs.is_file():
                 archived_files_rel.append(child_rel)
+                scanned_files_count += 1
                 has_archivable_entries = True
                 continue
 
@@ -57,6 +65,10 @@ def collect_archive_inventory(
                     empty_directories_rel.append(child_rel)
                 has_archivable_entries = True
                 continue
+
+        scanned_directories_count += 1
+        if on_directory_scanned is not None:
+            on_directory_scanned(scanned_directories_count, scanned_files_count)
 
         return has_archivable_entries
 
@@ -70,6 +82,8 @@ def collect_archive_inventory(
         archived_files_rel=archived_files_rel,
         empty_directories_rel=empty_directories_rel,
         skipped_symlinks_rel=skipped_symlinks_rel,
+        scanned_directories_count=scanned_directories_count,
+        scanned_files_count=scanned_files_count,
     )
 
 

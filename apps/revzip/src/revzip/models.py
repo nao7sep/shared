@@ -29,6 +29,8 @@ class ArchiveInventory:
     archived_files_rel: list[Path]
     empty_directories_rel: list[Path]
     skipped_symlinks_rel: list[Path]
+    scanned_directories_count: int
+    scanned_files_count: int
 
 
 @dataclass(frozen=True)

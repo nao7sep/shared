@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Iterable
@@ -15,6 +16,7 @@ def write_snapshot_zip(
     zip_path_abs: Path,
     archived_files_rel: Iterable[Path],
     empty_directories_rel: Iterable[Path],
+    on_file_archived: Callable[[int, int], None] | None = None,
 ) -> None:
     file_entries = [(rel_path, rel_path.as_posix()) for rel_path in archived_files_rel]
     directory_entries = [
@@ -27,11 +29,16 @@ def write_snapshot_zip(
 
     try:
         with zipfile.ZipFile(zip_path_abs, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            total_files = len(file_entries)
+            archived_files_count = 0
             for rel_path, entry_name in file_entries:
                 file_abs = source_dir_abs / rel_path
                 if not file_abs.is_file():
                     raise ArchiveError(f"File disappeared while archiving: {file_abs}")
                 zf.write(file_abs, arcname=entry_name)
+                archived_files_count += 1
+                if on_file_archived is not None:
+                    on_file_archived(archived_files_count, total_files)
 
             for rel_path, entry_name in directory_entries:
                 dir_abs = source_dir_abs / rel_path

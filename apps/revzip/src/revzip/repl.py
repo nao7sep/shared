@@ -13,6 +13,7 @@ from .presenters import (
     render_snapshot_warning_lines,
     render_warning,
 )
+from .progress import ConsoleProgressReporter
 from .snapshot_catalog_service import discover_snapshots
 
 
@@ -48,17 +49,24 @@ def run_repl(*, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet) -
 def _run_archive_action(
     *, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet
 ) -> None:
-    print("Archive comment (single line is typical).")
-    print("Finish input with an empty line.")
-    comment_raw = _read_multiline_until_empty()
+    progress = ConsoleProgressReporter()
+
+    comment_raw_value = _read_line("Archive comment: ")
+    if comment_raw_value is None:
+        print(render_error("Comment is required."))
+        return
+    comment_raw = comment_raw_value
 
     try:
         archive_result = create_snapshot(
             resolved_paths=resolved_paths,
             ignore_rule_set=ignore_rule_set,
             comment_raw=comment_raw,
+            on_scan_progress=progress.report_scanned,
+            on_archive_progress=progress.report_archived,
         )
     except RevzipError as exc:
+        progress.close_open_lines()
         print(render_error(str(exc)))
         return
 
@@ -139,16 +147,6 @@ def _prompt_snapshot_selection(
         return None
 
     return snapshot_records[selected_index - 1]
-
-
-def _read_multiline_until_empty() -> str:
-    lines: list[str] = []
-    while True:
-        line = _read_line("")
-        if line is None or line == "":
-            break
-        lines.append(line)
-    return "\n".join(lines)
 
 
 def _read_line(prompt: str) -> str | None:

@@ -41,3 +41,44 @@ def test_create_snapshot_fails_on_same_name_collision(tmp_path: Path) -> None:
             comment_raw="same comment",
             now_utc_dt=fixed_now_utc,
         )
+
+
+def test_create_snapshot_progress_callbacks_report_scan_and_archive(
+    tmp_path: Path,
+) -> None:
+    source_dir = tmp_path / "source"
+    dest_dir = tmp_path / "dest"
+    source_dir.mkdir()
+    dest_dir.mkdir()
+    (source_dir / "a.txt").write_text("a", encoding="utf-8")
+    (source_dir / "b.txt").write_text("b", encoding="utf-8")
+    (source_dir / "empty").mkdir()
+
+    resolved_paths = resolve_startup_paths(
+        source_arg_raw=str(source_dir),
+        dest_arg_raw=str(dest_dir),
+        ignore_arg_raw=None,
+        app_root_abs=tmp_path,
+    )
+    ignore_rule_set = load_ignore_rule_set(None)
+    fixed_now_utc = datetime(2026, 2, 25, 4, 5, 6, tzinfo=timezone.utc)
+
+    scan_events: list[tuple[int, int, bool]] = []
+    archive_events: list[tuple[int, int, bool]] = []
+
+    create_snapshot(
+        resolved_paths=resolved_paths,
+        ignore_rule_set=ignore_rule_set,
+        comment_raw="progress",
+        now_utc_dt=fixed_now_utc,
+        on_scan_progress=lambda dirs, files, final: scan_events.append(
+            (dirs, files, final)
+        ),
+        on_archive_progress=lambda archived, total, final: archive_events.append(
+            (archived, total, final)
+        ),
+    )
+
+    assert scan_events
+    assert scan_events[-1][2] is True
+    assert archive_events[-1] == (2, 2, True)
