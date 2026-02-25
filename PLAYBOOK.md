@@ -39,7 +39,7 @@ Developer profile and engineering principles for AI-assisted development.
 ### Naming
 
 - Directories and files: `kebab-case`
-- Plan documents: `{YYYY-MM-DD}_{short-description}.md` in `docs/plans/` within the project directory. Underscores separate semantic groups; hyphens separate words within a group (e.g., `2026-02-20_cli-bookmark-manager.md`).
+- Generated documents (plans, reviews, analyses): `{YYYY-MM-DD}_{short-description}.md` saved in the directory most relevant to the context. Underscores separate semantic groups; hyphens separate words within a group (e.g., `2026-02-20_cli-bookmark-manager.md`).
 
 ### Reusable Recipes
 
@@ -60,12 +60,9 @@ Never use raw dicts for structured data. If data has more than one field and liv
 - Reject tangled designs that mix responsibilities just to reduce line count.
 - Start concrete. Introduce Protocol/interface when there are two or more implementations.
 - Extract dependencies when code is hard to test.
-- Never split a module only to reduce line count.
-- Large files are acceptable when cohesive.
-- Split only with clear boundary problems (mixed layers, multiple reasons to change, hard-to-test coupling).
-- Do not split cohesive modules (parsers/state machines/registries/generated code) just to satisfy a size threshold.
-- Before deciding no split, verify maintainability explicitly: one primary reason to change, clear internal sectioning, and tests that can target behavior without fragile setup.
-- Before splitting, preserve behavior first: keep tests green, keep public APIs stable, and avoid dumping code into generic `utils` modules.
+- Split only when you can name two distinct responsibilities with independent reasons to change. File size and function length are never valid reasons to split.
+- Large files are acceptable when cohesive. Parsers, state machines, registries, and generated code are typically cohesive regardless of size.
+- When splitting, preserve behavior first: keep tests green, keep public APIs stable, and never dump code into generic `utils` modules.
 - Prefer small duplication over poor abstraction.
 
 ### Error Handling
@@ -75,9 +72,9 @@ Never use raw dicts for structured data. If data has more than one field and liv
 
 ### Code Review Priorities
 
-1. Security
+1. Separation of concerns and maintainability
 2. Correctness
-3. Separation of concerns and maintainability
+3. Security
 4. Fit with existing codebase
 5. Style (only when clarity is affected)
 
@@ -92,7 +89,8 @@ Never use raw dicts for structured data. If data has more than one field and liv
 
 ### TypeScript
 
-`npm` for package management.
+- `pnpm` for new projects (preferred: strict dependency resolution, fast, disk-efficient — the Node.js equivalent of `uv`).
+- `npm` when working on existing projects that already use it.
 
 ## Guardrails
 

@@ -10,16 +10,11 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 
 ### Responsibility Splitting
 
-- Files or classes doing more than one job. If a module handles both HTTP requests and database queries, those should separate.
-- Function length is a weak signal, not evidence by itself.
-- Recommend extraction only when there is concrete complexity: mixed abstraction levels, multiple distinct phases, heavy branching, or unrelated side effects.
-- File size is a weak smell, not evidence by itself.
-- Split only when boundaries are clear and each extracted module has one reason to change.
-- Prefer no split when the file is large but cohesive and extraction would increase coupling.
-- Before deciding not to split, verify separation of concerns explicitly: one primary reason to change, clear boundaries between layers, and focused tests that do not require broad fixture setup.
-- For each split recommendation, cite concrete evidence (for example: mixed layers in one function, recurring cross-module edits, or tests that require unrelated setup).
-- Avoid "misc/utils dumping ground" refactors; each new file must have a clear responsibility and name.
-- Refactors must preserve behavior first: use small reversible moves and keep tests/API compatibility intact.
+- A module has a problem only when you can name two distinct responsibilities with independent reasons to change. File size and function length are never evidence of a problem by themselves.
+- Recommend a split only when there is concrete evidence: mixed abstraction levels, tangled layers, or tests that require unrelated setup to exercise one behavior.
+- For each split recommendation, name the two responsibilities and cite the evidence. If you cannot, do not recommend the split.
+- Avoid "misc/utils dumping ground" refactors; each new file must have a clear, singular responsibility.
+- Refactors must preserve behavior first: use small reversible moves and keep tests and API compatibility intact.
 
 ### Abstraction Opportunities
 

@@ -8,6 +8,14 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 
 ## What To Look For
 
+### Separation of Concerns
+
+- UI, domain logic, commands, and data handling must not be tangled.
+- Flag a separation issue only when you can name two distinct responsibilities. Do not report file length as a finding.
+- Long files are acceptable when cohesive (parsers, state machines, command registries, generated code).
+- Any finding must include concrete evidence (mixed layers in the same function, recurring cross-module edits to ship one change, or tests requiring unrelated setup).
+- If recommending a split, specify the proposed boundaries and how behavior and API stability will be protected during migration.
+
 ### Correctness
 
 - Logic errors, off-by-one mistakes, race conditions, unintended mutation.
@@ -26,16 +34,6 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 - User input must be validated/sanitized before use (SQL queries, shell commands, file paths, URLs).
 - Credentials, tokens, and secrets must not appear in source code or logs.
 - File operations must not follow user-controlled paths outside intended directories.
-
-### Separation of Concerns
-
-- UI, domain logic, commands, and data handling must not be tangled.
-- Do not report file length as a finding.
-- File size is a weak signal only; report only concrete mixed-responsibility or maintainability problems.
-- Even when no split is recommended, verify maintainability explicitly: one primary reason to change, clear layer boundaries inside the module, and tests that can target behavior without fragile setup.
-- Any separation-of-concerns finding must include concrete evidence (for example: mixed layers in the same function, recurring cross-module edits to ship one change, or tests requiring unrelated setup).
-- Long files can be acceptable when cohesive (for example: generated code, command registries, parsers, or state machines).
-- If recommending a split, specify proposed boundaries and how behavior/API stability will be protected during migration.
 
 ## What Not To Look For
 
