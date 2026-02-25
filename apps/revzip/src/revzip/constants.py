@@ -26,5 +26,5 @@ LIST_SEPARATOR = " | "
 WARNING_PREFIX = "WARNING:"
 ERROR_PREFIX = "ERROR:"
 
-# Spaces, CR/LF, and cross-platform forbidden filename characters.
-COMMENT_FILENAME_SANITIZE_REGEX = r"[ \r\n/\\:*?\"<>|]+"
+# ASCII control chars (0-31, 127), spaces/newlines, and Windows-forbidden filename chars.
+COMMENT_FILENAME_SANITIZE_REGEX = r"[\x00-\x1F\x7F /\\:*?\"<>|]+"

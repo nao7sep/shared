@@ -28,3 +28,11 @@ def test_validate_and_sanitize_comment_trims_edge_hyphens() -> None:
 def test_validate_and_sanitize_comment_fails_if_sanitized_segment_is_empty() -> None:
     with pytest.raises(ArchiveError):
         validate_and_sanitize_comment("  ///???***  ")
+
+
+def test_validate_and_sanitize_comment_merges_all_hyphen_runs() -> None:
+    comment, filename_segment = validate_and_sanitize_comment(
+        "   ^\\-\\-\\-\\^- adf aasd fasd   "
+    )
+    assert comment == "^\\-\\-\\-\\^- adf aasd fasd"
+    assert filename_segment == "^-^-adf-aasd-fasd"

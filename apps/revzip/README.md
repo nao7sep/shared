@@ -66,7 +66,7 @@ Then it shows only this REPL menu:
   - preserves input text as entered
 - Filename comment segment:
   - replaces spaces/newlines and reserved characters `/ \ : * ? " < > |` with `-`
-  - merges consecutive replacement runs into one `-`
+  - merges every consecutive hyphen run into one `-`
   - trims leading/trailing `-` after replacement
   - fails archive if sanitized segment becomes empty
 - Snapshot filename format:
