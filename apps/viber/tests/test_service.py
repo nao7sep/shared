@@ -24,6 +24,9 @@ from viber.service import (
     get_task,
     resolve_assignment,
     set_project_state,
+    update_assignment_comment,
+    update_group_name,
+    update_project_name,
     update_task_description,
 )
 
@@ -90,6 +93,21 @@ def test_delete_group_success() -> None:
     assert db.groups == []
 
 
+def test_update_group_name() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    updated = update_group_name(db, g.id, "Platform")
+    assert updated.name == "Platform"
+
+
+def test_update_group_name_duplicate_raises() -> None:
+    db = make_db()
+    g1 = create_group(db, "Backend")
+    create_group(db, "Frontend")
+    with pytest.raises(DuplicateNameError):
+        update_group_name(db, g1.id, "frontend")
+
+
 # ---------------------------------------------------------------------------
 # Projects
 # ---------------------------------------------------------------------------
@@ -143,6 +161,23 @@ def test_set_project_state() -> None:
     p = create_project(db, "api", g.id)
     updated = set_project_state(db, p.id, ProjectState.SUSPENDED)
     assert updated.state == ProjectState.SUSPENDED
+
+
+def test_update_project_name() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    updated = update_project_name(db, p.id, "service-api")
+    assert updated.name == "service-api"
+
+
+def test_update_project_name_duplicate_raises() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p1 = create_project(db, "api", g.id)
+    create_project(db, "auth", g.id)
+    with pytest.raises(DuplicateNameError):
+        update_project_name(db, p1.id, "AUTH")
 
 
 def test_delete_project_cascades_assignments() -> None:
@@ -275,6 +310,19 @@ def test_resolve_assignment_nah() -> None:
     a = resolve_assignment(db, p.id, t.id, AssignmentStatus.NAH, None)
     assert a.status == AssignmentStatus.NAH
     assert a.comment is None
+
+
+def test_update_assignment_comment_set_and_clear() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+
+    updated = update_assignment_comment(db, p.id, t.id, "Need follow-up")
+    assert updated.comment == "Need follow-up"
+
+    cleared = update_assignment_comment(db, p.id, t.id, None)
+    assert cleared.comment is None
 
 
 def test_get_assignment_not_found() -> None:

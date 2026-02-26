@@ -37,7 +37,12 @@ read p<ID>                                  (r p<ID>)
 read t<ID>                                  (r t<ID>)
 
 update p<ID> active|suspended|deprecated    (u p<ID> <state>)
-update t<ID>                                (u t<ID>)
+update g<ID> <new-name>                     (u g<ID> <new-name>)
+update p<ID> name <new-name>                (u p<ID> name <new-name>)
+update p<ID> state <state>                  (u p<ID> state <state>)
+update t<ID> <new-description>              (u t<ID> <new-description>)
+update p<ID> t<ID> [comment]                (u p<ID> t<ID> [comment])
+update t<ID> p<ID> [comment]                (u t<ID> p<ID> [comment])
 
 delete g<ID>                                (d g<ID>)
 delete p<ID>                                (d p<ID>)
@@ -62,6 +67,8 @@ exit | quit
 - `ok` and `nah` accept tokens in either order: `ok p3 t1` or `ok t1 p3`.
 - `create task <description> g<ID>` — the trailing `g<ID>` scopes the task to one group; omit for all groups.
 - `update p<ID>` transitions project lifecycle state (`active` → `suspended` → `deprecated`, any direction).
+- `update p<ID> <name>` is supported as a shorthand rename form.
+- `update p<ID> t<ID>` with no comment clears the assignment comment.
 - `work` loops through pending items one by one with `[o]k / [n]ah / [s]kip / [q]uit` prompts.
 - `exit` and `quit` are full-word only (no single-letter aliases).
 
@@ -88,7 +95,7 @@ When `--check ~/viber/check.html` is given, viber writes one file per group afte
 
 - `check-backend.html`, `check-frontend.html`, …
 - Rows = tasks (newest first), columns = non-deprecated projects.
-- ✅ ok · ❌ nah · `·` pending · gray cell = lifecycle gap (no assignment).
+- ✅ ok · ❌ nah · blank cell pending · gray cell = lifecycle gap (no assignment).
 
 ## Path Syntax
 

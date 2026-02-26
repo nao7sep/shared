@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from viber.models import AssignmentStatus, Database, ProjectState
-from viber.renderer import render_check_pages
+from viber.renderer import remove_check_page, render_check_pages
 from viber.service import (
     create_group,
     create_project,
@@ -94,7 +94,7 @@ def test_render_status_symbols(tmp_path: Path) -> None:
     content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
     assert "✅" in content
     assert "❌" in content
-    assert "·" in content
+    assert "&nbsp;" in content
 
 
 def test_render_tasks_newest_first(tmp_path: Path) -> None:
@@ -126,3 +126,38 @@ def test_render_multiple_groups(tmp_path: Path) -> None:
     files = sorted(f.name for f in tmp_path.glob("check-*.html"))
     assert "check-backend.html" in files
     assert "check-frontend.html" in files
+
+
+def test_render_selected_groups_only(tmp_path: Path) -> None:
+    db = Database()
+    g1 = create_group(db, "Backend")
+    g2 = create_group(db, "Frontend")
+    create_project(db, "api", g1.id)
+    create_project(db, "ui", g2.id)
+    create_task(db, "Task", None)
+
+    check_base = tmp_path / "check.html"
+    render_check_pages(db, check_base)
+    frontend_path = tmp_path / "check-frontend.html"
+    before_stat = frontend_path.stat().st_mtime_ns
+
+    create_project(db, "billing", g1.id)
+    render_check_pages(db, check_base, {g1.id})
+    after_stat = frontend_path.stat().st_mtime_ns
+
+    assert before_stat == after_stat
+
+
+def test_remove_check_page(tmp_path: Path) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    create_project(db, "api", g.id)
+    create_task(db, "Task", None)
+
+    check_base = tmp_path / "check.html"
+    render_check_pages(db, check_base)
+    page = tmp_path / "check-backend.html"
+    assert page.exists()
+
+    remove_check_page(check_base, "Backend")
+    assert not page.exists()

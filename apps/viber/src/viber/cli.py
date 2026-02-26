@@ -7,6 +7,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
 
+from .constants import (
+    ARG_CHECK,
+    ARG_DATA,
+    ARG_HELP_LONG,
+    ARG_HELP_SHORT,
+    CLI_HELP_HINT,
+    CLI_USAGE,
+    STDERR_ERROR_PREFIX,
+    STDERR_FATAL_PREFIX,
+    STDERR_HTML_WARN_PREFIX,
+    STDERR_LOAD_ERROR_PREFIX,
+)
 from .errors import StartupValidationError, ViberError
 from .path_mapping import map_path
 from .renderer import render_check_pages
@@ -14,21 +26,6 @@ from .repl import run_repl
 from .store import load_database
 
 _APP_ROOT = Path(__file__).parent
-
-_USAGE = """\
-Usage: viber --data <path> [--check <path>]
-
-Options:
-  --data <path>    Path to JSON state file (required).
-                   Accepts absolute paths, ~ (home), or @ (app root).
-  --check <path>   Optional path for HTML check output files.
-                   HTML is regenerated after each mutation.
-  --help           Show this help message and exit.
-
-Path examples:
-  viber --data ~/viber/data.json
-  viber --data ~/viber/data.json --check ~/viber/check.html
-"""
 
 
 @dataclass
@@ -41,8 +38,8 @@ def parse_args(argv: list[str] | None = None) -> AppArgs | None:
     """Parse CLI arguments. Returns None if --help was requested."""
     args = argv if argv is not None else sys.argv[1:]
 
-    if "--help" in args or "-h" in args:
-        print(_USAGE, end="")
+    if ARG_HELP_LONG in args or ARG_HELP_SHORT in args:
+        print(CLI_USAGE, end="")
         return None
 
     data_raw: str | None = None
@@ -50,24 +47,24 @@ def parse_args(argv: list[str] | None = None) -> AppArgs | None:
 
     i = 0
     while i < len(args):
-        if args[i] == "--data":
+        if args[i] == ARG_DATA:
             if i + 1 >= len(args):
-                _die("--data requires a path argument.")
+                _die(f"{ARG_DATA} requires a path argument.")
             data_raw = args[i + 1]
             i += 2
-        elif args[i] == "--check":
+        elif args[i] == ARG_CHECK:
             if i + 1 >= len(args):
-                _die("--check requires a path argument.")
+                _die(f"{ARG_CHECK} requires a path argument.")
             check_raw = args[i + 1]
             i += 2
         else:
             _die(f"Unknown argument: {args[i]}")
 
     if data_raw is None:
-        _die("--data is required.")
+        _die(f"{ARG_DATA} is required.")
 
-    data_path = _resolve_path(data_raw, "--data")
-    check_path = _resolve_path(check_raw, "--check") if check_raw is not None else None
+    data_path = _resolve_path(data_raw, ARG_DATA)
+    check_path = _resolve_path(check_raw, ARG_CHECK) if check_raw is not None else None
 
     return AppArgs(data_path=data_path, check_path=check_path)
 
@@ -81,7 +78,7 @@ def main() -> None:
     try:
         db = load_database(app_args.data_path)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error loading data file: {exc}", file=sys.stderr)
+        print(f"{STDERR_LOAD_ERROR_PREFIX}{exc}", file=sys.stderr)
         sys.exit(1)
 
     # If --check is configured and we have data, generate initial HTML.
@@ -89,12 +86,12 @@ def main() -> None:
         try:
             render_check_pages(db, app_args.check_path)
         except Exception as exc:  # noqa: BLE001
-            print(f"Warning: Could not generate HTML check pages: {exc}", file=sys.stderr)
+            print(f"{STDERR_HTML_WARN_PREFIX}{exc}", file=sys.stderr)
 
     try:
         run_repl(db, app_args.data_path, app_args.check_path)
     except ViberError as exc:
-        print(f"Fatal error: {exc}", file=sys.stderr)
+        print(f"{STDERR_FATAL_PREFIX}{exc}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -110,6 +107,6 @@ def _resolve_path(raw: str, arg_name: str) -> Path:
 
 
 def _die(message: str) -> NoReturn:
-    print(f"Error: {message}", file=sys.stderr)
-    print("Run 'viber --help' for usage.", file=sys.stderr)
+    print(f"{STDERR_ERROR_PREFIX}{message}", file=sys.stderr)
+    print(CLI_HELP_HINT, file=sys.stderr)
     sys.exit(1)

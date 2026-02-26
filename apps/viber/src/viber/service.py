@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from .constants import UTC_OFFSET_ZERO, UTC_SUFFIX_Z
 from .errors import (
     AssignmentNotFoundError,
     DuplicateNameError,
@@ -49,6 +50,14 @@ def list_groups(db: Database) -> list[Group]:
     return list(db.groups)
 
 
+def update_group_name(db: Database, group_id: int, name: str) -> Group:
+    """Rename a group with case-insensitive uniqueness enforced."""
+    group = get_group(db, group_id)
+    _check_group_name_unique(db, name, exclude_id=group_id)
+    group.name = name
+    return group
+
+
 def delete_group(db: Database, group_id: int) -> Group:
     """Raise GroupInUseError if any project references this group."""
     group = get_group(db, group_id)
@@ -91,6 +100,14 @@ def list_projects(db: Database) -> list[Project]:
     return list(db.projects)
 
 
+def update_project_name(db: Database, project_id: int, name: str) -> Project:
+    """Rename a project with uniqueness enforced within its group."""
+    project = get_project(db, project_id)
+    _check_project_name_unique(db, name, project.group_id, exclude_id=project_id)
+    project.name = name
+    return project
+
+
 def set_project_state(db: Database, project_id: int, new_state: ProjectState) -> Project:
     """Transition project to any state. No assignment side effects."""
     project = get_project(db, project_id)
@@ -129,7 +146,7 @@ def create_task(
     if group_id is not None:
         get_group(db, group_id)  # validate group exists
 
-    created_utc = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    created_utc = datetime.now(UTC).isoformat().replace(UTC_OFFSET_ZERO, UTC_SUFFIX_Z)
     task = Task(
         id=db.next_task_id,
         description=description,
@@ -208,6 +225,20 @@ def resolve_assignment(
     get_task(db, task_id)
     assignment = get_assignment(db, project_id, task_id)
     assignment.status = status
+    assignment.comment = comment
+    return assignment
+
+
+def update_assignment_comment(
+    db: Database,
+    project_id: int,
+    task_id: int,
+    comment: str | None,
+) -> Assignment:
+    """Update assignment comment only."""
+    get_project(db, project_id)
+    get_task(db, task_id)
+    assignment = get_assignment(db, project_id, task_id)
     assignment.comment = comment
     return assignment
 

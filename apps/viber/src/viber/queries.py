@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .constants import ASSIGNMENT_STATUS_PENDING
 from .errors import ProjectNotFoundError, TaskNotFoundError
 from .models import Assignment, Database, Group, Project, ProjectState, Task, assignment_key
 
@@ -33,7 +34,7 @@ def pending_all(db: Database) -> list[PendingEntry]:
         for task in db.tasks:
             key = assignment_key(project.id, task.id)
             a = db.assignments.get(key)
-            if a is None or a.status.value != "pending":
+            if a is None or a.status.value != ASSIGNMENT_STATUS_PENDING:
                 continue
             results.append(PendingEntry(project=project, group=group, task=task, assignment=a))
 
@@ -63,7 +64,7 @@ def pending_by_project(db: Database, project_id: int) -> list[tuple[Task, Assign
     for task in db.tasks:
         key = assignment_key(project_id, task.id)
         a = db.assignments.get(key)
-        if a is None or a.status.value != "pending":
+        if a is None or a.status.value != ASSIGNMENT_STATUS_PENDING:
             continue
         results.append((task, a))
 
@@ -94,7 +95,7 @@ def pending_by_task(
             continue
         key = assignment_key(project.id, task_id)
         a = db.assignments.get(key)
-        if a is None or a.status.value != "pending":
+        if a is None or a.status.value != ASSIGNMENT_STATUS_PENDING:
             continue
         results.append((project, group, a))
 
