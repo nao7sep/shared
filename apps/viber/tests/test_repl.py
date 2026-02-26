@@ -1,42 +1,98 @@
-"""Tests for REPL command parsing helpers."""
+"""Tests for command parsing and arity validation."""
 
-from viber.repl import _parse_id_token, _parse_pt_tokens
+import pytest
 
-
-def test_parse_id_token_valid() -> None:
-    assert _parse_id_token("g3", "g") == 3
-    assert _parse_id_token("p12", "p") == 12
-    assert _parse_id_token("t7", "t") == 7
-
-
-def test_parse_id_token_wrong_prefix() -> None:
-    assert _parse_id_token("g3", "p") is None
-
-
-def test_parse_id_token_no_digits() -> None:
-    assert _parse_id_token("g", "g") is None
-    assert _parse_id_token("group", "g") is None
+from viber.command_parser import (
+    CommandParseError,
+    DeleteEntityCommand,
+    ReadEntityCommand,
+    ResolveAssignmentCommand,
+    UpdateProjectStateCommand,
+    ViewEntityCommand,
+    WorkEntityCommand,
+    parse_command,
+)
+from viber.models import AssignmentStatus, ProjectState
 
 
-def test_parse_pt_tokens_p_first() -> None:
-    pid, tid = _parse_pt_tokens("p3", "t5")
-    assert pid == 3
-    assert tid == 5
+def test_parse_read_entity_project() -> None:
+    cmd = parse_command("read", ["p12"])
+    assert isinstance(cmd, ReadEntityCommand)
+    assert cmd.kind == "project"
+    assert cmd.entity_id == 12
 
 
-def test_parse_pt_tokens_t_first() -> None:
-    pid, tid = _parse_pt_tokens("t5", "p3")
-    assert pid == 3
-    assert tid == 5
+def test_parse_view_entity_task() -> None:
+    cmd = parse_command("view", ["t5"])
+    assert isinstance(cmd, ViewEntityCommand)
+    assert cmd.kind == "task"
+    assert cmd.entity_id == 5
 
 
-def test_parse_pt_tokens_invalid() -> None:
-    pid, tid = _parse_pt_tokens("g1", "t2")
-    assert pid is None
-    assert tid is None
+def test_parse_work_entity_project() -> None:
+    cmd = parse_command("work", ["p3"])
+    assert isinstance(cmd, WorkEntityCommand)
+    assert cmd.kind == "project"
+    assert cmd.entity_id == 3
 
 
-def test_parse_pt_tokens_uppercase() -> None:
-    pid, tid = _parse_pt_tokens("P3", "T5")
-    assert pid == 3
-    assert tid == 5
+def test_parse_resolve_accepts_t_then_p_order() -> None:
+    cmd = parse_command("ok", ["t5", "p3"])
+    assert isinstance(cmd, ResolveAssignmentCommand)
+    assert cmd.project_id == 3
+    assert cmd.task_id == 5
+    assert cmd.status == AssignmentStatus.OK
+
+
+def test_parse_delete_single_target() -> None:
+    cmd = parse_command("delete", ["g1"])
+    assert isinstance(cmd, DeleteEntityCommand)
+    assert cmd.kind == "group"
+    assert cmd.entity_id == 1
+
+
+def test_parse_update_project_state() -> None:
+    cmd = parse_command("update", ["p1", "state", "suspended"])
+    assert isinstance(cmd, UpdateProjectStateCommand)
+    assert cmd.project_id == 1
+    assert cmd.new_state == ProjectState.SUSPENDED
+
+
+def test_parse_rejects_extra_arg_for_read() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("read", ["projects", "extra"])
+
+
+def test_parse_rejects_extra_arg_for_delete() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("delete", ["t1", "extra"])
+
+
+def test_parse_rejects_extra_arg_for_view() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("view", ["p1", "extra"])
+
+
+def test_parse_rejects_extra_arg_for_work() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("work", ["t1", "extra"])
+
+
+def test_parse_rejects_extra_arg_for_ok() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("ok", ["p1", "t2", "extra"])
+
+
+def test_parse_rejects_extra_arg_for_update_state() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("update", ["p1", "state", "active", "extra"])
+
+
+def test_parse_rejects_update_project_state_shorthand() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("update", ["p1", "active"])
+
+
+def test_parse_rejects_update_project_name_shorthand() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("update", ["p1", "new-name"])

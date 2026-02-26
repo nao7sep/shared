@@ -23,9 +23,6 @@ from .models import (
     assignment_key,
 )
 
-_UTC_OFFSET_ZERO = "+00:00"
-_UTC_SUFFIX_Z = "Z"
-
 # ---------------------------------------------------------------------------
 # Groups
 # ---------------------------------------------------------------------------
@@ -84,6 +81,7 @@ def create_project(db: Database, name: str, group_id: int) -> Project:
         name=name,
         group_id=group_id,
         state=ProjectState.ACTIVE,
+        created_utc=_now_utc_iso_z(),
     )
     db.next_project_id += 1
     db.projects.append(project)
@@ -148,7 +146,7 @@ def create_task(
     if group_id is not None:
         get_group(db, group_id)  # validate group exists
 
-    created_utc = datetime.now(UTC).isoformat().replace(_UTC_OFFSET_ZERO, _UTC_SUFFIX_Z)
+    created_utc = _now_utc_iso_z()
     task = Task(
         id=db.next_task_id,
         description=description,
@@ -168,6 +166,7 @@ def create_task(
             project_id=project.id,
             task_id=task.id,
             status=AssignmentStatus.PENDING,
+            handled_utc=None,
         )
 
     return task
@@ -222,12 +221,13 @@ def resolve_assignment(
     status: AssignmentStatus,
     comment: str | None,
 ) -> Assignment:
-    """Validate entities exist, then update assignment status and comment."""
+    """Validate entities exist, then update assignment status/comment/handled time."""
     get_project(db, project_id)
     get_task(db, task_id)
     assignment = get_assignment(db, project_id, task_id)
     assignment.status = status
     assignment.comment = comment
+    assignment.handled_utc = _now_utc_iso_z() if status != AssignmentStatus.PENDING else None
     return assignment
 
 
@@ -272,3 +272,7 @@ def _check_project_name_unique(
             continue
         if p.name.lower() == name_lower:
             raise DuplicateNameError(name)
+
+
+def _now_utc_iso_z() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")

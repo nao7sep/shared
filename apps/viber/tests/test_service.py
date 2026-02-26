@@ -121,6 +121,8 @@ def test_create_project() -> None:
     assert p.name == "api-server"
     assert p.group_id == g.id
     assert p.state == ProjectState.ACTIVE
+    assert p.created_utc is not None
+    assert p.created_utc.endswith("Z")
 
 
 def test_create_project_group_not_found() -> None:
@@ -215,6 +217,7 @@ def test_create_task_generates_assignments_for_active_projects() -> None:
     assert assignment_key(p1.id, t.id) in db.assignments
     assert assignment_key(p2.id, t.id) in db.assignments
     assert db.assignments[assignment_key(p1.id, t.id)].status == AssignmentStatus.PENDING
+    assert db.assignments[assignment_key(p1.id, t.id)].handled_utc is None
 
 
 def test_create_task_skips_suspended_project() -> None:
@@ -299,6 +302,8 @@ def test_resolve_assignment_ok() -> None:
     a = resolve_assignment(db, p.id, t.id, AssignmentStatus.OK, "Done")
     assert a.status == AssignmentStatus.OK
     assert a.comment == "Done"
+    assert a.handled_utc is not None
+    assert a.handled_utc.endswith("Z")
 
 
 def test_resolve_assignment_nah() -> None:
@@ -310,6 +315,22 @@ def test_resolve_assignment_nah() -> None:
     a = resolve_assignment(db, p.id, t.id, AssignmentStatus.NAH, None)
     assert a.status == AssignmentStatus.NAH
     assert a.comment is None
+    assert a.handled_utc is not None
+    assert a.handled_utc.endswith("Z")
+
+
+def test_resolve_assignment_pending_clears_handled_timestamp() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+
+    a = resolve_assignment(db, p.id, t.id, AssignmentStatus.OK, None)
+    assert a.handled_utc is not None
+
+    a = resolve_assignment(db, p.id, t.id, AssignmentStatus.PENDING, None)
+    assert a.status == AssignmentStatus.PENDING
+    assert a.handled_utc is None
 
 
 def test_update_assignment_comment_set_and_clear() -> None:

@@ -66,7 +66,11 @@ def format_group(group: Group) -> str:
 
 def format_project(project: Project, group: Group) -> str:
     state_label = f"[{project.state.value}]"
-    return f"{format_project_ref(project)} {state_label} (group: {group.name})"
+    created = format_local_time(project.created_utc)
+    return (
+        f"{format_project_ref(project)} {state_label} (group: {group.name})"
+        f" [created: {created}]"
+    )
 
 
 def format_task(task: Task, db: Database) -> str:
@@ -83,6 +87,8 @@ def format_assignment(
 ) -> str:
     status = assignment.status.value
     line = f"{format_project_ref(project)} + {format_task_ref(task)}: {status}"
+    if assignment.handled_utc is not None:
+        line += f" [handled: {format_local_time(assignment.handled_utc)}]"
     if assignment.comment:
         line += f" — {assignment.comment}"
     return line

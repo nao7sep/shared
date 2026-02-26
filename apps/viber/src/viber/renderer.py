@@ -23,12 +23,6 @@ from .models import (
 )
 from .path_mapping import slugify
 
-_DEFAULT_SUFFIX = ".html"
-_STATUS_SYMBOL_OK = "✅"
-_STATUS_SYMBOL_NAH = "❌"
-# Keep pending visually neutral and unobtrusive in tables.
-_STATUS_SYMBOL_PENDING = "&nbsp;"
-
 
 def render_check_pages(
     db: Database,
@@ -70,7 +64,7 @@ def check_page_path(check_base: Path, group_name: str) -> Path:
     """Return the check-page path for one group name."""
     out_dir = check_base.parent
     stem = check_base.stem
-    suffix = check_base.suffix or _DEFAULT_SUFFIX
+    suffix = check_base.suffix or ".html"
     slug = slugify(group_name)
     return out_dir / f"{stem}-{slug}{suffix}"
 
@@ -166,10 +160,11 @@ def _render_table(
 
 def _cell_for_status(status: AssignmentStatus) -> tuple[str, str]:
     if status == AssignmentStatus.OK:
-        return "ok", _STATUS_SYMBOL_OK
+        return "ok", "✅"
     if status == AssignmentStatus.NAH:
-        return "nah", _STATUS_SYMBOL_NAH
-    return "pending", _STATUS_SYMBOL_PENDING
+        return "nah", "❌"
+    # Keep pending visually neutral and unobtrusive in tables.
+    return "pending", "&nbsp;"
 
 
 def _select_groups(db: Database, group_ids: set[int] | None) -> list[Group]:

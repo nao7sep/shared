@@ -6,8 +6,6 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
-_ASSIGNMENT_KEY_SEPARATOR = "-"
-
 
 class ProjectState(StrEnum):
     ACTIVE = "active"
@@ -31,6 +29,7 @@ class Project(BaseModel):
     name: str
     group_id: int
     state: ProjectState
+    created_utc: str  # ISO 8601 with 'Z' suffix
 
 
 class Task(BaseModel):
@@ -45,6 +44,7 @@ class Assignment(BaseModel):
     task_id: int
     status: AssignmentStatus
     comment: str | None = None
+    handled_utc: str | None  # ISO 8601 with 'Z' suffix; None until handled
 
 
 class Database(BaseModel):
@@ -60,4 +60,4 @@ class Database(BaseModel):
 
 def assignment_key(project_id: int, task_id: int) -> str:
     """Return the composite key used to look up an assignment."""
-    return f"{project_id}{_ASSIGNMENT_KEY_SEPARATOR}{task_id}"
+    return f"{project_id}-{task_id}"

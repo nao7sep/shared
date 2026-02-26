@@ -44,7 +44,13 @@ def test_database_roundtrip() -> None:
     db = Database()
     db.groups.append(Group(id=1, name="Backend"))
     db.projects.append(
-        Project(id=1, name="api", group_id=1, state=ProjectState.ACTIVE)
+        Project(
+            id=1,
+            name="api",
+            group_id=1,
+            state=ProjectState.ACTIVE,
+            created_utc="2026-02-26T09:00:00.000000Z",
+        )
     )
     db.tasks.append(
         Task(
@@ -55,10 +61,15 @@ def test_database_roundtrip() -> None:
         )
     )
     db.assignments["1-1"] = Assignment(
-        project_id=1, task_id=1, status=AssignmentStatus.PENDING
+        project_id=1,
+        task_id=1,
+        status=AssignmentStatus.PENDING,
+        handled_utc=None,
     )
     data = db.model_dump(mode="json")
     restored = Database.model_validate(data)
     assert restored.groups[0].name == "Backend"
     assert restored.projects[0].state == ProjectState.ACTIVE
+    assert restored.projects[0].created_utc == "2026-02-26T09:00:00.000000Z"
     assert restored.assignments["1-1"].status == AssignmentStatus.PENDING
+    assert restored.assignments["1-1"].handled_utc is None
