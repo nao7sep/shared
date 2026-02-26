@@ -153,7 +153,7 @@ class TestExecuteCommand:
     def test_execute_command_done_non_numeric_usage_error(self, sample_session):
         """Test that done command requires numeric task number."""
         with pytest.raises(ValueError, match="Usage: done <num>"):
-            dispatcher.execute_command("done", ["--note"], {}, sample_session)
+            dispatcher.execute_command("done", ["abc"], {}, sample_session)
 
     def test_execute_command_unknown(self, sample_session):
         """Test that unknown command raises ValueError."""

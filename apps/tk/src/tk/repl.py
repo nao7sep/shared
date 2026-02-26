@@ -1,21 +1,17 @@
 """REPL parsing and loop orchestration for tk."""
 
 import os
-import shlex
 import traceback
 from typing import Any
 
 from tk import commands, dispatcher, markdown, prompts
-from tk.errors import TkError, TkUsageError
+from tk.errors import TkError
 from tk.session import Session
 
 
 def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
     """Parse command line into (command, args, kwargs)."""
-    try:
-        parts = shlex.split(line)
-    except ValueError as e:
-        raise TkUsageError(f"Invalid command syntax: {e}") from e
+    parts = line.split()
 
     if not parts:
         return "", [], {}
@@ -41,7 +37,7 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
         part = parts[i]
 
         if part.startswith("--"):
-            flag_name = part[2:]
+            flag_name = part[2:].replace("-", "_")
 
             if i + 1 < len(parts) and not parts[i + 1].startswith("--"):
                 value: Any = parts[i + 1]

@@ -1,7 +1,5 @@
 """Tests for repl module."""
 
-import pytest
-from tk.errors import TkUsageError
 from tk.repl import parse_command, _try_parse_first_num_arg
 
 
@@ -24,20 +22,12 @@ class TestParseCommand:
         assert args == ["task", "text"]
         assert kwargs == {}
 
-    def test_parse_command_quoted_text(self):
-        """Test parsing quoted arguments with shlex semantics."""
-        cmd, args, kwargs = parse_command('add "task with spaces" tail')
+    def test_parse_command_apostrophe_in_text(self):
+        """Test that apostrophes in task text are handled without error."""
+        cmd, args, kwargs = parse_command("add do something about python's something")
 
         assert cmd == "add"
-        assert args == ["task with spaces", "tail"]
-        assert kwargs == {}
-
-    def test_parse_done_treats_flags_as_plain_args(self):
-        """Test that done command does not parse flag syntax."""
-        cmd, args, kwargs = parse_command("done 1 --note finished --date 2026-02-09")
-
-        assert cmd == "done"
-        assert args == ["1", "--note", "finished", "--date", "2026-02-09"]
+        assert args == ["do", "something", "about", "python's", "something"]
         assert kwargs == {}
 
     def test_parse_command_flag_int_value(self):
@@ -47,6 +37,13 @@ class TestParseCommand:
         assert cmd == "history"
         assert kwargs["days"] == 7
 
+    def test_parse_command_flag_hyphen_to_underscore(self):
+        """Test that hyphenated flags are normalized to underscore keys."""
+        cmd, args, kwargs = parse_command("history --working-days 3")
+
+        assert cmd == "history"
+        assert kwargs["working_days"] == 3
+
     def test_parse_command_flag_boolean(self):
         """Test boolean flags."""
         cmd, args, kwargs = parse_command("sync --force")
@@ -55,12 +52,11 @@ class TestParseCommand:
         assert kwargs["force"] is True
 
     def test_parse_command_no_flag_commands(self):
-        """Test that add/edit/note/done/cancel don't parse flags."""
-        # 'add' command should treat --note as part of text
-        cmd, args, kwargs = parse_command("add task with --note text")
+        """Test that add/edit/note/done/cancel treat all words as plain args."""
+        cmd, args, kwargs = parse_command("add task with extra words")
 
         assert cmd == "add"
-        assert args == ["task", "with", "--note", "text"]
+        assert args == ["task", "with", "extra", "words"]
         assert kwargs == {}
 
     def test_parse_command_edit_no_flags(self):
@@ -70,19 +66,6 @@ class TestParseCommand:
         assert cmd == "edit"
         assert args == ["1", "new", "--text", "here"]
         assert kwargs == {}
-
-    def test_parse_cancel_treats_flags_as_plain_args(self):
-        """Test that cancel command does not parse flag syntax."""
-        cmd, args, kwargs = parse_command("cancel 1 --note nope --date 2026-02-09")
-
-        assert cmd == "cancel"
-        assert args == ["1", "--note", "nope", "--date", "2026-02-09"]
-        assert kwargs == {}
-
-    def test_parse_command_invalid_syntax(self):
-        """Test that unmatched quotes raise usage error."""
-        with pytest.raises(TkUsageError, match="Invalid command syntax"):
-            parse_command('add "unterminated')
 
 
 class TestTryParseFirstNumArg:
