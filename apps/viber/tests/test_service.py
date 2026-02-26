@@ -1,0 +1,307 @@
+"""Tests for domain service layer."""
+
+import pytest
+
+from viber.errors import (
+    AssignmentNotFoundError,
+    DuplicateNameError,
+    GroupInUseError,
+    GroupNotFoundError,
+    ProjectNotFoundError,
+    TaskNotFoundError,
+)
+from viber.models import AssignmentStatus, Database, ProjectState, assignment_key
+from viber.service import (
+    create_group,
+    create_project,
+    create_task,
+    delete_group,
+    delete_project,
+    delete_task,
+    get_assignment,
+    get_group,
+    get_project,
+    get_task,
+    resolve_assignment,
+    set_project_state,
+    update_task_description,
+)
+
+
+def make_db() -> Database:
+    return Database()
+
+
+# ---------------------------------------------------------------------------
+# Groups
+# ---------------------------------------------------------------------------
+
+
+def test_create_group() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    assert g.id == 1
+    assert g.name == "Backend"
+    assert db.next_group_id == 2
+    assert len(db.groups) == 1
+
+
+def test_create_group_id_increments() -> None:
+    db = make_db()
+    g1 = create_group(db, "A")
+    g2 = create_group(db, "B")
+    assert g1.id == 1
+    assert g2.id == 2
+
+
+def test_create_group_duplicate_raises() -> None:
+    db = make_db()
+    create_group(db, "Backend")
+    with pytest.raises(DuplicateNameError):
+        create_group(db, "Backend")
+
+
+def test_create_group_case_insensitive_duplicate() -> None:
+    db = make_db()
+    create_group(db, "Backend")
+    with pytest.raises(DuplicateNameError):
+        create_group(db, "backend")
+
+
+def test_get_group_not_found() -> None:
+    db = make_db()
+    with pytest.raises(GroupNotFoundError):
+        get_group(db, 99)
+
+
+def test_delete_group_blocked_by_projects() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    create_project(db, "api", g.id)
+    with pytest.raises(GroupInUseError):
+        delete_group(db, g.id)
+
+
+def test_delete_group_success() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    deleted = delete_group(db, g.id)
+    assert deleted.id == g.id
+    assert db.groups == []
+
+
+# ---------------------------------------------------------------------------
+# Projects
+# ---------------------------------------------------------------------------
+
+
+def test_create_project() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api-server", g.id)
+    assert p.id == 1
+    assert p.name == "api-server"
+    assert p.group_id == g.id
+    assert p.state == ProjectState.ACTIVE
+
+
+def test_create_project_group_not_found() -> None:
+    db = make_db()
+    with pytest.raises(GroupNotFoundError):
+        create_project(db, "api", 99)
+
+
+def test_create_project_duplicate_name_in_group() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    create_project(db, "api", g.id)
+    with pytest.raises(DuplicateNameError):
+        create_project(db, "API", g.id)
+
+
+def test_create_project_same_name_different_group_allowed() -> None:
+    db = make_db()
+    g1 = create_group(db, "Backend")
+    g2 = create_group(db, "Frontend")
+    create_project(db, "web", g1.id)
+    p2 = create_project(db, "web", g2.id)
+    assert p2.group_id == g2.id
+
+
+def test_project_no_backfill_on_creation() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    create_task(db, "Task 1", None)  # task created before project
+    p = create_project(db, "api", g.id)
+    key = assignment_key(p.id, 1)
+    assert key not in db.assignments
+
+
+def test_set_project_state() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    updated = set_project_state(db, p.id, ProjectState.SUSPENDED)
+    assert updated.state == ProjectState.SUSPENDED
+
+
+def test_delete_project_cascades_assignments() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task 1", None)
+    key = assignment_key(p.id, t.id)
+    assert key in db.assignments
+
+    delete_project(db, p.id)
+    assert key not in db.assignments
+    assert db.projects == []
+
+
+def test_get_project_not_found() -> None:
+    db = make_db()
+    with pytest.raises(ProjectNotFoundError):
+        get_project(db, 99)
+
+
+# ---------------------------------------------------------------------------
+# Tasks
+# ---------------------------------------------------------------------------
+
+
+def test_create_task_generates_assignments_for_active_projects() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p1 = create_project(db, "api", g.id)
+    p2 = create_project(db, "auth", g.id)
+
+    t = create_task(db, "Update deps", None)
+
+    assert assignment_key(p1.id, t.id) in db.assignments
+    assert assignment_key(p2.id, t.id) in db.assignments
+    assert db.assignments[assignment_key(p1.id, t.id)].status == AssignmentStatus.PENDING
+
+
+def test_create_task_skips_suspended_project() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    set_project_state(db, p.id, ProjectState.SUSPENDED)
+
+    t = create_task(db, "Task", None)
+    assert assignment_key(p.id, t.id) not in db.assignments
+
+
+def test_create_task_skips_deprecated_project() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    set_project_state(db, p.id, ProjectState.DEPRECATED)
+
+    t = create_task(db, "Task", None)
+    assert assignment_key(p.id, t.id) not in db.assignments
+
+
+def test_create_task_with_target_group_skips_other_groups() -> None:
+    db = make_db()
+    g1 = create_group(db, "Backend")
+    g2 = create_group(db, "Frontend")
+    p1 = create_project(db, "api", g1.id)
+    p2 = create_project(db, "ui", g2.id)
+
+    t = create_task(db, "Backend task", g1.id)
+
+    assert assignment_key(p1.id, t.id) in db.assignments
+    assert assignment_key(p2.id, t.id) not in db.assignments
+
+
+def test_create_task_group_not_found() -> None:
+    db = make_db()
+    from viber.errors import GroupNotFoundError
+    with pytest.raises(GroupNotFoundError):
+        create_task(db, "Task", 99)
+
+
+def test_update_task_description() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    create_project(db, "api", g.id)
+    t = create_task(db, "Old desc", None)
+    updated = update_task_description(db, t.id, "New desc")
+    assert updated.description == "New desc"
+
+
+def test_delete_task_cascades_assignments() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+    key = assignment_key(p.id, t.id)
+    assert key in db.assignments
+
+    delete_task(db, t.id)
+    assert key not in db.assignments
+    assert db.tasks == []
+
+
+def test_get_task_not_found() -> None:
+    db = make_db()
+    with pytest.raises(TaskNotFoundError):
+        get_task(db, 99)
+
+
+# ---------------------------------------------------------------------------
+# Assignments
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_assignment_ok() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+
+    a = resolve_assignment(db, p.id, t.id, AssignmentStatus.OK, "Done")
+    assert a.status == AssignmentStatus.OK
+    assert a.comment == "Done"
+
+
+def test_resolve_assignment_nah() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+
+    a = resolve_assignment(db, p.id, t.id, AssignmentStatus.NAH, None)
+    assert a.status == AssignmentStatus.NAH
+    assert a.comment is None
+
+
+def test_get_assignment_not_found() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    create_project(db, "api", g.id)
+    create_task(db, "Task", None)
+    with pytest.raises(AssignmentNotFoundError):
+        get_assignment(db, 999, 1)
+
+
+def test_reactivated_project_no_backfill() -> None:
+    """After reactivation, only NEW tasks generate assignments."""
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    # suspend project
+    set_project_state(db, p.id, ProjectState.SUSPENDED)
+    # create task while suspended
+    t1 = create_task(db, "Task during suspension", None)
+    assert assignment_key(p.id, t1.id) not in db.assignments
+
+    # reactivate
+    set_project_state(db, p.id, ProjectState.ACTIVE)
+    # still no backfill for t1
+    assert assignment_key(p.id, t1.id) not in db.assignments
+
+    # new task after reactivation → gets assignment
+    t2 = create_task(db, "Task after reactivation", None)
+    assert assignment_key(p.id, t2.id) in db.assignments

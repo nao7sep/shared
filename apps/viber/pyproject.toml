@@ -1,0 +1,27 @@
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
+name = "viber"
+version = "0.1.0"
+description = "Local REPL tool for tracking repeated cross-project maintenance tasks."
+authors = [{ name = "nao7sep", email = "nao7sep@gmail.com" }]
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.0"]
+
+[project.scripts]
+viber = "viber.__main__:main"
+
+[dependency-groups]
+dev = ["pytest", "ruff", "mypy"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+strict = true
