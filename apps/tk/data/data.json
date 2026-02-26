@@ -354,11 +354,11 @@
     },
     {
       "text": "introduce tk, my first python app that nobody else will use :)",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-08T07:18:50.180050+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-26T00:49:08.961474+00:00",
+      "subjective_date": "2026-02-26",
+      "note": "ship products, not self satisfaction"
     },
     {
       "text": "introduce and release polychat",
@@ -545,7 +545,7 @@
       "note": null
     },
     {
-      "text": "regenerate polychat's publish.py. uv-related changes are messy",
+      "text": "regenerate polychat's publish.py. uv-migration-related changes are messy",
       "status": "pending",
       "created_at": "2026-02-19T04:56:31.811729+00:00",
       "handled_at": null,
@@ -676,6 +676,14 @@
       "text": "extract tasks and ideas from voice recordings",
       "status": "pending",
       "created_at": "2026-02-25T03:25:44.330847+00:00",
+      "handled_at": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "develop qc (quality control) tool",
+      "status": "pending",
+      "created_at": "2026-02-26T00:51:58.617581+00:00",
       "handled_at": null,
       "subjective_date": null,
       "note": null

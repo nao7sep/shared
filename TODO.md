@@ -3,7 +3,6 @@
 - read the claude code book on mcp, parallel development, sub-agents
 - write web app that just sends todo mail
 - vocabulary development infrastructure for my daughter
-- introduce tk, my first python app that nobody else will use :)
 - introduce and release polychat
 - automate "recordings => transcription => context"
 - learn about github pages, automation
@@ -15,14 +14,18 @@
 - tool to help organize personal videos/photos
 - tool to scan/translate/share paper documents
 - catalogue of tools and work reports
-- regenerate polychat's publish.py. uv-related changes are messy
+- regenerate polychat's publish.py. uv-migration-related changes are messy
 - it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?
 - generalize publish.py as a any-python-app tool
 - ensure windows compatibility of polychat
 - prepare to end gemini subscription + maybe report how
 - extract tasks and ideas from voice recordings
+- develop qc (quality control) tool
 
 ## History
+
+### 2026-02-26
+- ❌ introduce tk, my first python app that nobody else will use :) => ship products, not self satisfaction
 
 ### 2026-02-25
 - ❌ zip/rar archiver that works just like i want it to => wrote revzip, a more specific app
