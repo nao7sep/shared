@@ -7,33 +7,14 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .constants import (
-    ALIASES,
-    BANNER_LINES,
-    COMMAND_CANCEL_CONFIRM,
-    COMMAND_CANCEL_CONFIRM_LONG,
-    COMMAND_EXIT,
-    COMMAND_QUIT,
-    PROJECT_STATE_ACTIVE,
-    PROJECT_STATE_DEPRECATED,
-    PROJECT_STATE_SUSPENDED,
-    PROMPT,
-    READLINE_BIND_EMACS,
-    READLINE_BIND_ENABLE_KEYPAD,
-    REPL_HELP_TEXT,
-    REPL_HISTORY_SUFFIX,
-    TOKEN_GROUP_PREFIX,
-    TOKEN_PROJECT_PREFIX,
-    TOKEN_TASK_PREFIX,
-    VERB_NAH,
-    VERB_OK,
-)
 from .errors import AssignmentNotFoundError, ViberError
 from .formatter import (
     format_group,
     format_local_time,
     format_project,
+    format_project_ref,
     format_task,
+    format_task_ref,
     print_banner,
     print_blank,
     print_segment,
@@ -63,6 +44,76 @@ from .service import (
 )
 from .store import save_database
 
+_PROMPT = "> "
+_BANNER_LINES = (
+    "Viber — cross-project maintenance tracker",
+    "Type 'help' for commands. Type 'exit' or 'quit' to leave.",
+)
+_ALIASES = {
+    "c": "create",
+    "r": "read",
+    "u": "update",
+    "d": "delete",
+    "v": "view",
+    "o": "ok",
+    "n": "nah",
+    "w": "work",
+}
+_COMMAND_EXIT = "exit"
+_COMMAND_QUIT = "quit"
+_VERB_OK = "ok"
+_VERB_NAH = "nah"
+_COMMAND_CANCEL_CONFIRM = "y"
+_COMMAND_CANCEL_CONFIRM_LONG = "yes"
+_READLINE_BIND_ENABLE_KEYPAD = "set enable-keypad on"
+_READLINE_BIND_EMACS = "set editing-mode emacs"
+_REPL_HISTORY_SUFFIX = ".history"
+
+_TOKEN_GROUP_PREFIX = "g"
+_TOKEN_PROJECT_PREFIX = "p"
+_TOKEN_TASK_PREFIX = "t"
+_PROJECT_STATE_ACTIVE = "active"
+_PROJECT_STATE_SUSPENDED = "suspended"
+_PROJECT_STATE_DEPRECATED = "deprecated"
+
+_HELP_TEXT = """\
+create group <name>                                c g <name>
+create project <name> g<ID>                        c p <name> g<ID>
+create task <description> [g<ID>]                  c t <description> [g<ID>]
+
+read groups                                        r groups
+read projects                                      r projects
+read tasks                                         r tasks
+read g<ID>                                         r g<ID>
+read p<ID>                                         r p<ID>
+read t<ID>                                         r t<ID>
+
+update g<ID> <new-name>                            u g<ID> <new-name>
+update p<ID> name <new-name>                       u p<ID> name <new-name>
+update p<ID> state <active|suspended|deprecated>   u p<ID> state <state>
+update p<ID> <active|suspended|deprecated>         u p<ID> <state>
+update t<ID> <new-description>                     u t<ID> <new-description>
+update p<ID> t<ID> [comment]                       u p<ID> t<ID> [comment]
+update t<ID> p<ID> [comment]                       u t<ID> p<ID> [comment]
+
+delete g<ID>                                       d g<ID>
+delete p<ID>                                       d p<ID>
+delete t<ID>                                       d t<ID>
+
+view                                               v       (all pending)
+view p<ID>                                         v p<ID> (pending tasks for project)
+view t<ID>                                         v t<ID> (pending projects for task)
+
+ok p<ID> t<ID>                                     o p<ID> t<ID>
+ok t<ID> p<ID>                                     o t<ID> p<ID>
+nah p<ID> t<ID>                                    n p<ID> t<ID>
+
+work p<ID>                                         w p<ID> (iterate pending tasks)
+work t<ID>                                         w t<ID> (iterate pending projects)
+
+help
+exit | quit"""
+
 readline_module: Any
 try:
     import readline as readline_module
@@ -80,7 +131,7 @@ def run_repl(
 ) -> None:
     """Run the interactive REPL loop until exit/quit."""
 
-    history_path = data_path.with_suffix(f"{data_path.suffix}{REPL_HISTORY_SUFFIX}")
+    history_path = data_path.with_suffix(f"{data_path.suffix}{_REPL_HISTORY_SUFFIX}")
     _configure_line_editor(history_path)
 
     def after_mutation(
@@ -99,12 +150,12 @@ def run_repl(
         if affected_group_ids:
             render_check_pages(db, check_path, affected_group_ids)
 
-    print_banner(BANNER_LINES)
+    print_banner(_BANNER_LINES)
 
     try:
         while True:
             try:
-                raw = input(PROMPT)
+                raw = input(_PROMPT)
             except (EOFError, KeyboardInterrupt):
                 print()
                 continue
@@ -124,10 +175,10 @@ def run_repl(
                 continue
 
             verb = tokens[0].lower()
-            verb = ALIASES.get(verb, verb)
+            verb = _ALIASES.get(verb, verb)
             args = tokens[1:]
 
-            if verb in (COMMAND_EXIT, COMMAND_QUIT):
+            if verb in (_COMMAND_EXIT, _COMMAND_QUIT):
                 print_segment(["Goodbye."], trailing_blank=False)
                 break
 
@@ -180,7 +231,7 @@ def _dispatch(
 
 
 def _cmd_help() -> None:
-    print_segment(REPL_HELP_TEXT.splitlines())
+    print_segment(_HELP_TEXT.splitlines())
 
 
 def _cmd_create(
@@ -209,7 +260,7 @@ def _cmd_create(
             print_segment(["Usage: create project <name> g<ID>"])
             return
         group_token = args[-1]
-        group_id = _parse_id_token(group_token, TOKEN_GROUP_PREFIX)
+        group_id = _parse_id_token(group_token, _TOKEN_GROUP_PREFIX)
         if group_id is None:
             print_segment([f"Invalid group reference '{group_token}'. Expected g<ID>."])
             return
@@ -228,8 +279,8 @@ def _cmd_create(
         task_group_id: int | None = None
         desc_tokens = args[1:]
         # Check if last token is a group reference
-        if desc_tokens and _parse_id_token(desc_tokens[-1], TOKEN_GROUP_PREFIX) is not None:
-            task_group_id = _parse_id_token(desc_tokens[-1], TOKEN_GROUP_PREFIX)
+        if desc_tokens and _parse_id_token(desc_tokens[-1], _TOKEN_GROUP_PREFIX) is not None:
+            task_group_id = _parse_id_token(desc_tokens[-1], _TOKEN_GROUP_PREFIX)
             desc_tokens = desc_tokens[:-1]
         if not desc_tokens:
             print_segment(["Task description cannot be empty."])
@@ -274,7 +325,7 @@ def _cmd_read(args: list[str], db: Database) -> None:
                 if g:
                     lines.append(format_project(p, g))
                 else:
-                    lines.append(f"p{p.id}: {p.name} [{p.state.value}] (group: ?)")
+                    lines.append(f"{p.name} (p{p.id}) [{p.state.value}] (group: ?)")
             print_segment(lines)
 
     elif token in ("tasks", "t"):
@@ -285,7 +336,7 @@ def _cmd_read(args: list[str], db: Database) -> None:
             print_segment([format_task(t, db) for t in tasks])
 
     elif token.startswith("g"):
-        gid = _parse_id_token(token, TOKEN_GROUP_PREFIX)
+        gid = _parse_id_token(token, _TOKEN_GROUP_PREFIX)
         if gid is None:
             print_segment([f"Invalid group reference '{token}'."])
             return
@@ -293,7 +344,7 @@ def _cmd_read(args: list[str], db: Database) -> None:
         print_segment([format_group(group)])
 
     elif token.startswith("p"):
-        pid = _parse_id_token(token, TOKEN_PROJECT_PREFIX)
+        pid = _parse_id_token(token, _TOKEN_PROJECT_PREFIX)
         if pid is None:
             print_segment([f"Invalid project reference '{token}'."])
             return
@@ -303,10 +354,10 @@ def _cmd_read(args: list[str], db: Database) -> None:
         if maybe_group is not None:
             print_segment([format_project(project, maybe_group)])
         else:
-            print_segment([f"p{project.id}: {project.name} [{project.state.value}]"])
+            print_segment([f"{project.name} (p{project.id}) [{project.state.value}]"])
 
     elif token.startswith("t"):
-        tid = _parse_id_token(token, TOKEN_TASK_PREFIX)
+        tid = _parse_id_token(token, _TOKEN_TASK_PREFIX)
         if tid is None:
             print_segment([f"Invalid task reference '{token}'."])
             return
@@ -338,7 +389,7 @@ def _cmd_update(
     token = args[0].lower()
 
     if token.startswith("g"):
-        gid = _parse_id_token(token, TOKEN_GROUP_PREFIX)
+        gid = _parse_id_token(token, _TOKEN_GROUP_PREFIX)
         if gid is None:
             print_segment([f"Invalid group reference '{token}'."])
             return
@@ -363,7 +414,7 @@ def _cmd_update(
         return
 
     if token.startswith("p"):
-        pid = _parse_id_token(token, TOKEN_PROJECT_PREFIX)
+        pid = _parse_id_token(token, _TOKEN_PROJECT_PREFIX)
         if pid is None:
             print_segment([f"Invalid project reference '{token}'."])
             return
@@ -376,7 +427,7 @@ def _cmd_update(
             ])
             return
         second = args[1].lower()
-        assignment_tid = _parse_id_token(second, TOKEN_TASK_PREFIX)
+        assignment_tid = _parse_id_token(second, _TOKEN_TASK_PREFIX)
         if assignment_tid is not None:
             comment = _join_tokens(args[2:])
             update_assignment_comment(db, pid, assignment_tid, comment or None)
@@ -418,9 +469,9 @@ def _cmd_update(
             state_str = second
 
         state_map = {
-            PROJECT_STATE_ACTIVE: ProjectState.ACTIVE,
-            PROJECT_STATE_SUSPENDED: ProjectState.SUSPENDED,
-            PROJECT_STATE_DEPRECATED: ProjectState.DEPRECATED,
+            _PROJECT_STATE_ACTIVE: ProjectState.ACTIVE,
+            _PROJECT_STATE_SUSPENDED: ProjectState.SUSPENDED,
+            _PROJECT_STATE_DEPRECATED: ProjectState.DEPRECATED,
         }
         if state_str in state_map:
             project = set_project_state(db, pid, state_map[state_str])
@@ -448,12 +499,12 @@ def _cmd_update(
         return
 
     elif token.startswith("t"):
-        tid = _parse_id_token(token, TOKEN_TASK_PREFIX)
+        tid = _parse_id_token(token, _TOKEN_TASK_PREFIX)
         if tid is None:
             print_segment([f"Invalid task reference '{token}'."])
             return
         if len(args) >= 2:
-            maybe_pid = _parse_id_token(args[1].lower(), TOKEN_PROJECT_PREFIX)
+            maybe_pid = _parse_id_token(args[1].lower(), _TOKEN_PROJECT_PREFIX)
             if maybe_pid is not None:
                 comment = _join_tokens(args[2:])
                 update_assignment_comment(db, maybe_pid, tid, comment or None)
@@ -471,7 +522,7 @@ def _cmd_update(
                 return
             task = update_task_description(db, tid, new_desc)
             after_mutation(_task_affected_group_ids(db, task.group_id), None)
-            print_segment([f"Updated task: t{task.id} is now \"{task.description}\"."])
+            print_segment([f"Updated task: {format_task_ref(task)}."])
             return
 
         task = get_task(db, tid)
@@ -487,7 +538,7 @@ def _cmd_update(
             return
         task = update_task_description(db, tid, new_desc)
         after_mutation(_task_affected_group_ids(db, task.group_id), None)
-        print_segment([f"Updated task: t{task.id} is now \"{task.description}\"."])
+        print_segment([f"Updated task: {format_task_ref(task)}."])
 
     else:
         print_segment([f"Unknown target '{token}'. Expected g<ID>, p<ID>, or t<ID>."])
@@ -503,7 +554,7 @@ def _cmd_delete(
     token = args[0].lower()
 
     if token.startswith("g"):
-        gid = _parse_id_token(token, TOKEN_GROUP_PREFIX)
+        gid = _parse_id_token(token, _TOKEN_GROUP_PREFIX)
         if gid is None:
             print_segment([f"Invalid group reference '{token}'."])
             return
@@ -512,7 +563,7 @@ def _cmd_delete(
         print_segment([f"Deleted group: {group.name} (g{group.id})."])
 
     elif token.startswith("p"):
-        pid = _parse_id_token(token, TOKEN_PROJECT_PREFIX)
+        pid = _parse_id_token(token, _TOKEN_PROJECT_PREFIX)
         if pid is None:
             print_segment([f"Invalid project reference '{token}'."])
             return
@@ -521,7 +572,7 @@ def _cmd_delete(
         print_segment([f"Deleted project: {project.name} (p{project.id})."])
 
     elif token.startswith("t"):
-        tid = _parse_id_token(token, TOKEN_TASK_PREFIX)
+        tid = _parse_id_token(token, _TOKEN_TASK_PREFIX)
         if tid is None:
             print_segment([f"Invalid task reference '{token}'."])
             return
@@ -543,7 +594,7 @@ def _cmd_view(args: list[str], db: Database) -> None:
             lines = []
             for e in entries:
                 lines.append(
-                    f"p{e.project.id}/{e.project.name} + t{e.task.id}: {e.task.description}"
+                    f"{format_project_ref(e.project)} + {format_task_ref(e.task)}"
                 )
             print_segment(lines)
         return
@@ -551,34 +602,34 @@ def _cmd_view(args: list[str], db: Database) -> None:
     token = args[0].lower()
 
     if token.startswith("p"):
-        pid = _parse_id_token(token, TOKEN_PROJECT_PREFIX)
+        pid = _parse_id_token(token, _TOKEN_PROJECT_PREFIX)
         if pid is None:
             print_segment([f"Invalid project reference '{token}'."])
             return
         project = get_project(db, pid)
         results = pending_by_project(db, pid)
         if not results:
-            print_segment([f"No pending tasks for p{pid}: {project.name}."])
+            print_segment([f"No pending tasks for {format_project_ref(project)}."])
         else:
-            lines = [f"Pending tasks for p{pid}: {project.name}:"]
+            lines = [f"Pending tasks for {format_project_ref(project)}:"]
             for task, _a in results:
                 created = format_local_time(task.created_utc).split(" ")[0]
-                lines.append(f"  t{task.id}: {task.description} ({created})")
+                lines.append(f"  {format_task_ref(task)} ({created})")
             print_segment(lines)
 
     elif token.startswith("t"):
-        tid = _parse_id_token(token, TOKEN_TASK_PREFIX)
+        tid = _parse_id_token(token, _TOKEN_TASK_PREFIX)
         if tid is None:
             print_segment([f"Invalid task reference '{token}'."])
             return
         task = get_task(db, tid)
         task_results = pending_by_task(db, tid)
         if not task_results:
-            print_segment([f"No pending projects for t{tid}: {task.description}."])
+            print_segment([f"No pending projects for {format_task_ref(task)}."])
         else:
-            lines = [f"Pending projects for t{tid}: {task.description}:"]
+            lines = [f"Pending projects for {format_task_ref(task)}:"]
             for project, group, _a in task_results:
-                lines.append(f"  p{project.id}: {project.name} (group: {group.name})")
+                lines.append(f"  {format_project_ref(project)} (group: {group.name})")
             print_segment(lines)
 
     else:
@@ -593,7 +644,7 @@ def _cmd_resolve(
 ) -> None:
     """Handle ok/nah with either p<ID> t<ID> or t<ID> p<ID> token order."""
     if len(args) < 2:
-        verb = VERB_OK if status == AssignmentStatus.OK else VERB_NAH
+        verb = _VERB_OK if status == AssignmentStatus.OK else _VERB_NAH
         print_segment([f"Usage: {verb} p<ID> t<ID>"])
         return
 
@@ -610,12 +661,12 @@ def _cmd_resolve(
         raise AssignmentNotFoundError(pid, tid)
 
     assignment = db.assignments[key]
-    verb_label = VERB_OK if status == AssignmentStatus.OK else VERB_NAH
+    verb_label = _VERB_OK if status == AssignmentStatus.OK else _VERB_NAH
 
     print_segment([
         f"Resolving as '{verb_label}':",
-        f"  Project: p{project.id}: {project.name}",
-        f"  Task:    t{task.id}: {task.description}",
+        f"  Project: {format_project_ref(project)}",
+        f"  Task:    {format_task_ref(task)}",
         f"  Current: {assignment.status.value}",
     ], trailing_blank=False)
 
@@ -626,7 +677,7 @@ def _cmd_resolve(
         print_segment(["Cancelled."])
         return
 
-    if confirm not in (COMMAND_CANCEL_CONFIRM, COMMAND_CANCEL_CONFIRM_LONG):
+    if confirm not in (_COMMAND_CANCEL_CONFIRM, _COMMAND_CANCEL_CONFIRM_LONG):
         print_segment(["Cancelled."])
         return
 
@@ -655,7 +706,7 @@ def _cmd_work(
     token = args[0].lower()
 
     if token.startswith("p"):
-        pid = _parse_id_token(token, TOKEN_PROJECT_PREFIX)
+        pid = _parse_id_token(token, _TOKEN_PROJECT_PREFIX)
         if pid is None:
             print_segment([f"Invalid project reference '{token}'."])
             return
@@ -663,7 +714,7 @@ def _cmd_work(
         _work_by_project(db, project, after_mutation)
 
     elif token.startswith("t"):
-        tid = _parse_id_token(token, TOKEN_TASK_PREFIX)
+        tid = _parse_id_token(token, _TOKEN_TASK_PREFIX)
         if tid is None:
             print_segment([f"Invalid task reference '{token}'."])
             return
@@ -684,7 +735,7 @@ def _work_by_project(
 
     results = pending_by_project(db, project.id)
     if not results:
-        print_segment([f"No pending tasks for p{project.id}: {project.name}."])
+        print_segment([f"No pending tasks for {format_project_ref(project)}."])
         return
 
     print_segment([
@@ -694,7 +745,7 @@ def _work_by_project(
 
     for i, (task, _a) in enumerate(results, 1):
         created = format_local_time(task.created_utc).split(" ")[0]
-        print(f"[{i}/{len(results)}] t{task.id}: {task.description} ({created})")
+        print(f"[{i}/{len(results)}] {format_task_ref(task)} ({created})")
 
         action = _prompt_work_action()
         if action == "q":
@@ -712,7 +763,7 @@ def _work_by_project(
             comment = comment_raw if comment_raw else None
             resolve_assignment(db, project.id, task.id, status, comment)
             after_mutation({project.group_id}, None)
-            verb_label = VERB_OK if status == AssignmentStatus.OK else VERB_NAH
+            verb_label = _VERB_OK if status == AssignmentStatus.OK else _VERB_NAH
             print(f"Updated assignment to {verb_label}.")
         print_blank()
 
@@ -729,7 +780,7 @@ def _work_by_task(
 
     results = pending_by_task(db, task.id)
     if not results:
-        print_segment([f"No pending projects for t{task.id}: {task.description}."])
+        print_segment([f"No pending projects for {format_task_ref(task)}."])
         return
 
     print_segment([
@@ -738,7 +789,7 @@ def _work_by_task(
     print_blank()
 
     for i, (project, group, _a) in enumerate(results, 1):
-        print(f"[{i}/{len(results)}] p{project.id}: {project.name} (group: {group.name})")
+        print(f"[{i}/{len(results)}] {format_project_ref(project)} (group: {group.name})")
 
         action = _prompt_work_action()
         if action == "q":
@@ -756,7 +807,7 @@ def _work_by_task(
             comment = comment_raw if comment_raw else None
             resolve_assignment(db, project.id, task.id, status, comment)
             after_mutation({project.group_id}, None)
-            verb_label = VERB_OK if status == AssignmentStatus.OK else VERB_NAH
+            verb_label = _VERB_OK if status == AssignmentStatus.OK else _VERB_NAH
             print(f"Updated assignment to {verb_label}.")
         print_blank()
 
@@ -801,8 +852,8 @@ def _configure_line_editor(history_path: Path) -> None:
     if readline is None:
         return
     try:
-        readline.parse_and_bind(READLINE_BIND_ENABLE_KEYPAD)
-        readline.parse_and_bind(READLINE_BIND_EMACS)
+        readline.parse_and_bind(_READLINE_BIND_ENABLE_KEYPAD)
+        readline.parse_and_bind(_READLINE_BIND_EMACS)
     except Exception:  # noqa: BLE001
         pass
     try:
@@ -864,8 +915,8 @@ def _parse_pt_tokens(
     a = a.lower()
     b = b.lower()
 
-    if a.startswith(TOKEN_PROJECT_PREFIX) and b.startswith(TOKEN_TASK_PREFIX):
-        return _parse_id_token(a, TOKEN_PROJECT_PREFIX), _parse_id_token(b, TOKEN_TASK_PREFIX)
-    if a.startswith(TOKEN_TASK_PREFIX) and b.startswith(TOKEN_PROJECT_PREFIX):
-        return _parse_id_token(b, TOKEN_PROJECT_PREFIX), _parse_id_token(a, TOKEN_TASK_PREFIX)
+    if a.startswith(_TOKEN_PROJECT_PREFIX) and b.startswith(_TOKEN_TASK_PREFIX):
+        return _parse_id_token(a, _TOKEN_PROJECT_PREFIX), _parse_id_token(b, _TOKEN_TASK_PREFIX)
+    if a.startswith(_TOKEN_TASK_PREFIX) and b.startswith(_TOKEN_PROJECT_PREFIX):
+        return _parse_id_token(b, _TOKEN_PROJECT_PREFIX), _parse_id_token(a, _TOKEN_TASK_PREFIX)
     return None, None

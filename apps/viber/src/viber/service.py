@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from .constants import UTC_OFFSET_ZERO, UTC_SUFFIX_Z
 from .errors import (
     AssignmentNotFoundError,
     DuplicateNameError,
@@ -23,6 +22,9 @@ from .models import (
     Task,
     assignment_key,
 )
+
+_UTC_OFFSET_ZERO = "+00:00"
+_UTC_SUFFIX_Z = "Z"
 
 # ---------------------------------------------------------------------------
 # Groups
@@ -146,7 +148,7 @@ def create_task(
     if group_id is not None:
         get_group(db, group_id)  # validate group exists
 
-    created_utc = datetime.now(UTC).isoformat().replace(UTC_OFFSET_ZERO, UTC_SUFFIX_Z)
+    created_utc = datetime.now(UTC).isoformat().replace(_UTC_OFFSET_ZERO, _UTC_SUFFIX_Z)
     task = Task(
         id=db.next_task_id,
         description=description,

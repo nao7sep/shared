@@ -10,35 +10,6 @@ import html
 from collections.abc import Sequence
 from pathlib import Path
 
-from .constants import (
-    DATE_PART_INDEX,
-    DATE_PART_SEPARATOR,
-    HTML_COL_CREATED,
-    HTML_COL_TASK,
-    HTML_DEFAULT_SUFFIX,
-    HTML_DOC_TYPE,
-    HTML_EMPTY_GROUP_TEXT,
-    HTML_META_CHARSET,
-    HTML_ROW_CLOSE,
-    HTML_ROW_OPEN,
-    HTML_STATUS_SYMBOL_NAH,
-    HTML_STATUS_SYMBOL_OK,
-    HTML_STATUS_SYMBOL_PENDING,
-    HTML_STYLE_LINES,
-    HTML_TABLE_CLOSE,
-    HTML_TABLE_OPEN,
-    HTML_TAG_BODY_CLOSE,
-    HTML_TAG_BODY_OPEN,
-    HTML_TAG_HEAD_CLOSE,
-    HTML_TAG_HEAD_OPEN,
-    HTML_TAG_HTML_CLOSE,
-    HTML_TAG_HTML_OPEN,
-    HTML_TBODY_CLOSE,
-    HTML_TBODY_OPEN,
-    HTML_THEAD_CLOSE,
-    HTML_THEAD_OPEN,
-    HTML_TITLE_PREFIX,
-)
 from .formatter import format_local_time
 from .models import (
     Assignment,
@@ -51,6 +22,12 @@ from .models import (
     assignment_key,
 )
 from .path_mapping import slugify
+
+_DEFAULT_SUFFIX = ".html"
+_STATUS_SYMBOL_OK = "✅"
+_STATUS_SYMBOL_NAH = "❌"
+# Keep pending visually neutral and unobtrusive in tables.
+_STATUS_SYMBOL_PENDING = "&nbsp;"
 
 
 def render_check_pages(
@@ -93,7 +70,7 @@ def check_page_path(check_base: Path, group_name: str) -> Path:
     """Return the check-page path for one group name."""
     out_dir = check_base.parent
     stem = check_base.stem
-    suffix = check_base.suffix or HTML_DEFAULT_SUFFIX
+    suffix = check_base.suffix or _DEFAULT_SUFFIX
     slug = slugify(group_name)
     return out_dir / f"{stem}-{slug}{suffix}"
 
@@ -119,34 +96,43 @@ def _render_group_page(db: Database, group_id: int, group_name: str) -> str:
     title = html.escape(group_name)
 
     lines: list[str] = [
-        HTML_DOC_TYPE,
-        HTML_TAG_HTML_OPEN,
-        HTML_TAG_HEAD_OPEN,
-        f'  <meta charset="{HTML_META_CHARSET}">',
-        f"  <title>{HTML_TITLE_PREFIX}{title}</title>",
+        "<!DOCTYPE html>",
+        '<html lang="en">',
+        "<head>",
+        '  <meta charset="UTF-8">',
+        f"  <title>Viber Check — {title}</title>",
         "  <style>",
-        *HTML_STYLE_LINES,
+        "    body { font-family: sans-serif; font-size: 14px; }",
+        "    table { border-collapse: collapse; }",
+        "    th, td { border: 1px solid #ccc; padding: 4px 8px;"
+        " text-align: center; vertical-align: top; }",
+        "    th { background: #f5f5f5; font-weight: bold; }",
+        "    td.task-desc { text-align: left; max-width: 300px; word-break: break-word; }",
+        "    td.gap { background: #ccc; }",
+        "    td.pending { }",
+        "    td.ok { }",
+        "    td.nah { }",
         "  </style>",
-        HTML_TAG_HEAD_CLOSE,
-        HTML_TAG_BODY_OPEN,
+        "</head>",
+        "<body>",
         f"  <h1>{title}</h1>",
     ]
 
     if not projects and not tasks:
-        lines += [HTML_EMPTY_GROUP_TEXT]
+        lines += ["  <p>No projects or tasks in this group.</p>"]
     else:
         lines += _render_table(db, projects, tasks)
 
-    lines += [HTML_TAG_BODY_CLOSE, HTML_TAG_HTML_CLOSE, ""]
+    lines += ["</body>", "</html>", ""]
     return "\n".join(lines)
 
 
 def _render_table(
     db: Database, projects: list[Project], tasks: Sequence[Task]
 ) -> list[str]:
-    lines: list[str] = [HTML_TABLE_OPEN, HTML_THEAD_OPEN, HTML_ROW_OPEN]
-    lines.append(HTML_COL_TASK)
-    lines.append(HTML_COL_CREATED)
+    lines: list[str] = ["  <table>", "    <thead>", "      <tr>"]
+    lines.append("        <th>Task</th>")
+    lines.append("        <th>Created</th>")
 
     for p in projects:
         label = html.escape(p.name)
@@ -154,12 +140,12 @@ def _render_table(
             label += " <em>(suspended)</em>"
         lines.append(f"        <th>{label}</th>")
 
-    lines += [HTML_ROW_CLOSE, HTML_THEAD_CLOSE, HTML_TBODY_OPEN]
+    lines += ["      </tr>", "    </thead>", "    <tbody>"]
 
     for task in tasks:
-        created = format_local_time(task.created_utc).split(DATE_PART_SEPARATOR)[DATE_PART_INDEX]
+        created = format_local_time(task.created_utc).split(" ")[0]
         desc = html.escape(task.description)
-        lines.append(HTML_ROW_OPEN)
+        lines.append("      <tr>")
         lines.append(f'        <td class="task-desc">{desc}</td>')
         lines.append(f"        <td>{html.escape(created)}</td>")
 
@@ -172,18 +158,18 @@ def _render_table(
                 cell_class, symbol = _cell_for_status(a.status)
                 lines.append(f'        <td class="{cell_class}">{symbol}</td>')
 
-        lines.append(HTML_ROW_CLOSE)
+        lines.append("      </tr>")
 
-    lines += [HTML_TBODY_CLOSE, HTML_TABLE_CLOSE]
+    lines += ["    </tbody>", "  </table>"]
     return lines
 
 
 def _cell_for_status(status: AssignmentStatus) -> tuple[str, str]:
     if status == AssignmentStatus.OK:
-        return "ok", HTML_STATUS_SYMBOL_OK
+        return "ok", _STATUS_SYMBOL_OK
     if status == AssignmentStatus.NAH:
-        return "nah", HTML_STATUS_SYMBOL_NAH
-    return "pending", HTML_STATUS_SYMBOL_PENDING
+        return "nah", _STATUS_SYMBOL_NAH
+    return "pending", _STATUS_SYMBOL_PENDING
 
 
 def _select_groups(db: Database, group_ids: set[int] | None) -> list[Group]:
