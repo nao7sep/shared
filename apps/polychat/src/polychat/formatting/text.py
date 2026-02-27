@@ -6,7 +6,7 @@ import re
 import unicodedata
 from typing import Callable
 
-from ..constants import BORDERLINE_CHAR, BORDERLINE_WIDTH, TRUNCATE_SEARCH_RADIUS
+from .constants import BORDERLINE_CHAR, BORDERLINE_WIDTH, TRUNCATE_SEARCH_RADIUS
 
 
 def text_to_lines(text: str) -> list[str]:

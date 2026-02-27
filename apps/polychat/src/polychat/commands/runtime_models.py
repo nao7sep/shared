@@ -9,7 +9,7 @@ from ..ai.catalog import (
     resolve_model_candidates,
     resolve_provider_shortcut,
 )
-from ..constants import DISPLAY_UNKNOWN
+from ..formatting.constants import DISPLAY_UNKNOWN
 from ..timeouts import resolve_profile_timeout
 
 if TYPE_CHECKING:

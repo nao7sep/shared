@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from ..constants import DATETIME_FORMAT_SHORT, DISPLAY_UNKNOWN
+from .constants import DATETIME_FORMAT_SHORT, DISPLAY_UNKNOWN
 
 
 def _format_updated_time(updated_at: object) -> str:

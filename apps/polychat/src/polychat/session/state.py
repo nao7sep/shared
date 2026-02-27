@@ -7,7 +7,9 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .. import hex_id
-from ..constants import EMOJI_WARNING
+
+
+EMOJI_WARNING = "⚠️"
 
 
 @dataclass

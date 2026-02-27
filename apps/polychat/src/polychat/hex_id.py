@@ -8,7 +8,9 @@ change on each app run.
 import random
 from typing import Any, Set
 
-from .constants import HEX_ID_MAX_ATTEMPTS, HEX_ID_MIN_DIGITS
+
+HEX_ID_MIN_DIGITS = 3
+HEX_ID_MAX_ATTEMPTS = 3
 
 
 def generate_hex_id(existing_ids: Set[str], min_digits: int = HEX_ID_MIN_DIGITS) -> str:

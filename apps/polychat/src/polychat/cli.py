@@ -8,7 +8,7 @@ import time
 from typing import cast
 
 from . import chat, profile, setup_wizard
-from .constants import DISPLAY_UNKNOWN
+from .formatting.constants import DISPLAY_UNKNOWN
 from .logging import (
     build_run_log_path,
     log_event,

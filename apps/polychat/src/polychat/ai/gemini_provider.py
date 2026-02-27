@@ -9,7 +9,7 @@ from google.genai.errors import (
     ServerError,
 )
 
-from ..constants import DISPLAY_UNKNOWN
+from ..formatting.constants import DISPLAY_UNKNOWN
 from ..logging import log_event
 from ..timeouts import (
     DEFAULT_PROFILE_TIMEOUT_SEC,

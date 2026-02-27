@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ..constants import (
+from .constants import (
     DATETIME_FORMAT_SHORT,
     DISPLAY_MISSING_HEX_ID,
     DISPLAY_UNKNOWN,

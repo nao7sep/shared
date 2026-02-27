@@ -9,14 +9,13 @@ from pathlib import Path
 from typing import Optional
 
 from .constants import (
-    BORDERLINE_CHAR,
-    BORDERLINE_WIDTH,
     BUILTIN_PROMPT_SYSTEM_DEFAULT,
     BUILTIN_PROMPT_TITLE,
     BUILTIN_PROMPT_SUMMARY,
     BUILTIN_PROMPT_SAFETY,
     USER_DATA_DIR,
 )
+from .formatting.constants import BORDERLINE_CHAR, BORDERLINE_WIDTH
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
 
 # Fixed paths for setup wizard

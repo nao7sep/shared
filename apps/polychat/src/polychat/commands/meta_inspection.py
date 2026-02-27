@@ -3,13 +3,11 @@
 from typing import TYPE_CHECKING
 
 from .. import hex_id
-from ..constants import (
+from ..formatting.constants import (
     DATETIME_FORMAT_FULL,
     DATETIME_FORMAT_SHORT,
     DISPLAY_NONE,
     DISPLAY_UNKNOWN,
-    HISTORY_DEFAULT_LIMIT,
-    MESSAGE_PREVIEW_LENGTH,
 )
 from ..formatting.history import (
     create_history_formatter,
@@ -28,6 +26,13 @@ if TYPE_CHECKING:
 else:
     class _CommandDependencies:
         pass
+
+
+# Default number of messages shown by /history.
+HISTORY_DEFAULT_LIMIT = 10
+
+# One-line preview length for /history and /status.
+MESSAGE_PREVIEW_LENGTH = 100
 
 
 class MetadataInspectionCommandHandlers:

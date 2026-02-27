@@ -6,7 +6,8 @@ from typing import Any, Optional, TYPE_CHECKING
 
 from ..ai.capabilities import provider_supports_search
 from ..ai.catalog import resolve_provider_shortcut
-from ..constants import CHAT_FILE_EXTENSION, DISPLAY_UNKNOWN
+from ..constants import CHAT_FILE_EXTENSION
+from ..formatting.constants import DISPLAY_UNKNOWN
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
 from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort

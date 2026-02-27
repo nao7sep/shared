@@ -13,13 +13,8 @@ from prompt_toolkit.key_binding import KeyBindings
 
 from .. import chat
 from ..commands import CommandHandler
-from ..constants import (
-    BORDERLINE_CHAR,
-    BORDERLINE_WIDTH,
-    EMOJI_MODE_RETRY,
-    EMOJI_MODE_SECRET,
-    REPL_HISTORY_FILE,
-)
+from ..constants import REPL_HISTORY_FILE
+from ..formatting.constants import BORDERLINE_CHAR, BORDERLINE_WIDTH
 from ..logging import log_event, summarize_command_args
 from ..orchestrator import ChatOrchestrator
 from ..orchestration.types import (
@@ -34,6 +29,10 @@ from ..session_manager import SessionManager
 from ..timeouts import resolve_profile_timeout
 from ..ui.interaction import ThreadedConsoleInteraction
 from .send_pipeline import execute_send_action
+
+
+EMOJI_MODE_RETRY = "♻️"
+EMOJI_MODE_SECRET = "🔒"
 
 
 def build_key_bindings(manager: SessionManager) -> KeyBindings:
