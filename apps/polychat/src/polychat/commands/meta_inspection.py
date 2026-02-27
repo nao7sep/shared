@@ -126,10 +126,10 @@ class MetadataInspectionCommandHandlers:
 
         msg = messages[msg_index]
         role = msg.get("role", DISPLAY_UNKNOWN)
-        timestamp = msg.get("timestamp", "")
+        timestamp_utc = msg.get("timestamp_utc", "")
 
-        if timestamp:
-            time_str = self._deps._to_local_time(timestamp, DATETIME_FORMAT_FULL)
+        if timestamp_utc:
+            time_str = self._deps._to_local_time(timestamp_utc, DATETIME_FORMAT_FULL)
         else:
             time_str = DISPLAY_UNKNOWN
 
@@ -187,9 +187,9 @@ class MetadataInspectionCommandHandlers:
         safety_prompt = profile_data.get("safety_prompt", DISPLAY_NONE)
 
         updated_local = DISPLAY_UNKNOWN
-        updated_at = metadata.get("updated_at")
-        if updated_at:
-            updated_local = self._deps._to_local_time(updated_at, DATETIME_FORMAT_SHORT)
+        updated_utc = metadata.get("updated_utc")
+        if updated_utc:
+            updated_local = self._deps._to_local_time(updated_utc, DATETIME_FORMAT_SHORT)
 
         output = [
             "Session Status",

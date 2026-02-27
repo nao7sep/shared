@@ -8,7 +8,7 @@ from typing import Any
 
 from .errors import MetadataError
 from .models import SnapshotMetadata
-from .timestamps import parse_created_utc
+from .timestamps import parse_created_at, parse_created_utc
 
 
 def write_snapshot_metadata(
@@ -55,6 +55,12 @@ def read_snapshot_metadata(*, metadata_path_abs: Path) -> SnapshotMetadata:
         ) from exc
 
     created_at = _get_required_str(payload, "created_at", metadata_path_abs)
+    try:
+        parse_created_at(created_at)
+    except ValueError as exc:
+        raise MetadataError(
+            f"Invalid created_at timestamp in metadata: {metadata_path_abs}"
+        ) from exc
     comment = _get_required_str(payload, "comment", metadata_path_abs)
     comment_filename_segment = _get_required_str(
         payload, "comment_filename_segment", metadata_path_abs

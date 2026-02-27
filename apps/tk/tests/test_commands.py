@@ -26,30 +26,30 @@ class TestListPendingData:
         assert items[0]["display_num"] == 1
         assert items[0]["task"]["text"] == "Task one"
 
-    def test_list_pending_data_sorts_by_created_at(self, sample_session):
-        """Test that pending tasks are sorted by created_at."""
+    def test_list_pending_data_sorts_by_created_utc(self, sample_session):
+        """Test that pending tasks are sorted by created_utc."""
         sample_session.tasks["tasks"] = [
             {
                 "text": "Third",
                 "status": "pending",
-                "created_at": "2026-02-03T10:00:00+00:00",
-                "handled_at": None,
+                "created_utc": "2026-02-03T10:00:00+00:00",
+                "handled_utc": None,
                 "subjective_date": None,
                 "note": None,
             },
             {
                 "text": "First",
                 "status": "pending",
-                "created_at": "2026-02-01T10:00:00+00:00",
-                "handled_at": None,
+                "created_utc": "2026-02-01T10:00:00+00:00",
+                "handled_utc": None,
                 "subjective_date": None,
                 "note": None,
             },
             {
                 "text": "Second",
                 "status": "pending",
-                "created_at": "2026-02-02T10:00:00+00:00",
-                "handled_at": None,
+                "created_utc": "2026-02-02T10:00:00+00:00",
+                "handled_utc": None,
                 "subjective_date": None,
                 "note": None,
             },
@@ -90,8 +90,8 @@ class TestListHistoryData:
         sample_session.tasks["tasks"].append({
             "text": "Old task",
             "status": "done",
-            "created_at": "2026-01-30T10:00:00+00:00",
-            "handled_at": "2026-01-30T15:00:00+00:00",
+            "created_utc": "2026-01-30T10:00:00+00:00",
+            "handled_utc": "2026-01-30T15:00:00+00:00",
             "subjective_date": "2026-01-30",
             "note": None,
         })
@@ -167,13 +167,13 @@ class TestCmdDone:
         assert task["status"] == "done"
 
     @freeze_time("2026-02-09 10:00:00", tz_offset=0)
-    def test_cmd_done_sets_handled_at(self, sample_session):
-        """Test that cmd_done sets handled_at timestamp."""
+    def test_cmd_done_sets_handled_utc(self, sample_session):
+        """Test that cmd_done sets handled_utc timestamp."""
         commands.cmd_done(sample_session, 0)
 
         task = sample_session.tasks["tasks"][0]
-        assert task["handled_at"] is not None
-        assert "2026-02-09" in task["handled_at"]
+        assert task["handled_utc"] is not None
+        assert "2026-02-09" in task["handled_utc"]
 
     @freeze_time("2026-02-09 10:00:00", tz_offset=0)
     def test_cmd_done_sets_subjective_date(self, sample_session):

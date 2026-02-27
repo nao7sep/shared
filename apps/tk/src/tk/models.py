@@ -14,7 +14,7 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-_TASK_FIELDS = ("text", "status", "created_at", "handled_at", "subjective_date", "note")
+_TASK_FIELDS = ("text", "status", "created_utc", "handled_utc", "subjective_date", "note")
 _PROFILE_FIELDS = (
     "timezone",
     "subjective_day_start",
@@ -38,8 +38,8 @@ class Task:
 
     text: str
     status: str
-    created_at: str
-    handled_at: str | None = None
+    created_utc: str
+    handled_utc: str | None = None
     subjective_date: str | None = None
     note: str | None = None
 
@@ -49,11 +49,17 @@ class Task:
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "Task":
         """Create task from a dict-like payload."""
+        created_utc = payload.get("created_utc")
+        if created_utc is None:
+            raise ValueError("Task missing required field: created_utc")
+
+        handled_utc = payload.get("handled_utc")
+
         return cls(
             text=str(payload["text"]),
             status=str(payload["status"]),
-            created_at=str(payload["created_at"]),
-            handled_at=None if payload.get("handled_at") is None else str(payload.get("handled_at")),
+            created_utc=str(created_utc),
+            handled_utc=None if handled_utc is None else str(handled_utc),
             subjective_date=None
             if payload.get("subjective_date") is None
             else str(payload.get("subjective_date")),
@@ -65,8 +71,8 @@ class Task:
         return {
             "text": self.text,
             "status": self.status,
-            "created_at": self.created_at,
-            "handled_at": self.handled_at,
+            "created_utc": self.created_utc,
+            "handled_utc": self.handled_utc,
             "subjective_date": self.subjective_date,
             "note": self.note,
         }
@@ -85,7 +91,7 @@ class Task:
             self.status = _coerce_task_status(str(value))
             return
 
-        if key in ("handled_at", "subjective_date", "note"):
+        if key in ("handled_utc", "subjective_date", "note"):
             setattr(self, key, None if value is None else str(value))
             return
 
@@ -141,8 +147,8 @@ class TaskStore:
             Task(
                 text=text,
                 status=TaskStatus.PENDING.value,
-                created_at=now_utc,
-                handled_at=None,
+                created_utc=now_utc,
+                handled_utc=None,
                 subjective_date=None,
                 note=None,
             )
@@ -157,7 +163,7 @@ class TaskStore:
 
     def update_task(self, index: int, **updates: Any) -> bool:
         """Update task fields at index."""
-        allowed_fields = {"text", "status", "handled_at", "subjective_date", "note"}
+        allowed_fields = {"text", "status", "handled_utc", "subjective_date", "note"}
         invalid_fields = set(updates.keys()) - allowed_fields
         if invalid_fields:
             raise ValueError(f"Invalid task fields: {', '.join(sorted(invalid_fields))}")

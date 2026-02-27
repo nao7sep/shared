@@ -12,33 +12,33 @@ def mock_session_manager_with_messages():
         "metadata": {},
         "messages": [
             {
-                "timestamp": "2026-02-02T10:00:00+00:00",
+                "timestamp_utc": "2026-02-02T10:00:00+00:00",
                 "role": "user",
                 "content": ["Hello, how are you?"]
             },
             {
-                "timestamp": "2026-02-02T10:00:01+00:00",
+                "timestamp_utc": "2026-02-02T10:00:01+00:00",
                 "role": "assistant",
                 "model": "claude-haiku-4-5",
                 "content": ["I'm doing well, thank you!"]
             },
             {
-                "timestamp": "2026-02-02T10:00:02+00:00",
+                "timestamp_utc": "2026-02-02T10:00:02+00:00",
                 "role": "user",
                 "content": ["What's the weather?"]
             },
             {
-                "timestamp": "2026-02-02T10:00:03+00:00",
+                "timestamp_utc": "2026-02-02T10:00:03+00:00",
                 "role": "error",
                 "content": ["API timeout after 300 seconds"]
             },
             {
-                "timestamp": "2026-02-02T10:00:04+00:00",
+                "timestamp_utc": "2026-02-02T10:00:04+00:00",
                 "role": "user",
                 "content": ["Try again"]
             },
             {
-                "timestamp": "2026-02-02T10:00:05+00:00",
+                "timestamp_utc": "2026-02-02T10:00:05+00:00",
                 "role": "assistant",
                 "model": "claude-haiku-4-5",
                 "content": ["The weather is sunny today!"]

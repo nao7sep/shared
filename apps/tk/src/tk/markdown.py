@@ -93,8 +93,8 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
 
         lines.append(f"### {date}")
 
-        # Sort tasks within date by handled_at
-        date_tasks = sorted(all_dates[date], key=lambda t: t.get("handled_at", ""))
+        # Sort tasks within date by handled_utc.
+        date_tasks = sorted(all_dates[date], key=lambda t: t.get("handled_utc", ""))
 
         for task in date_tasks:
             text = task["text"]

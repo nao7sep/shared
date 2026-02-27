@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 
-DEFAULT_EVENT_KEY_ORDER: list[str] = ["ts", "level", "logger"]
+DEFAULT_EVENT_KEY_ORDER: list[str] = ["ts_utc", "level", "logger"]
 
 
 EVENT_KEY_ORDER: dict[str, list[str]] = {
     # Application lifecycle events
     "app_start": [
-        "ts",
+        "ts_utc",
         "level",
         "assistant_provider",
         "assistant_model",
@@ -25,7 +25,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "system_prompt",
     ],
     "app_stop": [
-        "ts",
+        "ts_utc",
         "level",
         "reason",
         "uptime_ms",
@@ -33,7 +33,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "error",
     ],
     "session_start": [
-        "ts",
+        "ts_utc",
         "level",
         "assistant_provider",
         "assistant_model",
@@ -52,7 +52,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "message_count",
     ],
     "session_stop": [
-        "ts",
+        "ts_utc",
         "level",
         "reason",
         "chat_file",
@@ -60,7 +60,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
     ],
     # Command execution events
     "command_exec": [
-        "ts",
+        "ts_utc",
         "level",
         "command",
         "args_summary",
@@ -68,7 +68,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "elapsed_ms",
     ],
     "command_error": [
-        "ts",
+        "ts_utc",
         "level",
         "command",
         "args_summary",
@@ -78,7 +78,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
     ],
     # Chat management events
     "chat_switch": [
-        "ts",
+        "ts_utc",
         "level",
         "chat_file",
         "trigger",
@@ -86,25 +86,25 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "message_count",
     ],
     "chat_close": [
-        "ts",
+        "ts_utc",
         "level",
         "chat_file",
         "message_count",
     ],
     "chat_rename": [
-        "ts",
+        "ts_utc",
         "level",
         "old_chat_file",
         "new_chat_file",
     ],
     "chat_delete": [
-        "ts",
+        "ts_utc",
         "level",
         "chat_file",
     ],
     # AI interaction events
     "ai_request": [
-        "ts",
+        "ts_utc",
         "level",
         "mode",
         "provider",
@@ -115,7 +115,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "has_system_prompt",
     ],
     "ai_response": [
-        "ts",
+        "ts_utc",
         "level",
         "mode",
         "provider",
@@ -132,7 +132,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "estimated_cost",
     ],
     "ai_error": [
-        "ts",
+        "ts_utc",
         "level",
         "mode",
         "provider",
@@ -149,7 +149,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
     ],
     # Helper AI events
     "helper_ai_request": [
-        "ts",
+        "ts_utc",
         "level",
         "task",
         "provider",
@@ -159,7 +159,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "has_system_prompt",
     ],
     "helper_ai_response": [
-        "ts",
+        "ts_utc",
         "level",
         "task",
         "provider",
@@ -175,7 +175,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "estimated_cost",
     ],
     "helper_ai_error": [
-        "ts",
+        "ts_utc",
         "level",
         "task",
         "provider",
@@ -191,7 +191,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
     ],
     # Provider validation events
     "provider_validation_error": [
-        "ts",
+        "ts_utc",
         "level",
         "provider",
         "model",
@@ -206,13 +206,13 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "error",
     ],
     "provider_log": [
-        "ts",
+        "ts_utc",
         "level",
         "provider",
         "message",
     ],
     "provider_retry": [
-        "ts",
+        "ts_utc",
         "level",
         "provider",
         "operation",
@@ -224,7 +224,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "function",
     ],
     "httpx_request": [
-        "ts",
+        "ts_utc",
         "level",
         "logger",
         "http_method",

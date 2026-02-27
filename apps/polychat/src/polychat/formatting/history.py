@@ -51,7 +51,7 @@ def create_history_formatter(
         """Format one message for history display."""
         hex_id = msg.get("hex_id", DISPLAY_MISSING_HEX_ID)
         role = msg.get("role", DISPLAY_UNKNOWN)
-        timestamp = msg.get("timestamp", "")
+        timestamp_utc = msg.get("timestamp_utc", "")
 
         if role == "user":
             role_display = f"{EMOJI_ROLE_USER} User"
@@ -63,8 +63,8 @@ def create_history_formatter(
         else:
             role_display = f"{EMOJI_ROLE_UNKNOWN} {role.capitalize()}"
 
-        if timestamp:
-            time_str = timestamp_formatter(timestamp, DATETIME_FORMAT_SHORT)
+        if timestamp_utc:
+            time_str = timestamp_formatter(timestamp_utc, DATETIME_FORMAT_SHORT)
         else:
             time_str = DISPLAY_UNKNOWN
 

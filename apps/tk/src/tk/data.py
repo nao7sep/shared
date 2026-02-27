@@ -29,8 +29,8 @@ def add_task(data: dict[str, Any] | Any, text: str) -> int:
     task = {
         "text": text,
         "status": TaskStatus.PENDING.value,
-        "created_at": now_utc,
-        "handled_at": None,
+        "created_utc": now_utc,
+        "handled_utc": None,
         "subjective_date": None,
         "note": None,
     }
@@ -54,7 +54,7 @@ def update_task(data: dict[str, Any] | Any, index: int, **updates: Any) -> bool:
     if hasattr(data, "update_task") and callable(data.update_task):
         return data.update_task(index, **updates)
 
-    allowed_fields = {"text", "status", "handled_at", "subjective_date", "note"}
+    allowed_fields = {"text", "status", "handled_utc", "subjective_date", "note"}
     invalid_fields = set(updates.keys()) - allowed_fields
     if invalid_fields:
         raise ValueError(f"Invalid task fields: {', '.join(sorted(invalid_fields))}")

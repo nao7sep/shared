@@ -4,13 +4,20 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 from ..constants import APP_NAME, DATETIME_FORMAT_FILENAME, LOG_FILE_EXTENSION
 from .formatter import StructuredTextFormatter
 from .schema import LOG_PATH_FIELDS
+
+
+def _utc_now_roundtrip() -> str:
+    """Return a high-precision UTC timestamp with explicit UTC marker."""
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace(
+        "+00:00", "Z"
+    )
 
 
 def _to_log_safe(value: Any) -> Any:
@@ -109,7 +116,7 @@ def estimate_message_chars(messages: list[dict]) -> int:
 def log_event(event: str, level: int = logging.INFO, **fields: Any) -> None:
     """Emit a structured log event."""
     payload = {
-        "ts": datetime.now().astimezone().isoformat(),
+        "ts_utc": _utc_now_roundtrip(),
         "event": event,
     }
     for key, value in fields.items():

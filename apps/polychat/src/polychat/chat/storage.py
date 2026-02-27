@@ -19,7 +19,7 @@ def _canonical_for_change_detection(payload: dict[str, Any]) -> dict[str, Any]:
     normalized = copy.deepcopy(payload)
     metadata = normalized.get("metadata")
     if isinstance(metadata, dict):
-        metadata["updated_at"] = None
+        metadata["updated_utc"] = None
     return normalized
 
 
@@ -42,8 +42,8 @@ def _sync_in_memory_metadata(data: dict[str, Any], metadata: dict[str, Any]) -> 
     """Mirror persisted created/updated timestamps into in-memory chat data."""
     target = data.get("metadata")
     if isinstance(target, dict):
-        target["created_at"] = metadata.get("created_at")
-        target["updated_at"] = metadata.get("updated_at")
+        target["created_utc"] = metadata.get("created_utc")
+        target["updated_utc"] = metadata.get("updated_utc")
 
 
 def load_chat(path: str) -> dict[str, Any]:
@@ -79,7 +79,7 @@ async def save_chat(path: str, data: dict[str, Any]) -> None:
             _sync_in_memory_metadata(data, existing_metadata)
         return
 
-    document.touch_updated_at()
+    document.touch_updated_utc()
     persistable_data = document.to_dict(include_runtime_hex_id=False)
     _sync_in_memory_metadata(data, document.metadata.to_dict())
 

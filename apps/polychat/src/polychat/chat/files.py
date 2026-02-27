@@ -45,8 +45,8 @@ def list_chats(chats_dir: str) -> list[dict[str, Any]]:
                     "filename": file_path.name,
                     "path": str(file_path),
                     "title": metadata.get("title"),
-                    "created_at": metadata.get("created_at"),
-                    "updated_at": metadata.get("updated_at"),
+                    "created_utc": metadata.get("created_utc"),
+                    "updated_utc": metadata.get("updated_utc"),
                     "message_count": len(messages),
                 }
             )
@@ -55,8 +55,8 @@ def list_chats(chats_dir: str) -> list[dict[str, Any]]:
             logging.debug(f"Skipping invalid chat file {file_path}: {e}")
             continue
 
-    # Sort by updated_at (most recent first), then by filename.
-    chat_files.sort(key=lambda x: (x["updated_at"] or "", x["filename"]), reverse=True)
+    # Sort by updated_utc (most recent first), then by filename.
+    chat_files.sort(key=lambda x: (x["updated_utc"] or "", x["filename"]), reverse=True)
 
     return chat_files
 

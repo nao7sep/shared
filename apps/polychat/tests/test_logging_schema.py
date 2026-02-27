@@ -25,7 +25,7 @@ def test_ai_response_order_matches_schema_prefix() -> None:
     formatter = StructuredTextFormatter()
     payload = {
         "event": "ai_response",
-        "ts": "2026-02-24T00:00:00+00:00",
+        "ts_utc": "2026-02-24T00:00:00+00:00",
         "level": "INFO",
         "mode": "normal",
         "provider": "openai",
@@ -65,7 +65,7 @@ def test_provider_retry_order_matches_schema_prefix() -> None:
     formatter = StructuredTextFormatter()
     payload = {
         "event": "provider_retry",
-        "ts": "2026-02-24T00:00:00+00:00",
+        "ts_utc": "2026-02-24T00:00:00+00:00",
         "level": "WARNING",
         "provider": "openai",
         "operation": "_create_response",

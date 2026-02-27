@@ -57,7 +57,7 @@ def list_pending_data(session: Session) -> PendingListPayload:
         for i, task in enumerate(tasks_data.tasks)
         if task.status == _PENDING_STATUS
     ]
-    pending_with_indices.sort(key=lambda x: x[1].created_at)
+    pending_with_indices.sort(key=lambda x: x[1].created_utc)
 
     items: list[TaskListItem] = []
     for display_num, (array_index, task) in enumerate(pending_with_indices, start=1):
@@ -210,7 +210,7 @@ def _handle_task(
     updated = tasks_data.update_task(
         array_index,
         status=status,
-        handled_at=now_utc,
+        handled_utc=now_utc,
         subjective_date=subj_date,
         note=note,
     )

@@ -346,7 +346,7 @@ async def test_full_chat_flow():
                 f"Message {i}: role mismatch"
             assert orig['content'] == loaded['content'], \
                 f"Message {i}: content mismatch"
-            assert orig['timestamp'] == loaded['timestamp'], \
+            assert orig['timestamp_utc'] == loaded['timestamp_utc'], \
                 f"Message {i}: timestamp mismatch"
             if 'model' in orig:
                 assert orig['model'] == loaded['model'], \

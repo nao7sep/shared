@@ -21,7 +21,7 @@ def group_tasks_for_display(tasks: list[Any]) -> dict[str, Any]:
         if task["status"] == _PENDING_STATUS:
             result[_PENDING_STATUS].append(task)
 
-    result[_PENDING_STATUS].sort(key=lambda t: t["created_at"])
+    result[_PENDING_STATUS].sort(key=lambda t: t.get("created_utc", ""))
 
     for status in (_DONE_STATUS, _CANCELLED_STATUS):
         handled_with_indices = [
@@ -55,7 +55,7 @@ def group_handled_tasks(
         grouped[date].append((array_index, task))
 
     for date in grouped:
-        grouped[date].sort(key=lambda x: x[1].get("handled_at", ""))
+        grouped[date].sort(key=lambda x: x[1].get("handled_utc", ""))
 
     known = sorted(
         [(date, items) for date, items in grouped.items() if date != "unknown"],

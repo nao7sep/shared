@@ -3,688 +3,688 @@
     {
       "text": "branch management best practices",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:06:57.681830+00:00",
-      "handled_at": "2026-02-01T22:16:20.423052+00:00",
+      "created_utc": "2026-02-01T09:06:57.681830+00:00",
+      "handled_utc": "2026-02-01T22:16:20.423052+00:00",
       "subjective_date": "2026-02-02",
       "note": "my knowledge is enough for now"
     },
     {
       "text": "check all existing tasks to draw a bigger picture. currently work is in bits",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:07:20.062514+00:00",
-      "handled_at": "2026-02-12T03:25:30.973898+00:00",
+      "created_utc": "2026-02-01T09:07:20.062514+00:00",
+      "handled_utc": "2026-02-12T03:25:30.973898+00:00",
       "subjective_date": "2026-02-12",
       "note": "vibe management may work better. we finish what we want, when and while we want to"
     },
     {
       "text": "tool to compress/extract entire code directory, while gitignoring things",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:07:32.168027+00:00",
-      "handled_at": "2026-02-01T23:39:40.285114+00:00",
+      "created_utc": "2026-02-01T09:07:32.168027+00:00",
+      "handled_utc": "2026-02-01T23:39:40.285114+00:00",
       "subjective_date": "2026-02-02",
       "note": "branches work better/faster"
     },
     {
       "text": "check all remaining tasks in paper notebook",
       "status": "done",
-      "created_at": "2026-02-01T09:07:53.500669+00:00",
-      "handled_at": "2026-02-12T03:35:46.930459+00:00",
+      "created_utc": "2026-02-01T09:07:53.500669+00:00",
+      "handled_utc": "2026-02-12T03:35:46.930459+00:00",
       "subjective_date": "2026-02-12",
       "note": null
     },
     {
       "text": "discuss task management cost and its potential relevance to inability to complete trivial tasks (such as pushups)",
       "status": "done",
-      "created_at": "2026-02-01T09:08:11.394081+00:00",
-      "handled_at": "2026-02-01T22:17:14.589670+00:00",
+      "created_utc": "2026-02-01T09:08:11.394081+00:00",
+      "handled_utc": "2026-02-01T22:17:14.589670+00:00",
       "subjective_date": "2026-02-02",
       "note": "done. i will think of something"
     },
     {
       "text": "practice writing the what, following 01 doc",
       "status": "done",
-      "created_at": "2026-02-01T09:08:23.364505+00:00",
-      "handled_at": "2026-02-01T09:34:20.310810+00:00",
+      "created_utc": "2026-02-01T09:08:23.364505+00:00",
+      "handled_utc": "2026-02-01T09:34:20.310810+00:00",
       "subjective_date": "2026-02-01",
       "note": "wrote what.md and also work_log.md for tk"
     },
     {
       "text": "read the claude code book on mcp, parallel development, sub-agents",
       "status": "pending",
-      "created_at": "2026-02-01T09:08:33.700384+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-01T09:08:33.700384+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "what's python's Protocol?",
       "status": "done",
-      "created_at": "2026-02-01T09:08:46.599769+00:00",
-      "handled_at": "2026-02-01T10:33:29.543254+00:00",
+      "created_utc": "2026-02-01T09:08:46.599769+00:00",
+      "handled_utc": "2026-02-01T10:33:29.543254+00:00",
       "subjective_date": "2026-02-01",
       "note": "interface-ish feature without inheritance"
     },
     {
       "text": "try developing 2 projects in parallel",
       "status": "done",
-      "created_at": "2026-02-01T09:08:58.690890+00:00",
-      "handled_at": "2026-02-09T02:33:43.048812+00:00",
+      "created_utc": "2026-02-01T09:08:58.690890+00:00",
+      "handled_utc": "2026-02-09T02:33:43.048812+00:00",
       "subjective_date": "2026-02-08",
       "note": "polychat and tk. it worked"
     },
     {
       "text": "try using mac keychain",
       "status": "done",
-      "created_at": "2026-02-01T09:09:09.835397+00:00",
-      "handled_at": "2026-02-05T04:24:51.216897+00:00",
+      "created_utc": "2026-02-01T09:09:09.835397+00:00",
+      "handled_utc": "2026-02-05T04:24:51.216897+00:00",
       "subjective_date": "2026-02-05",
       "note": "wrote code and tests"
     },
     {
       "text": "hello world python gui apps using different packages",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:09:21.520636+00:00",
-      "handled_at": "2026-02-12T03:37:17.427304+00:00",
+      "created_utc": "2026-02-01T09:09:21.520636+00:00",
+      "handled_utc": "2026-02-12T03:37:17.427304+00:00",
       "subjective_date": "2026-02-12",
       "note": "not interested. we'll learn what we need, when we need it"
     },
     {
       "text": "establish straightforward workflow. inbox zero strategy may be key",
       "status": "done",
-      "created_at": "2026-02-01T09:09:33.370278+00:00",
-      "handled_at": "2026-02-01T09:35:07.377072+00:00",
+      "created_utc": "2026-02-01T09:09:33.370278+00:00",
+      "handled_utc": "2026-02-01T09:35:07.377072+00:00",
       "subjective_date": "2026-02-01",
       "note": "wrote tk"
     },
     {
       "text": "simple todo management cli tool that works well with git and inbox zero strategy",
       "status": "done",
-      "created_at": "2026-02-01T09:09:40.466015+00:00",
-      "handled_at": "2026-02-01T09:35:58.212345+00:00",
+      "created_utc": "2026-02-01T09:09:40.466015+00:00",
+      "handled_utc": "2026-02-01T09:35:58.212345+00:00",
       "subjective_date": "2026-02-01",
       "note": "name of app is tk"
     },
     {
       "text": "sqlalchemy?",
       "status": "done",
-      "created_at": "2026-02-01T09:09:47.201634+00:00",
-      "handled_at": "2026-02-01T10:36:54.220135+00:00",
+      "created_utc": "2026-02-01T09:09:47.201634+00:00",
+      "handled_utc": "2026-02-01T10:36:54.220135+00:00",
       "subjective_date": "2026-02-01",
       "note": "entity framework-ish orm. also has dapper-ish lower level features"
     },
     {
       "text": "update HOW.md of tk",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:09:54.733185+00:00",
-      "handled_at": "2026-02-01T09:36:41.371382+00:00",
+      "created_utc": "2026-02-01T09:09:54.733185+00:00",
+      "handled_utc": "2026-02-01T09:36:41.371382+00:00",
       "subjective_date": "2026-02-01",
       "note": "source is now single source of truth"
     },
     {
       "text": "commit initial docs by claude AND the conv log",
       "status": "done",
-      "created_at": "2026-02-01T09:15:43.459361+00:00",
-      "handled_at": "2026-02-01T09:18:23.918923+00:00",
+      "created_utc": "2026-02-01T09:15:43.459361+00:00",
+      "handled_utc": "2026-02-01T09:18:23.918923+00:00",
       "subjective_date": "2026-01-30",
       "note": "just the docs"
     },
     {
       "text": "beyond compare on macbook as well",
       "status": "done",
-      "created_at": "2026-02-01T09:15:54.918713+00:00",
-      "handled_at": "2026-02-01T09:18:33.293246+00:00",
+      "created_utc": "2026-02-01T09:15:54.918713+00:00",
+      "handled_utc": "2026-02-01T09:18:33.293246+00:00",
       "subjective_date": "2026-01-30",
       "note": null
     },
     {
       "text": "minimal .gitignore in 2 repos",
       "status": "done",
-      "created_at": "2026-02-01T09:16:02.403604+00:00",
-      "handled_at": "2026-02-01T09:18:37.505528+00:00",
+      "created_utc": "2026-02-01T09:16:02.403604+00:00",
+      "handled_utc": "2026-02-01T09:18:37.505528+00:00",
       "subjective_date": "2026-01-30",
       "note": null
     },
     {
       "text": "consider replacing _private in docs with secrets",
       "status": "done",
-      "created_at": "2026-02-01T09:16:08.765190+00:00",
-      "handled_at": "2026-02-01T09:18:42.529771+00:00",
+      "created_utc": "2026-02-01T09:16:08.765190+00:00",
+      "handled_utc": "2026-02-01T09:18:42.529771+00:00",
       "subjective_date": "2026-01-30",
       "note": "replaced and refactored"
     },
     {
       "text": "clone repos on mac mini",
       "status": "done",
-      "created_at": "2026-02-01T09:16:15.019537+00:00",
-      "handled_at": "2026-02-01T09:18:46.672322+00:00",
+      "created_utc": "2026-02-01T09:16:15.019537+00:00",
+      "handled_utc": "2026-02-01T09:18:46.672322+00:00",
       "subjective_date": "2026-01-30",
       "note": null
     },
     {
       "text": "generate doc on python dependency management",
       "status": "done",
-      "created_at": "2026-02-01T09:16:20.704903+00:00",
-      "handled_at": "2026-02-01T09:18:50.855470+00:00",
+      "created_utc": "2026-02-01T09:16:20.704903+00:00",
+      "handled_utc": "2026-02-01T09:18:50.855470+00:00",
       "subjective_date": "2026-01-30",
       "note": null
     },
     {
       "text": "what is .zprofile? check it on all pcs",
       "status": "done",
-      "created_at": "2026-02-01T09:16:26.014861+00:00",
-      "handled_at": "2026-02-01T09:18:56.931207+00:00",
+      "created_utc": "2026-02-01T09:16:26.014861+00:00",
+      "handled_utc": "2026-02-01T09:18:56.931207+00:00",
       "subjective_date": "2026-01-30",
       "note": "unsuitable for setting api keys as environment variables. plaintext. exposed to all processes. use keychain"
     },
     {
       "text": "system-wide python3 is used and poetry isnt found on macbook",
       "status": "done",
-      "created_at": "2026-02-01T09:16:31.249566+00:00",
-      "handled_at": "2026-02-01T09:19:07.025632+00:00",
+      "created_utc": "2026-02-01T09:16:31.249566+00:00",
+      "handled_utc": "2026-02-01T09:19:07.025632+00:00",
       "subjective_date": "2026-01-30",
       "note": "fixed"
     },
     {
       "text": "make sure poetry is installed via homebrew on all pcs",
       "status": "done",
-      "created_at": "2026-02-01T09:16:36.334384+00:00",
-      "handled_at": "2026-02-01T09:19:10.506982+00:00",
+      "created_utc": "2026-02-01T09:16:36.334384+00:00",
+      "handled_utc": "2026-02-01T09:19:10.506982+00:00",
       "subjective_date": "2026-01-30",
       "note": null
     },
     {
       "text": ".command files to update homebrew/pip packages AND ones that run ai clis",
       "status": "done",
-      "created_at": "2026-02-01T09:16:42.469570+00:00",
-      "handled_at": "2026-02-01T09:19:21.249350+00:00",
+      "created_utc": "2026-02-01T09:16:42.469570+00:00",
+      "handled_utc": "2026-02-01T09:19:21.249350+00:00",
       "subjective_date": "2026-01-30",
       "note": "first half done. second half violates yagni"
     },
     {
       "text": "license for the repos and apps that they will contain",
       "status": "done",
-      "created_at": "2026-02-01T09:16:47.750246+00:00",
-      "handled_at": "2026-02-01T09:19:50.857321+00:00",
+      "created_utc": "2026-02-01T09:16:47.750246+00:00",
+      "handled_utc": "2026-02-01T09:19:50.857321+00:00",
       "subjective_date": "2026-01-30",
       "note": "gpl good enough"
     },
     {
       "text": "generate doc on commonly used metadata",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:16:52.672163+00:00",
-      "handled_at": "2026-02-01T09:20:04.553097+00:00",
+      "created_utc": "2026-02-01T09:16:52.672163+00:00",
+      "handled_utc": "2026-02-01T09:20:04.553097+00:00",
       "subjective_date": "2026-01-30",
       "note": "saved in secrets repo"
     },
     {
       "text": "tool to view conv logs",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:17:05.465250+00:00",
-      "handled_at": "2026-02-01T09:20:08.846864+00:00",
+      "created_utc": "2026-02-01T09:17:05.465250+00:00",
+      "handled_utc": "2026-02-01T09:20:08.846864+00:00",
       "subjective_date": "2026-01-30",
       "note": "if good docs are generated/reviewed, conv logs add no value"
     },
     {
       "text": "relearn markdown syntax AND make or find cheat sheet",
       "status": "cancelled",
-      "created_at": "2026-02-01T09:17:11.360348+00:00",
-      "handled_at": "2026-02-01T09:20:11.917885+00:00",
+      "created_utc": "2026-02-01T09:17:11.360348+00:00",
+      "handled_utc": "2026-02-01T09:20:11.917885+00:00",
       "subjective_date": "2026-01-30",
       "note": "i seem to know just enough"
     },
     {
       "text": "try mail/sms apis",
       "status": "cancelled",
-      "created_at": "2026-02-01T10:43:29.292143+00:00",
-      "handled_at": "2026-02-12T03:37:44.082534+00:00",
+      "created_utc": "2026-02-01T10:43:29.292143+00:00",
+      "handled_utc": "2026-02-12T03:37:44.082534+00:00",
       "subjective_date": "2026-02-12",
       "note": null
     },
     {
       "text": "write web app that just sends todo mail",
       "status": "pending",
-      "created_at": "2026-02-01T10:44:47.352789+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-01T10:44:47.352789+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "learn different ways to split text into chunks for embedding",
       "status": "cancelled",
-      "created_at": "2026-02-01T10:48:23.803997+00:00",
-      "handled_at": "2026-02-12T03:38:03.823083+00:00",
+      "created_utc": "2026-02-01T10:48:23.803997+00:00",
+      "handled_utc": "2026-02-12T03:38:03.823083+00:00",
       "subjective_date": "2026-02-12",
       "note": null
     },
     {
       "text": "try deepl/google translation apis",
       "status": "cancelled",
-      "created_at": "2026-02-01T10:49:20.259796+00:00",
-      "handled_at": "2026-02-12T03:38:09.472127+00:00",
+      "created_utc": "2026-02-01T10:49:20.259796+00:00",
+      "handled_utc": "2026-02-12T03:38:09.472127+00:00",
       "subjective_date": "2026-02-12",
       "note": null
     },
     {
       "text": "try openai/google transcription apis",
       "status": "cancelled",
-      "created_at": "2026-02-01T10:49:41.950698+00:00",
-      "handled_at": "2026-02-12T03:38:14.262445+00:00",
+      "created_utc": "2026-02-01T10:49:41.950698+00:00",
+      "handled_utc": "2026-02-12T03:38:14.262445+00:00",
       "subjective_date": "2026-02-12",
       "note": null
     },
     {
       "text": "tk: faster way to show recent tasks. \"h\" currently shows everything",
       "status": "done",
-      "created_at": "2026-02-01T22:21:07.454023+00:00",
-      "handled_at": "2026-02-01T23:40:39.867646+00:00",
+      "created_utc": "2026-02-01T22:21:07.454023+00:00",
+      "handled_utc": "2026-02-01T23:40:39.867646+00:00",
       "subjective_date": "2026-02-02",
       "note": "added today, yesterday and recent commands"
     },
     {
       "text": "tk: use emojis in history",
       "status": "done",
-      "created_at": "2026-02-01T22:22:06.572147+00:00",
-      "handled_at": "2026-02-01T23:40:48.988515+00:00",
+      "created_utc": "2026-02-01T22:22:06.572147+00:00",
+      "handled_utc": "2026-02-01T23:40:48.988515+00:00",
       "subjective_date": "2026-02-02",
       "note": null
     },
     {
       "text": "mechanism to store/retrieve api keys",
       "status": "done",
-      "created_at": "2026-02-02T00:40:01.523015+00:00",
-      "handled_at": "2026-02-05T04:25:19.416048+00:00",
+      "created_utc": "2026-02-02T00:40:01.523015+00:00",
+      "handled_utc": "2026-02-05T04:25:19.416048+00:00",
       "subjective_date": "2026-02-05",
       "note": "implemented in polychat"
     },
     {
       "text": "docs on config-related python packages",
       "status": "cancelled",
-      "created_at": "2026-02-02T00:40:47.439179+00:00",
-      "handled_at": "2026-02-05T04:25:40.776376+00:00",
+      "created_utc": "2026-02-02T00:40:47.439179+00:00",
+      "handled_utc": "2026-02-05T04:25:40.776376+00:00",
       "subjective_date": "2026-02-05",
       "note": "yagni"
     },
     {
       "text": "multi-ai cli chat tool",
       "status": "done",
-      "created_at": "2026-02-02T00:43:42.386866+00:00",
-      "handled_at": "2026-02-08T10:50:04.809269+00:00",
+      "created_utc": "2026-02-02T00:43:42.386866+00:00",
+      "handled_utc": "2026-02-08T10:50:04.809269+00:00",
       "subjective_date": "2026-02-08",
       "note": "first version of polychat runs. refactored and tested"
     },
     {
       "text": "tk: smoother workflow. must be something my windows user wife could use",
       "status": "cancelled",
-      "created_at": "2026-02-04T00:24:16.676655+00:00",
-      "handled_at": "2026-02-05T04:27:05.887652+00:00",
+      "created_utc": "2026-02-04T00:24:16.676655+00:00",
+      "handled_utc": "2026-02-05T04:27:05.887652+00:00",
       "subjective_date": "2026-02-05",
       "note": "workflow is just fine"
     },
     {
       "text": "tk: task addition without \"add\"?",
       "status": "cancelled",
-      "created_at": "2026-02-04T00:25:17.366382+00:00",
-      "handled_at": "2026-02-05T04:27:27.411717+00:00",
+      "created_utc": "2026-02-04T00:25:17.366382+00:00",
+      "handled_utc": "2026-02-05T04:27:27.411717+00:00",
       "subjective_date": "2026-02-05",
       "note": "risky"
     },
     {
       "text": "add prefix _ to what.md and how.md",
       "status": "cancelled",
-      "created_at": "2026-02-04T00:31:45.416106+00:00",
-      "handled_at": "2026-02-05T00:19:39.364483+00:00",
+      "created_utc": "2026-02-04T00:31:45.416106+00:00",
+      "handled_utc": "2026-02-05T00:19:39.364483+00:00",
       "subjective_date": "2026-02-05",
       "note": "did and reverted. made internal_docs instead"
     },
     {
       "text": "vocabulary development infrastructure for my daughter",
       "status": "pending",
-      "created_at": "2026-02-05T04:31:55.061907+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-05T04:31:55.061907+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "refine vibe coding workflow",
       "status": "done",
-      "created_at": "2026-02-05T09:54:23.899038+00:00",
-      "handled_at": "2026-02-06T00:38:35.051813+00:00",
+      "created_utc": "2026-02-05T09:54:23.899038+00:00",
+      "handled_utc": "2026-02-06T00:38:35.051813+00:00",
       "subjective_date": "2026-02-06",
       "note": "watched some videos and simplified things"
     },
     {
       "text": "introduce tk, my first python app that nobody else will use :)",
       "status": "cancelled",
-      "created_at": "2026-02-08T07:18:50.180050+00:00",
-      "handled_at": "2026-02-26T00:49:08.961474+00:00",
+      "created_utc": "2026-02-08T07:18:50.180050+00:00",
+      "handled_utc": "2026-02-26T00:49:08.961474+00:00",
       "subjective_date": "2026-02-26",
       "note": "ship products, not self satisfaction"
     },
     {
       "text": "introduce and release polychat",
       "status": "pending",
-      "created_at": "2026-02-08T07:19:12.365598+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-08T07:19:12.365598+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "review tk and update readme.md",
       "status": "done",
-      "created_at": "2026-02-08T07:29:46.008699+00:00",
-      "handled_at": "2026-02-09T03:07:58.723174+00:00",
+      "created_utc": "2026-02-08T07:29:46.008699+00:00",
+      "handled_utc": "2026-02-09T03:07:58.723174+00:00",
       "subjective_date": "2026-02-09",
       "note": null
     },
     {
       "text": "review polychat and update readme.md",
       "status": "done",
-      "created_at": "2026-02-08T07:29:55.249305+00:00",
-      "handled_at": "2026-02-12T03:41:33.648219+00:00",
+      "created_utc": "2026-02-08T07:29:55.249305+00:00",
+      "handled_utc": "2026-02-12T03:41:33.648219+00:00",
       "subjective_date": "2026-02-12",
       "note": "first beta done"
     },
     {
       "text": "tk: shouldnt be able to set note to pending task",
       "status": "done",
-      "created_at": "2026-02-09T04:23:23.649444+00:00",
-      "handled_at": "2026-02-09T05:06:29.685052+00:00",
+      "created_utc": "2026-02-09T04:23:23.649444+00:00",
+      "handled_utc": "2026-02-09T05:06:29.685052+00:00",
       "subjective_date": "2026-02-09",
       "note": null
     },
     {
       "text": "automate \"recordings => transcription => context\"",
       "status": "pending",
-      "created_at": "2026-02-12T03:39:05.985954+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-12T03:39:05.985954+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "seek tools to read foreign language books",
       "status": "done",
-      "created_at": "2026-02-12T03:42:42.574095+00:00",
-      "handled_at": "2026-02-19T01:18:41.798522+00:00",
+      "created_utc": "2026-02-12T03:42:42.574095+00:00",
+      "handled_utc": "2026-02-19T01:18:41.798522+00:00",
       "subjective_date": "2026-02-19",
       "note": "wrote 2 tools for personal use"
     },
     {
       "text": "learn about github pages, automation",
       "status": "pending",
-      "created_at": "2026-02-12T03:43:37.370916+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-12T03:43:37.370916+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "tackle https://www.darioamodei.com/essay/the-adolescence-of-technology",
       "status": "pending",
-      "created_at": "2026-02-12T03:46:01.538670+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-12T03:46:01.538670+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "analyze page structures of https://openwebf.com/en",
       "status": "pending",
-      "created_at": "2026-02-12T20:36:40.923080+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-12T20:36:40.923080+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "learn: pypi, github actions, what else?",
       "status": "done",
-      "created_at": "2026-02-15T23:05:50.153014+00:00",
-      "handled_at": "2026-02-19T01:20:09.849497+00:00",
+      "created_utc": "2026-02-15T23:05:50.153014+00:00",
+      "handled_utc": "2026-02-19T01:20:09.849497+00:00",
       "subjective_date": "2026-02-19",
       "note": "github actions + tags based auto distribution isnt optimal solution for mono repo"
     },
     {
       "text": "tool to generate font rendering sample images",
       "status": "pending",
-      "created_at": "2026-02-19T00:14:19.929598+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T00:14:19.929598+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "tool to compose/print/save/organize documents for my daughter",
       "status": "pending",
-      "created_at": "2026-02-19T00:17:22.165706+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T00:17:22.165706+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "prompts to skills",
       "status": "done",
-      "created_at": "2026-02-19T00:17:45.216767+00:00",
-      "handled_at": "2026-02-23T06:14:40.088913+00:00",
+      "created_utc": "2026-02-19T00:17:45.216767+00:00",
+      "handled_utc": "2026-02-23T06:14:40.088913+00:00",
       "subjective_date": "2026-02-23",
       "note": "refined. kept as prompts."
     },
     {
       "text": "zip/rar archiver that works just like i want it to",
       "status": "cancelled",
-      "created_at": "2026-02-19T00:18:32.153155+00:00",
-      "handled_at": "2026-02-25T03:09:31.172558+00:00",
+      "created_utc": "2026-02-19T00:18:32.153155+00:00",
+      "handled_utc": "2026-02-25T03:09:31.172558+00:00",
       "subjective_date": "2026-02-25",
       "note": "wrote revzip, a more specific app"
     },
     {
       "text": "system to save done-on-mac files on windows persistently",
       "status": "pending",
-      "created_at": "2026-02-19T00:19:45.205383+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T00:19:45.205383+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "tool to help organize personal videos/photos",
       "status": "pending",
-      "created_at": "2026-02-19T00:20:07.827282+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T00:20:07.827282+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "tool to scan/translate/share paper documents",
       "status": "pending",
-      "created_at": "2026-02-19T00:20:52.316059+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T00:20:52.316059+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "split-conversation-into-docs.md as skill",
       "status": "done",
-      "created_at": "2026-02-19T00:27:51.737287+00:00",
-      "handled_at": "2026-02-23T06:15:09.399752+00:00",
+      "created_utc": "2026-02-19T00:27:51.737287+00:00",
+      "handled_utc": "2026-02-23T06:15:09.399752+00:00",
       "subjective_date": "2026-02-23",
       "note": "refined"
     },
     {
       "text": "catalogue of tools and work reports",
       "status": "pending",
-      "created_at": "2026-02-19T00:31:07.790626+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T00:31:07.790626+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "report on migration, tk, polychat",
       "status": "cancelled",
-      "created_at": "2026-02-19T00:32:39.744052+00:00",
-      "handled_at": "2026-02-23T06:16:52.422649+00:00",
+      "created_utc": "2026-02-19T00:32:39.744052+00:00",
+      "handled_utc": "2026-02-23T06:16:52.422649+00:00",
       "subjective_date": "2026-02-23",
       "note": "too personal to be interesting. had excellent chat with gemini regarding quantity strategy, instead"
     },
     {
       "text": "user friendly repo root readme.md",
       "status": "done",
-      "created_at": "2026-02-19T02:07:06.329502+00:00",
-      "handled_at": "2026-02-23T08:07:39.384541+00:00",
+      "created_utc": "2026-02-19T02:07:06.329502+00:00",
+      "handled_utc": "2026-02-23T08:07:39.384541+00:00",
       "subjective_date": "2026-02-23",
       "note": "capitalized. good enough for now"
     },
     {
       "text": "migrate from poetry and hatchling to uv",
       "status": "done",
-      "created_at": "2026-02-19T04:03:01.085711+00:00",
-      "handled_at": "2026-02-23T06:17:07.874762+00:00",
+      "created_utc": "2026-02-19T04:03:01.085711+00:00",
+      "handled_utc": "2026-02-23T06:17:07.874762+00:00",
       "subjective_date": "2026-02-23",
       "note": null
     },
     {
       "text": "refactor readme.md and relevant docs for all apps. just migrated to uv",
       "status": "done",
-      "created_at": "2026-02-19T04:53:41.377439+00:00",
-      "handled_at": "2026-02-23T06:17:25.812886+00:00",
+      "created_utc": "2026-02-19T04:53:41.377439+00:00",
+      "handled_utc": "2026-02-23T06:17:25.812886+00:00",
       "subjective_date": "2026-02-23",
       "note": null
     },
     {
       "text": "regenerate polychat's publish.py. uv-migration-related changes are messy",
       "status": "pending",
-      "created_at": "2026-02-19T04:56:31.811729+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T04:56:31.811729+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "regenerate everything in shared/docs. uv related updates everywhere",
       "status": "cancelled",
-      "created_at": "2026-02-19T04:58:26.878636+00:00",
-      "handled_at": "2026-02-23T06:18:24.419430+00:00",
+      "created_utc": "2026-02-19T04:58:26.878636+00:00",
+      "handled_utc": "2026-02-23T06:18:24.419430+00:00",
       "subjective_date": "2026-02-23",
       "note": "just deleted. one-shot docs need separate storage"
     },
     {
       "text": "ACTUALLY i should just delete obsolete docs. i've done a few things with python. i now know basics",
       "status": "done",
-      "created_at": "2026-02-19T04:59:54.224956+00:00",
-      "handled_at": "2026-02-23T06:18:45.675675+00:00",
+      "created_utc": "2026-02-19T04:59:54.224956+00:00",
+      "handled_utc": "2026-02-23T06:18:45.675675+00:00",
       "subjective_date": "2026-02-23",
       "note": "yeah yeah"
     },
     {
       "text": "make new branch for each repo. vibe coding often means micro commits, whose logs are rarely valuable",
       "status": "done",
-      "created_at": "2026-02-19T05:01:27.452281+00:00",
-      "handled_at": "2026-02-23T06:19:37.666961+00:00",
+      "created_utc": "2026-02-19T05:01:27.452281+00:00",
+      "handled_utc": "2026-02-23T06:19:37.666961+00:00",
       "subjective_date": "2026-02-23",
       "note": "yes, we no longer need 100 commit details made in a few days"
     },
     {
       "text": "maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents",
       "status": "cancelled",
-      "created_at": "2026-02-19T05:09:13.437044+00:00",
-      "handled_at": "2026-02-23T06:20:06.601944+00:00",
+      "created_utc": "2026-02-19T05:09:13.437044+00:00",
+      "handled_utc": "2026-02-23T06:20:06.601944+00:00",
       "subjective_date": "2026-02-23",
       "note": "micro optimization is evil"
     },
     {
       "text": "maybe, separate repo for one-shot docs?",
       "status": "cancelled",
-      "created_at": "2026-02-19T05:10:38.623656+00:00",
-      "handled_at": "2026-02-23T06:22:08.029772+00:00",
+      "created_utc": "2026-02-19T05:10:38.623656+00:00",
+      "handled_utc": "2026-02-23T06:22:08.029772+00:00",
       "subjective_date": "2026-02-23",
       "note": "separate repo ONLY if authorization settings or app/doc life cycle differ. not just because we feel something would be messy"
     },
     {
       "text": "time to refine anything and everything in current repos. moving on to typescript soon",
       "status": "done",
-      "created_at": "2026-02-19T05:11:34.425073+00:00",
-      "handled_at": "2026-02-25T03:11:54.441082+00:00",
+      "created_utc": "2026-02-19T05:11:34.425073+00:00",
+      "handled_utc": "2026-02-25T03:11:54.441082+00:00",
       "subjective_date": "2026-02-25",
       "note": "a looot of refactoring done. sure, i did it all by myself. 100 commits in a day or two. absolutely no ais. i am a proud developer... well, used to be :D"
     },
     {
       "text": "it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?",
       "status": "pending",
-      "created_at": "2026-02-19T05:13:01.367726+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-19T05:13:01.367726+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "time to build an unified system to work on 3+ projects at once. 2 worked well yesterday",
       "status": "done",
-      "created_at": "2026-02-19T05:15:05.405641+00:00",
-      "handled_at": "2026-02-25T03:15:11.170283+00:00",
+      "created_utc": "2026-02-19T05:15:05.405641+00:00",
+      "handled_utc": "2026-02-25T03:15:11.170283+00:00",
       "subjective_date": "2026-02-25",
       "note": "polychat + recipes + shared prompts + codex app + beyond compare + revzip"
     },
     {
       "text": "polychat: notifications?",
       "status": "cancelled",
-      "created_at": "2026-02-21T21:45:41.392105+00:00",
-      "handled_at": "2026-02-25T03:16:09.746422+00:00",
+      "created_utc": "2026-02-21T21:45:41.392105+00:00",
+      "handled_utc": "2026-02-25T03:16:09.746422+00:00",
       "subjective_date": "2026-02-25",
       "note": "not an agentic tool. responses return in ~10 seconds"
     },
     {
       "text": "polychat: copy command to copy selected message to clipboard?",
       "status": "cancelled",
-      "created_at": "2026-02-21T21:46:07.777124+00:00",
-      "handled_at": "2026-02-25T03:16:55.061278+00:00",
+      "created_utc": "2026-02-21T21:46:07.777124+00:00",
+      "handled_utc": "2026-02-25T03:16:55.061278+00:00",
       "subjective_date": "2026-02-25",
       "note": "i usually give the entire chat history file rather than a specific message"
     },
     {
       "text": "polychat: adjustable ttl values?",
       "status": "cancelled",
-      "created_at": "2026-02-21T21:46:32.109727+00:00",
-      "handled_at": "2026-02-23T06:23:40.552752+00:00",
+      "created_utc": "2026-02-21T21:46:32.109727+00:00",
+      "handled_utc": "2026-02-23T06:23:40.552752+00:00",
       "subjective_date": "2026-02-23",
       "note": "considered. only claude supports it meaningfully and there are trade offs"
     },
     {
       "text": "polychat: metadata is updated when mode is switched (bug)",
       "status": "done",
-      "created_at": "2026-02-23T06:24:15.893882+00:00",
-      "handled_at": "2026-02-25T03:17:11.186997+00:00",
+      "created_utc": "2026-02-23T06:24:15.893882+00:00",
+      "handled_utc": "2026-02-25T03:17:11.186997+00:00",
       "subjective_date": "2026-02-25",
       "note": "fixed"
     },
     {
       "text": "generalize publish.py as a any-python-app tool",
       "status": "pending",
-      "created_at": "2026-02-25T03:19:25.480174+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-25T03:19:25.480174+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "ensure windows compatibility of polychat",
       "status": "cancelled",
-      "created_at": "2026-02-25T03:20:03.610689+00:00",
-      "handled_at": "2026-02-27T02:15:28.266348+00:00",
+      "created_utc": "2026-02-25T03:20:03.610689+00:00",
+      "handled_utc": "2026-02-27T02:15:28.266348+00:00",
       "subjective_date": "2026-02-27",
       "note": "viber will take care of this"
     },
     {
       "text": "prepare to end gemini subscription + maybe report how",
       "status": "pending",
-      "created_at": "2026-02-25T03:23:09.909311+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-25T03:23:09.909311+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "extract tasks and ideas from voice recordings",
       "status": "pending",
-      "created_at": "2026-02-25T03:25:44.330847+00:00",
-      "handled_at": null,
+      "created_utc": "2026-02-25T03:25:44.330847+00:00",
+      "handled_utc": null,
       "subjective_date": null,
       "note": null
     },
     {
       "text": "develop qc (quality control) tool",
       "status": "done",
-      "created_at": "2026-02-26T00:51:58.617581+00:00",
-      "handled_at": "2026-02-27T02:16:47.154328+00:00",
+      "created_utc": "2026-02-26T00:51:58.617581+00:00",
+      "handled_utc": "2026-02-27T02:16:47.154328+00:00",
       "subjective_date": "2026-02-27",
       "note": "viber done. 6 projects and 14 tasks registered"
     }

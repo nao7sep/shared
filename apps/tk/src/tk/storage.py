@@ -17,12 +17,15 @@ def validate_tasks_structure(data: dict[str, Any]) -> None:
     if not isinstance(data["tasks"], list):
         raise ValueError("Invalid tasks file structure: 'tasks' must be an array")
 
-    required_fields = {"text", "status", "created_at"}
     for i, task in enumerate(data["tasks"]):
         if not isinstance(task, dict):
             raise ValueError(f"Task {i} is not a valid object")
 
+        required_fields = {"text", "status"}
         missing = required_fields - set(task.keys())
+        if "created_utc" not in task:
+            missing = set(missing)
+            missing.add("created_utc")
         if missing:
             raise ValueError(f"Task {i} missing required fields: {', '.join(sorted(missing))}")
 

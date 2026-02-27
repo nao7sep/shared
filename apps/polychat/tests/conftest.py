@@ -62,12 +62,12 @@ def sample_chat():
             "title": "Test Chat",
             "summary": None,
             "system_prompt": None,
-            "created_at": "2026-02-02T10:00:00.000000Z",
-            "updated_at": "2026-02-02T10:00:00.000000Z"
+            "created_utc": "2026-02-02T10:00:00.000000Z",
+            "updated_utc": "2026-02-02T10:00:00.000000Z"
         },
         "messages": [
             {
-                "timestamp": "2026-02-02T10:00:00.000000Z",
+                "timestamp_utc": "2026-02-02T10:00:00.000000Z",
                 "role": "user",
                 "content": [
                     "I need help with a project.",
@@ -76,7 +76,7 @@ def sample_chat():
                 ]
             },
             {
-                "timestamp": "2026-02-02T10:00:05.000000Z",
+                "timestamp_utc": "2026-02-02T10:00:05.000000Z",
                 "role": "assistant",
                 "model": "claude-haiku-4-5",
                 "content": [

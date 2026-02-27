@@ -71,7 +71,7 @@ def build_retry_replacement_plan(
     existing_assistant_hex_id = messages[target_index].get("hex_id")
 
     replaced_user_message: dict[str, Any] = {
-        "timestamp": make_timestamp(),
+        "timestamp_utc": make_timestamp(),
         "role": "user",
         "content": text_to_lines(retry_attempt["user_msg"]),
     }
@@ -79,7 +79,7 @@ def build_retry_replacement_plan(
         replaced_user_message["hex_id"] = existing_user_hex_id
 
     replaced_assistant_message: dict[str, Any] = {
-        "timestamp": make_timestamp(),
+        "timestamp_utc": make_timestamp(),
         "role": "assistant",
         "model": current_model,
         "content": text_to_lines(retry_attempt["assistant_msg"]),

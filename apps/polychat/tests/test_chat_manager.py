@@ -31,12 +31,12 @@ def test_list_chats_single_valid_file(tmp_path):
             "title": "Test Chat",
             "summary": None,
             "system_prompt": None,
-            "created_at": "2026-02-02T00:00:00+00:00",
-            "updated_at": "2026-02-02T12:00:00+00:00",
+            "created_utc": "2026-02-02T00:00:00+00:00",
+            "updated_utc": "2026-02-02T12:00:00+00:00",
         },
         "messages": [
-            {"timestamp": "2026-02-02T00:00:00+00:00", "role": "user", "content": ["Hello"]},
-            {"timestamp": "2026-02-02T00:00:01+00:00", "role": "assistant", "model": "test-model", "content": ["Hi"]},
+            {"timestamp_utc": "2026-02-02T00:00:00+00:00", "role": "user", "content": ["Hello"]},
+            {"timestamp_utc": "2026-02-02T00:00:01+00:00", "role": "assistant", "model": "test-model", "content": ["Hi"]},
         ]
     }
     chat_file.write_text(json.dumps(chat_data))
@@ -47,7 +47,7 @@ def test_list_chats_single_valid_file(tmp_path):
     assert chats[0]["filename"] == "test-chat.json"
     assert chats[0]["title"] == "Test Chat"
     assert chats[0]["message_count"] == 2
-    assert chats[0]["updated_at"] == "2026-02-02T12:00:00+00:00"
+    assert chats[0]["updated_utc"] == "2026-02-02T12:00:00+00:00"
 
 
 def test_list_chats_multiple_files_sorted(tmp_path):
@@ -64,8 +64,8 @@ def test_list_chats_multiple_files_sorted(tmp_path):
                 "title": f"Chat {i}",
                 "summary": None,
                 "system_prompt": None,
-                "created_at": updated,
-                "updated_at": updated,
+                "created_utc": updated,
+                "updated_utc": updated,
             },
             "messages": []
         }
@@ -94,7 +94,7 @@ def test_list_chats_missing_metadata(tmp_path):
     # Should handle gracefully with None values
     assert len(chats) == 1
     assert chats[0]["title"] is None
-    assert chats[0]["updated_at"] is None
+    assert chats[0]["updated_utc"] is None
 
 
 def test_list_chats_invalid_json(tmp_path):
@@ -135,7 +135,7 @@ def test_format_chat_info_with_title():
         "filename": "test-chat.json",
         "title": "My Important Chat",
         "message_count": 42,
-        "updated_at": "2026-02-08T14:30:00+00:00",
+        "updated_utc": "2026-02-08T14:30:00+00:00",
     }
 
     formatted = format_chat_info(chat, 1)
@@ -154,7 +154,7 @@ def test_format_chat_info_no_title():
         "filename": "untitled.json",
         "title": None,
         "message_count": 0,
-        "updated_at": None,
+        "updated_utc": None,
     }
 
     formatted = format_chat_info(chat, 5)
@@ -172,7 +172,7 @@ def test_format_chat_info_invalid_timestamp():
         "filename": "test.json",
         "title": "Test",
         "message_count": 1,
-        "updated_at": "invalid-timestamp",
+        "updated_utc": "invalid-timestamp",
     }
 
     formatted = format_chat_info(chat, 1)

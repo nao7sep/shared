@@ -12,9 +12,16 @@ REQUIRED_METADATA_KEYS = (
     "title",
     "summary",
     "system_prompt",
-    "created_at",
-    "updated_at",
+    "created_utc",
+    "updated_utc",
 )
+
+
+def _utc_now_roundtrip() -> str:
+    """Return a high-precision UTC timestamp with explicit UTC marker."""
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace(
+        "+00:00", "Z"
+    )
 
 
 def _text_to_lines(text: str) -> list[str]:
@@ -54,8 +61,8 @@ class ChatMetadata:
     title: str | None = None
     summary: str | None = None
     system_prompt: str | None = None
-    created_at: str | None = None
-    updated_at: str | None = None
+    created_utc: str | None = None
+    updated_utc: str | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -74,8 +81,8 @@ class ChatMetadata:
             title=metadata.get("title"),
             summary=metadata.get("summary"),
             system_prompt=metadata.get("system_prompt"),
-            created_at=metadata.get("created_at"),
-            updated_at=metadata.get("updated_at"),
+            created_utc=metadata.get("created_utc"),
+            updated_utc=metadata.get("updated_utc"),
             extras=extras,
         )
 
@@ -85,8 +92,8 @@ class ChatMetadata:
             "title": self.title,
             "summary": self.summary,
             "system_prompt": self.system_prompt,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "created_utc": self.created_utc,
+            "updated_utc": self.updated_utc,
         }
         payload.update(self.extras)
         return payload
@@ -98,7 +105,7 @@ class ChatMessage:
 
     role: str
     content: list[str]
-    timestamp: str | None = None
+    timestamp_utc: str | None = None
     model: str | None = None
     citations: list[Citation] | None = None
     details: dict[str, Any] | None = None
@@ -127,7 +134,7 @@ class ChatMessage:
             for key, value in message.items()
             if key
             not in {
-                "timestamp",
+                "timestamp_utc",
                 "role",
                 "content",
                 "model",
@@ -157,7 +164,7 @@ class ChatMessage:
         details = details_payload if isinstance(details_payload, dict) else None
 
         return cls(
-            timestamp=message.get("timestamp"),
+            timestamp_utc=message.get("timestamp_utc"),
             role=str(message.get("role", "")),
             content=_normalize_content(message.get("content")),
             model=message.get("model"),
@@ -171,7 +178,7 @@ class ChatMessage:
     def new_user(cls, content: str) -> ChatMessage:
         """Create a user message with current UTC timestamp."""
         return cls(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp_utc=_utc_now_roundtrip(),
             role="user",
             content=_text_to_lines(content),
         )
@@ -186,7 +193,7 @@ class ChatMessage:
     ) -> ChatMessage:
         """Create an assistant message with current UTC timestamp."""
         return cls(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp_utc=_utc_now_roundtrip(),
             role="assistant",
             model=model,
             content=_text_to_lines(content),
@@ -202,7 +209,7 @@ class ChatMessage:
     ) -> ChatMessage:
         """Create an error message with current UTC timestamp."""
         return cls(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp_utc=_utc_now_roundtrip(),
             role="error",
             content=_text_to_lines(content),
             details=details,
@@ -211,7 +218,7 @@ class ChatMessage:
     def to_dict(self, *, include_runtime_hex_id: bool = True) -> dict[str, Any]:
         """Serialize chat message to persisted dict shape."""
         payload: dict[str, Any] = {
-            "timestamp": self.timestamp,
+            "timestamp_utc": self.timestamp_utc,
             "role": self.role,
             "content": list(self.content),
         }
@@ -268,13 +275,13 @@ class ChatDocument:
         ]
         return cls(metadata=metadata, messages=messages)
 
-    def touch_updated_at(self) -> str:
+    def touch_updated_utc(self) -> str:
         """Set and return updated timestamp in UTC ISO format."""
-        now = datetime.now(timezone.utc).isoformat()
-        self.metadata.updated_at = now
-        if not self.metadata.created_at:
-            self.metadata.created_at = now
-        return now
+        now_utc = _utc_now_roundtrip()
+        self.metadata.updated_utc = now_utc
+        if not self.metadata.created_utc:
+            self.metadata.created_utc = now_utc
+        return now_utc
 
     def to_dict(self, *, include_runtime_hex_id: bool = True) -> dict[str, Any]:
         """Serialize chat document to dict form."""

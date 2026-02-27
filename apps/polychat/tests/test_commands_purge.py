@@ -36,23 +36,23 @@ def mock_session_manager_purge():
         "metadata": {},
         "messages": [
             {
-                "timestamp": "2026-02-02T10:00:00+00:00",
+                "timestamp_utc": "2026-02-02T10:00:00+00:00",
                 "role": "user",
                 "content": ["Message 1"]
             },
             {
-                "timestamp": "2026-02-02T10:00:01+00:00",
+                "timestamp_utc": "2026-02-02T10:00:01+00:00",
                 "role": "assistant",
                 "model": "claude-haiku-4-5",
                 "content": ["Response 1"]
             },
             {
-                "timestamp": "2026-02-02T10:00:02+00:00",
+                "timestamp_utc": "2026-02-02T10:00:02+00:00",
                 "role": "user",
                 "content": ["Message 2"]
             },
             {
-                "timestamp": "2026-02-02T10:00:03+00:00",
+                "timestamp_utc": "2026-02-02T10:00:03+00:00",
                 "role": "assistant",
                 "model": "claude-haiku-4-5",
                 "content": ["Response 2"]

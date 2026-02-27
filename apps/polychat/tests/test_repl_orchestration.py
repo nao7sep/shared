@@ -69,8 +69,8 @@ class TestChatSwitchingOrchestration:
                 "title": None,
                 "summary": None,
                 "system_prompt": None,
-                "created_at": None,
-                "updated_at": None,
+                "created_utc": None,
+                "updated_utc": None,
             },
             "messages": [],
         }

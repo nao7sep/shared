@@ -23,6 +23,10 @@ def parse_created_utc(created_utc: str) -> datetime:
     return parsed.replace(tzinfo=timezone.utc)
 
 
+def parse_created_at(created_at: str) -> datetime:
+    return datetime.strptime(created_at, _LOCAL_DISPLAY_TIMESTAMP_FORMAT)
+
+
 def format_created_at(created_utc_dt: datetime) -> str:
     utc_dt = _coerce_to_utc(created_utc_dt)
     return utc_dt.astimezone().strftime(_LOCAL_DISPLAY_TIMESTAMP_FORMAT)

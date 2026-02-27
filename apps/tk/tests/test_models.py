@@ -22,8 +22,8 @@ class TestTask:
         payload = {
             "text": "Ship feature",
             "status": "done",
-            "created_at": "2026-02-23T10:00:00+00:00",
-            "handled_at": "2026-02-23T11:00:00+00:00",
+            "created_utc": "2026-02-23T10:00:00+00:00",
+            "handled_utc": "2026-02-23T11:00:00+00:00",
             "subjective_date": "2026-02-23",
             "note": "released",
         }
@@ -36,14 +36,14 @@ class TestTask:
             Task(
                 text="Bad",
                 status="invalid",
-                created_at="2026-02-23T10:00:00+00:00",
+                created_utc="2026-02-23T10:00:00+00:00",
             )
 
     def test_task_dict_compat_setitem(self):
         task = Task(
             text="Before",
             status=TaskStatus.PENDING.value,
-            created_at="2026-02-23T10:00:00+00:00",
+            created_utc="2026-02-23T10:00:00+00:00",
         )
 
         task["text"] = "After"
@@ -62,8 +62,8 @@ class TestTaskStore:
                 {
                     "text": "Task one",
                     "status": "pending",
-                    "created_at": "2026-02-01T10:00:00+00:00",
-                    "handled_at": None,
+                    "created_utc": "2026-02-01T10:00:00+00:00",
+                    "handled_utc": None,
                     "subjective_date": None,
                     "note": None,
                 }
@@ -79,8 +79,8 @@ class TestTaskStore:
             {
                 "text": "Task one",
                 "status": "pending",
-                "created_at": "2026-02-01T10:00:00+00:00",
-                "handled_at": None,
+                "created_utc": "2026-02-01T10:00:00+00:00",
+                "handled_utc": None,
                 "subjective_date": None,
                 "note": None,
             }
@@ -96,8 +96,8 @@ class TestTaskStore:
                     {
                         "text": "Task one",
                         "status": "pending",
-                        "created_at": "2026-02-01T10:00:00+00:00",
-                        "handled_at": None,
+                        "created_utc": "2026-02-01T10:00:00+00:00",
+                        "handled_utc": None,
                         "subjective_date": None,
                         "note": None,
                     }
@@ -151,7 +151,7 @@ class TestPayloadDtos:
         task = Task(
             text="Task one",
             status=TaskStatus.PENDING.value,
-            created_at="2026-02-01T10:00:00+00:00",
+            created_utc="2026-02-01T10:00:00+00:00",
         )
         payload = PendingListPayload(
             items=[TaskListItem(display_num=1, array_index=0, task=task)]
@@ -165,8 +165,8 @@ class TestPayloadDtos:
         task = Task(
             text="Task two",
             status=TaskStatus.DONE.value,
-            created_at="2026-02-02T10:00:00+00:00",
-            handled_at="2026-02-02T15:00:00+00:00",
+            created_utc="2026-02-02T10:00:00+00:00",
+            handled_utc="2026-02-02T15:00:00+00:00",
             subjective_date="2026-02-02",
         )
         payload = HistoryListPayload(

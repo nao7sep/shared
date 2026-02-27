@@ -26,7 +26,7 @@ def test_load_chat_nonexistent_file(tmp_path):
     assert "messages" in chat
     assert chat["messages"] == []
     assert chat["metadata"]["title"] is None
-    assert chat["metadata"]["created_at"] is None
+    assert chat["metadata"]["created_utc"] is None
 
 
 def test_load_chat_valid_file(tmp_path):
@@ -39,12 +39,12 @@ def test_load_chat_valid_file(tmp_path):
             "title": "Test Chat",
             "summary": None,
             "system_prompt": None,
-            "created_at": "2026-02-02T00:00:00+00:00",
-            "updated_at": "2026-02-02T00:00:00+00:00",
+            "created_utc": "2026-02-02T00:00:00+00:00",
+            "updated_utc": "2026-02-02T00:00:00+00:00",
         },
         "messages": [
             {
-                "timestamp": "2026-02-02T00:00:00+00:00",
+                "timestamp_utc": "2026-02-02T00:00:00+00:00",
                 "role": "user",
                 "content": ["Hello"]
             }
@@ -94,8 +94,8 @@ def test_load_chat_missing_messages(tmp_path):
             "title": None,
             "summary": None,
             "system_prompt": None,
-            "created_at": None,
-            "updated_at": None,
+            "created_utc": None,
+            "updated_utc": None,
         }
     }
 
@@ -127,8 +127,8 @@ def test_load_chat_normalizes_string_content_and_metadata_defaults(tmp_path):
     assert loaded["metadata"]["title"] == "Legacy"
     assert loaded["metadata"]["summary"] is None
     assert loaded["metadata"]["system_prompt"] is None
-    assert loaded["metadata"]["created_at"] is None
-    assert loaded["metadata"]["updated_at"] is None
+    assert loaded["metadata"]["created_utc"] is None
+    assert loaded["metadata"]["updated_utc"] is None
 
 
 def test_load_chat_rejects_invalid_metadata_type(tmp_path):
@@ -195,12 +195,12 @@ async def test_save_chat_basic(tmp_path):
             "title": "Save Test",
             "summary": None,
             "system_prompt": None,
-            "created_at": None,
-            "updated_at": None,
+            "created_utc": None,
+            "updated_utc": None,
         },
         "messages": [
             {
-                "timestamp": "2026-02-02T00:00:00+00:00",
+                "timestamp_utc": "2026-02-02T00:00:00+00:00",
                 "role": "user",
                 "content": ["Test message"]
             }
@@ -230,8 +230,8 @@ async def test_save_chat_creates_directory(tmp_path):
             "title": None,
             "summary": None,
             "system_prompt": None,
-            "created_at": None,
-            "updated_at": None,
+            "created_utc": None,
+            "updated_utc": None,
         },
         "messages": []
     }
@@ -253,8 +253,8 @@ async def test_save_chat_updates_timestamps(tmp_path):
             "title": None,
             "summary": None,
             "system_prompt": None,
-            "created_at": None,
-            "updated_at": None,
+            "created_utc": None,
+            "updated_utc": None,
         },
         "messages": []
     }
@@ -262,21 +262,21 @@ async def test_save_chat_updates_timestamps(tmp_path):
     await save_chat(str(chat_path), chat_data)
 
     # Both should be set
-    assert chat_data["metadata"]["created_at"] is not None
-    assert chat_data["metadata"]["updated_at"] is not None
+    assert chat_data["metadata"]["created_utc"] is not None
+    assert chat_data["metadata"]["updated_utc"] is not None
 
     # They should be the same on first save
-    assert chat_data["metadata"]["created_at"] == chat_data["metadata"]["updated_at"]
+    assert chat_data["metadata"]["created_utc"] == chat_data["metadata"]["updated_utc"]
 
     # Save again without mutation: no-op write should keep updated_at stable
-    original_created = chat_data["metadata"]["created_at"]
-    original_updated = chat_data["metadata"]["updated_at"]
+    original_created = chat_data["metadata"]["created_utc"]
+    original_updated = chat_data["metadata"]["updated_utc"]
     await asyncio.sleep(0.001)
     await save_chat(str(chat_path), chat_data)
 
     # No persisted change -> created_at and updated_at should remain unchanged.
-    assert chat_data["metadata"]["created_at"] == original_created
-    assert chat_data["metadata"]["updated_at"] == original_updated
+    assert chat_data["metadata"]["created_utc"] == original_created
+    assert chat_data["metadata"]["updated_utc"] == original_updated
 
     # Mutate persisted payload and save again.
     chat_data["metadata"]["title"] = "Updated"
@@ -284,8 +284,8 @@ async def test_save_chat_updates_timestamps(tmp_path):
     await save_chat(str(chat_path), chat_data)
 
     # created_at should stay fixed; updated_at should move forward on mutation.
-    assert chat_data["metadata"]["created_at"] == original_created
-    assert chat_data["metadata"]["updated_at"] != original_updated
+    assert chat_data["metadata"]["created_utc"] == original_created
+    assert chat_data["metadata"]["updated_utc"] != original_updated
 
 
 @pytest.mark.asyncio
@@ -298,8 +298,8 @@ async def test_save_chat_json_format(tmp_path):
             "title": "Formatted Test",
             "summary": None,
             "system_prompt": None,
-            "created_at": None,
-            "updated_at": None,
+            "created_utc": None,
+            "updated_utc": None,
         },
         "messages": []
     }
@@ -325,12 +325,12 @@ async def test_save_chat_does_not_persist_hex_id(tmp_path):
             "title": "Hex Test",
             "summary": None,
             "system_prompt": None,
-            "created_at": None,
-            "updated_at": None,
+            "created_utc": None,
+            "updated_utc": None,
         },
         "messages": [
             {
-                "timestamp": "2026-02-02T00:00:00+00:00",
+                "timestamp_utc": "2026-02-02T00:00:00+00:00",
                 "role": "user",
                 "content": ["Hello"],
                 "hex_id": "a3f",

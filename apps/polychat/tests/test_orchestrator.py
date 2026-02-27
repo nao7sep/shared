@@ -40,7 +40,7 @@ def sample_chat_data():
     return {
         "metadata": {
             "title": "Test Chat",
-            "created_at": "2026-02-02T00:00:00Z",
+            "created_utc": "2026-02-02T00:00:00Z",
         },
         "messages": [
             {"role": "user", "content": "Hello"},
@@ -654,8 +654,8 @@ class TestSessionManagerIntegration:
                     "title": None,
                     "summary": None,
                     "system_prompt": None,
-                    "created_at": None,
-                    "updated_at": None,
+                    "created_utc": None,
+                    "updated_utc": None,
                 },
                 "messages": [],
             }

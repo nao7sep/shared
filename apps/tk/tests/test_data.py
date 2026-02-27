@@ -70,8 +70,8 @@ class TestValidateTasksStructure:
                 {
                     "text": "Test task",
                     "status": "pending",
-                    "created_at": "2026-02-09T10:00:00+00:00",
-                    "handled_at": None,
+                    "created_utc": "2026-02-09T10:00:00+00:00",
+                    "handled_utc": None,
                     "subjective_date": None,
                     "note": None,
                 }
@@ -97,16 +97,16 @@ class TestValidateTasksStructure:
         # Missing 'text'
         with pytest.raises(ValueError, match="missing required fields"):
             data.validate_tasks_structure({
-                "tasks": [{"status": "pending", "created_at": "2026-02-09T10:00:00+00:00"}]
+                "tasks": [{"status": "pending", "created_utc": "2026-02-09T10:00:00+00:00"}]
             })
 
         # Missing 'status'
         with pytest.raises(ValueError, match="missing required fields"):
             data.validate_tasks_structure({
-                "tasks": [{"text": "Test", "created_at": "2026-02-09T10:00:00+00:00"}]
+                "tasks": [{"text": "Test", "created_utc": "2026-02-09T10:00:00+00:00"}]
             })
 
-        # Missing 'created_at'
+        # Missing 'created_utc'
         with pytest.raises(ValueError, match="missing required fields"):
             data.validate_tasks_structure({
                 "tasks": [{"text": "Test", "status": "pending"}]
@@ -119,7 +119,7 @@ class TestValidateTasksStructure:
                 "tasks": [{
                     "text": "Test",
                     "status": "invalid_status",
-                    "created_at": "2026-02-09T10:00:00+00:00",
+                    "created_utc": "2026-02-09T10:00:00+00:00",
                 }]
             })
 
@@ -164,8 +164,8 @@ class TestSaveTasks:
             "tasks": [{
                 "text": "日本語タスク 🚀",
                 "status": "pending",
-                "created_at": "2026-02-09T10:00:00+00:00",
-                "handled_at": None,
+                "created_utc": "2026-02-09T10:00:00+00:00",
+                "handled_utc": None,
                 "subjective_date": None,
                 "note": None,
             }]
@@ -202,8 +202,8 @@ class TestAddTask:
         task = tasks_data["tasks"][0]
         assert task["text"] == "Test task"
         assert task["status"] == "pending"
-        assert task["created_at"] is not None
-        assert task["handled_at"] is None
+        assert task["created_utc"] is not None
+        assert task["handled_utc"] is None
         assert task["subjective_date"] is None
         assert task["note"] is None
 
@@ -222,19 +222,19 @@ class TestAddTask:
         data.add_task(tasks_data, "Test task")
 
         task = tasks_data["tasks"][0]
-        assert task["handled_at"] is None
+        assert task["handled_utc"] is None
         assert task["subjective_date"] is None
         assert task["note"] is None
 
     def test_add_task_timestamp_utc(self):
-        """Test that created_at is UTC timestamp."""
+        """Test that created_utc is UTC timestamp."""
         tasks_data = {"tasks": []}
 
         data.add_task(tasks_data, "Test task")
 
-        created_at = tasks_data["tasks"][0]["created_at"]
+        created_utc = tasks_data["tasks"][0]["created_utc"]
         # Should be able to parse as ISO format
-        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        dt = datetime.fromisoformat(created_utc.replace('Z', '+00:00'))
         assert dt.tzinfo is not None
 
 
@@ -330,9 +330,9 @@ class TestGroupHandledTasks:
     def test_group_handled_tasks_by_date(self):
         """Test that tasks are grouped by subjective_date."""
         tasks = [
-            (0, {"subjective_date": "2026-02-09", "handled_at": "2026-02-09T10:00:00+00:00"}),
-            (1, {"subjective_date": "2026-02-09", "handled_at": "2026-02-09T11:00:00+00:00"}),
-            (2, {"subjective_date": "2026-02-08", "handled_at": "2026-02-08T10:00:00+00:00"}),
+            (0, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
+            (1, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T11:00:00+00:00"}),
+            (2, {"subjective_date": "2026-02-08", "handled_utc": "2026-02-08T10:00:00+00:00"}),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -345,8 +345,8 @@ class TestGroupHandledTasks:
     def test_group_handled_tasks_unknown(self):
         """Test handling of tasks with missing dates."""
         tasks = [
-            (0, {"subjective_date": "2026-02-09", "handled_at": "2026-02-09T10:00:00+00:00"}),
-            (1, {"subjective_date": None, "handled_at": "2026-02-08T10:00:00+00:00"}),
+            (0, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
+            (1, {"subjective_date": None, "handled_utc": "2026-02-08T10:00:00+00:00"}),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -358,9 +358,9 @@ class TestGroupHandledTasks:
     def test_group_handled_tasks_sort_dates_desc(self):
         """Test that dates are sorted descending."""
         tasks = [
-            (0, {"subjective_date": "2026-02-07", "handled_at": "2026-02-07T10:00:00+00:00"}),
-            (1, {"subjective_date": "2026-02-09", "handled_at": "2026-02-09T10:00:00+00:00"}),
-            (2, {"subjective_date": "2026-02-08", "handled_at": "2026-02-08T10:00:00+00:00"}),
+            (0, {"subjective_date": "2026-02-07", "handled_utc": "2026-02-07T10:00:00+00:00"}),
+            (1, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
+            (2, {"subjective_date": "2026-02-08", "handled_utc": "2026-02-08T10:00:00+00:00"}),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -369,11 +369,11 @@ class TestGroupHandledTasks:
         assert dates == ["2026-02-09", "2026-02-08", "2026-02-07"]
 
     def test_group_handled_tasks_sort_within_date(self):
-        """Test that tasks within date are sorted by handled_at ascending."""
+        """Test that tasks within date are sorted by handled_utc ascending."""
         tasks = [
-            (0, {"subjective_date": "2026-02-09", "handled_at": "2026-02-09T12:00:00+00:00"}),
-            (1, {"subjective_date": "2026-02-09", "handled_at": "2026-02-09T10:00:00+00:00"}),
-            (2, {"subjective_date": "2026-02-09", "handled_at": "2026-02-09T11:00:00+00:00"}),
+            (0, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T12:00:00+00:00"}),
+            (1, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
+            (2, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T11:00:00+00:00"}),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -381,7 +381,7 @@ class TestGroupHandledTasks:
         # Get the tasks for 2026-02-09
         for date, date_tasks in result:
             if date == "2026-02-09":
-                handled_times = [t["handled_at"] for _, t in date_tasks]
+                handled_times = [t["handled_utc"] for _, t in date_tasks]
                 assert handled_times == [
                     "2026-02-09T10:00:00+00:00",
                     "2026-02-09T11:00:00+00:00",

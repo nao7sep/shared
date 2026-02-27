@@ -20,12 +20,12 @@ def test_chat_document_from_raw_normalizes_content_and_metadata() -> None:
     assert "hex_id" not in payload["messages"][0]
 
 
-def test_chat_document_touch_updated_at_sets_created_and_updated() -> None:
+def test_chat_document_touch_updated_utc_sets_created_and_updated() -> None:
     document = ChatDocument.empty()
-    updated_at = document.touch_updated_at()
+    updated_utc = document.touch_updated_utc()
 
-    assert document.metadata.created_at == updated_at
-    assert document.metadata.updated_at == updated_at
+    assert document.metadata.created_utc == updated_utc
+    assert document.metadata.updated_utc == updated_utc
 
 
 def test_chat_message_to_dict_includes_runtime_hex_id_when_requested() -> None:
