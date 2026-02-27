@@ -23,7 +23,10 @@ def load_from_env(var_name: str) -> str:
     if not value:
         raise ValueError(
             f"Environment variable '{var_name}' not set.\n"
-            f"Set it with: export {var_name}=your-api-key"
+            f"Set it with:\n"
+            f"  Unix/macOS:  export {var_name}=your-api-key\n"
+            f"  Windows CMD: set {var_name}=your-api-key\n"
+            f"  PowerShell:  $env:{var_name} = 'your-api-key'"
         )
 
     return value.strip()
