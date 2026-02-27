@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import sys
+
 
 class ConsoleProgressReporter:
     """Renders scan/archive progress in-place on the terminal."""
 
     def __init__(self) -> None:
+        self._is_interactive_tty = sys.stdout.isatty()
         self._scan_line_open = False
         self._archive_line_open = False
 
@@ -31,6 +34,12 @@ class ConsoleProgressReporter:
     def _render_line(self, *, line: str, phase: str, final: bool) -> None:
         line_open_attr = "_scan_line_open" if phase == "scan" else "_archive_line_open"
         line_open = getattr(self, line_open_attr)
+
+        if not self._is_interactive_tty:
+            if final:
+                print(line)
+            setattr(self, line_open_attr, False)
+            return
 
         if final:
             if line_open:

@@ -228,7 +228,7 @@ async def repl_loop(
                             chat_file=chat_path,
                             message_count=len(chat_data.get("messages", [])) if chat_data else 0,
                         )
-                        print("\nGoodbye!")
+                        print("Goodbye!")
                         break
 
                     elif isinstance(action, ContinueAction):
@@ -314,5 +314,5 @@ async def repl_loop(
                 chat_file=chat_path,
                 message_count=len(chat_data.get("messages", [])) if chat_data else 0,
             )
-            print("\nGoodbye!")
+            print("Goodbye!")
             break

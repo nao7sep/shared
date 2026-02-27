@@ -102,6 +102,8 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
         print(warning_line)
 
     if not snapshot_records:
+        if snapshot_warnings:
+            print()
         print("No valid snapshots available for extraction.")
         return
 

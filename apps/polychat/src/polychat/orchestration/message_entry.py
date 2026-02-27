@@ -58,13 +58,13 @@ class MessageEntryHandlersMixin:
         if not chat_path:
             return PrintAction(
                 message=(
-                    "\nNo chat is currently open.\n"
+                    "No chat is currently open.\n"
                     "Use /new to create a new chat or /open to open an existing one."
                 )
             )
 
         if not isinstance(chat_data, dict):
-            return PrintAction(message="\nNo chat data loaded.")
+            return PrintAction(message="No chat data loaded.")
 
         if has_pending_error(chat_data) and not self.manager.retry_mode and not self.manager.secret_mode:
             return PrintAction(message=pending_error_guidance())

@@ -68,7 +68,7 @@ def run_setup_wizard() -> Optional[str]:
         try:
             key = input(f"  {display_name} API key: ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\n\nSetup cancelled.")
+            print("\nSetup cancelled.")
             return None
         if key:
             api_keys[provider_id] = key
@@ -96,7 +96,7 @@ def run_setup_wizard() -> Optional[str]:
     try:
         confirm = input("Save and start PolyChat? (y/N): ").strip().lower()
     except (EOFError, KeyboardInterrupt):
-        print("\n\nSetup cancelled.")
+        print("\nSetup cancelled.")
         return None
 
     if confirm not in ("y", "yes"):

@@ -240,7 +240,7 @@ class ChatFileCommandHandlers:
         )
 
         # Confirm deletion
-        await self._deps._notify(f"\nWARNING: This will permanently delete: {Path(selected_path).name}")
+        await self._deps._notify(f"WARNING: This will permanently delete: {Path(selected_path).name}")
         if not await self._deps._confirm_yes("Type 'yes' to confirm deletion: "):
             return "Deletion cancelled"
 

@@ -135,7 +135,7 @@ def pending_error_guidance(*, compact: bool = False) -> str:
         return f"[{EMOJI_WARNING} PENDING ERROR - Use /retry or /rewind]"
 
     return (
-        f"\n{EMOJI_WARNING} Cannot continue: last interaction failed.\n"
+        f"{EMOJI_WARNING} Cannot continue: last interaction failed.\n"
         "Use /retry to rerun the same message.\n"
         "Use /rewind to remove the failed error/turn."
     )

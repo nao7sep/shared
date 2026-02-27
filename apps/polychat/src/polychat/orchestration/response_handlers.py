@@ -123,7 +123,7 @@ class ResponseHandlersMixin:
                 assistant_hex_id=assistant_hex_id,
             )
             if not can_mutate_normal_chat(transition):
-                return PrintAction(message="\nError: chat context missing for normal-mode response.")
+                return PrintAction(message="Error: chat context missing for normal-mode response.")
             assert chat_path is not None
             assert isinstance(chat_data, dict)
             add_assistant_message(
@@ -199,7 +199,7 @@ class ResponseHandlersMixin:
 
         if mode == "normal":
             if not can_mutate_normal_chat(transition):
-                return PrintAction(message=f"\nError: {error}")
+                return PrintAction(message=f"Error: {error}")
             assert chat_path is not None
             assert isinstance(chat_data, dict)
             if assistant_hex_id and should_release_for_error(transition):
@@ -222,7 +222,7 @@ class ResponseHandlersMixin:
         elif assistant_hex_id and should_release_for_error(transition):
             self.manager.release_hex_id(assistant_hex_id)
 
-        return PrintAction(message=f"\nError: {error}")
+        return PrintAction(message=f"Error: {error}")
 
     async def handle_user_cancel(
         self,
@@ -241,7 +241,7 @@ class ResponseHandlersMixin:
 
         if mode == "normal":
             if not can_mutate_normal_chat(transition):
-                return PrintAction(message="\n[Message cancelled]")
+                return PrintAction(message="[Message cancelled]")
             assert chat_path is not None
             assert isinstance(chat_data, dict)
             if assistant_hex_id and should_release_for_cancel(transition):
@@ -256,4 +256,4 @@ class ResponseHandlersMixin:
         if mode in ("retry", "secret") and assistant_hex_id and should_release_for_cancel(transition):
             self.manager.release_hex_id(assistant_hex_id)
 
-        return PrintAction(message="\n[Message cancelled]")
+        return PrintAction(message="[Message cancelled]")

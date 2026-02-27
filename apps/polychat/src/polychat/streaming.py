@@ -46,12 +46,12 @@ async def display_streaming_response(
 
     except KeyboardInterrupt:
         # User cancelled streaming
-        print("\n[Streaming cancelled by user]")
+        print("[Streaming cancelled by user]")
         raise
 
     except Exception as e:
         # Error during streaming
-        print(f"\n[Error during streaming: {e}]")
+        print(f"[Error during streaming: {e}]")
         raise
 
     return "".join(accumulated), first_token_time

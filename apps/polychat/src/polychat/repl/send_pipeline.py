@@ -57,9 +57,9 @@ async def execute_send_action(
         return
 
     if action.mode == "retry" and action.assistant_hex_id:
-        prefix = f"\n{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
+        prefix = f"{manager.current_ai.capitalize()} ({action.assistant_hex_id}): "
     else:
-        prefix = f"\n{manager.current_ai.capitalize()}: "
+        prefix = f"{manager.current_ai.capitalize()}: "
 
     try:
         print(prefix, end="", flush=True)

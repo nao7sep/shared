@@ -204,7 +204,7 @@ def main() -> None:
             reason="keyboard_interrupt",
             uptime_ms=round((time.perf_counter() - app_started) * 1000, 1),
         )
-        print("\nInterrupted")
+        print("Interrupted")
         sys.exit(0)
     except Exception as e:
         print(f"Error: {e}")

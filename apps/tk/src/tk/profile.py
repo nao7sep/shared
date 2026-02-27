@@ -192,6 +192,7 @@ def create_profile(path: str) -> dict[str, Any]:
         # Fallback to UTC if detection fails
         print(f"Warning: Could not detect system timezone ({e})")
         print("Falling back to UTC. Edit the profile JSON to set your timezone manually.")
+        print()
         system_timezone = "UTC"
 
     profile_dir = str(profile_path.parent)
