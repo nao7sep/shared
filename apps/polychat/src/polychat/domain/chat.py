@@ -220,14 +220,33 @@ class ChatMessage:
         payload: dict[str, Any] = {
             "timestamp_utc": self.timestamp_utc,
             "role": self.role,
-            "content": list(self.content),
         }
-        if self.model is not None:
-            payload["model"] = self.model
-        if self.citations:
-            payload["citations"] = list(self.citations)
-        if self.details is not None:
-            payload["details"] = dict(self.details)
+
+        if self.role == "assistant":
+            if self.model is not None:
+                payload["model"] = self.model
+            payload["content"] = list(self.content)
+            if self.citations:
+                payload["citations"] = list(self.citations)
+            if self.details is not None:
+                payload["details"] = dict(self.details)
+        elif self.role == "error":
+            payload["content"] = list(self.content)
+            if self.details is not None:
+                payload["details"] = dict(self.details)
+            if self.model is not None:
+                payload["model"] = self.model
+            if self.citations:
+                payload["citations"] = list(self.citations)
+        else:
+            payload["content"] = list(self.content)
+            if self.model is not None:
+                payload["model"] = self.model
+            if self.citations:
+                payload["citations"] = list(self.citations)
+            if self.details is not None:
+                payload["details"] = dict(self.details)
+
         if include_runtime_hex_id and self.hex_id:
             payload["hex_id"] = self.hex_id
         payload.update(self.extras)

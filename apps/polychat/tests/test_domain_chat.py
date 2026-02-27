@@ -37,3 +37,39 @@ def test_chat_message_to_dict_includes_runtime_hex_id_when_requested() -> None:
 
     assert runtime_payload["hex_id"] == "a3f"
     assert "hex_id" not in persist_payload
+
+
+def test_chat_message_to_dict_orders_user_fields() -> None:
+    message = ChatMessage.new_user("hello")
+    payload = message.to_dict(include_runtime_hex_id=False)
+
+    assert list(payload.keys()) == ["timestamp_utc", "role", "content"]
+
+
+def test_chat_message_to_dict_orders_assistant_fields() -> None:
+    message = ChatMessage.new_assistant(
+        "hello",
+        model="gpt-5-mini",
+        citations=[{"title": "Example", "url": "https://example.com"}],
+    )
+    payload = message.to_dict(include_runtime_hex_id=False)
+
+    assert list(payload.keys()) == [
+        "timestamp_utc",
+        "role",
+        "model",
+        "content",
+        "citations",
+    ]
+
+
+def test_chat_message_to_dict_orders_error_fields() -> None:
+    message = ChatMessage.new_error("boom", details={"error_code": 429})
+    payload = message.to_dict(include_runtime_hex_id=False)
+
+    assert list(payload.keys()) == [
+        "timestamp_utc",
+        "role",
+        "content",
+        "details",
+    ]
