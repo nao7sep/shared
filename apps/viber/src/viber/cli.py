@@ -72,7 +72,10 @@ def parse_args(argv: list[str] | None = None) -> AppArgs | None:
 
 def main() -> None:
     """Application entry point."""
-    app_args = parse_args()
+    try:
+        app_args = parse_args()
+    except StartupValidationError as exc:
+        _die(str(exc))
     if app_args is None:
         sys.exit(0)
 

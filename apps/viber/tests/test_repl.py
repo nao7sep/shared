@@ -4,6 +4,7 @@ import pytest
 
 from viber.command_parser import (
     CommandParseError,
+    CreateTaskCommand,
     DeleteEntityCommand,
     ReadEntityCommand,
     ResolveAssignmentCommand,
@@ -56,6 +57,30 @@ def test_parse_update_project_state() -> None:
     assert isinstance(cmd, UpdateProjectStateCommand)
     assert cmd.project_id == 1
     assert cmd.new_state == ProjectState.SUSPENDED
+
+
+def test_parse_create_task_requires_explicit_all_or_group_scope() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("create", ["task", "Upgrade deps"])
+
+
+def test_parse_create_task_with_all_scope() -> None:
+    cmd = parse_command("create", ["task", "Upgrade", "deps", "all"])
+    assert isinstance(cmd, CreateTaskCommand)
+    assert cmd.description == "Upgrade deps"
+    assert cmd.group_id is None
+
+
+def test_parse_create_task_with_group_scope() -> None:
+    cmd = parse_command("create", ["task", "Upgrade", "deps", "g12"])
+    assert isinstance(cmd, CreateTaskCommand)
+    assert cmd.description == "Upgrade deps"
+    assert cmd.group_id == 12
+
+
+def test_parse_create_task_rejects_invalid_scope_token() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("create", ["task", "Upgrade", "deps", "backend"])
 
 
 def test_parse_rejects_extra_arg_for_read() -> None:

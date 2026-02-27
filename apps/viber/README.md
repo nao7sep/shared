@@ -27,7 +27,7 @@ Full-word commands (aliases in parentheses):
 ```
 create group <name>                         (c g <name>)
 create project <name> g<ID>                 (c p <name> g<ID>)
-create task <description> [g<ID>]           (c t <description> [g<ID>])
+create task <description> <all|g<ID>>       (c t <description> <all|g<ID>>)
 
 read groups                                 (r groups)
 read projects                               (r projects)
@@ -64,10 +64,16 @@ exit | quit
 ### Notes
 
 - `ok` and `nah` accept tokens in either order: `ok p3 t1` or `ok t1 p3`.
-- `create task <description> g<ID>` — the trailing `g<ID>` scopes the task to one group; omit for all groups.
+- `create task` requires explicit scope: trailing `g<ID>` for one group or `all` for all groups.
 - Use explicit project update forms only: `update p<ID> name ...` and `update p<ID> state ...`.
 - `update p<ID> t<ID>` with no comment clears the assignment comment.
-- `work` loops through pending items one by one with `[o]k / [n]ah / [s]kip / [q]uit` prompts.
+- Deletes are cascading: deleting a group also deletes its projects and group-scoped tasks; deleting a project/task deletes related assignments.
+- All `delete` commands require typing exact `yes`; Enter or any other input cancels.
+- Project data rows use `project | group | state | local-created-time`.
+- Task data rows use `task | group-or-all | local-created-time`.
+- `view` shows `project | group | task`; `view p<ID>` and `view t<ID>` show header row + matching rows (no timestamps).
+- `work` shows all pending items, then prompts for item number (or `q` to quit), then action `[o]k / [n]ah / [c]ancel`.
+- In `work`, pressing `Ctrl+C` at any prompt cancels the current step safely.
 - `exit` and `quit` are full-word only (no single-letter aliases).
 
 ## Concepts
@@ -93,7 +99,8 @@ Assignments are only generated for `active` projects at task creation time. No b
 - `project.created_utc` is set when a project is created.
 - `task.created_utc` is set when a task is created.
 - `assignment.handled_utc` is `null` while pending, and set when resolved via `ok` or `nah`.
-- `read projects` / `read p<ID>` display project creation time in local time as `[created: ...]`.
+- `read projects` / `read p<ID>` display `project | group | state | local-created-time`.
+- `read tasks` / `read t<ID>` display `task | group-or-all | local-created-time`.
 
 ## HTML Check Pages
 

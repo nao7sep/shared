@@ -14,11 +14,7 @@ from datetime import datetime
 
 from .models import Assignment, AssignmentStatus, Database, Group, Project, ProjectState, Task
 
-_UTC_SUFFIX_Z = "Z"
-_UTC_OFFSET_ZERO = "+00:00"
 _LOCAL_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-_LABEL_ALL_GROUPS = "all groups"
-_LABEL_GROUP_NOT_FOUND_TEMPLATE = "g{group_id} (not found)"
 
 
 def print_banner(lines: Iterable[str]) -> None:
@@ -65,11 +61,12 @@ def format_group(group: Group) -> str:
 
 
 def format_project(project: Project, group: Group) -> str:
-    state_label = f"[{project.state.value}]"
     created = format_local_time(project.created_utc)
     return (
-        f"{format_project_ref(project)} {state_label} (group: {group.name})"
-        f" [created: {created}]"
+        f"{format_project_ref(project)}"
+        f" | {format_group_ref(group)}"
+        f" | {project.state.value}"
+        f" | {created}"
     )
 
 
@@ -78,26 +75,33 @@ def format_task(task: Task, db: Database) -> str:
     if task.group_id is not None:
         group_label = _resolve_group_label(db, task.group_id)
     else:
-        group_label = _LABEL_ALL_GROUPS
-    return f"{format_task_ref(task)} [created: {created}] [target: {group_label}]"
+        group_label = "all groups"
+    return f"{format_task_ref(task)} | {group_label} | {created}"
 
 
 def format_assignment(
     assignment: Assignment, project: Project, task: Task
 ) -> str:
     status = assignment.status.value
-    line = f"{format_project_ref(project)} + {format_task_ref(task)}: {status}"
-    if assignment.handled_utc is not None:
-        line += f" [handled: {format_local_time(assignment.handled_utc)}]"
-    if assignment.comment:
-        line += f" — {assignment.comment}"
-    return line
+    handled = (
+        format_local_time(assignment.handled_utc)
+        if assignment.handled_utc is not None
+        else "-"
+    )
+    comment = assignment.comment if assignment.comment else "-"
+    return (
+        f"{format_project_ref(project)}"
+        f" | {format_task_ref(task)}"
+        f" | {status}"
+        f" | {handled}"
+        f" | {comment}"
+    )
 
 
 def format_local_time(utc_iso: str) -> str:
     """Parse UTC ISO string, convert to local time, format as 'YYYY-MM-DD HH:MM:SS'."""
     # Handle both '+00:00' and 'Z' suffixes
-    normalized = utc_iso.replace(_UTC_SUFFIX_Z, _UTC_OFFSET_ZERO)
+    normalized = utc_iso.replace("Z", "+00:00")
     dt_utc = datetime.fromisoformat(normalized).astimezone(tz=None)
     return dt_utc.strftime(_LOCAL_TIME_FORMAT)
 
@@ -114,8 +118,8 @@ def format_status_mark(status: AssignmentStatus) -> str:
 def _resolve_group_label(db: Database, group_id: int) -> str:
     for g in db.groups:
         if g.id == group_id:
-            return g.name
-    return _LABEL_GROUP_NOT_FOUND_TEMPLATE.format(group_id=group_id)
+            return format_group_ref(g)
+    return f"g{group_id} (not found)"
 
 
 def describe_project_state(state: ProjectState) -> str:

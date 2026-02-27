@@ -150,7 +150,7 @@ def _parse_create(args: list[str]) -> ParsedCommand:
     if not args:
         raise CommandParseError(
             "Usage: create group <name> | create project <name> g<ID>"
-            " | create task <description> [g<ID>]"
+            " | create task <description> <all|g<ID>>"
         )
 
     kind = args[0].lower()
@@ -178,14 +178,18 @@ def _parse_create(args: list[str]) -> ParsedCommand:
         return CreateProjectCommand(name=name, group_id=group_id)
 
     if kind in ("task", "t"):
-        if len(args) < 2:
-            raise CommandParseError("Usage: create task <description> [g<ID>]")
-        task_group_id: int | None = None
-        desc_tokens = args[1:]
-        maybe_gid = _parse_id_token(desc_tokens[-1], "g")
-        if maybe_gid is not None:
-            task_group_id = maybe_gid
-            desc_tokens = desc_tokens[:-1]
+        if len(args) < 3:
+            raise CommandParseError("Usage: create task <description> <all|g<ID>>")
+        scope_token = args[-1].lower()
+        if scope_token == "all":
+            task_group_id: int | None = None
+        else:
+            task_group_id = _parse_id_token(scope_token, "g")
+            if task_group_id is None:
+                raise CommandParseError(
+                    f"Invalid task scope '{args[-1]}'. Expected all or g<ID>."
+                )
+        desc_tokens = args[1:-1]
         description = _join_tokens(desc_tokens)
         if not description:
             raise CommandParseError("Task description cannot be empty.")

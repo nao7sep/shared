@@ -161,3 +161,30 @@ def test_remove_check_page(tmp_path: Path) -> None:
 
     remove_check_page(check_base, "Backend")
     assert not page.exists()
+
+
+def test_render_escapes_all_user_supplied_text(tmp_path: Path) -> None:
+    db = Database()
+    group_name = 'Back<end>&"Team"'
+    project_name = 'api<script>alert(1)</script>&"x"'
+    task_desc = 'Fix <b>markup</b> & "quotes"'
+    g = create_group(db, group_name)
+    p = create_project(db, project_name, g.id)
+    create_task(db, task_desc, g.id)
+    set_project_state(db, p.id, ProjectState.SUSPENDED)
+
+    check_base = tmp_path / "check.html"
+    written = render_check_pages(db, check_base)
+    assert len(written) == 1
+    content = written[0].read_text(encoding="utf-8")
+
+    # Group name in title/h1 must be escaped.
+    assert "Back&lt;end&gt;&amp;&quot;Team&quot;" in content
+    # Project name must be escaped, while static suspended markup is preserved.
+    assert "api&lt;script&gt;alert(1)&lt;/script&gt;&amp;&quot;x&quot;" in content
+    assert "<em>(suspended)</em>" in content
+    # Task description must be escaped.
+    assert "Fix &lt;b&gt;markup&lt;/b&gt; &amp; &quot;quotes&quot;" in content
+    # Raw tag injection should not appear.
+    assert "<script>alert(1)</script>" not in content
+    assert "<b>markup</b>" not in content

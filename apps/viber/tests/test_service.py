@@ -5,7 +5,6 @@ import pytest
 from viber.errors import (
     AssignmentNotFoundError,
     DuplicateNameError,
-    GroupInUseError,
     GroupNotFoundError,
     ProjectNotFoundError,
     TaskNotFoundError,
@@ -77,12 +76,46 @@ def test_get_group_not_found() -> None:
         get_group(db, 99)
 
 
-def test_delete_group_blocked_by_projects() -> None:
+def test_delete_group_cascades_projects_tasks_and_assignments() -> None:
     db = make_db()
-    g = create_group(db, "Backend")
-    create_project(db, "api", g.id)
-    with pytest.raises(GroupInUseError):
-        delete_group(db, g.id)
+    g1 = create_group(db, "Backend")
+    g2 = create_group(db, "Frontend")
+    p1 = create_project(db, "api", g1.id)
+    p2 = create_project(db, "ui", g2.id)
+
+    # all groups task; assignments for p1 and p2
+    t_all = create_task(db, "Shared task", None)
+    # group-scoped task in g1; assignment for p1 only
+    t_g1 = create_task(db, "Backend task", g1.id)
+    # group-scoped task in g2; assignment for p2 only
+    t_g2 = create_task(db, "Frontend task", g2.id)
+
+    key_p1_tall = assignment_key(p1.id, t_all.id)
+    key_p2_tall = assignment_key(p2.id, t_all.id)
+    key_p1_tg1 = assignment_key(p1.id, t_g1.id)
+    key_p2_tg2 = assignment_key(p2.id, t_g2.id)
+    assert key_p1_tall in db.assignments
+    assert key_p2_tall in db.assignments
+    assert key_p1_tg1 in db.assignments
+    assert key_p2_tg2 in db.assignments
+
+    delete_group(db, g1.id)
+
+    # group and its projects are deleted
+    assert all(g.id != g1.id for g in db.groups)
+    assert all(p.group_id != g1.id for p in db.projects)
+
+    # tasks scoped to deleted group are deleted; all-group and other-group tasks remain
+    remaining_task_ids = {t.id for t in db.tasks}
+    assert t_g1.id not in remaining_task_ids
+    assert t_all.id in remaining_task_ids
+    assert t_g2.id in remaining_task_ids
+
+    # assignments tied to deleted project/task are removed; unrelated remain
+    assert key_p1_tall not in db.assignments
+    assert key_p1_tg1 not in db.assignments
+    assert key_p2_tall in db.assignments
+    assert key_p2_tg2 in db.assignments
 
 
 def test_delete_group_success() -> None:

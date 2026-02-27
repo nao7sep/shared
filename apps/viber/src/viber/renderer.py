@@ -125,8 +125,8 @@ def _render_table(
     db: Database, projects: list[Project], tasks: Sequence[Task]
 ) -> list[str]:
     lines: list[str] = ["  <table>", "    <thead>", "      <tr>"]
-    lines.append("        <th>Task</th>")
     lines.append("        <th>Created</th>")
+    lines.append("        <th>Task</th>")
 
     for p in projects:
         label = html.escape(p.name)
@@ -140,8 +140,8 @@ def _render_table(
         created = format_local_time(task.created_utc).split(" ")[0]
         desc = html.escape(task.description)
         lines.append("      <tr>")
-        lines.append(f'        <td class="task-desc">{desc}</td>')
         lines.append(f"        <td>{html.escape(created)}</td>")
+        lines.append(f'        <td class="task-desc">{desc}</td>')
 
         for project in projects:
             key = assignment_key(project.id, task.id)

@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from .errors import (
     AssignmentNotFoundError,
     DuplicateNameError,
-    GroupInUseError,
     GroupNotFoundError,
     ProjectNotFoundError,
     TaskNotFoundError,
@@ -58,11 +57,17 @@ def update_group_name(db: Database, group_id: int, name: str) -> Group:
 
 
 def delete_group(db: Database, group_id: int) -> Group:
-    """Raise GroupInUseError if any project references this group."""
+    """Cascade-delete projects/tasks in this group and their assignments, then remove group."""
     group = get_group(db, group_id)
-    for p in db.projects:
-        if p.group_id == group_id:
-            raise GroupInUseError(group_id)
+    project_ids = [p.id for p in db.projects if p.group_id == group_id]
+    task_ids = [t.id for t in db.tasks if t.group_id == group_id]
+
+    for project_id in project_ids:
+        delete_project(db, project_id)
+
+    for task_id in task_ids:
+        delete_task(db, task_id)
+
     db.groups.remove(group)
     return group
 

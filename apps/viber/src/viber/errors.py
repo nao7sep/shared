@@ -27,11 +27,6 @@ class AssignmentNotFoundError(ViberError):
         super().__init__(f"No assignment for p{project_id} / t{task_id}.")
 
 
-class GroupInUseError(ViberError):
-    def __init__(self, group_id: int) -> None:
-        super().__init__(f"Group {group_id} has projects; cannot delete.")
-
-
 class DuplicateNameError(ViberError):
     def __init__(self, name: str) -> None:
         super().__init__(f"Name '{name}' already exists.")

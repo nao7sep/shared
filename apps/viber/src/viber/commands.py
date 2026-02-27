@@ -27,12 +27,11 @@ from .command_parser import (
 from .errors import AssignmentNotFoundError
 from .formatter import (
     format_group,
-    format_local_time,
+    format_group_ref,
     format_project,
     format_project_ref,
     format_task,
     format_task_ref,
-    print_blank,
     print_segment,
 )
 from .models import AssignmentStatus, Database, assignment_key
@@ -63,7 +62,7 @@ MutationHook = Callable[[set[int] | None, set[str] | None], None]
 HELP_TEXT = """\
 create group <name>                                c g <name>
 create project <name> g<ID>                        c p <name> g<ID>
-create task <description> [g<ID>]                  c t <description> [g<ID>]
+create task <description> <all|g<ID>>              c t <description> <all|g<ID>>
 
 read groups                                        r groups
 read projects                                      r projects
@@ -110,7 +109,7 @@ def execute_command(
     if isinstance(command, CreateGroupCommand):
         group = create_group(db, command.name)
         after_mutation({group.id}, None)
-        print_segment([f"Created group: {group.name} (g{group.id})."])
+        print_segment([f"Created group: {group.name} (g{group.id})"])
         return
 
     if isinstance(command, CreateProjectCommand):
@@ -118,7 +117,7 @@ def execute_command(
         project = create_project(db, command.name, command.group_id)
         after_mutation({group.id}, None)
         print_segment([
-            f"Created project: {project.name} (p{project.id}) in group {group.name} (g{group.id})."
+            f"Created project: {project.name} (p{project.id}) in group {group.name} (g{group.id})"
         ])
         return
 
@@ -130,7 +129,7 @@ def execute_command(
         else:
             scope_group = get_group(db, task.group_id)
             scope = f"group {scope_group.name} (g{scope_group.id})"
-        print_segment([f"Created task: {task.description} (t{task.id}) for {scope}."])
+        print_segment([f"Created task: {task.description} (t{task.id}) for {scope}"])
         return
 
     if isinstance(command, ReadCollectionCommand):
@@ -147,11 +146,11 @@ def execute_command(
         removed_names = {old_name} if old_name != group.name else None
         after_mutation({group.id}, removed_names)
         if old_name == group.name:
-            print_segment([f"Group name unchanged: {group.name} (g{group.id})."])
+            print_segment([f"Group name unchanged: {group.name} (g{group.id})"])
         else:
             print_segment([
                 f"Renamed group: {old_name} (g{group.id}) -> "
-                f"{group.name} (g{group.id})."
+                f"{group.name} (g{group.id})"
             ])
         return
 
@@ -160,11 +159,11 @@ def execute_command(
         project = update_project_name(db, command.project_id, command.new_name)
         after_mutation({project.group_id}, None)
         if old_name == project.name:
-            print_segment([f"Project name unchanged: {project.name} (p{project.id})."])
+            print_segment([f"Project name unchanged: {project.name} (p{project.id})"])
         else:
             print_segment([
                 f"Renamed project: {old_name} (p{project.id}) -> "
-                f"{project.name} (p{project.id})."
+                f"{project.name} (p{project.id})"
             ])
         return
 
@@ -172,7 +171,7 @@ def execute_command(
         project = set_project_state(db, command.project_id, command.new_state)
         after_mutation({project.group_id}, None)
         print_segment([
-            f"Updated project state: {project.name} (p{project.id}) -> {command.new_state.value}."
+            f"Updated project state: {project.name} (p{project.id}) -> {command.new_state.value}"
         ])
         return
 
@@ -182,18 +181,18 @@ def execute_command(
         if command.comment:
             print_segment([
                 "Updated assignment comment for "
-                f"p{command.project_id} + t{command.task_id}: {command.comment}"
+                f"p{command.project_id} | t{command.task_id}: {command.comment}"
             ])
         else:
             print_segment([
-                f"Cleared assignment comment for p{command.project_id} + t{command.task_id}."
+                f"Cleared assignment comment for p{command.project_id} | t{command.task_id}"
             ])
         return
 
     if isinstance(command, UpdateTaskDescriptionCommand):
         task = update_task_description(db, command.task_id, command.new_description)
         after_mutation(_task_affected_group_ids(db, task.group_id), None)
-        print_segment([f"Updated task: {format_task_ref(task)}."])
+        print_segment([f"Updated task: {format_task_ref(task)}"])
         return
 
     if isinstance(command, UpdateTaskDescriptionPromptCommand):
@@ -210,7 +209,7 @@ def execute_command(
             return
         task = update_task_description(db, command.task_id, new_desc)
         after_mutation(_task_affected_group_ids(db, task.group_id), None)
-        print_segment([f"Updated task: {format_task_ref(task)}."])
+        print_segment([f"Updated task: {format_task_ref(task)}"])
         return
 
     if isinstance(command, DeleteEntityCommand):
@@ -223,7 +222,11 @@ def execute_command(
             print_segment(["Vibe is good. No pending assignments."])
         else:
             lines = [
-                f"{format_project_ref(e.project)} + {format_task_ref(e.task)}"
+                (
+                    f"{format_project_ref(e.project)}"
+                    f" | {format_group_ref(e.group)}"
+                    f" | {format_task_ref(e.task)}"
+                )
                 for e in entries
             ]
             print_segment(lines)
@@ -258,18 +261,7 @@ def _exec_read_collection(command: ReadCollectionCommand, db: Database) -> None:
         if not projects:
             print_segment(["No projects."])
             return
-        group_map = {g.id: g for g in db.groups}
-        lines: list[str] = []
-        for project in projects:
-            group = group_map.get(project.group_id)
-            if group is not None:
-                lines.append(format_project(project, group))
-            else:
-                created = format_local_time(project.created_utc)
-                lines.append(
-                    f"{project.name} (p{project.id}) [{project.state.value}] (group: ?)"
-                    f" [created: {created}]"
-                )
+        lines = [format_project(project, get_group(db, project.group_id)) for project in projects]
         print_segment(lines)
         return
 
@@ -288,15 +280,8 @@ def _exec_read_entity(command: ReadEntityCommand, db: Database) -> None:
 
     if command.kind == "project":
         project = get_project(db, command.entity_id)
-        group_map = {g.id: g for g in db.groups}
-        maybe_group = group_map.get(project.group_id)
-        if maybe_group is not None:
-            print_segment([format_project(project, maybe_group)])
-        else:
-            created = format_local_time(project.created_utc)
-            print_segment(
-                [f"{project.name} (p{project.id}) [{project.state.value}] [created: {created}]"]
-            )
+        group = get_group(db, project.group_id)
+        print_segment([format_project(project, group)])
         return
 
     task = get_task(db, command.entity_id)
@@ -305,44 +290,57 @@ def _exec_read_entity(command: ReadEntityCommand, db: Database) -> None:
 
 def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: MutationHook) -> None:
     if command.kind == "group":
+        group = get_group(db, command.entity_id)
+        if not _confirm_action([format_group(group)]):
+            return
         group = delete_group(db, command.entity_id)
         after_mutation(set(), {group.name})
-        print_segment([f"Deleted group: {group.name} (g{group.id})."])
+        print_segment([f"Deleted group: {group.name} (g{group.id})"])
         return
 
     if command.kind == "project":
+        project = get_project(db, command.entity_id)
+        group = get_group(db, project.group_id)
+        summary = format_project(project, group)
+        if not _confirm_action([summary]):
+            return
         project = delete_project(db, command.entity_id)
         after_mutation({project.group_id}, None)
-        print_segment([f"Deleted project: {project.name} (p{project.id})."])
+        print_segment([f"Deleted project: {project.name} (p{project.id})"])
         return
 
+    task = get_task(db, command.entity_id)
+    if not _confirm_action([format_task(task, db)]):
+        return
     task = delete_task(db, command.entity_id)
     after_mutation(_task_affected_group_ids(db, task.group_id), None)
-    print_segment([f"Deleted task: {task.description} (t{task.id})."])
+    print_segment([f"Deleted task: {task.description} (t{task.id})"])
 
 
 def _exec_view_entity(command: ViewEntityCommand, db: Database) -> None:
     if command.kind == "project":
         project = get_project(db, command.entity_id)
+        group = get_group(db, project.group_id)
+        header = f"{format_project_ref(project)} | {format_group_ref(group)}"
         results = pending_by_project(db, command.entity_id)
         if not results:
-            print_segment([f"No pending tasks for {format_project_ref(project)}."])
+            print_segment([header, "No pending tasks."])
             return
-        lines = [f"Pending tasks for {format_project_ref(project)}:"]
+        lines: list[str] = [header]
         for task, _assignment in results:
-            created = format_local_time(task.created_utc).split(" ")[0]
-            lines.append(f"  {format_task_ref(task)} ({created})")
+            lines.append(format_task_ref(task))
         print_segment(lines)
         return
 
     task = get_task(db, command.entity_id)
     task_results = pending_by_task(db, command.entity_id)
+    header = format_task_ref(task)
     if not task_results:
-        print_segment([f"No pending projects for {format_task_ref(task)}."])
+        print_segment([header, "No pending projects."])
         return
-    lines = [f"Pending projects for {format_task_ref(task)}:"]
+    lines = [header]
     for project, group, _assignment in task_results:
-        lines.append(f"  {format_project_ref(project)} (group: {group.name})")
+        lines.append(f"{format_project_ref(project)} | {format_group_ref(group)}")
     print_segment(lines)
 
 
@@ -392,8 +390,8 @@ def _exec_resolve(
     resolve_assignment(db, command.project_id, command.task_id, command.status, comment)
     after_mutation({project.group_id}, None)
     print_segment([
-        f"Updated assignment: {project.name} (p{project.id}) + {task.description} (t{task.id})"
-        f" -> {verb_label}."
+        f"Updated assignment: {format_project_ref(project)} | {format_task_ref(task)}"
+        f" | {verb_label}"
     ])
 
 
@@ -415,41 +413,48 @@ def _work_by_project(
     if not isinstance(project, Project):
         return
 
-    results = pending_by_project(db, project.id)
-    if not results:
-        print_segment([f"No pending tasks for {format_project_ref(project)}."])
+    initial_results = pending_by_project(db, project.id)
+    if not initial_results:
+        print_segment([f"No pending tasks for {format_project_ref(project)}"])
         return
 
-    print_segment([
-        f"Work loop: {project.name} (p{project.id}) has {len(results)} pending task(s)."
-    ], trailing_blank=False)
-    print_blank()
+    while True:
+        results = pending_by_project(db, project.id)
+        if not results:
+            print_segment(["Work loop complete."])
+            return
 
-    for i, (task, _assignment) in enumerate(results, 1):
-        created = format_local_time(task.created_utc).split(" ")[0]
-        print(f"[{i}/{len(results)}] {format_task_ref(task)} ({created})")
+        lines = [f"Work loop: {format_project_ref(project)}"]
+        for i, (task, _assignment) in enumerate(results, 1):
+            lines.append(f"{i}. {format_task(task, db)}")
+        print_segment(lines, trailing_blank=False)
 
-        action = _prompt_work_action()
-        if action == "q":
+        selected = _prompt_work_item_selection(len(results))
+        if selected is None:
             print_segment(["Work loop exited."])
             return
-        if action == "s":
-            continue
-        if action in ("o", "n"):
-            status = AssignmentStatus.OK if action == "o" else AssignmentStatus.NAH
-            try:
-                comment_raw = input("Comment (optional, Enter to skip): ").strip()
-            except (EOFError, KeyboardInterrupt):
-                print()
-                comment_raw = ""
-            comment = comment_raw if comment_raw else None
-            resolve_assignment(db, project.id, task.id, status, comment)
-            after_mutation({project.group_id}, None)
-            verb_label = "ok" if status == AssignmentStatus.OK else "nah"
-            print(f"Updated assignment to {verb_label}.")
-        print_blank()
 
-    print_segment(["Work loop complete."])
+        task = results[selected - 1][0]
+        status = _prompt_work_resolution_status()
+        if status is None:
+            print_segment(["Cancelled."])
+            continue
+
+        cancelled, comment = _prompt_optional_comment()
+        if cancelled:
+            print_segment(["Cancelled."])
+            continue
+
+        resolve_assignment(db, project.id, task.id, status, comment)
+        after_mutation({project.group_id}, None)
+        verb_label = "ok" if status == AssignmentStatus.OK else "nah"
+        print_segment([
+            (
+                f"Updated assignment: {format_project_ref(project)}"
+                f" | {format_task_ref(task)}"
+                f" | {verb_label}"
+            )
+        ])
 
 
 def _work_by_task(
@@ -460,59 +465,106 @@ def _work_by_task(
     if not isinstance(task, Task):
         return
 
-    results = pending_by_task(db, task.id)
-    if not results:
-        print_segment([f"No pending projects for {format_task_ref(task)}."])
+    initial_results = pending_by_task(db, task.id)
+    if not initial_results:
+        print_segment([f"No pending projects for {format_task_ref(task)}"])
         return
 
-    print_segment([
-        f"Work loop: {task.description} (t{task.id}) has {len(results)} pending project(s)."
-    ], trailing_blank=False)
-    print_blank()
+    while True:
+        results = pending_by_task(db, task.id)
+        if not results:
+            print_segment(["Work loop complete."])
+            return
 
-    for i, (project, group, _assignment) in enumerate(results, 1):
-        print(f"[{i}/{len(results)}] {format_project_ref(project)} (group: {group.name})")
+        lines = [f"Work loop: {format_task_ref(task)}"]
+        for i, (project, group, _assignment) in enumerate(results, 1):
+            lines.append(f"{i}. {format_project(project, group)}")
+        print_segment(lines, trailing_blank=False)
 
-        action = _prompt_work_action()
-        if action == "q":
+        selected = _prompt_work_item_selection(len(results))
+        if selected is None:
             print_segment(["Work loop exited."])
             return
-        if action == "s":
+
+        project = results[selected - 1][0]
+        status = _prompt_work_resolution_status()
+        if status is None:
+            print_segment(["Cancelled."])
             continue
-        if action in ("o", "n"):
-            status = AssignmentStatus.OK if action == "o" else AssignmentStatus.NAH
-            try:
-                comment_raw = input("Comment (optional, Enter to skip): ").strip()
-            except (EOFError, KeyboardInterrupt):
-                print()
-                comment_raw = ""
-            comment = comment_raw if comment_raw else None
-            resolve_assignment(db, project.id, task.id, status, comment)
-            after_mutation({project.group_id}, None)
-            verb_label = "ok" if status == AssignmentStatus.OK else "nah"
-            print(f"Updated assignment to {verb_label}.")
-        print_blank()
 
-    print_segment(["Work loop complete."])
+        cancelled, comment = _prompt_optional_comment()
+        if cancelled:
+            print_segment(["Cancelled."])
+            continue
+
+        resolve_assignment(db, project.id, task.id, status, comment)
+        after_mutation({project.group_id}, None)
+        verb_label = "ok" if status == AssignmentStatus.OK else "nah"
+        print_segment([
+            (
+                f"Updated assignment: {format_project_ref(project)}"
+                f" | {format_task_ref(task)}"
+                f" | {verb_label}"
+            )
+        ])
 
 
-def _prompt_work_action() -> str:
-    """Prompt for work-loop action. Returns 'o', 'n', 's', or 'q'."""
+def _prompt_work_item_selection(total_items: int) -> int | None:
+    """Prompt for item index or quit. Returns 1-based index or None (quit/cancel)."""
     while True:
         try:
-            raw = input("[o]k / [n]ah / [s]kip / [q]uit: ").strip().lower()
+            raw = input(f"Select item 1-{total_items} or q to quit: ").strip().lower()
         except (EOFError, KeyboardInterrupt):
             print()
-            return "q"
-        if raw in ("o", "ok"):
-            return "o"
-        if raw in ("n", "nah"):
-            return "n"
-        if raw in ("s", "skip"):
-            return "s"
+            return None
         if raw in ("q", "quit"):
-            return "q"
-        print("Please enter o, n, s, or q.")
+            return None
+        if raw.isdigit():
+            selected = int(raw)
+            if 1 <= selected <= total_items:
+                return selected
+        print(f"Please enter a number between 1 and {total_items}, or q.")
+
+
+def _prompt_work_resolution_status() -> AssignmentStatus | None:
+    """Prompt for resolution action. Returns status or None for cancel."""
+    while True:
+        try:
+            raw = input("Action [o]k / [n]ah / [c]ancel: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return None
+        if raw in ("o", "ok"):
+            return AssignmentStatus.OK
+        if raw in ("n", "nah"):
+            return AssignmentStatus.NAH
+        if raw in ("c", "cancel"):
+            return None
+        print("Please enter o, n, or c.")
+
+
+def _prompt_optional_comment() -> tuple[bool, str | None]:
+    """Prompt for optional comment. Returns (cancelled, comment)."""
+    try:
+        comment_raw = input("Comment (optional, Enter for none): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return True, None
+    return False, (comment_raw if comment_raw else None)
+
+
+def _confirm_action(lines: list[str]) -> bool:
+    print_segment(lines, trailing_blank=False)
+    try:
+        confirm = input("Type 'yes' to confirm delete [N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        print_segment(["Cancelled."])
+        return False
+    if confirm != "yes":
+        print_segment(["Cancelled."])
+        return False
+    return True
 
 
 def _task_affected_group_ids(db: Database, group_id: int | None) -> set[int]:

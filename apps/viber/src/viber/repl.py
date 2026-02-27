@@ -43,9 +43,7 @@ def run_repl(
     check_path: Path | None,
 ) -> None:
     """Run the interactive REPL loop until exit/quit."""
-
-    history_path = data_path.with_suffix(f"{data_path.suffix}.history")
-    _configure_line_editor(history_path)
+    _configure_line_editor()
 
     def after_mutation(
         affected_group_ids: set[int] | None,
@@ -63,10 +61,7 @@ def run_repl(
         if affected_group_ids:
             render_check_pages(db, check_path, affected_group_ids)
 
-    try:
-        _run_loop(db, after_mutation)
-    finally:
-        _save_line_editor_history(history_path)
+    _run_loop(db, after_mutation)
 
 
 def _run_loop(db: Database, after_mutation: MutationHook) -> None:
@@ -82,7 +77,7 @@ def _run_loop(db: Database, after_mutation: MutationHook) -> None:
         line = raw.strip()
         if not line:
             continue
-        _record_history_entry(line)
+        _record_command_history(line)
 
         try:
             tokens = shlex.split(line)
@@ -114,38 +109,30 @@ def _run_loop(db: Database, after_mutation: MutationHook) -> None:
             print_segment([f"Unexpected error: {exc}"])
 
 
-def _configure_line_editor(history_path: Path) -> None:
+def _configure_line_editor() -> None:
+    """Enable basic in-line editing (history stays in-memory only for this session)."""
     if readline is None:
         return
     try:
+        # Needed on some terminals so arrow keys work for cursor movement.
         readline.parse_and_bind("set enable-keypad on")
         readline.parse_and_bind("set editing-mode emacs")
+        # Only REPL command lines should enter history; confirmations/comments should not.
+        set_auto_history = getattr(readline, "set_auto_history", None)
+        if callable(set_auto_history):
+            set_auto_history(False)
     except Exception:  # noqa: BLE001
         pass
+
+
+def _record_command_history(line: str) -> None:
+    """Record REPL command history explicitly when readline is available."""
+    if readline is None:
+        return
+    add_history = getattr(readline, "add_history", None)
+    if not callable(add_history):
+        return
     try:
-        if history_path.exists():
-            readline.read_history_file(str(history_path))
+        add_history(line)
     except Exception:  # noqa: BLE001
         pass
-
-
-def _record_history_entry(line: str) -> None:
-    if readline is None:
-        return
-    try:
-        last_index = readline.get_current_history_length()
-        if last_index > 0 and readline.get_history_item(last_index) == line:
-            return
-        readline.add_history(line)
-    except Exception:  # noqa: BLE001
-        return
-
-
-def _save_line_editor_history(history_path: Path) -> None:
-    if readline is None:
-        return
-    try:
-        history_path.parent.mkdir(parents=True, exist_ok=True)
-        readline.write_history_file(str(history_path))
-    except Exception:  # noqa: BLE001
-        return

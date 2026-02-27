@@ -28,7 +28,7 @@ class PendingEntry:
 def pending_all(db: Database) -> list[PendingEntry]:
     """Return all pending assignments, excluding SUSPENDED and DEPRECATED projects.
 
-    Ordered by: group name asc, project name asc, task created_utc asc.
+    Ordered by: task created_utc asc, group name asc, project name asc.
     """
     group_map = {g.id: g for g in db.groups}
 
@@ -48,9 +48,9 @@ def pending_all(db: Database) -> list[PendingEntry]:
 
     results.sort(
         key=lambda e: (
+            e.task.created_utc,
             e.group.name.lower(),
             e.project.name.lower(),
-            e.task.created_utc,
         )
     )
     return results
