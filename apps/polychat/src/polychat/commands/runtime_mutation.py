@@ -69,7 +69,7 @@ class RuntimeMutationCommandHandlers:
             else:
                 target_label = "selected target"
 
-            print(f"WARNING: Rewind will delete from {target_label} onwards")
+            await self._deps._notify(f"WARNING: Rewind will delete from {target_label} onwards")
             if not await self._deps._confirm_yes("Type 'yes' to confirm rewind: "):
                 return "Rewind cancelled"
 
@@ -111,7 +111,9 @@ class RuntimeMutationCommandHandlers:
         indices_to_delete.sort(reverse=True)
 
         ids_for_prompt = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
-        print(f"WARNING: Purging message(s) breaks conversation context: {ids_for_prompt}")
+        await self._deps._notify(
+            f"WARNING: Purging message(s) breaks conversation context: {ids_for_prompt}"
+        )
         if not await self._deps._confirm_yes("Type 'yes' to confirm purge: "):
             return "Purge cancelled"
 

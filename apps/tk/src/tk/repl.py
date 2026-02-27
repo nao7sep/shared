@@ -6,7 +6,27 @@ from typing import Any
 
 from tk import commands, dispatcher, markdown, prompts
 from tk.errors import TkError
+from tk.models import TaskStatus
 from tk.session import Session
+
+_NO_FLAG_COMMANDS = frozenset(
+    (
+        "add",
+        "a",
+        "edit",
+        "e",
+        "note",
+        "n",
+        "done",
+        "d",
+        "cancel",
+        "c",
+    )
+)
+_HANDLED_COMMAND_TO_STATUS = {
+    "done": TaskStatus.DONE.value,
+    "cancel": TaskStatus.CANCELLED.value,
+}
 
 
 def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
@@ -18,15 +38,7 @@ def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
 
     cmd = parts[0]
 
-    no_flag_commands = {
-        "add", "a",
-        "edit", "e",
-        "note", "n",
-        "done", "d",
-        "cancel", "c",
-    }
-
-    if cmd in no_flag_commands:
+    if cmd in _NO_FLAG_COMMANDS:
         return cmd, parts[1:], {}
 
     args = []
@@ -78,7 +90,7 @@ def _prepare_interactive_command(
     """Collect interactive inputs for commands that need REPL prompts."""
     normalized = dispatcher.resolve_command_alias(cmd)
 
-    if normalized in ("done", "cancel"):
+    if normalized in _HANDLED_COMMAND_TO_STATUS:
         if kwargs or len(args) != 1:
             return cmd, args, kwargs
 
@@ -87,7 +99,7 @@ def _prepare_interactive_command(
             return cmd, args, kwargs
 
         task = session.get_task_by_display_number(num)
-        status = "done" if normalized == "done" else "cancelled"
+        status = _HANDLED_COMMAND_TO_STATUS[normalized]
         default_date = commands.get_default_subjective_date(session)
 
         try:
@@ -192,9 +204,15 @@ def repl(session: Session) -> None:
 
     if tasks_data:
         raw_tasks = tasks_data.to_dict()["tasks"] if hasattr(tasks_data, "to_dict") else tasks_data["tasks"]
-        pending_count = sum(1 for t in raw_tasks if t["status"] == "pending")
-        done_count = sum(1 for t in raw_tasks if t["status"] == "done")
-        cancelled_count = sum(1 for t in raw_tasks if t["status"] == "cancelled")
+        pending_count = sum(
+            1 for t in raw_tasks if t["status"] == TaskStatus.PENDING.value
+        )
+        done_count = sum(
+            1 for t in raw_tasks if t["status"] == TaskStatus.DONE.value
+        )
+        cancelled_count = sum(
+            1 for t in raw_tasks if t["status"] == TaskStatus.CANCELLED.value
+        )
 
         print(f"{pending_count} pending, {done_count} done, {cancelled_count} cancelled")
 

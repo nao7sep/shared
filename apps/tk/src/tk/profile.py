@@ -1,15 +1,17 @@
 """Profile management: loading, creation, and path mapping."""
 
 import json
+import re
+from datetime import time as time_type
 from pathlib import Path
 from typing import Any
-from datetime import time as time_type
-import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from tk.errors import TkConfigError
 
-APP_DIR = Path(__file__).resolve().parents[2]
+_APP_DIR = Path(__file__).resolve().parents[2]
+_TIME_WITH_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2}):(\d{2})$")
+_TIME_WITHOUT_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2})$")
 
 
 def _normalize_shortcut_subpath(path: str) -> str:
@@ -39,9 +41,9 @@ def map_path(path: str, profile_dir: str) -> str:
         return str(Path.home())
     elif path.startswith("@/") or path.startswith("@\\"):
         # App directory is the project root (where pyproject.toml is).
-        return str(APP_DIR / _normalize_shortcut_subpath(path))
+        return str(_APP_DIR / _normalize_shortcut_subpath(path))
     elif path == "@":
-        return str(APP_DIR)
+        return str(_APP_DIR)
     elif Path(path).is_absolute():
         return path
     else:
@@ -61,11 +63,7 @@ def parse_time(time_str: str) -> tuple[int, int, int]:
     Raises:
         TkConfigError: If format is invalid
     """
-    # Support both HH:MM and HH:MM:SS
-    pattern_with_seconds = r"^(\d{1,2}):(\d{2}):(\d{2})$"
-    pattern_without_seconds = r"^(\d{1,2}):(\d{2})$"
-
-    match = re.match(pattern_with_seconds, time_str)
+    match = _TIME_WITH_SECONDS_RE.match(time_str)
     if match:
         hours, minutes, seconds = match.groups()
         parsed = (int(hours), int(minutes), int(seconds))
@@ -77,7 +75,7 @@ def parse_time(time_str: str) -> tuple[int, int, int]:
             ) from e
         return parsed
 
-    match = re.match(pattern_without_seconds, time_str)
+    match = _TIME_WITHOUT_SECONDS_RE.match(time_str)
     if match:
         hours, minutes = match.groups()
         parsed = (int(hours), int(minutes), 0)

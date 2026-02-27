@@ -14,6 +14,9 @@ class UserInteractionPort(Protocol):
     async def prompt_text(self, prompt: str) -> str:
         """Prompt for free-form text input."""
 
+    async def notify(self, message: str) -> None:
+        """Display one-way informational output."""
+
     async def prompt_chat_selection(
         self,
         chats_dir: str,
@@ -29,6 +32,9 @@ class ThreadedConsoleInteraction:
 
     async def prompt_text(self, prompt: str) -> str:
         return await asyncio.to_thread(input, prompt)
+
+    async def notify(self, message: str) -> None:
+        await asyncio.to_thread(print, message)
 
     async def prompt_chat_selection(
         self,

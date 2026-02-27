@@ -10,7 +10,7 @@ from ..constants import CHAT_FILE_EXTENSION, DISPLAY_UNKNOWN
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
 from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort
-from .context import CommandContext
+from .context import CommandContext, HelperAIInvoker
 
 if TYPE_CHECKING:
     from ..session_manager import SessionManager
@@ -23,6 +23,7 @@ class CommandHandlerBaseMixin:
         self,
         manager: "SessionManager",
         interaction: Optional[UserInteractionPort] = None,
+        helper_ai_invoker: Optional[HelperAIInvoker] = None,
     ):
         """Initialize command handler.
 
@@ -30,9 +31,12 @@ class CommandHandlerBaseMixin:
             manager: SessionManager instance for unified state access
         """
         resolved_interaction = interaction or ThreadedConsoleInteraction()
+        if helper_ai_invoker is None:
+            raise ValueError("helper_ai_invoker is required")
         self.context = CommandContext(
             manager=manager,
             interaction=resolved_interaction,
+            invoke_helper_ai=helper_ai_invoker,
         )
         # Backward-compatible aliases for existing command mixins/tests.
         self.manager = self.context.manager
@@ -58,6 +62,10 @@ class CommandHandlerBaseMixin:
     async def _confirm_yes(self, prompt: str) -> bool:
         """Return True when user enters 'yes' (case-insensitive)."""
         return (await self._prompt_text(prompt)).strip().lower() == "yes"
+
+    async def _notify(self, message: str) -> None:
+        """Display a one-way message through injected interaction adapter."""
+        await self.interaction.notify(message)
 
     async def _prompt_chat_selection(
         self,

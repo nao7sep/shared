@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional, cast
 
+from ..chat import add_assistant_message, add_error_message
 from ..logging import sanitize_error_message
 from .types import ActionMode, ContinueAction, OrchestratorAction, PrintAction
 from ..ai.types import Citation
@@ -98,8 +99,6 @@ class ResponseHandlersMixin:
         citations: Optional[list[Citation]] = None,
     ) -> OrchestratorAction:
         """Handle successful AI response for the given mode."""
-        from .. import orchestrator as orchestrator_module
-
         if mode == "retry":
             citations_payload = cast(Optional[list[dict[str, Any]]], citations)
             if user_input and assistant_hex_id:
@@ -127,7 +126,7 @@ class ResponseHandlersMixin:
                 return PrintAction(message="\nError: chat context missing for normal-mode response.")
             assert chat_path is not None
             assert isinstance(chat_data, dict)
-            orchestrator_module.chat.add_assistant_message(
+            add_assistant_message(
                 chat_data,
                 response_text,
                 self.manager.current_model,
@@ -191,8 +190,6 @@ class ResponseHandlersMixin:
         assistant_hex_id: Optional[str] = None,
     ) -> PrintAction:
         """Handle AI error and return a user-facing action."""
-        from .. import orchestrator as orchestrator_module
-
         transition = build_transition_state(
             mode,
             chat_path=chat_path,
@@ -211,7 +208,7 @@ class ResponseHandlersMixin:
                 self.manager.pop_message(-1, chat_data)
 
             sanitized_error = sanitize_error_message(str(error))
-            orchestrator_module.chat.add_error_message(
+            add_error_message(
                 chat_data,
                 sanitized_error,
                 {"provider": self.manager.current_ai, "model": self.manager.current_model},

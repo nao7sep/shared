@@ -1,7 +1,7 @@
 """Metadata generation/safety handlers and compatibility adapters."""
 
 import logging
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Optional
 
 from .. import hex_id
 from ..chat import get_messages_for_ai
@@ -38,20 +38,15 @@ class MetadataGenerationCommandHandlers:
         system_prompt: Optional[str],
         task: str,
     ) -> str:
-        """Late-bind helper call through commands module for test patch compatibility."""
-        from .. import commands as commands_module
-
-        return cast(
-            str,
-            await commands_module.invoke_helper_ai(
-                helper_ai,
-                helper_model,
-                profile_data,
-                messages,
-                system_prompt,
-                task=task,
-                session=self._deps.manager,
-            ),
+        """Invoke helper AI through explicitly wired command context dependency."""
+        return await self._deps.context.invoke_helper_ai(
+            helper_ai,
+            helper_model,
+            profile_data,
+            messages,
+            system_prompt,
+            task=task,
+            session=self._deps.manager,
         )
 
     async def set_title(self, args: str) -> str:

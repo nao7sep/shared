@@ -4,6 +4,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tk.models import TaskStatus
+
+_VALID_TASK_STATUSES = {status.value for status in TaskStatus}
+
 
 def validate_tasks_structure(data: dict[str, Any]) -> None:
     """Validate persisted task payload structure."""
@@ -14,8 +18,6 @@ def validate_tasks_structure(data: dict[str, Any]) -> None:
         raise ValueError("Invalid tasks file structure: 'tasks' must be an array")
 
     required_fields = {"text", "status", "created_at"}
-    valid_statuses = {"pending", "done", "cancelled"}
-
     for i, task in enumerate(data["tasks"]):
         if not isinstance(task, dict):
             raise ValueError(f"Task {i} is not a valid object")
@@ -24,7 +26,7 @@ def validate_tasks_structure(data: dict[str, Any]) -> None:
         if missing:
             raise ValueError(f"Task {i} missing required fields: {', '.join(sorted(missing))}")
 
-        if task["status"] not in valid_statuses:
+        if task["status"] not in _VALID_TASK_STATUSES:
             raise ValueError(f"Task {i} has invalid status: {task['status']}")
 
 

@@ -5,9 +5,17 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .constants import DEFAULT_IGNORE_NAMES
 from .errors import IgnorePatternError
 from .models import IgnoreRuleSet
+
+_DEFAULT_IGNORE_NAMES = frozenset(
+    {
+        ".git",
+        ".DS_Store",
+        "Thumbs.db",
+        "desktop.ini",
+    }
+)
 
 
 def load_ignore_rule_set(ignore_file_abs: Path | None) -> IgnoreRuleSet:
@@ -41,7 +49,7 @@ def load_ignore_rule_set(ignore_file_abs: Path | None) -> IgnoreRuleSet:
 
 
 def is_default_ignored_name(name: str) -> bool:
-    return name in DEFAULT_IGNORE_NAMES
+    return name in _DEFAULT_IGNORE_NAMES
 
 
 def matches_ignore_rules(

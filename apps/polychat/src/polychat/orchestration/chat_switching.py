@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+from ..chat import load_chat
 from ..logging import log_event
 from .types import ContinueAction, OrchestratorAction
 
@@ -29,10 +30,7 @@ class ChatSwitchingHandlersMixin:
                 chat_data=current_chat_data,
             )
 
-        # Late-bind through orchestrator module for test patch compatibility.
-        from .. import orchestrator as orchestrator_module
-
-        new_chat_data = orchestrator_module.chat.load_chat(new_chat_path)
+        new_chat_data = load_chat(new_chat_path)
         self.manager.switch_chat(new_chat_path, new_chat_data)
 
         await self.manager.save_current_chat(
@@ -67,10 +65,7 @@ class ChatSwitchingHandlersMixin:
                 chat_data=current_chat_data,
             )
 
-        # Late-bind through orchestrator module for test patch compatibility.
-        from .. import orchestrator as orchestrator_module
-
-        new_chat_data = orchestrator_module.chat.load_chat(new_chat_path)
+        new_chat_data = load_chat(new_chat_path)
         self.manager.switch_chat(new_chat_path, new_chat_data)
 
         log_event(

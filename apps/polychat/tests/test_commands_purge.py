@@ -16,6 +16,9 @@ class FakeInteraction:
             return self.responses.pop(0)
         return "yes"
 
+    async def notify(self, message: str) -> None:
+        del message
+
     async def prompt_chat_selection(
         self,
         chats_dir: str,

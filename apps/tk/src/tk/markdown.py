@@ -4,6 +4,11 @@ from pathlib import Path
 from typing import Any
 
 from tk import data
+from tk.models import TaskStatus
+
+_PENDING_STATUS = TaskStatus.PENDING.value
+_DONE_STATUS = TaskStatus.DONE.value
+_CANCELLED_STATUS = TaskStatus.CANCELLED.value
 
 
 def _write_todo(lines: list[str], output_path: str) -> None:
@@ -43,14 +48,14 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     lines = ["# TODO", ""]
 
     # Pending section
-    if sorted_data["pending"]:
-        for task in sorted_data["pending"]:
+    if sorted_data[_PENDING_STATUS]:
+        for task in sorted_data[_PENDING_STATUS]:
             lines.append(f"- {task['text']}")
     else:
         lines.append("No pending tasks.")
 
     # Check if there are any handled tasks
-    has_handled = any(sorted_data["done"]) or any(sorted_data["cancelled"])
+    has_handled = any(sorted_data[_DONE_STATUS]) or any(sorted_data[_CANCELLED_STATUS])
 
     if not has_handled:
         # No history to show, just end with empty line
@@ -67,13 +72,13 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     all_dates = {}
 
     # Add done tasks
-    for date, date_tasks in sorted_data["done"]:
+    for date, date_tasks in sorted_data[_DONE_STATUS]:
         if date not in all_dates:
             all_dates[date] = []
         all_dates[date].extend(date_tasks)
 
     # Add cancelled tasks
-    for date, date_tasks in sorted_data["cancelled"]:
+    for date, date_tasks in sorted_data[_CANCELLED_STATUS]:
         if date not in all_dates:
             all_dates[date] = []
         all_dates[date].extend(date_tasks)
@@ -94,7 +99,7 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
         for task in date_tasks:
             text = task["text"]
             note = task.get("note")
-            status_emoji = "✅" if task["status"] == "done" else "❌"
+            status_emoji = "✅" if task["status"] == _DONE_STATUS else "❌"
 
             if note:
                 lines.append(f"- {status_emoji} {text} => {note}")

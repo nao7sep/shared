@@ -104,7 +104,7 @@ async def test_safe_command_full_chat(command_handler_safe, mock_session_manager
 
     # Mock prompt loading and helper AI
     with patch("polychat.prompts._load_prompt_from_path") as mock_load_prompt, \
-         patch("polychat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+         patch.object(handler.context, "invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.return_value = """PII: ⚠ Found: name "John Doe" in message
 CREDENTIALS: ⚠ Found: potential API key in message
@@ -131,7 +131,7 @@ async def test_safe_command_specific_message(command_handler_safe, mock_session_
     handler = command_handler_safe
 
     with patch("polychat.prompts._load_prompt_from_path") as mock_load_prompt, \
-         patch("polychat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+         patch.object(handler.context, "invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.return_value = """PII: ⚠ Found: name "John Doe"
 CREDENTIALS: ✓ None
@@ -164,7 +164,7 @@ async def test_safe_command_error_handling(command_handler_safe, mock_session_ma
     handler = command_handler_safe
 
     with patch("polychat.prompts._load_prompt_from_path") as mock_load_prompt, \
-         patch("polychat.commands.invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
+         patch.object(handler.context, "invoke_helper_ai", new_callable=AsyncMock) as mock_helper:
         mock_load_prompt.return_value = "Check safety:\n{CONTENT}"
         mock_helper.side_effect = Exception("API error")
 

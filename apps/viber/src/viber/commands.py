@@ -59,7 +59,7 @@ from .service import (
 
 MutationHook = Callable[[set[int] | None, set[str] | None], None]
 
-HELP_TEXT = """\
+_HELP_TEXT = """\
 create group <name>                                c g <name>
 create project <name> g<ID>                        c p <name> g<ID>
 create task <description> <all|g<ID>>              c t <description> <all|g<ID>>
@@ -103,7 +103,7 @@ def execute_command(
     after_mutation: MutationHook,
 ) -> None:
     if isinstance(command, HelpCommand):
-        print_segment(HELP_TEXT.splitlines())
+        print_segment(_HELP_TEXT.splitlines())
         return
 
     if isinstance(command, CreateGroupCommand):

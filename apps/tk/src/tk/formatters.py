@@ -1,6 +1,6 @@
 """Text formatters for REPL output."""
 
-from tk.models import HistoryListPayload, PendingListPayload
+from tk.models import HistoryListPayload, PendingListPayload, TaskStatus
 
 
 def format_pending_list(payload: PendingListPayload) -> str:
@@ -47,7 +47,7 @@ def format_history_list(payload: HistoryListPayload) -> str:
 
         for item in group.items:
             task = item.task
-            status_emoji = "✅" if task.status == "done" else "❌"
+            status_emoji = "✅" if task.status == TaskStatus.DONE.value else "❌"
             padded_num = str(item.display_num).rjust(num_width)
             note = task.note
 

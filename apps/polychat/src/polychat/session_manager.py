@@ -20,6 +20,7 @@ from .session.accessors import (
     state_setitem,
     state_to_dict,
 )
+from .prompts.system_prompt import load_system_prompt as resolve_system_prompt
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC, format_timeout, normalize_timeout
 
 
@@ -264,7 +265,7 @@ class SessionManager:
         Returns:
             Tuple of (system_prompt_text, system_prompt_path, warning_message)
         """
-        return session_ops.load_system_prompt(
+        return resolve_system_prompt(
             profile_data,
             profile_path=profile_path,
             strict=strict,

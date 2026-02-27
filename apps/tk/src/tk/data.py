@@ -7,6 +7,7 @@ rest of the application.
 from datetime import datetime, timezone
 from typing import Any
 
+from tk.models import TaskStatus
 from tk.storage import load_tasks, save_tasks, validate_tasks_structure
 from tk.task_queries import group_handled_tasks, group_tasks_for_display
 
@@ -27,7 +28,7 @@ def add_task(data: dict[str, Any] | Any, text: str) -> int:
     now_utc = datetime.now(timezone.utc).isoformat()
     task = {
         "text": text,
-        "status": "pending",
+        "status": TaskStatus.PENDING.value,
         "created_at": now_utc,
         "handled_at": None,
         "subjective_date": None,

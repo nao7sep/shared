@@ -67,7 +67,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
     - `text.py`, `history.py`, `chat_list.py`, `citations.py`, `costs.py`
 
 - `src/polychat/prompts/`
-  - Owns prompt template builders (`templates.py`) and prompt assets (`prompts/system/*`).
+  - Owns prompt template builders (`templates.py`), system-prompt loading (`system_prompt.py`), and prompt assets (`prompts/system/*`).
   - `prompts/__init__.py` re-exports compatibility symbols, including `_load_prompt_from_path` for existing patch points.
 
 - `src/polychat/logging/`
@@ -87,3 +87,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 - Legacy shims are removed only after:
   - no in-repo imports depend on them
   - compatibility tests are updated/retired.
+- `tests/test_module_boundaries.py` enforces key facade boundaries:
+  - `orchestration/*` must not import root `orchestrator` facade.
+  - `commands/*` (except package `__init__`) must not import parent `commands` facade.
+  - feature modules must not import root `chat_manager` facade.

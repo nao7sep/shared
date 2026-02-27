@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+from ..chat import (
+    add_user_message,
+    get_messages_for_ai,
+    get_retry_context_for_last_interaction,
+)
 from ..session.state import has_pending_error, pending_error_guidance
 from .types import (
     ActionMode,
@@ -78,9 +83,7 @@ class MessageEntryHandlersMixin:
         chat_data: dict,
     ) -> OrchestratorAction:
         """Handle one message while secret mode is enabled."""
-        from .. import orchestrator as orchestrator_module
-
-        secret_context = orchestrator_module.chat.get_messages_for_ai(chat_data)
+        secret_context = get_messages_for_ai(chat_data)
         temp_messages = secret_context + [{"role": "user", "content": user_input}]
 
         return self._build_send_action(
@@ -94,12 +97,10 @@ class MessageEntryHandlersMixin:
         chat_data: dict,
     ) -> OrchestratorAction:
         """Handle one message while retry mode is enabled."""
-        from .. import orchestrator as orchestrator_module
-
         try:
             retry_context = self.manager.get_retry_context()
         except ValueError:
-            retry_context = orchestrator_module.chat.get_retry_context_for_last_interaction(chat_data)
+            retry_context = get_retry_context_for_last_interaction(chat_data)
             target_index = len(chat_data.get("messages", [])) - 1
             self.manager.enter_retry_mode(
                 retry_context,
@@ -123,13 +124,11 @@ class MessageEntryHandlersMixin:
         chat_path: str,
     ) -> OrchestratorAction:
         """Handle one message in normal mode and persist the user turn pre-send."""
-        from .. import orchestrator as orchestrator_module
-
-        orchestrator_module.chat.add_user_message(chat_data, user_input)
+        add_user_message(chat_data, user_input)
         new_msg_index = len(chat_data["messages"]) - 1
         self.manager.assign_message_hex_id(new_msg_index)
 
-        messages = orchestrator_module.chat.get_messages_for_ai(chat_data)
+        messages = get_messages_for_ai(chat_data)
 
         return self._build_send_action(
             messages=messages,

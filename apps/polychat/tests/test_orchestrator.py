@@ -1,7 +1,7 @@
 """Tests for ChatOrchestrator."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from polychat.commands.types import CommandSignal
 from polychat.orchestrator import ChatOrchestrator
@@ -104,8 +104,8 @@ class TestNewChatSignal:
     @pytest.mark.asyncio
     async def test_new_chat_signal(self, orchestrator, sample_chat_data):
         """Test creating new chat."""
-        with patch("polychat.orchestrator.chat") as mock_chat:
-            mock_chat.load_chat = MagicMock(return_value={"messages": []})
+        with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
+            mock_load_chat.return_value = {"messages": []}
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
                     CommandSignal(kind="new_chat", chat_path="/test/new-chat.json"),
@@ -117,7 +117,7 @@ class TestNewChatSignal:
                 assert mock_save.await_count == 2
 
             # Should load new chat
-            mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
+            mock_load_chat.assert_called_once_with("/test/new-chat.json")
 
             # Should return continue action with new chat
             assert isinstance(action, ContinueAction)
@@ -128,8 +128,8 @@ class TestNewChatSignal:
     @pytest.mark.asyncio
     async def test_new_chat_without_current_chat(self, orchestrator):
         """Test creating new chat when no current chat."""
-        with patch("polychat.orchestrator.chat") as mock_chat:
-            mock_chat.load_chat = MagicMock(return_value={"messages": []})
+        with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
+            mock_load_chat.return_value = {"messages": []}
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
                     CommandSignal(kind="new_chat", chat_path="/test/new-chat.json"),
@@ -141,7 +141,7 @@ class TestNewChatSignal:
                 mock_save.assert_called_once()
 
             # Should load new chat
-            mock_chat.load_chat.assert_called_once_with("/test/new-chat.json")
+            mock_load_chat.assert_called_once_with("/test/new-chat.json")
 
             assert isinstance(action, ContinueAction)
             assert action.chat_path == "/test/new-chat.json"
@@ -153,8 +153,8 @@ class TestOpenChatSignal:
     @pytest.mark.asyncio
     async def test_open_chat_signal(self, orchestrator, sample_chat_data):
         """Test opening existing chat."""
-        with patch("polychat.orchestrator.chat") as mock_chat:
-            mock_chat.load_chat = MagicMock(return_value={"messages": [{"role": "user", "content": "Test"}]})
+        with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
+            mock_load_chat.return_value = {"messages": [{"role": "user", "content": "Test"}]}
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
                     CommandSignal(kind="open_chat", chat_path="/test/existing-chat.json"),
@@ -166,7 +166,7 @@ class TestOpenChatSignal:
                 mock_save.assert_called_once()
 
             # Should load selected chat
-            mock_chat.load_chat.assert_called_once_with("/test/existing-chat.json")
+            mock_load_chat.assert_called_once_with("/test/existing-chat.json")
 
             # Should return continue action
             assert isinstance(action, ContinueAction)
@@ -648,19 +648,17 @@ class TestSessionManagerIntegration:
     @pytest.mark.asyncio
     async def test_chat_switching_updates_session_manager(self, orchestrator):
         """Test that chat switching updates the session manager."""
-        with patch("polychat.orchestrator.chat") as mock_chat:
-            mock_chat.load_chat = MagicMock(
-                return_value={
-                    "metadata": {
-                        "title": None,
-                        "summary": None,
-                        "system_prompt": None,
-                        "created_at": None,
-                        "updated_at": None,
-                    },
-                    "messages": [],
-                }
-            )
+        with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
+            mock_load_chat.return_value = {
+                "metadata": {
+                    "title": None,
+                    "summary": None,
+                    "system_prompt": None,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                "messages": [],
+            }
 
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
                 await orchestrator.handle_command_response(

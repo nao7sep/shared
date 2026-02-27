@@ -21,6 +21,14 @@ COMMAND_ALIASES = {
     "y": "yesterday",
     "r": "recent",
 }
+_INT_FIRST_ARG_COMMANDS = frozenset(
+    ("edit", "done", "cancel", "delete", "note", "date")
+)
+_HELP_COMMAND_GROUPS = (
+    ("add", "list", "help", "done", "cancel", "edit", "note", "delete"),
+    ("history", "today", "yesterday", "recent"),
+    ("date", "sync"),
+)
 
 
 @dataclass
@@ -45,7 +53,7 @@ def _normalize_args(cmd: str, args: list[Any]) -> list[Any]:
     if cmd == "add" and normalized:
         return [" ".join(str(a) for a in normalized)]
 
-    if cmd in ("edit", "done", "cancel", "delete", "note", "date") and normalized:
+    if cmd in _INT_FIRST_ARG_COMMANDS and normalized:
         try:
             normalized[0] = int(normalized[0])
         except ValueError:
@@ -214,19 +222,13 @@ def command_doc_entries() -> list[dict[str, str]]:
 
 def render_help_text() -> str:
     """Render help text directly from command registry metadata."""
-    groups = [
-        ["add", "list", "help", "done", "cancel", "edit", "note", "delete"],
-        ["history", "today", "yesterday", "recent"],
-        ["date", "sync"],
-    ]
-
     entries_by_command = {entry["command"]: entry for entry in command_doc_entries()}
-    rows = [entries_by_command[cmd] for group in groups for cmd in group]
+    rows = [entries_by_command[cmd] for group in _HELP_COMMAND_GROUPS for cmd in group]
     rows.append(entries_by_command["exit"])
     width = max(len(row["display_usage"]) for row in rows)
 
     lines = ["Available commands:", ""]
-    for group_idx, group in enumerate(groups):
+    for group in _HELP_COMMAND_GROUPS:
         for command in group:
             entry = entries_by_command[command]
             lines.append(

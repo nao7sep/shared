@@ -5,6 +5,7 @@ from typing import Optional, TYPE_CHECKING
 from ..chat import save_chat
 from ..ai.helper_runtime import invoke_helper_ai
 from .base import CommandHandlerBaseMixin
+from .context import HelperAIInvoker
 from .dispatch import CommandDispatcher
 from .runtime_models import RuntimeModelCommandHandlers, RuntimeModelCommandsMixin
 from .runtime_modes import RuntimeModeCommandHandlers, RuntimeModeCommandsMixin
@@ -36,8 +37,13 @@ class CommandHandler(
         self,
         manager: "SessionManager",
         interaction: Optional[UserInteractionPort] = None,
+        helper_ai_invoker: Optional[HelperAIInvoker] = None,
     ) -> None:
-        super().__init__(manager, interaction=interaction)
+        super().__init__(
+            manager,
+            interaction=interaction,
+            helper_ai_invoker=helper_ai_invoker or invoke_helper_ai,
+        )
         self._runtime_model_commands = RuntimeModelCommandHandlers(self)
         self._runtime_mode_commands = RuntimeModeCommandHandlers(self)
         self._runtime_mutation_commands = RuntimeMutationCommandHandlers(self)

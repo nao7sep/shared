@@ -2,22 +2,28 @@
 
 from typing import Any
 
+from tk.models import TaskStatus
+
+_PENDING_STATUS = TaskStatus.PENDING.value
+_DONE_STATUS = TaskStatus.DONE.value
+_CANCELLED_STATUS = TaskStatus.CANCELLED.value
+
 
 def group_tasks_for_display(tasks: list[Any]) -> dict[str, Any]:
     """Group and sort tasks for TODO/history display."""
     result: dict[str, Any] = {
-        "pending": [],
-        "done": [],
-        "cancelled": [],
+        _PENDING_STATUS: [],
+        _DONE_STATUS: [],
+        _CANCELLED_STATUS: [],
     }
 
     for task in tasks:
-        if task["status"] == "pending":
-            result["pending"].append(task)
+        if task["status"] == _PENDING_STATUS:
+            result[_PENDING_STATUS].append(task)
 
-    result["pending"].sort(key=lambda t: t["created_at"])
+    result[_PENDING_STATUS].sort(key=lambda t: t["created_at"])
 
-    for status in ("done", "cancelled"):
+    for status in (_DONE_STATUS, _CANCELLED_STATUS):
         handled_with_indices = [
             (i, task)
             for i, task in enumerate(tasks)

@@ -25,6 +25,9 @@ class CommandDependencies(Protocol):
     async def _confirm_yes(self, prompt: str) -> bool:
         ...
 
+    async def _notify(self, message: str) -> None:
+        ...
+
     async def _prompt_chat_selection(
         self,
         chats_dir: str,

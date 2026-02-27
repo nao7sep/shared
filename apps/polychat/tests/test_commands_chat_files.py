@@ -12,6 +12,7 @@ class _InteractionStub:
     def __init__(self, prompt_text_result: str = ""):
         self.prompt_text_result = prompt_text_result
         self.prompt_text = AsyncMock(side_effect=self._prompt_text_impl)
+        self.notify = AsyncMock(return_value=None)
         self.prompt_chat_selection = AsyncMock(return_value=None)
 
     async def _prompt_text_impl(self, _prompt: str) -> str:
@@ -76,4 +77,3 @@ async def test_new_chat_with_open_chat_skips_prompt(mock_session_manager):
 
     interaction.prompt_text.assert_not_called()
     assert result == CommandSignal(kind="new_chat", chat_path="/test/chats/new-chat.json")
-

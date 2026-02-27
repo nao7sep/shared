@@ -13,10 +13,16 @@ from tk.models import (
     PendingListPayload,
     Task,
     TaskListItem,
+    TaskStatus,
     TaskStore,
 )
 from tk.session import Session
 from tk.validation import validate_date_format
+
+_PENDING_STATUS = TaskStatus.PENDING.value
+_DONE_STATUS = TaskStatus.DONE.value
+_CANCELLED_STATUS = TaskStatus.CANCELLED.value
+_HANDLED_STATUSES = (_DONE_STATUS, _CANCELLED_STATUS)
 
 
 def _serialize_tasks(tasks_data: TaskStore) -> list[dict[str, Any]]:
@@ -49,7 +55,7 @@ def list_pending_data(session: Session) -> PendingListPayload:
     pending_with_indices = [
         (i, task)
         for i, task in enumerate(tasks_data.tasks)
-        if task.status == "pending"
+        if task.status == _PENDING_STATUS
     ]
     pending_with_indices.sort(key=lambda x: x[1].created_at)
 
@@ -83,7 +89,7 @@ def list_history_data(
     handled_with_indices = [
         (i, task)
         for i, task in enumerate(tasks_data.tasks)
-        if task.status in ("done", "cancelled")
+        if task.status in _HANDLED_STATUSES
     ]
 
     if days is not None:
@@ -224,7 +230,7 @@ def cmd_done(
     date_str: str | None = None,
 ) -> str:
     """Mark a task as done."""
-    return _handle_task(session, array_index, "done", note, date_str)
+    return _handle_task(session, array_index, _DONE_STATUS, note, date_str)
 
 
 def cmd_cancel(
@@ -234,7 +240,7 @@ def cmd_cancel(
     date_str: str | None = None,
 ) -> str:
     """Mark a task as cancelled."""
-    return _handle_task(session, array_index, "cancelled", note, date_str)
+    return _handle_task(session, array_index, _CANCELLED_STATUS, note, date_str)
 
 
 def cmd_edit(session: Session, array_index: int, text: str) -> str:
@@ -282,7 +288,7 @@ def cmd_note(session: Session, array_index: int, note: str | None = None) -> str
     task = tasks_data.get_task_by_index(array_index)
     if not task:
         raise ValueError("Task not found")
-    if task.status == "pending":
+    if task.status == _PENDING_STATUS:
         raise ValueError("Cannot set note on pending task. Mark it done or cancelled first.")
 
     if not tasks_data.update_task(array_index, note=note):
@@ -304,7 +310,7 @@ def cmd_date(session: Session, array_index: int, date_str: str) -> str:
     task = tasks_data.get_task_by_index(array_index)
     if not task:
         raise ValueError("Task not found")
-    if task.status == "pending":
+    if task.status == _PENDING_STATUS:
         raise ValueError("Cannot set date on pending task. Mark it done or cancelled first.")
 
     if not tasks_data.update_task(array_index, subjective_date=date_str):
