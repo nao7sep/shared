@@ -121,6 +121,57 @@ def test_pending_by_task_excludes_suspended() -> None:
     assert results == []
 
 
+def test_pending_by_task_excludes_deprecated() -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+    set_project_state(db, p.id, ProjectState.DEPRECATED)
+
+    results = pending_by_task(db, t.id)
+    assert results == []
+
+
+def test_pending_by_task_ordering_by_group_then_project() -> None:
+    db = Database()
+    g_b = create_group(db, "beta")
+    g_a = create_group(db, "Alpha")
+    p_b = create_project(db, "zeta", g_b.id)
+    p_a2 = create_project(db, "zeta", g_a.id)
+    p_a1 = create_project(db, "alpha", g_a.id)
+    t = create_task(db, "Task", None)
+
+    results = pending_by_task(db, t.id)
+    ordered = [(p.name, g.name) for p, g, _a in results]
+    assert ordered == [
+        (p_a1.name, g_a.name),
+        (p_a2.name, g_a.name),
+        (p_b.name, g_b.name),
+    ]
+
+
+def test_pending_all_ordering_by_task_then_group_then_project() -> None:
+    db = Database()
+    g_b = create_group(db, "beta")
+    g_a = create_group(db, "Alpha")
+    p_b = create_project(db, "zeta", g_b.id)
+    p_a2 = create_project(db, "zeta", g_a.id)
+    p_a1 = create_project(db, "alpha", g_a.id)
+    t1 = create_task(db, "Task one", None)
+    t2 = create_task(db, "Task two", None)
+
+    entries = pending_all(db)
+    ordered = [(e.task.id, e.group.name, e.project.name) for e in entries]
+    assert ordered == [
+        (t1.id, g_a.name, p_a1.name),
+        (t1.id, g_a.name, p_a2.name),
+        (t1.id, g_b.name, p_b.name),
+        (t2.id, g_a.name, p_a1.name),
+        (t2.id, g_a.name, p_a2.name),
+        (t2.id, g_b.name, p_b.name),
+    ]
+
+
 def test_pending_by_task_not_found() -> None:
     db = Database()
     from viber.errors import TaskNotFoundError

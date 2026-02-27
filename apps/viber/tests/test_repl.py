@@ -2,10 +2,12 @@
 
 import pytest
 
+import viber.repl as repl_module
 from viber.command_parser import (
     CommandParseError,
     CreateTaskCommand,
     DeleteEntityCommand,
+    HelpCommand,
     ReadEntityCommand,
     ResolveAssignmentCommand,
     UpdateProjectStateCommand,
@@ -13,7 +15,9 @@ from viber.command_parser import (
     WorkEntityCommand,
     parse_command,
 )
-from viber.models import AssignmentStatus, ProjectState
+from viber.commands import execute_command
+from viber.models import AssignmentStatus, Database, ProjectState, assignment_key
+from viber.service import create_group, create_project, create_task
 
 
 def test_parse_read_entity_project() -> None:
@@ -43,6 +47,30 @@ def test_parse_resolve_accepts_t_then_p_order() -> None:
     assert cmd.project_id == 3
     assert cmd.task_id == 5
     assert cmd.status == AssignmentStatus.OK
+
+
+def test_parse_resolve_accepts_p_then_t_order() -> None:
+    cmd = parse_command("ok", ["p3", "t5"])
+    assert isinstance(cmd, ResolveAssignmentCommand)
+    assert cmd.project_id == 3
+    assert cmd.task_id == 5
+    assert cmd.status == AssignmentStatus.OK
+
+
+def test_parse_nah_accepts_t_then_p_order() -> None:
+    cmd = parse_command("nah", ["t5", "p3"])
+    assert isinstance(cmd, ResolveAssignmentCommand)
+    assert cmd.project_id == 3
+    assert cmd.task_id == 5
+    assert cmd.status == AssignmentStatus.NAH
+
+
+def test_parse_nah_accepts_p_then_t_order() -> None:
+    cmd = parse_command("nah", ["p3", "t5"])
+    assert isinstance(cmd, ResolveAssignmentCommand)
+    assert cmd.project_id == 3
+    assert cmd.task_id == 5
+    assert cmd.status == AssignmentStatus.NAH
 
 
 def test_parse_delete_single_target() -> None:
@@ -121,3 +149,119 @@ def test_parse_rejects_update_project_state_shorthand() -> None:
 def test_parse_rejects_update_project_name_shorthand() -> None:
     with pytest.raises(CommandParseError):
         parse_command("update", ["p1", "new-name"])
+
+
+def test_run_loop_aliases_are_mapped_to_full_verbs(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen_verbs: list[str] = []
+    inputs = iter([
+        "c anything",
+        "r anything",
+        "u anything",
+        "d anything",
+        "v anything",
+        "o anything",
+        "n anything",
+        "w anything",
+        "exit",
+    ])
+
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+    monkeypatch.setattr(repl_module, "print_banner", lambda _lines: None)
+    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
+
+    def fake_parse(verb: str, args: list[str]) -> HelpCommand:
+        seen_verbs.append(verb)
+        return HelpCommand()
+
+    monkeypatch.setattr(repl_module, "parse_command", fake_parse)
+    monkeypatch.setattr(
+        repl_module, "execute_command", lambda _command, _db, _after_mutation: None
+    )
+
+    repl_module._run_loop(Database(), lambda _gids, _removed: None)
+    assert seen_verbs == ["create", "read", "update", "delete", "view", "ok", "nah", "work"]
+
+
+def test_run_loop_quit_is_recognized(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    inputs = iter(["quit"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
+    repl_module._run_loop(Database(), lambda _gids, _removed: None)
+    out = capsys.readouterr().out
+    assert "Goodbye." in out
+
+
+def test_run_loop_eof_exits_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr("builtins.input", lambda _prompt="": (_ for _ in ()).throw(EOFError()))
+    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
+    repl_module._run_loop(Database(), lambda _gids, _removed: None)
+    out = capsys.readouterr().out
+    assert "Goodbye." in out
+
+
+def test_run_loop_unknown_command_shows_helpful_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    inputs = iter(["wat", "exit"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
+    repl_module._run_loop(Database(), lambda _gids, _removed: None)
+    out = capsys.readouterr().out
+    assert "Unknown command: 'wat'. Type 'help' for available commands." in out
+
+
+def test_run_loop_view_no_pending_shows_expected_message(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    inputs = iter(["view", "exit"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
+    repl_module._run_loop(Database(), lambda _gids, _removed: None)
+    out = capsys.readouterr().out
+    assert "Vibe is good. No pending assignments." in out
+
+
+def test_work_loop_project_processes_selection_and_quit(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t1 = create_task(db, "Task A", None)
+    t2 = create_task(db, "Task B", None)
+
+    inputs = iter(["2", "o", "", "q"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        WorkEntityCommand(kind="project", entity_id=p.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    assert db.assignments[assignment_key(p.id, t1.id)].status == AssignmentStatus.PENDING
+    assert db.assignments[assignment_key(p.id, t2.id)].status == AssignmentStatus.OK
+
+
+def test_work_loop_project_cancel_keeps_assignment_pending(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    inputs = iter(["1", "c", "q"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        WorkEntityCommand(kind="project", entity_id=p.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    assert db.assignments[assignment_key(p.id, t.id)].status == AssignmentStatus.PENDING

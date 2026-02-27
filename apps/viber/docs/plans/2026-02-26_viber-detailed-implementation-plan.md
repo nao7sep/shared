@@ -538,79 +538,79 @@ Every REPL command that mutates state must call:
 
 ### Phase 1: Foundation
 
-- [ ] Create `pyproject.toml` with project metadata, `[project.scripts]` entry for `viber`, dev deps `pydantic pytest ruff mypy`.
-- [ ] Create `src/viber/__init__.py` (empty).
-- [ ] Create `src/viber/__main__.py` → `from .cli import main; main()`.
-- [ ] Implement `errors.py` with all exception classes.
-- [ ] Implement `models.py`: enums, Pydantic models, `assignment_key()`.
-- [ ] Implement `store.py`: `load_database`, `save_database`.
-- [ ] Write `tests/test_store.py`: round-trip, missing file returns empty DB.
+- [x] Create `pyproject.toml` with project metadata, `[project.scripts]` entry for `viber`, dev deps `pydantic pytest ruff mypy`.
+- [x] Create `src/viber/__init__.py` (empty).
+- [x] Create `src/viber/__main__.py` → `from .cli import main; main()`.
+- [x] Implement `errors.py` with all exception classes.
+- [x] Implement `models.py`: enums, Pydantic models, `assignment_key()`.
+- [x] Implement `store.py`: `load_database`, `save_database`.
+- [x] Write `tests/test_store.py`: round-trip, missing file returns empty DB.
 
 ### Phase 2: Path Utilities
 
-- [ ] Implement `path_mapping.py`: `map_path`, `slugify`, private helpers.
-- [ ] Write `tests/test_path_mapping.py`: NUL rejection, ~, @, absolute, relative+base, relative+no-base, Windows rooted-not-qualified, dot segments, slugify cases.
+- [x] Implement `path_mapping.py`: `map_path`, `slugify`, private helpers.
+- [x] Write `tests/test_path_mapping.py`: NUL rejection, ~, @, absolute, relative+base, relative+no-base, Windows rooted-not-qualified, dot segments, slugify cases.
 
 ### Phase 3: Domain Services
 
-- [ ] Implement `service.py` group functions.
-- [ ] Implement `service.py` project functions.
-- [ ] Implement `service.py` task functions (including assignment generation).
-- [ ] Implement `service.py` assignment functions.
-- [ ] Write `tests/test_service.py`:
-  - [ ] Group CRUD + delete blocked when projects exist.
-  - [ ] Project CRUD + cascade delete.
-  - [ ] Task creation generates pending assignments for active+matching projects only.
-  - [ ] Task creation skips suspended/deprecated projects.
-  - [ ] Task creation skips projects in wrong group.
-  - [ ] Assignment not backfilled for projects created after task.
-  - [ ] Task cascade delete removes assignments.
-  - [ ] Project cascade delete removes assignments.
-  - [ ] set_project_state allows any transition.
-  - [ ] Case-insensitive uniqueness enforced for groups.
-  - [ ] Case-insensitive uniqueness enforced for projects within group.
-  - [ ] Duplicate name raises DuplicateNameError.
+- [x] Implement `service.py` group functions.
+- [x] Implement `service.py` project functions.
+- [x] Implement `service.py` task functions (including assignment generation).
+- [x] Implement `service.py` assignment functions.
+- [x] Write `tests/test_service.py`:
+  - [x] Group CRUD + delete blocked when projects exist.
+  - [x] Project CRUD + cascade delete.
+  - [x] Task creation generates pending assignments for active+matching projects only.
+  - [x] Task creation skips suspended/deprecated projects.
+  - [x] Task creation skips projects in wrong group.
+  - [x] Assignment not backfilled for projects created after task.
+  - [x] Task cascade delete removes assignments.
+  - [x] Project cascade delete removes assignments.
+  - [x] set_project_state allows any transition.
+  - [x] Case-insensitive uniqueness enforced for groups.
+  - [x] Case-insensitive uniqueness enforced for projects within group.
+  - [x] Duplicate name raises DuplicateNameError.
 
 ### Phase 4: Queries
 
-- [ ] Implement `queries.py`: `pending_all`, `pending_by_project`, `pending_by_task`.
-- [ ] Write `tests/test_queries.py`:
-  - [ ] pending_all excludes SUSPENDED and DEPRECATED.
-  - [ ] pending_all includes ACTIVE only.
-  - [ ] pending_by_project returns empty if project is not ACTIVE.
-  - [ ] pending_by_task excludes SUSPENDED/DEPRECATED.
-  - [ ] Ordering is correct.
+- [x] Implement `queries.py`: `pending_all`, `pending_by_project`, `pending_by_task`.
+- [x] Write `tests/test_queries.py`:
+  - [x] pending_all excludes SUSPENDED and DEPRECATED.
+  - [x] pending_all includes ACTIVE only.
+  - [x] pending_by_project returns empty if project is not ACTIVE.
+  - [x] pending_by_task excludes SUSPENDED/DEPRECATED.
+  - [x] Ordering is correct.
 
 ### Phase 5: Output
 
-- [ ] Implement `formatter.py`: all format/print helpers.
-- [ ] Implement `renderer.py`: `render_check_pages`, HTML template.
-- [ ] Write `tests/test_renderer.py`:
-  - [ ] Deprecated projects excluded from HTML columns.
-  - [ ] Suspended projects included with "(suspended)" label.
-  - [ ] Gray cells for no-assignment lifecycle gaps.
-  - [ ] Tasks ordered newest-first.
-  - [ ] Correct symbols for each status.
-  - [ ] File is named with slugified group name.
+- [x] Implement `formatter.py`: all format/print helpers.
+- [x] Implement `renderer.py`: `render_check_pages`, HTML template.
+- [x] Write `tests/test_renderer.py`:
+  - [x] Deprecated projects excluded from HTML columns.
+  - [x] Suspended projects included with "(suspended)" label.
+  - [x] Gray cells for no-assignment lifecycle gaps.
+  - [x] Tasks ordered newest-first.
+  - [x] Correct symbols for each status.
+  - [x] File is named with slugified group name.
 
 ### Phase 6: REPL and CLI
 
-- [ ] Implement `cli.py`: `AppArgs`, `parse_args`, `main`.
-- [ ] Implement `repl.py`: REPL loop, command parser, all commands, ok/nah flow, work loop.
-- [ ] Write `tests/test_repl.py`:
-  - [ ] ok accepts both token orders.
-  - [ ] nah accepts both token orders.
-  - [ ] work loop processes pending, skip works, quit exits.
-  - [ ] view with no pending shows correct message.
-  - [ ] Unknown command shows helpful error.
-  - [ ] exit/quit recognized; c/r/u/d/v/o/n/w recognized.
+- [x] Implement `cli.py`: `AppArgs`, `parse_args`, `main`.
+- [x] Implement `repl.py`: REPL loop, command parser, all commands, ok/nah flow, work loop.
+- [x] Write `tests/test_repl.py`:
+  - [x] ok accepts both token orders.
+  - [x] nah accepts both token orders.
+  - [x] work loop processes pending, skip works, quit exits.
+  - [x] view with no pending shows correct message.
+  - [x] Unknown command shows helpful error.
+  - [x] exit/quit recognized; c/r/u/d/v/o/n/w recognized.
 
 ### Phase 7: Quality Gate
 
-- [ ] Run `ruff check src/ tests/` and fix all issues.
-- [ ] Run `mypy src/` (strict mode if feasible) and fix type errors.
-- [ ] Run `pytest tests/` and confirm all pass.
-- [ ] Write `README.md` with full-word command examples first, alias forms second.
+- [x] Run `ruff check src/ tests/` and fix all issues.
+- [x] Run `mypy src/` (strict mode if feasible) and fix type errors.
+- [x] Run `pytest tests/` and confirm all pass.
+- [x] Write `README.md` with full-word command examples first, alias forms second.
 
 ---
 

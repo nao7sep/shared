@@ -70,7 +70,11 @@ def _run_loop(db: Database, after_mutation: MutationHook) -> None:
     while True:
         try:
             raw = input("> ")
-        except (EOFError, KeyboardInterrupt):
+        except EOFError:
+            print()
+            print_segment(["Goodbye."], trailing_blank=False)
+            break
+        except KeyboardInterrupt:
             print()
             continue
 
