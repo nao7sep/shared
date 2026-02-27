@@ -658,11 +658,11 @@
     },
     {
       "text": "ensure windows compatibility of polychat",
-      "status": "pending",
+      "status": "cancelled",
       "created_at": "2026-02-25T03:20:03.610689+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-27T02:15:28.266348+00:00",
+      "subjective_date": "2026-02-27",
+      "note": "viber will take care of this"
     },
     {
       "text": "prepare to end gemini subscription + maybe report how",
@@ -682,11 +682,11 @@
     },
     {
       "text": "develop qc (quality control) tool",
-      "status": "pending",
+      "status": "done",
       "created_at": "2026-02-26T00:51:58.617581+00:00",
-      "handled_at": null,
-      "subjective_date": null,
-      "note": null
+      "handled_at": "2026-02-27T02:16:47.154328+00:00",
+      "subjective_date": "2026-02-27",
+      "note": "viber done. 6 projects and 14 tasks registered"
     }
   ]
 }

@@ -17,12 +17,14 @@
 - regenerate polychat's publish.py. uv-migration-related changes are messy
 - it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?
 - generalize publish.py as a any-python-app tool
-- ensure windows compatibility of polychat
 - prepare to end gemini subscription + maybe report how
 - extract tasks and ideas from voice recordings
-- develop qc (quality control) tool
 
 ## History
+
+### 2026-02-27
+- ❌ ensure windows compatibility of polychat => viber will take care of this
+- ✅ develop qc (quality control) tool => viber done. 6 projects and 14 tasks registered
 
 ### 2026-02-26
 - ❌ introduce tk, my first python app that nobody else will use :) => ship products, not self satisfaction
