@@ -1,6 +1,7 @@
 """Tests for path security - ensuring relative paths are rejected."""
 
 import pytest
+import unicodedata
 from pathlib import Path
 from polychat.profile import map_path
 from polychat.path_utils import has_app_path_prefix, has_home_path_prefix
@@ -49,6 +50,23 @@ def test_map_path_accepts_absolute_paths():
     abs_path = "/absolute/path/to/file.txt"
     result = map_path(abs_path)
     assert result == abs_path
+
+
+def test_map_path_rejects_nul_character():
+    """NUL bytes should be rejected explicitly before path operations."""
+    with pytest.raises(ValueError, match="Path contains NUL character"):
+        map_path("~/bad\x00name")
+
+
+def test_map_path_normalizes_unicode_nfd_to_nfc():
+    """NFD and NFC-equivalent inputs should map to the same path."""
+    nfd_segment = "caf" + "e\u0301"  # cafe + combining acute accent
+    nfc_segment = unicodedata.normalize("NFC", nfd_segment)
+
+    mapped_from_nfd = map_path(f"~/{nfd_segment}/file.txt")
+    mapped_from_nfc = map_path(f"~/{nfc_segment}/file.txt")
+
+    assert mapped_from_nfd == mapped_from_nfc
 
 
 def test_map_path_rejects_windows_absolute_path_on_non_windows():

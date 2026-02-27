@@ -1,7 +1,12 @@
 """Profile management: loading, creation, and path mapping."""
 
 import json
+import ntpath
+import os
+import posixpath
 import re
+import sys
+import unicodedata
 from datetime import time as time_type
 from pathlib import Path
 from typing import Any
@@ -9,14 +14,95 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from tk.errors import TkConfigError
 
-_APP_DIR = Path(__file__).resolve().parents[2]
 _TIME_WITH_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2}):(\d{2})$")
 _TIME_WITHOUT_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2})$")
 
 
+def _normalize_path_text(path: str) -> str:
+    """Normalize user path input and reject invalid path text."""
+    normalized = unicodedata.normalize("NFC", path)
+    if "\0" in normalized:
+        raise TkConfigError("Path cannot contain NUL bytes")
+    return normalized
+
+
+def _is_shortcut_with_subpath(path: str, shortcut: str) -> bool:
+    return path.startswith(shortcut) and len(path) > 1 and path[1] in ("/", "\\")
+
+
+def _is_windows_rooted_not_fully_qualified(path: str) -> bool:
+    """Return True for Windows rooted-but-not-fully-qualified forms."""
+    drive, tail = ntpath.splitdrive(path)
+    if drive and tail and not tail.startswith(("/", "\\")):
+        return True  # Ex: C:temp
+    if not drive and path.startswith("\\") and not path.startswith("\\\\"):
+        return True  # Ex: \temp
+    return False
+
+
+def _is_absolute_path(path: str) -> bool:
+    return Path(path).is_absolute() or ntpath.isabs(path)
+
+
+def _resolve_dot_segments(path: str | Path) -> str:
+    """Resolve dot segments without introducing CWD dependence."""
+    path_text = str(path)
+    if ntpath.isabs(path_text) and not Path(path_text).is_absolute():
+        return ntpath.normpath(path_text)
+    return posixpath.normpath(path_text)
+
+
+def _runtime_app_root() -> Path:
+    """Resolve runtime app root for @/ path mapping."""
+    configured = os.getenv("TK_APP_ROOT")
+    if configured:
+        configured = _normalize_path_text(configured)
+        if _is_windows_rooted_not_fully_qualified(configured):
+            raise TkConfigError(
+                f"Invalid TK_APP_ROOT path: {configured}. Use an absolute path."
+            )
+        if not _is_absolute_path(configured):
+            raise TkConfigError(
+                f"Invalid TK_APP_ROOT path: {configured}. Use an absolute path."
+            )
+        return Path(_resolve_dot_segments(configured))
+
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+
+    # Source/package mode: runtime package directory.
+    return Path(__file__).resolve().parent
+
+
 def _normalize_shortcut_subpath(path: str) -> str:
     """Normalize shortcut subpath separators for cross-platform behavior."""
-    return path[2:].replace("\\", "/")
+    return path[1:].lstrip("/\\").replace("\\", "/")
+
+
+def _resolve_profile_path(path: str) -> Path:
+    """Resolve profile path without using current working directory."""
+    normalized = _normalize_path_text(path)
+
+    if _is_windows_rooted_not_fully_qualified(normalized):
+        raise TkConfigError(
+            f"Invalid profile path: {path}. Windows rooted path must be fully qualified."
+        )
+
+    if normalized == "~" or _is_shortcut_with_subpath(normalized, "~"):
+        mapped = Path.home() / _normalize_shortcut_subpath(normalized)
+        return Path(_resolve_dot_segments(mapped))
+
+    if normalized == "@" or _is_shortcut_with_subpath(normalized, "@"):
+        mapped = _runtime_app_root() / _normalize_shortcut_subpath(normalized)
+        return Path(_resolve_dot_segments(mapped))
+
+    if _is_absolute_path(normalized):
+        return Path(_resolve_dot_segments(normalized))
+
+    raise TkConfigError(
+        "Profile path must be absolute or start with '~/' or '@/'. "
+        "Relative profile paths are not supported."
+    )
 
 
 def map_path(path: str, profile_dir: str) -> str:
@@ -31,24 +117,37 @@ def map_path(path: str, profile_dir: str) -> str:
 
     Mapping rules:
         ~ or ~/ or ~\\ -> user home directory
-        @ or @/ or @\\ -> app directory (where pyproject.toml is located)
+        @ or @/ or @\\ -> runtime app root
         Relative paths -> relative to profile_dir
         Absolute paths -> used as-is
     """
-    if path.startswith("~/") or path.startswith("~\\"):
-        return str(Path.home() / _normalize_shortcut_subpath(path))
-    elif path == "~":
+    normalized = _normalize_path_text(path)
+
+    if _is_windows_rooted_not_fully_qualified(normalized):
+        raise TkConfigError(
+            f"Invalid path: {path}. Windows rooted path must be fully qualified."
+        )
+
+    if normalized == "~":
         return str(Path.home())
-    elif path.startswith("@/") or path.startswith("@\\"):
-        # App directory is the project root (where pyproject.toml is).
-        return str(_APP_DIR / _normalize_shortcut_subpath(path))
-    elif path == "@":
-        return str(_APP_DIR)
-    elif Path(path).is_absolute():
-        return path
-    else:
-        # Relative path - resolve relative to profile directory
-        return str(Path(profile_dir) / path)
+
+    if _is_shortcut_with_subpath(normalized, "~"):
+        mapped = Path.home() / _normalize_shortcut_subpath(normalized)
+        return _resolve_dot_segments(mapped)
+
+    if normalized == "@":
+        return str(_runtime_app_root())
+
+    if _is_shortcut_with_subpath(normalized, "@"):
+        mapped = _runtime_app_root() / _normalize_shortcut_subpath(normalized)
+        return _resolve_dot_segments(mapped)
+
+    if _is_absolute_path(normalized):
+        return _resolve_dot_segments(normalized)
+
+    # Relative path - resolve relative to profile directory.
+    mapped = Path(profile_dir) / normalized
+    return _resolve_dot_segments(mapped)
 
 
 def parse_time(time_str: str) -> tuple[int, int, int]:
@@ -131,10 +230,10 @@ def load_profile(path: str) -> dict[str, Any]:
 
     Raises:
         FileNotFoundError: If profile doesn't exist
-        ValueError: If profile is invalid
+        TkConfigError: If profile path/profile data is invalid
         json.JSONDecodeError: If JSON is malformed
     """
-    profile_path = Path(path).expanduser().resolve()
+    profile_path = _resolve_profile_path(path)
 
     if not profile_path.exists():
         raise FileNotFoundError(
@@ -178,7 +277,7 @@ def create_profile(path: str) -> dict[str, Any]:
         - auto_sync: true (sync TODO.md on every data change)
         - sync_on_exit: false (sync on app exit - redundant if auto_sync is true)
     """
-    profile_path = Path(path).expanduser().resolve()
+    profile_path = _resolve_profile_path(path)
 
     # Create directory if it doesn't exist
     profile_path.parent.mkdir(parents=True, exist_ok=True)
@@ -194,8 +293,6 @@ def create_profile(path: str) -> dict[str, Any]:
         print("Falling back to UTC. Edit the profile JSON to set your timezone manually.")
         print()
         system_timezone = "UTC"
-
-    profile_dir = str(profile_path.parent)
 
     profile = {
         "data_path": "./tasks.json",

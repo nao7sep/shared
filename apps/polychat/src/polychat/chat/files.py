@@ -17,6 +17,12 @@ def _is_windows_absolute_path(path: str) -> bool:
     return PureWindowsPath(path).is_absolute()
 
 
+def _is_windows_drive_relative_path(path: str) -> bool:
+    """Return True for drive-relative Windows paths like C:temp."""
+    win_path = PureWindowsPath(path)
+    return bool(win_path.drive) and not win_path.is_absolute()
+
+
 def list_chats(chats_dir: str) -> list[dict[str, Any]]:
     """List all chat files in the directory with metadata."""
     chats_path = Path(chats_dir)
@@ -102,6 +108,11 @@ def _rename_chat(
 
     if not old_file.exists():
         raise FileNotFoundError(f"Chat file not found: {old_path}")
+
+    if _is_windows_drive_relative_path(new_name):
+        raise ValueError(
+            f"Invalid path: {new_name} (Windows drive-relative paths are not supported)"
+        )
 
     chats_dir_resolved = Path(chats_dir).resolve()
 

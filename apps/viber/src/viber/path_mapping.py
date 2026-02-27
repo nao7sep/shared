@@ -66,42 +66,46 @@ def map_path(
 def slugify(segment: str) -> str:
     """Apply slugify mode to a single filename segment.
 
+    - Reject path-like input that includes directory separators.
     - Lowercase.
     - Split into base and extension at last '.' (if present and not leading).
-    - In the base: replace non-letter/digit/underscore/hyphen/dot chars with -.
+    - In base and extension: replace non-letter/digit/underscore/hyphen/dot chars with -.
     - Collapse runs of - to single -.
-    - Strip leading/trailing - and . from base.
+    - Strip leading/trailing - and . from base only.
     - Reattach lowercased extension.
     - Raise FilenameSanitizationError if result is empty.
     """
     segment = segment.lower()
+    if "/" in segment or "\\" in segment:
+        raise FilenameSanitizationError(segment)
 
     # Split extension
     dot_pos = segment.rfind(".")
     if dot_pos > 0:
-        base = segment[:dot_pos]
-        ext = segment[dot_pos:]  # includes the dot
+        base_raw = segment[:dot_pos]
+        ext_raw = segment[dot_pos + 1:]
     else:
-        base = segment
-        ext = ""
+        base_raw = segment
+        ext_raw = None
 
-    # Replace non-allowed chars with -
-    base = _SLUGIFY_KEEP_RE.sub("-", base)
-    # Collapse repeated -
-    base = _SLUGIFY_COLLAPSE_RE.sub("-", base)
-    # Strip leading/trailing - and .
-    base = base.strip("-.")
-
-    result = base + ext
-    if not result or result == ext:
+    base = _slugify_component(base_raw, strip_edges=True)
+    if not base:
         raise FilenameSanitizationError(segment)
 
-    return result
+    if ext_raw is None:
+        return base
+    ext = _slugify_component(ext_raw, strip_edges=False)
+    if not ext:
+        return base
+
+    return f"{base}.{ext}"
 
 
 def _map_special_prefixes(path_text: str, app_root_abs: Path) -> Path:
     if path_text.startswith("~"):
-        return Path(path_text).expanduser()
+        # Normalize slash styles before expanduser so "~\\..." is handled like "~/...".
+        normalized_home = re.sub(r"[\\/]+", "/", path_text)
+        return Path(normalized_home).expanduser()
     if path_text.startswith("@"):
         return _map_app_root_path(path_text, app_root_abs)
     # Normalize slash styles and repeated separators
@@ -126,3 +130,11 @@ def _is_windows_rooted_not_fully_qualified(path_text: str) -> bool:
         return True
     # C:name (drive-relative, not C:\name or C:/name)
     return _WINDOWS_DRIVE_RELATIVE_RE.match(path_text) is not None
+
+
+def _slugify_component(text: str, *, strip_edges: bool) -> str:
+    text = _SLUGIFY_KEEP_RE.sub("-", text)
+    text = _SLUGIFY_COLLAPSE_RE.sub("-", text)
+    if strip_edges:
+        text = text.strip("-.")
+    return text

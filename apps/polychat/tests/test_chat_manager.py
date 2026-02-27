@@ -323,6 +323,17 @@ def test_rename_chat_rejects_windows_absolute_path_on_non_windows(tmp_path):
     assert old_file.exists()
 
 
+def test_rename_chat_rejects_windows_drive_relative_path(tmp_path):
+    """Drive-relative Windows paths (C:temp) must be rejected."""
+    old_file = tmp_path / "old.json"
+    old_file.write_text("{}")
+
+    with pytest.raises(ValueError, match="Windows drive-relative paths are not supported"):
+        rename_chat(str(old_file), "C:temp", str(tmp_path))
+
+    assert old_file.exists()
+
+
 def test_rename_chat_nonexistent_file(tmp_path):
     """Test renaming non-existent file raises error."""
     with pytest.raises(FileNotFoundError, match="Chat file not found"):

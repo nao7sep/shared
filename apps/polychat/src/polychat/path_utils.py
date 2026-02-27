@@ -10,6 +10,7 @@ This module provides path mapping functionality to support:
 """
 
 from pathlib import Path, PureWindowsPath
+import unicodedata
 
 
 def get_app_root() -> Path:
@@ -39,6 +40,13 @@ def has_app_path_prefix(path: str) -> bool:
 def is_windows_absolute_path(path: str) -> bool:
     """Return True when path is an absolute Windows path (drive or UNC)."""
     return PureWindowsPath(path).is_absolute()
+
+
+def _normalize_path_input(path: str) -> str:
+    """Normalize input text to NFC and reject NUL characters."""
+    if "\x00" in path:
+        raise ValueError("Path contains NUL character")
+    return unicodedata.normalize("NFC", path)
 
 
 def map_path(path: str) -> str:
@@ -80,6 +88,8 @@ def map_path(path: str) -> str:
         >>> map_path("relative/path.json")
         ValueError: Relative paths without prefix are not supported
     """
+    path = _normalize_path_input(path)
+
     # Handle tilde (home directory)
     # Support both ~/ and ~\ for Windows compatibility
     if has_home_path_prefix(path):

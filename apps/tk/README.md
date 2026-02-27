@@ -124,12 +124,12 @@ Task deleted.
 
 **Path shortcuts** in data_path/output_path:
 - `~/dir/file` → your home directory
-- `@/dir/file` → tk app root (where pyproject.toml is) - source mode only
+- `@/dir/file` → runtime app root (`TK_APP_ROOT` if set, otherwise packaged app dir / source package dir)
 - `~\dir\file` and `@\dir\file` are also accepted (normalized to path separators)
 - `./dir/file` or `file` → relative to profile directory
 - `/abs/path` → absolute path used as-is
 
-**Note**: Avoid `@/` paths if building packaged executables.
+**Note**: Profile file paths passed via `--profile` must be absolute or use `~/` or `@/` (relative profile paths are rejected).
 
 A profile JSON contains:
 - `timezone`: IANA timezone (e.g., "Asia/Tokyo")
@@ -300,7 +300,7 @@ These are current project assumptions, documented for future packaging work:
 
 - Windows `.exe` one-file packaging is not an active goal right now.
 - Timezone behavior on Windows is expected to depend on runtime packaging details (for example bundled timezone data); verify during actual packaging/testing.
-- `@/` paths are intended for source/project usage. In one-file packaged mode they may be unreliable, so avoid them there.
+- `@/` paths map to runtime app root (`TK_APP_ROOT` override supported), so they work in both source and packaged modes when that root is configured as intended.
 
 ## License
 

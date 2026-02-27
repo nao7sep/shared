@@ -1,6 +1,7 @@
 """Tests for profile module."""
 
 import json
+import unicodedata
 import pytest
 from pathlib import Path
 
@@ -38,7 +39,7 @@ class TestMapPath:
     def test_map_path_at_with_subpath(self):
         """Test mapping @ with subpath."""
         result = map_path("@/test/path", "/profile/dir")
-        # App root is where pyproject.toml is (tk/)
+        # App root is runtime app root.
         assert result.endswith("test/path")
         assert "tk" in result or "src" in result
 
@@ -51,7 +52,7 @@ class TestMapPath:
     def test_map_path_at_alone(self):
         """Test mapping @ alone."""
         result = map_path("@", "/profile/dir")
-        # App root is where pyproject.toml is (tk/)
+        # App root is runtime app root.
         assert "tk" in result or "src" in result
 
     def test_map_path_absolute(self):
@@ -66,6 +67,34 @@ class TestMapPath:
         result = map_path("relative/path", profile_dir)
         expected = str(temp_dir / "relative/path")
         assert result == expected
+
+    def test_map_path_normalizes_nfc(self):
+        """Test path text normalization from NFD to NFC."""
+        nfd_name = "caf\u0065\u0301.txt"
+        result = map_path(f"~/{nfd_name}", "/profile/dir")
+        assert unicodedata.normalize("NFC", nfd_name) in result
+
+    def test_map_path_rejects_nul(self):
+        """Test that NUL-containing path is rejected."""
+        with pytest.raises(ValueError, match="NUL"):
+            map_path("bad\0path", "/profile/dir")
+
+    @pytest.mark.parametrize("bad_path", ["\\temp", "C:temp"])
+    def test_map_path_rejects_windows_rooted_not_fully_qualified(self, bad_path):
+        """Test rejection of Windows rooted-but-not-qualified forms."""
+        with pytest.raises(ValueError, match="fully qualified"):
+            map_path(bad_path, "/profile/dir")
+
+    def test_map_path_resolves_dot_segments(self):
+        """Test dot-segment resolution after mapping."""
+        result = map_path("../config", "/var/app/data")
+        assert result == "/var/app/config"
+
+    def test_map_path_shortcut_repeated_separators(self):
+        """Test that repeated separators remain anchored for shortcut prefixes."""
+        result = map_path("~//nested//file.txt", "/profile/dir")
+        assert str(Path(result)).startswith(str(Path.home()))
+        assert not result.startswith("/nested")
 
 
 class TestParseTime:
@@ -196,6 +225,11 @@ class TestLoadProfile:
         with pytest.raises(FileNotFoundError, match="Use 'init' command"):
             load_profile(str(profile_path))
 
+    def test_load_profile_rejects_relative_profile_path(self):
+        """Test that relative profile path is rejected."""
+        with pytest.raises(ValueError, match="Relative profile paths are not supported"):
+            load_profile("relative-profile.json")
+
     def test_load_profile_invalid_json(self, temp_dir):
         """Test that invalid JSON raises JSONDecodeError."""
         profile_path = temp_dir / "invalid.json"
@@ -274,6 +308,11 @@ class TestCreateProfile:
         create_profile(str(profile_path))
 
         assert profile_path.exists()
+
+    def test_create_profile_rejects_relative_profile_path(self):
+        """Test that relative profile path is rejected."""
+        with pytest.raises(ValueError, match="Relative profile paths are not supported"):
+            create_profile("relative-profile.json")
 
     def test_create_profile_creates_directory(self, temp_dir):
         """Test that create_profile creates parent directory."""

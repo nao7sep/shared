@@ -22,6 +22,12 @@ def test_tilde_expansion() -> None:
     assert "data.json" in str(result)
 
 
+def test_tilde_expansion_with_backslashes() -> None:
+    result = map_path("~\\viber\\data.json", app_root_abs=APP_ROOT)
+    assert result.is_absolute()
+    assert result.as_posix().endswith("/viber/data.json")
+
+
 def test_at_root() -> None:
     result = map_path("@/data.json", app_root_abs=APP_ROOT)
     assert result == Path("/app/root/data.json")
@@ -98,6 +104,11 @@ def test_slugify_with_extension() -> None:
     assert result == "my-group.html"
 
 
+def test_slugify_sanitizes_extension_characters() -> None:
+    result = slugify("report.bad ext")
+    assert result == "report.bad-ext"
+
+
 def test_slugify_collapses_hyphens() -> None:
     result = slugify("a  b  c")
     assert result == "a-b-c"
@@ -111,6 +122,13 @@ def test_slugify_strips_leading_trailing() -> None:
 def test_slugify_empty_raises() -> None:
     with pytest.raises(FilenameSanitizationError):
         slugify("---")
+
+
+def test_slugify_rejects_path_like_input() -> None:
+    with pytest.raises(FilenameSanitizationError):
+        slugify("dir/sub/file.txt")
+    with pytest.raises(FilenameSanitizationError):
+        slugify("dir\\sub\\file.txt")
 
 
 def test_slugify_unicode_letters_preserved() -> None:
