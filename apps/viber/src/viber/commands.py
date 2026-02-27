@@ -294,7 +294,7 @@ def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: Mut
         if not _confirm_action([format_group(group)]):
             return
         group = delete_group(db, command.entity_id)
-        after_mutation(set(), {group.name})
+        after_mutation(None, {group.name})
         print_segment([f"Deleted group: {group.name} (g{group.id})"])
         return
 
@@ -305,7 +305,7 @@ def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: Mut
         if not _confirm_action([summary]):
             return
         project = delete_project(db, command.entity_id)
-        after_mutation({project.group_id}, None)
+        after_mutation(None, None)
         print_segment([f"Deleted project: {project.name} (p{project.id})"])
         return
 

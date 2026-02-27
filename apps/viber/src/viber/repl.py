@@ -15,7 +15,7 @@ from .renderer import remove_check_page, render_check_pages
 from .store import save_database
 
 _BANNER_LINES = (
-    "Viber — cross-project maintenance tracker",
+    "viber — cross-project maintenance tracker",
     "Type 'help' for commands. Type 'exit' or 'quit' to leave.",
 )
 _ALIASES = {

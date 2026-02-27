@@ -87,29 +87,26 @@ def _render_group_page(db: Database, group_id: int, group_name: str) -> str:
         reverse=True,
     )
 
-    title = html.escape(group_name)
+    group_label = html.escape(group_name)
 
     lines: list[str] = [
         "<!DOCTYPE html>",
         '<html lang="en">',
         "<head>",
         '  <meta charset="UTF-8">',
-        f"  <title>Viber Check — {title}</title>",
+        f"  <title>{group_label} | viber</title>",
         "  <style>",
-        "    body { font-family: sans-serif; font-size: 14px; }",
-        "    table { border-collapse: collapse; }",
-        "    th, td { border: 1px solid #ccc; padding: 4px 8px;"
-        " text-align: center; vertical-align: top; }",
-        "    th { background: #f5f5f5; font-weight: bold; }",
-        "    td.task-desc { text-align: left; max-width: 300px; word-break: break-word; }",
-        "    td.gap { background: #ccc; }",
-        "    td.pending { }",
-        "    td.ok { }",
-        "    td.nah { }",
+        "    body { font-size: 1rem; }",
+        "    h1 { text-align: center; }",
+        "    table { border-collapse: collapse; margin: 0 auto; }",
+        "    th, td { border: 1px solid gray; padding: 0.5em; text-align: center; }",
+        "    th { background: black; color: white; font-weight: bold; }",
+        "    td.task-desc { text-align: left; overflow-wrap: break-word; }",
+        "    td.gap { background: silver; }",
         "  </style>",
         "</head>",
         "<body>",
-        f"  <h1>{title}</h1>",
+        f"  <h1>{group_label} | viber</h1>",
     ]
 
     if not projects and not tasks:
@@ -149,8 +146,7 @@ def _render_table(
             if a is None:
                 lines.append('        <td class="gap"></td>')
             else:
-                cell_class, symbol = _cell_for_status(a.status)
-                lines.append(f'        <td class="{cell_class}">{symbol}</td>')
+                lines.append(f"        <td>{_status_symbol(a.status)}</td>")
 
         lines.append("      </tr>")
 
@@ -158,13 +154,13 @@ def _render_table(
     return lines
 
 
-def _cell_for_status(status: AssignmentStatus) -> tuple[str, str]:
+def _status_symbol(status: AssignmentStatus) -> str:
     if status == AssignmentStatus.OK:
-        return "ok", "✅"
+        return "✅"
     if status == AssignmentStatus.NAH:
-        return "nah", "❌"
+        return "❌"
     # Keep pending visually neutral and unobtrusive in tables.
-    return "pending", "&nbsp;"
+    return "&nbsp;"
 
 
 def _select_groups(db: Database, group_ids: set[int] | None) -> list[Group]:

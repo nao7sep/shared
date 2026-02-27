@@ -68,6 +68,7 @@ exit | quit
 - Use explicit project update forms only: `update p<ID> name ...` and `update p<ID> state ...`.
 - `update p<ID> t<ID>` with no comment clears the assignment comment.
 - Deletes are cascading: deleting a group also deletes its projects and group-scoped tasks; deleting a project/task deletes related assignments.
+- Tasks with no assignments are auto-pruned during startup and delete cascades.
 - All `delete` commands require typing exact `yes`; Enter or any other input cancels.
 - Project data rows use `project | group | state | local-created-time`.
 - Task data rows use `task | group-or-all | local-created-time`.

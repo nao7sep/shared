@@ -126,6 +126,21 @@ def test_delete_group_success() -> None:
     assert db.groups == []
 
 
+def test_delete_group_prunes_orphan_all_group_tasks() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    create_project(db, "api", g.id)
+    t = create_task(db, "Shared task", None)
+    assert any(task.id == t.id for task in db.tasks)
+
+    delete_group(db, g.id)
+
+    assert db.groups == []
+    assert db.projects == []
+    assert db.tasks == []
+    assert db.assignments == {}
+
+
 def test_update_group_name() -> None:
     db = make_db()
     g = create_group(db, "Backend")
@@ -226,6 +241,20 @@ def test_delete_project_cascades_assignments() -> None:
     delete_project(db, p.id)
     assert key not in db.assignments
     assert db.projects == []
+
+
+def test_delete_project_prunes_orphan_tasks() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task 1", None)
+    assert any(task.id == t.id for task in db.tasks)
+
+    delete_project(db, p.id)
+
+    assert db.projects == []
+    assert db.tasks == []
+    assert db.assignments == {}
 
 
 def test_get_project_not_found() -> None:

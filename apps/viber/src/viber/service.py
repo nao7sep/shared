@@ -63,12 +63,13 @@ def delete_group(db: Database, group_id: int) -> Group:
     task_ids = [t.id for t in db.tasks if t.group_id == group_id]
 
     for project_id in project_ids:
-        delete_project(db, project_id)
+        delete_project(db, project_id, prune_orphans=False)
 
     for task_id in task_ids:
         delete_task(db, task_id)
 
     db.groups.remove(group)
+    prune_orphan_tasks(db)
     return group
 
 
@@ -120,7 +121,7 @@ def set_project_state(db: Database, project_id: int, new_state: ProjectState) ->
     return project
 
 
-def delete_project(db: Database, project_id: int) -> Project:
+def delete_project(db: Database, project_id: int, *, prune_orphans: bool = True) -> Project:
     """Cascade-delete all assignments for this project, then remove it."""
     project = get_project(db, project_id)
     keys_to_delete = [
@@ -129,6 +130,8 @@ def delete_project(db: Database, project_id: int) -> Project:
     for k in keys_to_delete:
         del db.assignments[k]
     db.projects.remove(project)
+    if prune_orphans:
+        prune_orphan_tasks(db)
     return project
 
 
@@ -204,6 +207,23 @@ def delete_task(db: Database, task_id: int) -> Task:
         del db.assignments[k]
     db.tasks.remove(task)
     return task
+
+
+def prune_orphan_tasks(db: Database) -> list[Task]:
+    """Delete tasks that have no remaining assignments and return removed tasks."""
+    task_ids_with_assignments = {a.task_id for a in db.assignments.values()}
+    removed: list[Task] = []
+    kept: list[Task] = []
+
+    for task in db.tasks:
+        if task.id in task_ids_with_assignments:
+            kept.append(task)
+        else:
+            removed.append(task)
+
+    if removed:
+        db.tasks = kept
+    return removed
 
 
 # ---------------------------------------------------------------------------

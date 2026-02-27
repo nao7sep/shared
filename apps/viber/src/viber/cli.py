@@ -11,7 +11,8 @@ from .errors import StartupValidationError, ViberError
 from .path_mapping import map_path
 from .renderer import render_check_pages
 from .repl import run_repl
-from .store import load_database
+from .service import prune_orphan_tasks
+from .store import load_database, save_database
 
 _USAGE = """\
 Usage: viber --data <path> [--check <path>]
@@ -84,6 +85,10 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         print(f"Error loading data file: {exc}", file=sys.stderr)
         sys.exit(1)
+
+    removed_tasks = prune_orphan_tasks(db)
+    if removed_tasks:
+        save_database(db, app_args.data_path)
 
     # If --check is configured and we have data, generate initial HTML.
     if app_args.check_path is not None and db.groups:
