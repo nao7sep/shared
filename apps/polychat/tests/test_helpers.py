@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from polychat.domain.chat import ChatMessage
 from polychat.domain.profile import RuntimeProfile
 
 _DEV_API_KEYS_FILENAME = ".dev-api-keys.json"

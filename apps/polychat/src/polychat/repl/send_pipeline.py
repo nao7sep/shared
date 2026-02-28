@@ -6,7 +6,7 @@ import logging
 import time
 from typing import Optional
 
-from ..ai.types import Citation
+from ..ai.types import AIResponseMetadata, Citation
 from ..ai.costing import estimate_cost
 from ..ai.citations import normalize_citations, resolve_vertex_citation_urls
 from ..ai.runtime import send_message_to_ai, validate_and_get_provider
@@ -31,7 +31,7 @@ def _resolve_effective_mode(base_mode: str, use_search: bool) -> str:
 
 
 async def _process_citations(
-    metadata: dict,
+    metadata: AIResponseMetadata,
 ) -> list[Citation]:
     """Normalize, resolve, and display citations from response metadata."""
     citations: list[Citation] = normalize_citations(metadata.get("citations"))
@@ -47,12 +47,12 @@ async def _process_citations(
 
 def _log_response_metrics(
     *,
-    metadata: dict,
+    metadata: AIResponseMetadata,
     response_text: str,
     first_token_time: Optional[float],
     effective_request_mode: str,
     manager: SessionManager,
-    effective_path: str,
+    effective_path: Optional[str],
 ) -> None:
     """Calculate timing/cost metrics and emit a structured log event."""
     end_time = time.perf_counter()

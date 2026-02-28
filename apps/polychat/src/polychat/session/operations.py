@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .. import hex_id
 from ..domain.chat import ChatDocument, ChatMessage
 from .state import SessionState, initialize_message_hex_ids
 

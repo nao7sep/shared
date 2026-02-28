@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .domain.chat import ChatDocument, ChatMessage
+from .domain.chat import ChatDocument
 from .domain.profile import RuntimeProfile
 from .session.retry_controller import RetryController
 from .session.secret_controller import SecretController

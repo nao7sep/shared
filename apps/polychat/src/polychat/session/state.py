@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .. import hex_id
-from ..domain.chat import ChatDocument, ChatMessage
+from ..domain.chat import ChatDocument
 from ..domain.profile import RuntimeProfile
 from .retry_controller import RetryController
 from .secret_controller import SecretController
