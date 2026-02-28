@@ -101,7 +101,7 @@ class ResponseHandlersMixin:
         """Handle successful AI response for the given mode."""
         if mode == "retry":
             if user_input and assistant_hex_id:
-                self.manager.add_retry_attempt(
+                self.manager.retry.add_attempt(
                     user_input,
                     response_text,
                     retry_hex_id=assistant_hex_id,

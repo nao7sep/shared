@@ -45,12 +45,12 @@ class TestSessionStateCreation:
         assert session.system_prompt is None
         assert session.system_prompt_path is None
         assert session.input_mode == "quick"
-        assert session.retry_mode is False
-        assert session.retry_base_messages == []
-        assert session.retry_target_index is None
-        assert session.retry_attempts == {}
-        assert session.secret_mode is False
-        assert session.secret_base_messages == []
+        assert session.retry.active is False
+        assert session.retry.base_messages == []
+        assert session.retry.target_index is None
+        assert session.retry.attempts == {}
+        assert session.secret.active is False
+        assert session.secret.base_messages == []
         assert session.hex_id_set == set()
         assert session._provider_cache == {}
 
@@ -66,15 +66,15 @@ class TestSessionStateCreation:
             system_prompt="You are helpful",
             system_prompt_path="~/prompts/default.txt",
             input_mode="compose",
-            retry_mode=True,
-            secret_mode=True,
         )
+        session.retry.active = True
+        session.secret.active = True
 
         assert session.current_ai == "openai"
         assert session.system_prompt == "You are helpful"
         assert session.input_mode == "compose"
-        assert session.retry_mode is True
-        assert session.secret_mode is True
+        assert session.retry.active is True
+        assert session.secret.active is True
 
 
 
@@ -270,21 +270,21 @@ class TestChatScopedState:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=ChatDocument.empty(),
-            retry_mode=True,
         )
-        session.retry_base_messages = [ChatMessage.new_user("old")]
-        session.retry_target_index = 3
-        session.retry_attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
+        session.retry.active = True
+        session.retry.base_messages = [ChatMessage.new_user("old")]
+        session.retry.target_index = 3
+        session.retry.attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
 
-        session.retry_mode = False
-        session.retry_base_messages.clear()
-        session.retry_target_index = None
-        session.retry_attempts.clear()
+        session.retry.active = False
+        session.retry.base_messages.clear()
+        session.retry.target_index = None
+        session.retry.attempts.clear()
 
-        assert session.retry_mode is False
-        assert session.retry_base_messages == []
-        assert session.retry_target_index is None
-        assert session.retry_attempts == {}
+        assert session.retry.active is False
+        assert session.retry.base_messages == []
+        assert session.retry.target_index is None
+        assert session.retry.attempts == {}
 
     def test_reset_clears_secret_state(self):
         """Test that reset clears secret mode state."""
@@ -295,15 +295,15 @@ class TestChatScopedState:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=ChatDocument.empty(),
-            secret_mode=True,
         )
-        session.secret_base_messages = [ChatMessage.new_user("secret")]
+        session.secret.active = True
+        session.secret.base_messages = [ChatMessage.new_user("secret")]
 
-        session.secret_mode = False
-        session.secret_base_messages.clear()
+        session.secret.active = False
+        session.secret.base_messages.clear()
 
-        assert session.secret_mode is False
-        assert session.secret_base_messages == []
+        assert session.secret.active is False
+        assert session.secret.base_messages == []
 
     def test_reset_both_modes_simultaneously(self):
         """Test resetting both retry and secret mode together."""
@@ -314,21 +314,21 @@ class TestChatScopedState:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=ChatDocument.empty(),
-            retry_mode=True,
-            secret_mode=True,
         )
-        session.retry_base_messages = [ChatMessage.new_user("retry")]
-        session.secret_base_messages = [ChatMessage.new_user("secret")]
+        session.retry.active = True
+        session.secret.active = True
+        session.retry.base_messages = [ChatMessage.new_user("retry")]
+        session.secret.base_messages = [ChatMessage.new_user("secret")]
 
-        session.retry_mode = False
-        session.secret_mode = False
-        session.retry_base_messages.clear()
-        session.secret_base_messages.clear()
+        session.retry.active = False
+        session.secret.active = False
+        session.retry.base_messages.clear()
+        session.secret.base_messages.clear()
 
-        assert session.retry_mode is False
-        assert session.secret_mode is False
-        assert session.retry_base_messages == []
-        assert session.secret_base_messages == []
+        assert session.retry.active is False
+        assert session.secret.active is False
+        assert session.retry.base_messages == []
+        assert session.secret.base_messages == []
 
 
 class TestErrorDetection:
@@ -399,12 +399,12 @@ class TestStateTransitions:
         )
 
         # Simulate entering retry mode
-        session.retry_mode = True
-        session.retry_base_messages = [ChatMessage.new_user("base")]
+        session.retry.active = True
+        session.retry.base_messages = [ChatMessage.new_user("base")]
 
-        assert session.retry_mode is True
-        assert len(session.retry_base_messages) == 1
-        assert session.secret_mode is False
+        assert session.retry.active is True
+        assert len(session.retry.base_messages) == 1
+        assert session.secret.active is False
 
     def test_enter_secret_mode(self):
         """Test entering secret mode."""
@@ -418,12 +418,12 @@ class TestStateTransitions:
         )
 
         # Simulate entering secret mode
-        session.secret_mode = True
-        session.secret_base_messages = [ChatMessage.new_user("frozen")]
+        session.secret.active = True
+        session.secret.base_messages = [ChatMessage.new_user("frozen")]
 
-        assert session.secret_mode is True
-        assert len(session.secret_base_messages) == 1
-        assert session.retry_mode is False
+        assert session.secret.active is True
+        assert len(session.secret.base_messages) == 1
+        assert session.retry.active is False
 
     def test_cannot_be_in_both_modes(self):
         """Test that retry and secret mode are mutually exclusive in practice."""
@@ -440,9 +440,9 @@ class TestStateTransitions:
 
         # This test documents current behavior
         # (In future, SessionManager should enforce exclusivity)
-        session.retry_mode = True
-        session.secret_mode = True
+        session.retry.active = True
+        session.secret.active = True
 
         # Currently both can be True (not ideal)
-        assert session.retry_mode is True
-        assert session.secret_mode is True
+        assert session.retry.active is True
+        assert session.secret.active is True

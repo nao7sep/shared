@@ -7,8 +7,10 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .. import hex_id
-from ..domain.chat import ChatDocument, ChatMessage, RetryAttempt
+from ..domain.chat import ChatDocument, ChatMessage
 from ..domain.profile import RuntimeProfile
+from .retry_controller import RetryController
+from .secret_controller import SecretController
 
 
 EMOJI_WARNING = "⚠️"
@@ -30,17 +32,22 @@ class SessionState:
     system_prompt: Optional[str] = None
     system_prompt_path: Optional[str] = None
     input_mode: str = "quick"
-    retry_mode: bool = False
-    retry_base_messages: list[ChatMessage] = field(default_factory=list)
-    retry_target_index: Optional[int] = None
-    retry_attempts: dict[str, RetryAttempt] = field(default_factory=dict)
-    secret_mode: bool = False
-    secret_base_messages: list[ChatMessage] = field(default_factory=list)
     search_mode: bool = False
     hex_id_set: set[str] = field(default_factory=set)
     _provider_cache: dict[tuple[str, str, int | float | None], Any] = field(
         default_factory=dict
     )
+
+    # Controllers are initialized in __post_init__ because they need hex_id_set.
+    retry: RetryController = field(init=False)
+    secret: SecretController = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.retry = RetryController(_hex_id_set=self.hex_id_set)
+        self.secret = SecretController()
+        # Wire mutual exclusion checks.
+        self.retry._conflict_check = lambda: self.secret.active
+        self.secret._conflict_check = lambda: self.retry.active
 
     @staticmethod
     def _normalize_timeout_key(timeout_sec: int | float | None) -> int | float | None:

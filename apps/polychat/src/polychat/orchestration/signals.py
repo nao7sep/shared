@@ -213,12 +213,12 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         if not current_chat_data:
             return PrintAction(message="No chat open")
 
-        retry_attempt = self.manager.get_retry_attempt(retry_hex_id)
+        retry_attempt = self.manager.retry.get_attempt(retry_hex_id)
         if not retry_attempt:
             return PrintAction(message=f"Retry ID not found: {retry_hex_id}")
 
         messages = current_chat_data.messages
-        target_index = self.manager.get_retry_target_index()
+        target_index = self.manager.retry.target_index
         if target_index is None or target_index < 0 or target_index >= len(messages):
             return PrintAction(message="Retry target is no longer valid")
 
@@ -238,7 +238,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
                 chat_data=current_chat_data,
             )
 
-        self.manager.exit_retry_mode()
+        self.manager.retry.exit()
 
         return PrintAction(message=f"Applied retry [{retry_hex_id}]")
 
@@ -247,14 +247,14 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         if not self.manager.retry_mode:
             return PrintAction(message="Not in retry mode")
 
-        self.manager.exit_retry_mode()
+        self.manager.retry.exit()
 
         return PrintAction(message="Cancelled retry mode")
 
     def _handle_clear_secret_context(self) -> OrchestratorAction:
         """Handle clear-secret-context signal."""
         if self.manager.secret_mode:
-            self.manager.exit_secret_mode()
+            self.manager.secret.exit()
             return PrintAction(message="Secret mode disabled")
 
         return ContinueAction()

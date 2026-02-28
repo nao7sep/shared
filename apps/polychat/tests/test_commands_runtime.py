@@ -29,7 +29,7 @@ async def test_secret_no_args_shows_state_off(command_handler, mock_session_mana
 
 @pytest.mark.asyncio
 async def test_secret_no_args_shows_state_on(command_handler, mock_session_manager):
-    mock_session_manager.secret_mode = True
+    mock_session_manager.secret.enter([])
     result = await command_handler.secret_mode_command("")
     assert result == "Secret mode: on"
     assert mock_session_manager.secret_mode is True
@@ -48,7 +48,7 @@ async def test_secret_on_off_still_work(command_handler, mock_session_manager):
 
 @pytest.mark.asyncio
 async def test_secret_on_when_already_on(command_handler, mock_session_manager):
-    mock_session_manager.secret_mode = True
+    mock_session_manager.secret.enter([])
     result = await command_handler.secret_mode_command("on")
     assert result == "Secret mode already on"
     assert mock_session_manager.secret_mode is True
@@ -116,7 +116,7 @@ async def test_retry_mode_excludes_last_user_assistant_interaction(command_handl
     result = await command_handler.retry_mode("")
 
     assert result == "Retry mode enabled"
-    ctx = mock_session_manager.get_retry_context()
+    ctx = mock_session_manager.retry.get_context()
     assert len(ctx) == 2
     assert ctx[0].role == "user"
     assert ctx[0].content == ["hello"]
@@ -136,7 +136,7 @@ async def test_retry_mode_excludes_failed_user_message_after_error(command_handl
     result = await command_handler.retry_mode("")
 
     assert result == "Retry mode enabled"
-    ctx = mock_session_manager.get_retry_context()
+    ctx = mock_session_manager.retry.get_context()
     assert len(ctx) == 2
     assert ctx[0].role == "user"
     assert ctx[0].content == ["hello"]
@@ -146,9 +146,9 @@ async def test_retry_mode_excludes_failed_user_message_after_error(command_handl
 
 @pytest.mark.asyncio
 async def test_apply_no_args_uses_latest_retry_attempt(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
-    first_id = mock_session_manager.add_retry_attempt("q1", "a1")
-    latest_id = mock_session_manager.add_retry_attempt("q2", "a2")
+    mock_session_manager.retry.enter([ChatMessage.new_user("base")], target_index=1)
+    first_id = mock_session_manager.retry.add_attempt("q1", "a1")
+    latest_id = mock_session_manager.retry.add_attempt("q2", "a2")
 
     result = await command_handler.apply_retry("")
 
@@ -158,8 +158,8 @@ async def test_apply_no_args_uses_latest_retry_attempt(command_handler, mock_ses
 
 @pytest.mark.asyncio
 async def test_apply_last_uses_latest_retry_attempt(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
-    latest_id = mock_session_manager.add_retry_attempt("q2", "a2")
+    mock_session_manager.retry.enter([ChatMessage.new_user("base")], target_index=1)
+    latest_id = mock_session_manager.retry.add_attempt("q2", "a2")
 
     result = await command_handler.apply_retry("last")
 
@@ -168,7 +168,7 @@ async def test_apply_last_uses_latest_retry_attempt(command_handler, mock_sessio
 
 @pytest.mark.asyncio
 async def test_apply_no_args_requires_retry_attempts(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
+    mock_session_manager.retry.enter([ChatMessage.new_user("base")], target_index=1)
 
     result = await command_handler.apply_retry("")
 
@@ -177,7 +177,7 @@ async def test_apply_no_args_requires_retry_attempts(command_handler, mock_sessi
 
 @pytest.mark.asyncio
 async def test_apply_last_requires_retry_attempts(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
+    mock_session_manager.retry.enter([ChatMessage.new_user("base")], target_index=1)
 
     result = await command_handler.apply_retry("last")
 
@@ -186,8 +186,8 @@ async def test_apply_last_requires_retry_attempts(command_handler, mock_session_
 
 @pytest.mark.asyncio
 async def test_apply_explicit_hex_id_still_supported(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
-    retry_hex_id = mock_session_manager.add_retry_attempt("q", "a")
+    mock_session_manager.retry.enter([ChatMessage.new_user("base")], target_index=1)
+    retry_hex_id = mock_session_manager.retry.add_attempt("q", "a")
 
     result = await command_handler.apply_retry(retry_hex_id)
 

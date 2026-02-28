@@ -241,11 +241,11 @@ class TestRetryModeSignals:
         """Test applying retry."""
         # Enter retry mode first
         orchestrator.manager.switch_chat("/test/chat.json", sample_chat_data)
-        orchestrator.manager.enter_retry_mode(
+        orchestrator.manager.retry.enter(
             [ChatMessage.new_user("Original")],
             target_index=1,
         )
-        retry_hex_id = orchestrator.manager.add_retry_attempt("Retry question", "Retry answer")
+        retry_hex_id = orchestrator.manager.retry.add_attempt("Retry question", "Retry answer")
         original_hex_id = sample_chat_data.messages[1].hex_id
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
@@ -277,11 +277,11 @@ class TestRetryModeSignals:
     async def test_apply_retry_preserves_citations(self, orchestrator, sample_chat_data):
         """Applied retry should persist citations when available."""
         orchestrator.manager.switch_chat("/test/chat.json", sample_chat_data)
-        orchestrator.manager.enter_retry_mode(
+        orchestrator.manager.retry.enter(
             [ChatMessage.new_user("Original")],
             target_index=1,
         )
-        retry_hex_id = orchestrator.manager.add_retry_attempt(
+        retry_hex_id = orchestrator.manager.retry.add_attempt(
             "Retry question",
             "Retry answer",
             citations=[{"url": "https://example.com", "title": "Example"}],
@@ -311,11 +311,11 @@ class TestRetryModeSignals:
             ],
         })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-        orchestrator.manager.enter_retry_mode(
+        orchestrator.manager.retry.enter(
             [ChatMessage.new_user("hello"), ChatMessage.new_assistant("hi", model="test-model")],
             target_index=3,
         )
-        retry_hex_id = orchestrator.manager.add_retry_attempt("try again", "done")
+        retry_hex_id = orchestrator.manager.retry.add_attempt("try again", "done")
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
             action = await orchestrator.handle_command_response(
@@ -342,11 +342,11 @@ class TestRetryModeSignals:
             ],
         })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-        orchestrator.manager.enter_retry_mode(
+        orchestrator.manager.retry.enter(
             [ChatMessage.new_user("good user"), ChatMessage.new_assistant("good assistant", model="test-model")],
             target_index=2,
         )
-        retry_hex_id = orchestrator.manager.add_retry_attempt("retry user", "retry answer")
+        retry_hex_id = orchestrator.manager.retry.add_attempt("retry user", "retry answer")
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
             action = await orchestrator.handle_command_response(
@@ -378,7 +378,7 @@ class TestRetryModeSignals:
     async def test_cancel_retry_signal(self, orchestrator):
         """Test cancelling retry mode."""
         # Enter retry mode first
-        orchestrator.manager.enter_retry_mode([ChatMessage.new_user("Test")])
+        orchestrator.manager.retry.enter([ChatMessage.new_user("Test")])
 
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="cancel_retry"),
@@ -406,7 +406,7 @@ class TestSecretModeSignals:
     async def test_clear_secret_context_when_in_secret_mode(self, orchestrator):
         """Test clearing secret context when in secret mode."""
         # Enter secret mode first
-        orchestrator.manager.enter_secret_mode([ChatMessage.new_user("Base")])
+        orchestrator.manager.secret.enter([ChatMessage.new_user("Base")])
 
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="clear_secret_context"),
@@ -562,7 +562,7 @@ class TestRetryModeMessages:
             ],
         })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-        orchestrator.manager.enter_retry_mode(
+        orchestrator.manager.retry.enter(
             [
                 ChatMessage.new_user("hello"),
                 ChatMessage.new_assistant("hello!", model="test-model"),
@@ -722,7 +722,7 @@ class TestSecretModeContext:
             ],
         })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-        orchestrator.manager.enter_secret_mode(list(chat_data.messages))
+        orchestrator.manager.secret.enter(list(chat_data.messages))
 
         first = await orchestrator.handle_user_message("secret one")
         assert isinstance(first, SendAction)

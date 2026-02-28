@@ -165,7 +165,7 @@ class RuntimeModeCommandHandlers:
             return "Last message is not an assistant response or error. Nothing to retry."
 
         retry_context = chat.get_retry_context_for_last_interaction(chat_data)
-        self._deps.manager.enter_retry_mode(
+        self._deps.manager.retry.enter(
             retry_context,
             target_index=len(messages) - 1,
         )
@@ -178,7 +178,7 @@ class RuntimeModeCommandHandlers:
 
         normalized_args = args.strip().lower()
         if normalized_args in {"", "last"}:
-            retry_hex_id = self._deps.manager.get_latest_retry_attempt_id()
+            retry_hex_id = self._deps.manager.retry.latest_attempt_id()
             if not retry_hex_id:
                 return "No retry attempts available yet"
             return CommandSignal(kind="apply_retry", value=retry_hex_id)
@@ -212,12 +212,12 @@ class RuntimeModeCommandHandlers:
             if self._deps.manager.secret_mode:
                 return "Secret mode already on"
             secret_context = chat.get_messages_for_ai(chat_data)
-            self._deps.manager.enter_secret_mode(secret_context)
+            self._deps.manager.secret.enter(secret_context)
             return "Secret mode enabled"
 
         if normalized == "off":
             if self._deps.manager.secret_mode:
-                self._deps.manager.exit_secret_mode()
+                self._deps.manager.secret.exit()
                 return "Secret mode disabled"
             return "Secret mode already off"
 

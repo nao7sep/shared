@@ -255,7 +255,7 @@ class TestChatManagement:
         )
 
         # Enter retry mode to test that it gets cleared
-        manager.enter_retry_mode([ChatMessage.new_user("old")])
+        manager.retry.enter([ChatMessage.new_user("old")])
         assert manager.retry_mode is True
 
         # Switch to new chat
@@ -298,7 +298,7 @@ class TestChatManagement:
         )
 
         # Set up some state
-        manager.enter_secret_mode([ChatMessage.new_user("test")])
+        manager.secret.enter([ChatMessage.new_user("test")])
 
         # Close chat
         manager.close_chat()
@@ -326,10 +326,10 @@ class TestRetryModeManagement:
         )
 
         base_messages = [ChatMessage.new_user("question")]
-        manager.enter_retry_mode(base_messages)
+        manager.retry.enter(base_messages)
 
         assert manager.retry_mode is True
-        assert manager.get_retry_context() == base_messages
+        assert manager.retry.get_context() == base_messages
 
     def test_cannot_enter_retry_while_in_secret_mode(self):
         """Test that entering retry mode while in secret mode raises error."""
@@ -339,10 +339,10 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_secret_mode([])
+        manager.secret.enter([])
 
         with pytest.raises(ValueError, match="Cannot enter retry mode while in secret mode"):
-            manager.enter_retry_mode([])
+            manager.retry.enter([])
 
     def test_add_and_get_retry_attempt(self):
         """Test storing and retrieving retry attempts by hex ID."""
@@ -352,10 +352,10 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([ChatMessage.new_user("base")])
-        retry_hex_id = manager.add_retry_attempt("new question", "new answer")
+        manager.retry.enter([ChatMessage.new_user("base")])
+        retry_hex_id = manager.retry.add_attempt("new question", "new answer")
 
-        attempt = manager.get_retry_attempt(retry_hex_id)
+        attempt = manager.retry.get_attempt(retry_hex_id)
         assert attempt is not None
         assert attempt.user_msg == "new question"
         assert attempt.assistant_msg == "new answer"
@@ -368,12 +368,12 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([ChatMessage.new_user("base")])
-        first_id = manager.add_retry_attempt("q1", "a1")
-        latest_id = manager.add_retry_attempt("q2", "a2")
+        manager.retry.enter([ChatMessage.new_user("base")])
+        first_id = manager.retry.add_attempt("q1", "a1")
+        latest_id = manager.retry.add_attempt("q2", "a2")
 
         assert first_id != latest_id
-        assert manager.get_latest_retry_attempt_id() == latest_id
+        assert manager.retry.latest_attempt_id() == latest_id
 
     def test_get_latest_retry_attempt_id_empty(self):
         """No retry attempts should return None."""
@@ -383,9 +383,9 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([ChatMessage.new_user("base")])
+        manager.retry.enter([ChatMessage.new_user("base")])
 
-        assert manager.get_latest_retry_attempt_id() is None
+        assert manager.retry.latest_attempt_id() is None
 
     def test_add_retry_attempt_without_mode_raises_error(self):
         """Test that adding retry attempt outside retry mode raises error."""
@@ -396,7 +396,7 @@ class TestRetryModeManagement:
         )
 
         with pytest.raises(ValueError, match="Not in retry mode"):
-            manager.add_retry_attempt("test", "test")
+            manager.retry.add_attempt("test", "test")
 
     def test_get_retry_context_without_mode_raises_error(self):
         """Test that getting retry context outside retry mode raises error."""
@@ -407,7 +407,7 @@ class TestRetryModeManagement:
         )
 
         with pytest.raises(ValueError, match="Not in retry mode"):
-            manager.get_retry_context()
+            manager.retry.get_context()
 
     def test_exit_retry_mode(self):
         """Test exiting retry mode clears all state."""
@@ -417,14 +417,14 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([ChatMessage.new_user("base")])
-        retry_hex_id = manager.add_retry_attempt("question", "answer")
+        manager.retry.enter([ChatMessage.new_user("base")])
+        retry_hex_id = manager.retry.add_attempt("question", "answer")
         assert retry_hex_id in manager.hex_id_set
 
-        manager.exit_retry_mode()
+        manager.retry.exit()
 
         assert manager.retry_mode is False
-        assert manager.get_retry_attempt(retry_hex_id) is None
+        assert manager.retry.get_attempt(retry_hex_id) is None
         assert retry_hex_id not in manager.hex_id_set
 
 
@@ -443,10 +443,10 @@ class TestSecretModeManagement:
             ChatMessage.new_user("public"),
             ChatMessage.new_assistant("response", model="test-model"),
         ]
-        manager.enter_secret_mode(base_messages)
+        manager.secret.enter(base_messages)
 
         assert manager.secret_mode is True
-        assert manager.get_secret_context() == base_messages
+        assert manager.secret.get_context() == base_messages
 
     def test_cannot_enter_secret_while_in_retry_mode(self):
         """Test that entering secret mode while in retry mode raises error."""
@@ -456,10 +456,10 @@ class TestSecretModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([])
+        manager.retry.enter([])
 
         with pytest.raises(ValueError, match="Cannot enter secret mode while in retry mode"):
-            manager.enter_secret_mode([])
+            manager.secret.enter([])
 
     def test_get_secret_context_without_mode_raises_error(self):
         """Test that getting secret context outside secret mode raises error."""
@@ -470,7 +470,7 @@ class TestSecretModeManagement:
         )
 
         with pytest.raises(ValueError, match="Not in secret mode"):
-            manager.get_secret_context()
+            manager.secret.get_context()
 
     def test_exit_secret_mode(self):
         """Test exiting secret mode clears all state."""
@@ -480,8 +480,8 @@ class TestSecretModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_secret_mode([ChatMessage.new_user("frozen")])
-        manager.exit_secret_mode()
+        manager.secret.enter([ChatMessage.new_user("frozen")])
+        manager.secret.exit()
 
         assert manager.secret_mode is False
 
@@ -668,18 +668,18 @@ class TestStateSafety:
         )
 
         # Enter retry mode
-        manager.enter_retry_mode([])
+        manager.retry.enter([])
         assert manager.retry_mode is True
 
         # Cannot enter secret mode
         with pytest.raises(ValueError):
-            manager.enter_secret_mode([])
+            manager.secret.enter([])
 
         # Exit retry, enter secret
-        manager.exit_retry_mode()
-        manager.enter_secret_mode([])
+        manager.retry.exit()
+        manager.secret.enter([])
         assert manager.secret_mode is True
 
         # Cannot enter retry mode
         with pytest.raises(ValueError):
-            manager.enter_retry_mode([])
+            manager.retry.enter([])

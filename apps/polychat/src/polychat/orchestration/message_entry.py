@@ -96,15 +96,15 @@ class MessageEntryHandlersMixin:
         """Handle one message while retry mode is enabled."""
         chat_data = self.manager.chat
         try:
-            retry_context = self.manager.get_retry_context()
+            retry_context = self.manager.retry.get_context()
         except ValueError:
             retry_context = get_retry_context_for_last_interaction(chat_data)
             target_index = len(chat_data.messages) - 1
-            self.manager.enter_retry_mode(
+            self.manager.retry.enter(
                 retry_context,
                 target_index=target_index if target_index >= 0 else None,
             )
-            retry_context = self.manager.get_retry_context()
+            retry_context = self.manager.retry.get_context()
 
         temp_messages = retry_context + [ChatMessage.new_user(user_input)]
 

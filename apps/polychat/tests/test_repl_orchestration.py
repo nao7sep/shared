@@ -131,18 +131,18 @@ class TestChatSwitchingOrchestration:
         # Simulate closing chat
         session.chat = ChatDocument.empty()
         session.hex_id_set.clear()
-        session.retry_mode = False
-        session.retry_base_messages.clear()
-        session.retry_target_index = None
-        session.retry_attempts.clear()
-        session.secret_mode = False
-        session.secret_base_messages.clear()
+        session.retry.active = False
+        session.retry.base_messages.clear()
+        session.retry.target_index = None
+        session.retry.attempts.clear()
+        session.secret.active = False
+        session.secret.base_messages.clear()
 
         assert isinstance(session.chat, ChatDocument)
         assert session.chat.messages == []
         assert session.hex_id_set == set()
-        assert session.retry_mode is False
-        assert session.secret_mode is False
+        assert session.retry.active is False
+        assert session.secret.active is False
 
     def test_chat_switch_resets_scoped_state(self):
         """Test that switching chats resets retry/secret modes."""
@@ -153,20 +153,20 @@ class TestChatSwitchingOrchestration:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=ChatDocument.from_raw({"metadata": {}, "messages": []}),
-            retry_mode=True,
-            secret_mode=True,
         )
+        session.retry.active = True
+        session.secret.active = True
 
         # Simulate chat switch
-        session.retry_mode = False
-        session.retry_base_messages.clear()
-        session.retry_target_index = None
-        session.retry_attempts.clear()
-        session.secret_mode = False
-        session.secret_base_messages.clear()
+        session.retry.active = False
+        session.retry.base_messages.clear()
+        session.retry.target_index = None
+        session.retry.attempts.clear()
+        session.secret.active = False
+        session.secret.base_messages.clear()
 
-        assert session.retry_mode is False
-        assert session.secret_mode is False
+        assert session.retry.active is False
+        assert session.secret.active is False
 
 
 class TestRetryModeOrchestration:
@@ -192,11 +192,11 @@ class TestRetryModeOrchestration:
         )
 
         # Enter retry mode - freeze context without last assistant message
-        session.retry_mode = True
-        session.retry_base_messages = [ChatMessage.new_user("Question")]
+        session.retry.active = True
+        session.retry.base_messages = [ChatMessage.new_user("Question")]
 
-        assert session.retry_mode is True
-        assert len(session.retry_base_messages) == 1
+        assert session.retry.active is True
+        assert len(session.retry.base_messages) == 1
         # Original chat unchanged
         assert len(chat_data.messages) == 2
 
@@ -209,13 +209,13 @@ class TestRetryModeOrchestration:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=ChatDocument.empty(),
-            retry_mode=True,
         )
-        session.retry_base_messages = [ChatMessage.new_user("Original")]
+        session.retry.active = True
+        session.retry.base_messages = [ChatMessage.new_user("Original")]
         retry_user_msg = "Try this instead"
 
         # Simulate building temp messages for retry
-        temp_messages = session.retry_base_messages + [
+        temp_messages = session.retry.base_messages + [
             ChatMessage.new_user(retry_user_msg)
         ]
 
@@ -251,24 +251,24 @@ class TestRetryModeOrchestration:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=ChatDocument.empty(),
-            retry_mode=True,
         )
-        session.retry_base_messages = [ChatMessage.new_user("base")]
-        session.retry_target_index = 1
-        session.retry_attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
+        session.retry.active = True
+        session.retry.base_messages = [ChatMessage.new_user("base")]
+        session.retry.target_index = 1
+        session.retry.attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
         session_dict = {"retry_mode": True}
 
         # Cancel retry
-        session.retry_mode = False
-        session.retry_base_messages.clear()
-        session.retry_target_index = None
-        session.retry_attempts.clear()
+        session.retry.active = False
+        session.retry.base_messages.clear()
+        session.retry.target_index = None
+        session.retry.attempts.clear()
         session_dict["retry_mode"] = False
 
-        assert session.retry_mode is False
-        assert session.retry_base_messages == []
-        assert session.retry_target_index is None
-        assert session.retry_attempts == {}
+        assert session.retry.active is False
+        assert session.retry.base_messages == []
+        assert session.retry.target_index is None
+        assert session.retry.attempts == {}
 
 
 class TestSecretModeOrchestration:
@@ -294,14 +294,14 @@ class TestSecretModeOrchestration:
         )
 
         # Enter secret mode - freeze current context
-        session.secret_mode = True
-        session.secret_base_messages = [
+        session.secret.active = True
+        session.secret.base_messages = [
             ChatMessage.new_user("Public question"),
             ChatMessage.new_assistant("Public answer", model="test-model"),
         ]
 
-        assert session.secret_mode is True
-        assert len(session.secret_base_messages) == 2
+        assert session.secret.active is True
+        assert len(session.secret.base_messages) == 2
 
     def test_secret_message_not_saved(self):
         """Test secret messages aren't saved to chat."""
@@ -314,12 +314,12 @@ class TestSecretModeOrchestration:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=chat_data,
-            secret_mode=True,
         )
-        session.secret_base_messages = [ChatMessage.new_user("Public")]
+        session.secret.active = True
+        session.secret.base_messages = [ChatMessage.new_user("Public")]
 
         # Simulate secret question (built but not saved)
-        temp_messages = session.secret_base_messages + [
+        temp_messages = session.secret.base_messages + [
             ChatMessage.new_user("Secret question")
         ]
 
@@ -340,14 +340,14 @@ class TestSecretModeOrchestration:
             helper_model="claude-haiku-4-5",
             profile=make_profile(),
             chat=ChatDocument.empty(),
-            secret_mode=True,
         )
-        session.secret_base_messages = [ChatMessage.new_user("frozen")]
+        session.secret.active = True
+        session.secret.base_messages = [ChatMessage.new_user("frozen")]
 
         # Clear secret context
-        session.secret_base_messages.clear()
+        session.secret.base_messages.clear()
 
-        assert session.secret_base_messages == []
+        assert session.secret.base_messages == []
         # Note: secret_mode might stay True until /secret toggle
 
 

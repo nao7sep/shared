@@ -25,7 +25,7 @@ def session_manager():
 
 def test_session_manager_both_modes_enabled(session_manager):
     """SessionManager can enable secret and search modes."""
-    session_manager.secret_mode = True
+    session_manager.secret.enter([])
     session_manager.search_mode = True
 
     assert session_manager.secret_mode is True
@@ -39,7 +39,7 @@ def test_session_manager_modes_independent(session_manager):
     assert session_manager.secret_mode is False
 
     session_manager.search_mode = False
-    session_manager.secret_mode = True
+    session_manager.secret.enter([])
     assert session_manager.secret_mode is True
     assert session_manager.search_mode is False
 
@@ -47,7 +47,7 @@ def test_session_manager_modes_independent(session_manager):
 def test_session_manager_clear_chat_clears_modes(session_manager):
     """Clearing chat state also clears chat-scoped modes."""
     session_manager.search_mode = True
-    session_manager.secret_mode = True
+    session_manager.secret.enter([])
 
     session_manager._clear_chat_scoped_state()
 
@@ -57,7 +57,7 @@ def test_session_manager_clear_chat_clears_modes(session_manager):
 
 def test_session_manager_to_dict_includes_modes(session_manager):
     """to_dict includes secret/search mode flags."""
-    session_manager.secret_mode = True
+    session_manager.secret.enter([])
     session_manager.search_mode = True
 
     state_dict = session_manager.to_dict()
@@ -70,7 +70,7 @@ def test_session_manager_to_dict_includes_modes(session_manager):
 
 def test_mode_combination_case1_both_persistent(session_manager):
     """Case 1: /secret on + /search on (both persistent)."""
-    session_manager.secret_mode = True
+    session_manager.secret.enter([])
     session_manager.search_mode = True
 
     assert session_manager.secret_mode is True

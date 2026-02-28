@@ -46,7 +46,7 @@ def _chat_with_pending_error() -> ChatDocument:
 async def test_pending_error_allows_retry_mode_send(orchestrator: ChatOrchestrator) -> None:
     chat_data = _chat_with_pending_error()
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-    orchestrator.manager.enter_retry_mode([ChatMessage.new_user("hello")], target_index=1)
+    orchestrator.manager.retry.enter([ChatMessage.new_user("hello")], target_index=1)
 
     action = await orchestrator.handle_user_message(
         "retry question",
@@ -61,7 +61,7 @@ async def test_pending_error_allows_retry_mode_send(orchestrator: ChatOrchestrat
 async def test_pending_error_allows_secret_mode_send(orchestrator: ChatOrchestrator) -> None:
     chat_data = _chat_with_pending_error()
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-    orchestrator.manager.enter_secret_mode(chat_data.messages)
+    orchestrator.manager.secret.enter(chat_data.messages)
 
     action = await orchestrator.handle_user_message(
         "secret question",
@@ -81,11 +81,11 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
         ],
     })
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-    orchestrator.manager.enter_retry_mode(
+    orchestrator.manager.retry.enter(
         [ChatMessage.new_user("hello")],
         target_index=99,
     )
-    retry_hex_id = orchestrator.manager.add_retry_attempt("retry q", "retry a")
+    retry_hex_id = orchestrator.manager.retry.add_attempt("retry q", "retry a")
 
     with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
         action = await orchestrator.handle_command_response(
@@ -100,8 +100,8 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
 
 @pytest.mark.asyncio
 async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -> None:
-    orchestrator.manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=0)
-    orchestrator.manager.add_retry_attempt("retry q", "retry a")
+    orchestrator.manager.retry.enter([ChatMessage.new_user("base")], target_index=0)
+    orchestrator.manager.retry.add_attempt("retry q", "retry a")
 
     action = await orchestrator.handle_command_response(
         CommandSignal(kind="cancel_retry"),
@@ -110,9 +110,9 @@ async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -
     assert isinstance(action, PrintAction)
     assert action.message == "Cancelled retry mode"
     assert orchestrator.manager.retry_mode is False
-    assert orchestrator.manager.get_latest_retry_attempt_id() is None
+    assert orchestrator.manager.retry.latest_attempt_id() is None
     with pytest.raises(ValueError, match="Not in retry mode"):
-        orchestrator.manager.get_retry_context()
+        orchestrator.manager.retry.get_context()
 
 
 @pytest.mark.asyncio

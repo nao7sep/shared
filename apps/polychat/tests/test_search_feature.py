@@ -60,9 +60,9 @@ def test_session_state_both_modes_can_be_enabled():
         profile=make_profile(),
         chat=ChatDocument.empty(),
     )
-    state.secret_mode = True
+    state.secret.active = True
     state.search_mode = True
-    assert state.secret_mode is True
+    assert state.secret.active is True
     assert state.search_mode is True
 
 
@@ -80,14 +80,14 @@ def test_session_state_modes_are_independent():
     # Enable search, verify secret is still off
     state.search_mode = True
     assert state.search_mode is True
-    assert state.secret_mode is False
+    assert state.secret.active is False
 
     # Enable secret, verify search stays on
-    state.secret_mode = True
-    assert state.secret_mode is True
+    state.secret.active = True
+    assert state.secret.active is True
     assert state.search_mode is True
 
     # Disable search, verify secret stays on
     state.search_mode = False
     assert state.search_mode is False
-    assert state.secret_mode is True
+    assert state.secret.active is True

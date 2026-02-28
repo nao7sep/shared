@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .ai.types import Citation
-from .domain.chat import ChatDocument, ChatMessage, RetryAttempt
+from .domain.chat import ChatDocument, ChatMessage
 from .domain.profile import RuntimeProfile
+from .session.retry_controller import RetryController
+from .session.secret_controller import SecretController
 from .session.state import (
     SessionState,
     assign_new_message_hex_id,
@@ -38,6 +39,10 @@ class SessionManager:
     Wraps SessionState providing single source of truth, clean API for
     state access and modification, encapsulated state transitions,
     automatic hex ID management, and provider caching.
+
+    Retry and secret mode are managed through dedicated controllers:
+    ``manager.retry`` (:class:`RetryController`) and
+    ``manager.secret`` (:class:`SecretController`).
     """
 
     current_ai = StateField[str]("current_ai")
@@ -52,8 +57,6 @@ class SessionManager:
     profile_path = StateField[Optional[str]]("profile_path")
     log_file = StateField[Optional[str]]("log_file")
     input_mode = StateField[str]("input_mode", validator=_validate_input_mode)
-    retry_mode = StateField[bool]("retry_mode", coerce=bool)
-    secret_mode = StateField[bool]("secret_mode", coerce=bool)
     search_mode = StateField[bool]("search_mode", coerce=bool)
     hex_id_set = StateField[set[str]]("hex_id_set", readonly=True)
 
@@ -88,7 +91,6 @@ class SessionManager:
             system_prompt_path: System prompt path (optional)
             input_mode: Input mode ("quick" or "compose")
         """
-        # Use helper AI/model defaults if not specified
         helper_ai = helper_ai or current_ai
         helper_model = helper_model or current_model
 
@@ -113,9 +115,33 @@ class SessionManager:
             input_mode=input_mode,
         )
 
-        # Initialize hex IDs if chat has messages
         if chat_doc.messages:
             initialize_message_hex_ids(self._state)
+
+    # ===================================================================
+    # Controllers
+    # ===================================================================
+
+    @property
+    def retry(self) -> RetryController:
+        """Retry mode controller."""
+        return self._state.retry
+
+    @property
+    def secret(self) -> SecretController:
+        """Secret mode controller."""
+        return self._state.secret
+
+    # Backward-compatible read-only properties for boolean checks.
+    @property
+    def retry_mode(self) -> bool:
+        """Whether retry mode is active (read-only; use ``retry.enter()``/``retry.exit()``)."""
+        return self._state.retry.active
+
+    @property
+    def secret_mode(self) -> bool:
+        """Whether secret mode is active (read-only; use ``secret.enter()``/``secret.exit()``)."""
+        return self._state.secret.active
 
     @property
     def message_hex_ids(self) -> dict[int, str]:
@@ -239,103 +265,16 @@ class SessionManager:
         )
 
     # ===================================================================
-    # Retry Mode Management
+    # Hex ID Management
     # ===================================================================
-
-    def enter_retry_mode(self, base_messages: list[ChatMessage], target_index: int | None = None) -> None:
-        """Enter retry mode with frozen message context.
-
-        Args:
-            base_messages: Frozen message context (all messages except last assistant)
-            target_index: Index of the message that /apply should replace
-        """
-        session_ops.enter_retry_mode(
-            self._state,
-            base_messages,
-            target_index=target_index,
-        )
-
-    def get_retry_context(self) -> list[ChatMessage]:
-        """Get frozen retry context.
-
-        Returns:
-            Frozen message context for retry
-
-        Raises:
-            ValueError: If not in retry mode
-        """
-        return session_ops.get_retry_context(self._state)
-
-    def add_retry_attempt(
-        self,
-        user_msg: str,
-        assistant_msg: str,
-        retry_hex_id: Optional[str] = None,
-        citations: Optional[list[Citation]] = None,
-    ) -> str:
-        """Store a retry attempt and return its runtime hex ID."""
-        return session_ops.add_retry_attempt(
-            self._state,
-            user_msg,
-            assistant_msg,
-            retry_hex_id=retry_hex_id,
-            citations=citations,
-        )
-
-    def get_retry_attempt(self, retry_hex_id: str) -> Optional[RetryAttempt]:
-        """Get one retry attempt by runtime hex ID."""
-        return session_ops.get_retry_attempt(self._state, retry_hex_id)
-
-    def get_latest_retry_attempt_id(self) -> Optional[str]:
-        """Get the most recently generated retry attempt hex ID."""
-        return session_ops.get_latest_retry_attempt_id(self._state)
-
-    def get_retry_target_index(self) -> Optional[int]:
-        """Get the chat message index that /apply should replace."""
-        return session_ops.get_retry_target_index(self._state)
 
     def reserve_hex_id(self) -> str:
         """Reserve a runtime hex ID for an in-flight assistant response."""
-        return session_ops.reserve_hex_id(self._state)
+        return hex_id.generate_hex_id(self._state.hex_id_set)
 
     def release_hex_id(self, message_hex_id: str) -> None:
         """Release a runtime hex ID that was reserved but not persisted."""
-        session_ops.release_hex_id(self._state, message_hex_id)
-
-    def exit_retry_mode(self) -> None:
-        """Exit retry mode and clear retry state."""
-        session_ops.exit_retry_mode(self._state)
-
-    # ===================================================================
-    # Secret Mode Management
-    # ===================================================================
-
-    def enter_secret_mode(self, base_messages: list[ChatMessage]) -> None:
-        """Enter secret mode and store a snapshot of persisted context.
-
-        Args:
-            base_messages: Current persisted message context
-        """
-        session_ops.enter_secret_mode(self._state, base_messages)
-
-    def get_secret_context(self) -> list[ChatMessage]:
-        """Get stored secret-mode context snapshot.
-
-        Returns:
-            Snapshot captured when secret mode was enabled
-
-        Raises:
-            ValueError: If not in secret mode
-        """
-        return session_ops.get_secret_context(self._state)
-
-    def exit_secret_mode(self) -> None:
-        """Exit secret mode and clear secret state."""
-        session_ops.exit_secret_mode(self._state)
-
-    # ===================================================================
-    # Hex ID Management
-    # ===================================================================
+        self._state.hex_id_set.discard(message_hex_id)
 
     def assign_message_hex_id(self, message_index: int) -> str:
         """Assign hex ID to a newly added message.
