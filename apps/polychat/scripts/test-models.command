@@ -1,8 +1,11 @@
 #!/bin/zsh
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+echo "PolyChat models integration test"
+echo ""
+echo "Syncing dependencies..."
 uv sync --group dev
-echo "Running models integration test..."
 echo ""
 echo "Requires .dev-api-keys.json with valid API keys."
 echo ""
@@ -15,21 +18,18 @@ read "choice?Select [1-3]: "
 
 case $choice in
     1)
-        echo ""
         echo "Running models smoke test..."
-        echo ""
         uv run pytest tests/test_models_integration.py::test_all_models_smoke_test -v -s -m integration
         ;;
     2)
-        echo ""
         echo "Running default models test..."
-        echo ""
         uv run pytest tests/test_models_integration.py::test_default_models_work -v -s -m integration
         ;;
     3)
         echo "Cancelled."
         ;;
     *)
-        echo "Invalid choice."
+        echo "ERROR: Invalid choice."
+        exit 1
         ;;
 esac

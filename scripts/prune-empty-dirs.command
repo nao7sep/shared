@@ -95,10 +95,11 @@ prune_directory_if_allowed() {
 }
 
 echo "Repo root: $REPO_ROOT"
-echo "Pruning empty directories and directories that only contain junk files..."
+echo "Scanning for empty directories and directories that only contain junk files..."
 
 deleted_dir_count=0
 deleted_junk_file_count=0
+printed_removed_header=0
 
 while IFS= read -r -d '' dir; do
   [[ "$dir" == "." ]] && continue
@@ -111,9 +112,15 @@ while IFS= read -r -d '' dir; do
   fi
 
   if prune_directory_if_allowed "$dir"; then
-    echo "Removed: $rel_dir"
+    if [[ "$printed_removed_header" -eq 0 ]]; then
+      echo ""
+      echo "Removed directories:"
+      printed_removed_header=1
+    fi
+    echo "  $rel_dir"
     deleted_dir_count=$((deleted_dir_count + 1))
   fi
 done < <(find . -depth -type d -print0)
 
-echo "Done. Removed $deleted_dir_count directories and $deleted_junk_file_count junk files."
+echo ""
+echo "Removed $deleted_dir_count directories and $deleted_junk_file_count junk files."

@@ -4,15 +4,15 @@ set -euo pipefail
 # Update Homebrew and all packages
 # This script installs Homebrew if not present, then updates everything
 
-echo ""
-echo "=== Homebrew Update ==="
-echo ""
+echo "Homebrew update"
 
 # Check if Homebrew is installed
+echo ""
+echo "Checking Homebrew installation..."
 if command -v brew &> /dev/null; then
-    echo "✓ Homebrew is installed"
+    echo "Homebrew is installed."
 else
-    echo "Installing Homebrew..."
+    echo "Installing Homebrew."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
     # Detect architecture and set Homebrew path
@@ -26,34 +26,32 @@ else
     if ! grep -q "eval.*brew shellenv" ~/.zprofile 2>/dev/null; then
         echo "" >> ~/.zprofile
         echo "eval \"\$($BREW_PATH shellenv)\"" >> ~/.zprofile
-        echo "✓ Added Homebrew to ~/.zprofile"
+        echo "Added Homebrew to ~/.zprofile."
     fi
 
     # Apply for current session
     eval "$($BREW_PATH shellenv)"
 
-    echo "✓ Homebrew installed"
+    echo "Homebrew installed."
 fi
 
 # Update Homebrew itself
 echo ""
 echo "Updating Homebrew..."
 if brew update; then
-    echo "✓ Homebrew updated"
+    echo "Homebrew updated."
 else
-    echo "✗ Failed to update Homebrew"
-    echo ""
+    echo "ERROR: Failed to update Homebrew."
     exit 1
 fi
 
 # Upgrade all packages
 echo ""
-echo "Upgrading all packages..."
+echo "Upgrading installed packages..."
 if brew upgrade; then
-    echo "✓ All packages upgraded"
+    echo "Installed packages upgraded."
 else
-    echo "✗ Failed to upgrade packages"
-    echo ""
+    echo "ERROR: Failed to upgrade installed packages."
     exit 1
 fi
 
@@ -61,13 +59,11 @@ fi
 echo ""
 echo "Cleaning up old versions..."
 if brew cleanup; then
-    echo "✓ Cleanup complete"
+    echo "Cleanup complete."
 else
-    echo "✗ Failed to cleanup"
-    echo ""
+    echo "ERROR: Failed to clean up old versions."
     exit 1
 fi
 
 echo ""
-echo "=== All Done! ==="
-echo ""
+echo "Homebrew update complete."
