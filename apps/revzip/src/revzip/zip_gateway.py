@@ -93,6 +93,7 @@ def _validate_members_safe_for_extract(members: list[zipfile.ZipInfo]) -> None:
         if entry_name.startswith("/") or entry_name.startswith("\\"):
             raise ExtractError(f"Unsafe zip entry path: {entry_name}")
 
-        entry_parts = PurePosixPath(entry_name).parts
+        normalised = entry_name.replace("\\", "/")
+        entry_parts = PurePosixPath(normalised).parts
         if ".." in entry_parts:
             raise ExtractError(f"Unsafe zip entry path: {entry_name}")

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import os
 import shutil
+import stat
 from pathlib import Path
 
 from .errors import ArchiveError, ExtractError
@@ -86,6 +88,31 @@ def collect_archive_inventory(
     )
 
 
+def _force_remove_readonly(
+    func: Callable[..., object],
+    path: str,
+    _exc_info: object,
+) -> None:
+    """onerror handler for shutil.rmtree: clear read-only bit and retry on Windows."""
+    if os.name == "nt":
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    else:
+        raise
+
+
+def _unlink_force(path: Path) -> None:
+    """Unlink a file, clearing read-only bit on Windows if needed."""
+    try:
+        path.unlink()
+    except PermissionError:
+        if os.name == "nt":
+            os.chmod(path, stat.S_IWRITE)
+            path.unlink()
+        else:
+            raise
+
+
 def clear_and_recreate_directory(directory_abs: Path) -> None:
     if directory_abs.exists() and not directory_abs.is_dir():
         raise ExtractError(f"Restore target is not a directory: {directory_abs}")
@@ -105,11 +132,11 @@ def clear_and_recreate_directory(directory_abs: Path) -> None:
     for child_abs in children:
         try:
             if child_abs.is_symlink() or child_abs.is_file():
-                child_abs.unlink()
+                _unlink_force(child_abs)
             elif child_abs.is_dir():
-                shutil.rmtree(child_abs)
+                shutil.rmtree(child_abs, onerror=_force_remove_readonly)
             else:
-                child_abs.unlink()
+                _unlink_force(child_abs)
         except OSError as exc:
             raise ExtractError(f"Failed to remove path during restore: {child_abs}") from exc
 

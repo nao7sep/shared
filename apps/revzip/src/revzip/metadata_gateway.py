@@ -27,6 +27,7 @@ def write_snapshot_metadata(
         metadata_path_abs.write_text(
             f"{json.dumps(payload, ensure_ascii=False, indent=2)}\n",
             encoding="utf-8",
+            newline="\n",
         )
     except OSError as exc:
         raise MetadataError(f"Failed to write metadata: {metadata_path_abs}") from exc
