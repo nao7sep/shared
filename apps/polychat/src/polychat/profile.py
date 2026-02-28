@@ -280,9 +280,9 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
                 "key": "OPENAI_API_KEY"
             },
             "claude": {
-                "type": "keychain",
-                "service": APP_NAME,
-                "account": "claude-api-key"
+                "type": "json",
+                "path": "~/.secrets/api-keys.json",
+                "key": "claude"
             },
             "gemini": {
                 "type": "json",

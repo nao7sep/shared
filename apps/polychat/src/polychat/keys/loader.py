@@ -7,11 +7,10 @@ class KeyConfig(TypedDict, total=False):
     """Typed configuration for API key loading.
 
     Discriminated by ``type`` field. Additional fields depend on the type:
-      env      → key
-      keychain → service, account
-      credential → service, account
-      json     → path, key
-      direct   → value (testing only)
+      env                      → key
+      keychain / credential    → service, account  (aliases; both use keyring)
+      json                     → path, key
+      direct                   → value (testing only)
     """
 
     type: Required[str]
@@ -37,8 +36,7 @@ def load_api_key(provider: str, config: KeyConfig) -> str:
 
     Example configs:
         {"type": "env", "key": "OPENAI_API_KEY"}
-        {"type": "keychain", "service": "polychat", "account": "claude-key"}
-        {"type": "credential", "service": "polychat", "account": "claude-key"}
+        {"type": "keychain", "service": "polychat", "account": "claude-key"}  # or "credential"
         {"type": "json", "path": "~/.secrets/keys.json", "key": "gemini"}
         {"type": "direct", "value": "sk-..."} (testing only)
     """
@@ -53,18 +51,10 @@ def load_api_key(provider: str, config: KeyConfig) -> str:
 
         return load_from_env(cast(str, config["key"]))
 
-    elif key_type == "keychain":
-        from .backends import load_from_keychain
+    elif key_type in ("keychain", "credential"):
+        from .backends import load_from_keyring
 
-        return load_from_keychain(
-            cast(str, config["service"]),
-            cast(str, config["account"]),
-        )
-
-    elif key_type == "credential":
-        from .backends import load_from_credential_manager
-
-        return load_from_credential_manager(
+        return load_from_keyring(
             cast(str, config["service"]),
             cast(str, config["account"]),
         )

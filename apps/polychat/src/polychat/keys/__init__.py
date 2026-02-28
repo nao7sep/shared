@@ -1,1 +1,1 @@
-"""API key management supporting environment variables, JSON files, macOS Keychain, and Windows Credential Manager."""
+"""API key management supporting environment variables, JSON files, and system credential stores (via keyring)."""

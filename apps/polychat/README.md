@@ -12,7 +12,7 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 - **Web Search**: Enable AI-powered web search with inline citations (OpenAI, Claude, Gemini, Grok, Perplexity)
 - **Git-Friendly Logs**: Chat history stored as formatted JSON with messages as line arrays
 - **Retry & Time Travel**: Re-ask questions without deleting history, or delete messages to "go back in time"
-- **Secure API Keys**: Support for environment variables, macOS Keychain, Windows Credential Manager, and JSON files
+- **Secure API Keys**: Support for environment variables, system credential store (via keyring), and JSON files
 - **System Prompts**: Predefined and custom system prompts with version control
 - **Streaming Responses**: Real-time response display with async streaming
 - **Profile-Based**: Each profile contains AI preferences, API keys, and default settings
@@ -51,7 +51,7 @@ This creates a template file:
 - Profile JSON at the path you provide
 
 The generated profile template uses home-based paths (`~/.polychat/...`) for directories and app root paths (`@/prompts/...`) for built-in prompt files.
-It also includes mixed API-key configuration examples (`env`, `keychain`, `credential`, `json`, `direct`) so you can pick the style you want.
+It also includes mixed API-key configuration examples (`env`, `keychain`/`credential`, `json`, `direct`) so you can pick the style you want.
 Then edit the template values (models, paths, and `api_keys`) before running PolyChat.
 
 ### 3. Start PolyChat
@@ -302,9 +302,9 @@ When the provider reports cached input tokens, those are shown and factored in a
       "key": "OPENAI_API_KEY"
     },
     "claude": {
-      "type": "keychain",
-      "service": "polychat",
-      "account": "claude-api-key"
+      "type": "json",
+      "path": "~/.secrets/api-keys.json",
+      "key": "claude"
     },
     "gemini": {
       "type": "json",
@@ -358,19 +358,12 @@ Both directories are created automatically if they don't exist.
 }
 ```
 
-**macOS Keychain:**
+**System Credential Store (macOS Keychain, Windows Credential Manager, or Secret Service on Linux):**
+
+Both `"keychain"` and `"credential"` are accepted as the type and behave identically — they use the [keyring](https://pypi.org/project/keyring/) library, which selects the right backend for the current platform.
 ```json
 {
   "type": "keychain",
-  "service": "polychat",
-  "account": "claude-api-key"
-}
-```
-
-**Windows Credential Manager:**
-```json
-{
-  "type": "credential",
   "service": "polychat",
   "account": "claude-api-key"
 }
@@ -393,7 +386,7 @@ Both directories are created automatically if they don't exist.
 }
 ```
 
-Use `direct` only when needed. Prefer `env`, `keychain` (macOS), or `credential` (Windows) so plaintext keys are less likely to be committed.
+Use `direct` only when needed. Prefer `env` or `keychain`/`credential` so plaintext keys are less likely to be committed.
 
 ### Path Mapping
 

@@ -784,9 +784,9 @@ def test_create_profile_template_uses_file_prompts_and_mixed_api_key_examples(tm
         "key": "OPENAI_API_KEY",
     }
     assert created_profile["api_keys"]["claude"] == {
-        "type": "keychain",
-        "service": "polychat",
-        "account": "claude-api-key",
+        "type": "json",
+        "path": "~/.secrets/api-keys.json",
+        "key": "claude",
     }
     assert created_profile["ai_limits"]["default"]["max_output_tokens"] is None
     assert created_profile["ai_limits"]["default"]["search_max_output_tokens"] is None

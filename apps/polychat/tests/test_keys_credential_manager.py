@@ -24,7 +24,7 @@ def test_load_from_credential_manager_missing_key():
     with patch('polychat.keys.backends.keyring') as mock_keyring:
         mock_keyring.get_password.return_value = None
 
-        with pytest.raises(ValueError, match="API key not found in Windows Credential Manager"):
+        with pytest.raises(ValueError, match="API key not found in"):
             load_from_credential_manager("polychat", "missing-account")
 
 
@@ -40,7 +40,7 @@ def test_load_from_credential_manager_access_failure():
     with patch('polychat.keys.backends.keyring') as mock_keyring:
         mock_keyring.get_password.side_effect = Exception("Access denied")
 
-        with pytest.raises(ValueError, match="Failed to access Windows Credential Manager"):
+        with pytest.raises(ValueError, match="Failed to access"):
             load_from_credential_manager("polychat", "test-account")
 
 
@@ -66,5 +66,5 @@ def test_store_in_credential_manager_failure():
     with patch('polychat.keys.backends.keyring') as mock_keyring:
         mock_keyring.set_password.side_effect = Exception("Write failed")
 
-        with pytest.raises(ValueError, match="Failed to store key in Windows Credential Manager"):
+        with pytest.raises(ValueError, match="Failed to store key in"):
             store_in_credential_manager("polychat", "test-account", "sk-key")

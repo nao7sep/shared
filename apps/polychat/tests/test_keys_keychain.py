@@ -21,7 +21,7 @@ def test_load_from_keychain_missing_key():
     with patch('polychat.keys.backends.keyring') as mock_keyring:
         mock_keyring.get_password.return_value = None
 
-        with pytest.raises(ValueError, match="API key not found in keychain"):
+        with pytest.raises(ValueError, match="API key not found in"):
             load_from_keychain("polychat", "missing-account")
 
 
@@ -37,7 +37,7 @@ def test_load_from_keychain_access_failure():
     with patch('polychat.keys.backends.keyring') as mock_keyring:
         mock_keyring.get_password.side_effect = Exception("Access denied")
 
-        with pytest.raises(ValueError, match="Failed to access keychain"):
+        with pytest.raises(ValueError, match="Failed to access"):
             load_from_keychain("polychat", "test-account")
 
 
@@ -63,5 +63,5 @@ def test_store_in_keychain_failure():
     with patch('polychat.keys.backends.keyring') as mock_keyring:
         mock_keyring.set_password.side_effect = Exception("Write failed")
 
-        with pytest.raises(ValueError, match="Failed to store key in keychain"):
+        with pytest.raises(ValueError, match="Failed to store key in"):
             store_in_keychain("polychat", "test-account", "sk-key")

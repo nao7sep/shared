@@ -1,9 +1,10 @@
-"""Credential backend loaders for environment, JSON, keychain, and credential manager."""
+"""Credential backend loaders for environment, JSON, and system credential store."""
 
 from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,35 @@ except ImportError:
     _keyring = None
 
 keyring = _keyring
+
+
+def _credential_store_name() -> str:
+    """Return a human-readable name for the platform's credential store."""
+    if sys.platform == "darwin":
+        return "macOS Keychain"
+    elif sys.platform == "win32":
+        return "Windows Credential Manager"
+    else:
+        return "system credential store"
+
+
+def _credential_store_hint(service: str, account: str) -> str:
+    """Return a platform-appropriate command to add a credential."""
+    if sys.platform == "darwin":
+        return (
+            f"Add it with: security add-generic-password "
+            f"-s {service} -a {account} -w your-api-key"
+        )
+    elif sys.platform == "win32":
+        return (
+            f"Add it with: cmdkey /generic:{service} "
+            f"/user:{account} /pass:your-api-key"
+        )
+    else:
+        return (
+            f"Add it with: secret-tool store --label='{service}' "
+            f"service {service} account {account}"
+        )
 
 
 def load_from_env(var_name: str) -> str:
@@ -65,74 +95,46 @@ def load_from_json(file_path: str, key_name: str) -> str:
     return value.strip()
 
 
-def load_from_keychain(service: str, account: str) -> str:
-    """Load API key from macOS Keychain."""
+def load_from_keyring(service: str, account: str) -> str:
+    """Load API key from the system credential store via keyring."""
     if keyring is None:
         raise ImportError(
             "keyring package not installed.\n" "Install with: uv add keyring"
         )
 
+    store_name = _credential_store_name()
     try:
         key = keyring.get_password(service, account)
     except Exception as e:
         raise ValueError(
-            f"Failed to access keychain: {e}\n"
+            f"Failed to access {store_name}: {e}\n"
             f"Service: {service}, Account: {account}"
         )
 
     if not isinstance(key, str) or not key:
         raise ValueError(
-            f"API key not found in keychain.\n"
+            f"API key not found in {store_name}.\n"
             f"Service: {service}, Account: {account}\n"
-            f"Add it with: security add-generic-password "
-            f"-s {service} -a {account} -w your-api-key"
+            f"{_credential_store_hint(service, account)}"
         )
 
     return key
 
 
-def store_in_keychain(service: str, account: str, key: str) -> None:
-    """Store API key in macOS Keychain."""
+def store_in_keyring(service: str, account: str, key: str) -> None:
+    """Store API key in the system credential store via keyring."""
     if keyring is None:
         raise ImportError("keyring package not installed")
 
+    store_name = _credential_store_name()
     try:
         keyring.set_password(service, account, key)
     except Exception as e:
-        raise ValueError(f"Failed to store key in keychain: {e}")
+        raise ValueError(f"Failed to store key in {store_name}: {e}")
 
 
-def load_from_credential_manager(service: str, account: str) -> str:
-    """Load API key from Windows Credential Manager."""
-    if keyring is None:
-        raise ImportError(
-            "keyring package not installed.\n" "Install with: uv add keyring"
-        )
-
-    try:
-        key = keyring.get_password(service, account)
-    except Exception as e:
-        raise ValueError(
-            f"Failed to access Windows Credential Manager: {e}\n"
-            f"Service: {service}, Account: {account}"
-        )
-
-    if not isinstance(key, str) or not key:
-        raise ValueError(
-            f"API key not found in Windows Credential Manager.\n"
-            f"Service: {service}, Account: {account}\n"
-            f"Add it with: cmdkey /generic:{service} /user:{account} /pass:your-api-key"
-        )
-
-    return key
-
-
-def store_in_credential_manager(service: str, account: str, key: str) -> None:
-    """Store API key in Windows Credential Manager."""
-    if keyring is None:
-        raise ImportError("keyring package not installed")
-
-    try:
-        keyring.set_password(service, account, key)
-    except Exception as e:
-        raise ValueError(f"Failed to store key in Windows Credential Manager: {e}")
+# Backward-compatible aliases
+load_from_keychain = load_from_keyring
+store_in_keychain = store_in_keyring
+load_from_credential_manager = load_from_keyring
+store_in_credential_manager = store_in_keyring
