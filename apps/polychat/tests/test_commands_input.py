@@ -27,7 +27,7 @@ async def test_input_set_quick(command_handler, mock_session_manager):
 @pytest.mark.asyncio
 async def test_input_default_uses_profile_value(command_handler, mock_session_manager):
     mock_session_manager.input_mode = "quick"
-    mock_session_manager.profile["input_mode"] = "compose"
+    mock_session_manager._state.profile.input_mode = "compose"
     result = await command_handler.set_input_mode("default")
     assert mock_session_manager.input_mode == "compose"
     assert "profile default: compose" in result
@@ -35,7 +35,7 @@ async def test_input_default_uses_profile_value(command_handler, mock_session_ma
 
 @pytest.mark.asyncio
 async def test_input_default_invalid_profile_falls_back(command_handler, mock_session_manager):
-    mock_session_manager.profile["input_mode"] = "invalid"
+    mock_session_manager._state.profile.input_mode = "invalid"
     result = await command_handler.set_input_mode("default")
     assert mock_session_manager.input_mode == "quick"
     assert "profile default: quick" in result

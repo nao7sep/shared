@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Optional
 
+from ..domain.profile import RuntimeProfile
 from .. import profile
 
 
 def load_system_prompt(
-    profile_data: dict[str, Any],
+    profile_data: RuntimeProfile,
     profile_path: Optional[str] = None,
     strict: bool = False,
 ) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -18,7 +19,7 @@ def load_system_prompt(
     system_prompt_path = None
     warning = None
 
-    prompt_config = profile_data.get("system_prompt")
+    prompt_config = profile_data.system_prompt
     if isinstance(prompt_config, str):
         system_prompt_path = prompt_config
 

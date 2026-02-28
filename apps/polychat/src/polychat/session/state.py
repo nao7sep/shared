@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .. import hex_id
+from ..domain.chat import ChatDocument, RetryAttempt
+from ..domain.profile import RuntimeProfile
 
 
 EMOJI_WARNING = "⚠️"
@@ -20,8 +22,8 @@ class SessionState:
     current_model: str
     helper_ai: str
     helper_model: str
-    profile: dict[str, Any]
-    chat: dict[str, Any]
+    profile: RuntimeProfile
+    chat: ChatDocument
     chat_path: Optional[str] = None
     profile_path: Optional[str] = None
     log_file: Optional[str] = None
@@ -31,7 +33,7 @@ class SessionState:
     retry_mode: bool = False
     retry_base_messages: list = field(default_factory=list)
     retry_target_index: Optional[int] = None
-    retry_attempts: dict[str, dict[str, Any]] = field(default_factory=dict)
+    retry_attempts: dict[str, RetryAttempt] = field(default_factory=dict)
     secret_mode: bool = False
     secret_base_messages: list = field(default_factory=list)
     search_mode: bool = False
@@ -73,11 +75,7 @@ class SessionState:
     ) -> Optional[Any]:
         """Get cached provider instance if available."""
         key = self._provider_cache_key(provider_name, api_key, timeout_sec=timeout_sec)
-        instance = self._provider_cache.get(key)
-        if instance is not None:
-            return instance
-        # Backward-compat for tests/older cache entries keyed without timeout.
-        return self._provider_cache.get((provider_name, api_key))  # type: ignore[arg-type]
+        return self._provider_cache.get(key) or None
 
     def cache_provider(
         self,
@@ -99,34 +97,31 @@ def initialize_message_hex_ids(session: SessionState) -> None:
     """Initialize hex IDs for all messages in the current chat."""
     session.hex_id_set.clear()
 
-    if session.chat and "messages" in session.chat:
-        for message in session.chat["messages"]:
-            message["hex_id"] = hex_id.generate_hex_id(session.hex_id_set)
+    for message in session.chat.messages:
+        message.hex_id = hex_id.generate_hex_id(session.hex_id_set)
 
 
 def assign_new_message_hex_id(session: SessionState, message_index: int) -> str:
     """Assign hex ID to a newly added message."""
-    messages = session.chat.get("messages", []) if isinstance(session.chat, dict) else []
+    messages = session.chat.messages
     if message_index < 0 or message_index >= len(messages):
         raise IndexError(f"Message index {message_index} out of range")
 
     new_hex_id = hex_id.generate_hex_id(session.hex_id_set)
-    messages[message_index]["hex_id"] = new_hex_id
+    messages[message_index].hex_id = new_hex_id
     return new_hex_id
 
 
-def has_pending_error(chat_data: dict[str, Any] | None) -> bool:
+def has_pending_error(chat_data: ChatDocument | None) -> bool:
     """Check if chat has a pending error that blocks normal conversation."""
-    if not chat_data or "messages" not in chat_data:
+    if chat_data is None:
         return False
 
-    messages = chat_data["messages"]
-    if not isinstance(messages, list) or not messages:
+    messages = chat_data.messages
+    if not messages:
         return False
     last_message = messages[-1]
-    if not isinstance(last_message, dict):
-        return False
-    return bool(last_message.get("role") == "error")
+    return bool(last_message.role == "error")
 
 
 def pending_error_guidance(*, compact: bool = False) -> str:

@@ -6,6 +6,13 @@ import json
 from pathlib import Path
 
 
+from polychat.domain.chat import ChatDocument
+
+from test_helpers import make_profile
+
+
+
+
 @pytest.fixture
 def temp_dir():
     """Create temporary directory for test files."""
@@ -57,7 +64,7 @@ def sample_profile(temp_dir):
 @pytest.fixture
 def sample_chat():
     """Create sample chat data."""
-    return {
+    return ChatDocument.from_raw({
         "metadata": {
             "title": "Test Chat",
             "summary": None,
@@ -88,7 +95,7 @@ def sample_chat():
                 ]
             }
         ]
-    }
+    })
 
 
 @pytest.fixture
@@ -104,21 +111,18 @@ def mock_session_manager():
     from polychat.session_manager import SessionManager
 
     manager = SessionManager(
-        profile={
-            "default_ai": "claude",
-            "models": {"claude": "claude-haiku-4-5", "openai": "gpt-5-mini"},
-            "timeout": 300,
-            "input_mode": "quick",
-            "title_prompt": "/test/prompts/title.txt",
-            "summary_prompt": "/test/prompts/summary.txt",
-            "safety_prompt": "/test/prompts/safety.txt",
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-            "api_keys": {},
-        },
+        profile=make_profile(
+            models={"claude": "claude-haiku-4-5", "openai": "gpt-5-mini"},
+            input_mode="quick",
+            title_prompt="/test/prompts/title.txt",
+            summary_prompt="/test/prompts/summary.txt",
+            safety_prompt="/test/prompts/safety.txt",
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+        ),
         current_ai="claude",
         current_model="claude-haiku-4-5",
-        chat={"metadata": {}, "messages": []},
+        chat=ChatDocument.from_raw({"metadata": {}, "messages": []}),
         chat_path="/test/chat.json",
         profile_path="/test/profile.json",
         log_file="/test/log.txt",

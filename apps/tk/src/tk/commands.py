@@ -3,7 +3,6 @@
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from tk import data, markdown, subjective_date
 from tk.models import (
@@ -25,9 +24,9 @@ _CANCELLED_STATUS = TaskStatus.CANCELLED.value
 _HANDLED_STATUSES = (_DONE_STATUS, _CANCELLED_STATUS)
 
 
-def _serialize_tasks(tasks_data: TaskStore) -> list[dict[str, Any]]:
-    """Convert task models to persistence-compatible dict list."""
-    return [task.to_dict() for task in tasks_data.tasks]
+def _serialize_tasks(tasks_data: TaskStore) -> list[Task]:
+    """Return task list from store for markdown generation."""
+    return tasks_data.tasks
 
 
 def _sync_if_auto(session: Session) -> None:
@@ -156,24 +155,15 @@ def list_history_data(
 
 
 def extract_last_list_mapping(
-    payload: PendingListPayload | HistoryListPayload | dict[str, Any],
+    payload: PendingListPayload | HistoryListPayload,
 ) -> list[tuple[int, int]]:
     """Build (display_num, array_index) mapping from list/history payloads."""
     if isinstance(payload, PendingListPayload):
         return [(item.display_num, item.array_index) for item in payload.items]
 
-    if isinstance(payload, HistoryListPayload):
-        mapping: list[tuple[int, int]] = []
-        for group in payload.groups:
-            mapping.extend((item.display_num, item.array_index) for item in group.items)
-        return mapping
-
-    if "items" in payload:
-        return [(item["display_num"], item["array_index"]) for item in payload["items"]]  # type: ignore[index]
-
     mapping: list[tuple[int, int]] = []
-    for group in payload.get("groups", []):  # type: ignore[union-attr]
-        mapping.extend((item["display_num"], item["array_index"]) for item in group["items"])
+    for group in payload.groups:
+        mapping.extend((item.display_num, item.array_index) for item in group.items)
     return mapping
 
 
@@ -186,7 +176,7 @@ def cmd_add(session: Session, text: str) -> str:
     prof = session.require_profile()
 
     tasks_data.add_task(text)
-    data.save_tasks(prof.data_path, tasks_data.to_dict())
+    data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
 
     return "Task added."
@@ -217,7 +207,7 @@ def _handle_task(
     if not updated:
         raise ValueError("Task not found")
 
-    data.save_tasks(prof.data_path, tasks_data.to_dict())
+    data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
 
     return f"Task marked as {status}."
@@ -254,7 +244,7 @@ def cmd_edit(session: Session, array_index: int, text: str) -> str:
     if not tasks_data.update_task(array_index, text=text):
         raise ValueError("Task not found")
 
-    data.save_tasks(prof.data_path, tasks_data.to_dict())
+    data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
 
     return "Task updated."
@@ -274,7 +264,7 @@ def cmd_delete(session: Session, array_index: int, confirm: bool = False) -> str
     if not tasks_data.delete_task(array_index):
         raise ValueError("Task not found")
 
-    data.save_tasks(prof.data_path, tasks_data.to_dict())
+    data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
 
     return "Task deleted."
@@ -294,7 +284,7 @@ def cmd_note(session: Session, array_index: int, note: str | None = None) -> str
     if not tasks_data.update_task(array_index, note=note):
         raise ValueError("Task not found")
 
-    data.save_tasks(prof.data_path, tasks_data.to_dict())
+    data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
 
     return "Note updated." if note else "Note removed."
@@ -316,7 +306,7 @@ def cmd_date(session: Session, array_index: int, date_str: str) -> str:
     if not tasks_data.update_task(array_index, subjective_date=date_str):
         raise ValueError("Task not found")
 
-    data.save_tasks(prof.data_path, tasks_data.to_dict())
+    data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
 
     return f"Subjective date updated to {date_str}."

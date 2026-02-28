@@ -27,6 +27,8 @@ from ..orchestration.types import (
 from ..path_utils import map_path
 from ..session.state import has_pending_error, pending_error_guidance
 from ..session_manager import SessionManager
+from ..domain.chat import ChatDocument
+from ..domain.profile import RuntimeProfile
 from ..timeouts import resolve_profile_timeout
 from ..ui.interaction import ThreadedConsoleInteraction
 from .send_pipeline import execute_send_action
@@ -86,13 +88,13 @@ def create_prompt_session(manager: SessionManager) -> PromptSession:
 
 def print_startup_banner(
     manager: SessionManager,
-    profile_data: dict,
+    profile_data: RuntimeProfile,
     chat_path: Optional[str],
 ) -> None:
     """Print REPL startup context and key usage hints."""
     configured_ais = []
-    for provider, model in profile_data["models"].items():
-        if provider in profile_data.get("api_keys", {}):
+    for provider, model in profile_data.models.items():
+        if provider in profile_data.api_keys:
             configured_ais.append(f"{provider} ({model})")
 
     borderline = BORDERLINE_CHAR * BORDERLINE_WIDTH
@@ -117,7 +119,7 @@ def print_startup_banner(
     print(borderline)
 
 
-def print_mode_banner(manager: SessionManager, chat_data: Optional[dict]) -> None:
+def print_mode_banner(manager: SessionManager, chat_data: Optional[ChatDocument]) -> None:
     """Print mode-state banner shown before each prompt."""
     if has_pending_error(chat_data) and not manager.retry_mode:
         print(pending_error_guidance(compact=True))
@@ -128,8 +130,8 @@ def print_mode_banner(manager: SessionManager, chat_data: Optional[dict]) -> Non
 
 
 async def repl_loop(
-    profile_data: dict,
-    chat_data: Optional[dict] = None,
+    profile_data: RuntimeProfile,
+    chat_data: Optional[ChatDocument] = None,
     chat_path: Optional[str] = None,
     system_prompt: Optional[str] = None,
     system_prompt_path: Optional[str] = None,
@@ -137,16 +139,16 @@ async def repl_loop(
     log_file: Optional[str] = None,
 ) -> None:
     """Run the REPL loop."""
-    helper_ai_name = profile_data.get("default_helper_ai", profile_data["default_ai"])
-    helper_model_name = profile_data["models"][helper_ai_name]
-    input_mode = profile_data.get("input_mode", "quick")
+    helper_ai_name = profile_data.default_helper_ai or profile_data.default_ai
+    helper_model_name = profile_data.models[helper_ai_name]
+    input_mode = profile_data.input_mode or "quick"
     if input_mode not in ("quick", "compose"):
         input_mode = "quick"
 
     manager = SessionManager(
         profile=profile_data,
-        current_ai=profile_data["default_ai"],
-        current_model=profile_data["models"][profile_data["default_ai"]],
+        current_ai=profile_data.default_ai,
+        current_model=profile_data.models[profile_data.default_ai],
         helper_ai=helper_ai_name,
         helper_model=helper_model_name,
         chat=chat_data,
@@ -158,20 +160,19 @@ async def repl_loop(
         input_mode=input_mode,
     )
 
-    if chat_data and system_prompt_path and not chat_data["metadata"].get("system_prompt"):
+    if chat_data and system_prompt_path and not chat_data.metadata.system_prompt:
         chat.update_metadata(chat_data, system_prompt=system_prompt_path)
 
     cmd_handler = CommandHandler(manager, interaction=ThreadedConsoleInteraction())
     orchestrator = ChatOrchestrator(manager)
-    chat_metadata = manager.chat.get("metadata", {}) if isinstance(manager.chat, dict) else {}
     log_event(
         "session_start",
         level=logging.INFO,
         profile_file=profile_path,
         chat_file=chat_path,
         log_file=log_file,
-        chats_dir=manager.profile.get("chats_dir"),
-        logs_dir=manager.profile.get("logs_dir"),
+        chats_dir=manager.profile.chats_dir,
+        logs_dir=manager.profile.logs_dir,
         assistant_provider=manager.current_ai,
         assistant_model=manager.current_model,
         helper_provider=manager.helper_ai,
@@ -179,9 +180,9 @@ async def repl_loop(
         input_mode=manager.input_mode,
         timeout=resolve_profile_timeout(manager.profile),
         system_prompt=manager.system_prompt_path,
-        chat_title=chat_metadata.get("title"),
-        chat_summary=chat_metadata.get("summary"),
-        message_count=len(manager.chat.get("messages", [])) if isinstance(manager.chat, dict) else 0,
+        chat_title=manager.chat.metadata.title,
+        chat_summary=manager.chat.metadata.summary,
+        message_count=len(manager.chat.messages),
     )
 
     prompt_session = create_prompt_session(manager)
@@ -227,7 +228,7 @@ async def repl_loop(
                             level=logging.INFO,
                             reason="exit_command",
                             chat_file=chat_path,
-                            message_count=len(chat_data.get("messages", [])) if chat_data else 0,
+                            message_count=len(chat_data.messages) if chat_data else 0,
                         )
                         print("Goodbye!")
                         break
@@ -309,7 +310,7 @@ async def repl_loop(
                 level=logging.INFO,
                 reason="keyboard_interrupt_or_eof",
                 chat_file=chat_path,
-                message_count=len(chat_data.get("messages", [])) if chat_data else 0,
+                message_count=len(chat_data.messages) if chat_data else 0,
             )
             print("Goodbye!")
             break

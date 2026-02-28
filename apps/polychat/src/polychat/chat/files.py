@@ -6,9 +6,10 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path, PureWindowsPath
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from ..constants import APP_NAME, CHAT_FILE_EXTENSION, DATETIME_FORMAT_FILENAME
+from ..domain.chat import ChatListEntry
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 
 
@@ -23,14 +24,14 @@ def _is_windows_drive_relative_path(path: str) -> bool:
     return bool(win_path.drive) and not win_path.is_absolute()
 
 
-def list_chats(chats_dir: str) -> list[dict[str, Any]]:
+def list_chats(chats_dir: str) -> list[ChatListEntry]:
     """List all chat files in the directory with metadata."""
     chats_path = Path(chats_dir)
 
     if not chats_path.exists():
         return []
 
-    chat_files = []
+    chat_files: list[ChatListEntry] = []
 
     for file_path in chats_path.glob(f"*{CHAT_FILE_EXTENSION}"):
         try:
@@ -41,14 +42,14 @@ def list_chats(chats_dir: str) -> list[dict[str, Any]]:
             messages = data.get("messages", [])
 
             chat_files.append(
-                {
-                    "filename": file_path.name,
-                    "path": str(file_path),
-                    "title": metadata.get("title"),
-                    "created_utc": metadata.get("created_utc"),
-                    "updated_utc": metadata.get("updated_utc"),
-                    "message_count": len(messages),
-                }
+                ChatListEntry(
+                    filename=file_path.name,
+                    path=str(file_path),
+                    title=metadata.get("title"),
+                    created_utc=metadata.get("created_utc"),
+                    updated_utc=metadata.get("updated_utc"),
+                    message_count=len(messages),
+                )
             )
         except Exception as e:
             # Skip invalid files but log the issue.
@@ -56,7 +57,7 @@ def list_chats(chats_dir: str) -> list[dict[str, Any]]:
             continue
 
     # Sort by updated_utc (most recent first), then by filename.
-    chat_files.sort(key=lambda x: (x["updated_utc"] or "", x["filename"]), reverse=True)
+    chat_files.sort(key=lambda x: (x.updated_utc or "", x.filename), reverse=True)
 
     return chat_files
 

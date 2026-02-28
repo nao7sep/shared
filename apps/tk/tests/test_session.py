@@ -32,7 +32,7 @@ class TestSessionRequireMethods:
         profile = sample_session.require_profile()
 
         assert profile is not None
-        assert "timezone" in profile
+        assert profile.timezone == "Asia/Tokyo"
 
     def test_require_profile_without_profile(self, empty_session):
         """Test that require_profile raises ValueError when not set."""
@@ -44,7 +44,7 @@ class TestSessionRequireMethods:
         tasks = sample_session.require_tasks()
 
         assert tasks is not None
-        assert "tasks" in tasks
+        assert len(tasks.tasks) > 0
 
     def test_require_tasks_without_tasks(self, empty_session):
         """Test that require_tasks raises ValueError when not set."""
@@ -100,7 +100,7 @@ class TestSessionTaskRetrieval:
         task = sample_session.get_task_by_display_number(1)
 
         assert task is not None
-        assert task["text"] == "Task one"
+        assert task.text == "Task one"
 
     def test_get_task_by_display_number_invalid(self, sample_session):
         """Test that invalid display number raises ValueError."""

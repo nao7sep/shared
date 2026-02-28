@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Optional
 
 from .. import hex_id
-from ..chat import get_messages_for_ai
+from ..domain.profile import RuntimeProfile
 from ..prompts.templates import (
     build_safety_check_prompt,
     build_summary_generation_prompt,
@@ -33,7 +33,7 @@ class MetadataGenerationCommandHandlers:
         self,
         helper_ai: str,
         helper_model: str,
-        profile_data: dict,
+        profile_data: RuntimeProfile,
         messages: list[dict],
         system_prompt: Optional[str],
         task: str,
@@ -70,18 +70,17 @@ class MetadataGenerationCommandHandlers:
         if chat_data is None:
             return "No chat is currently open"
 
-        messages = get_messages_for_ai(chat_data)
-        if not messages:
+        if not chat_data.messages:
             return "No messages in chat to generate title from"
 
-        context_text = format_for_ai_context(messages)
+        context_text = format_for_ai_context(chat_data.messages)
 
         prompt_messages = [
             {
                 "role": "user",
                 "content": build_title_generation_prompt(
                     context_text,
-                    self._deps.manager.profile.get("title_prompt"),
+                    self._deps.manager.profile.title_prompt,
                 ),
             }
         ]
@@ -132,18 +131,17 @@ class MetadataGenerationCommandHandlers:
         if chat_data is None:
             return "No chat is currently open"
 
-        messages = get_messages_for_ai(chat_data)
-        if not messages:
+        if not chat_data.messages:
             return "No messages in chat to generate summary from"
 
-        context_text = format_for_ai_context(messages)
+        context_text = format_for_ai_context(chat_data.messages)
 
         prompt_messages = [
             {
                 "role": "user",
                 "content": build_summary_generation_prompt(
                     context_text,
-                    self._deps.manager.profile.get("summary_prompt"),
+                    self._deps.manager.profile.summary_prompt,
                 ),
             }
         ]
@@ -176,7 +174,7 @@ class MetadataGenerationCommandHandlers:
         chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
-        messages = chat_data["messages"]
+        messages = chat_data.messages
 
         if not messages:
             return "No messages to check"
@@ -187,8 +185,7 @@ class MetadataGenerationCommandHandlers:
             if msg_index is None:
                 return f"Invalid hex ID: {args.strip()}"
 
-            msg = messages[msg_index]
-            content_to_check = format_for_safety_check([msg])
+            content_to_check = format_for_safety_check([messages[msg_index]])
             scope = f"message [{args.strip()}]"
         else:
             content_to_check = format_for_safety_check(messages)
@@ -199,7 +196,7 @@ class MetadataGenerationCommandHandlers:
                 "role": "user",
                 "content": build_safety_check_prompt(
                     content_to_check,
-                    self._deps.manager.profile.get("safety_prompt"),
+                    self._deps.manager.profile.safety_prompt,
                 ),
             }
         ]

@@ -2,7 +2,9 @@
 
 import pytest
 from polychat.commands import CommandHandler
+from polychat.domain.chat import ChatDocument
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 class FakeInteraction:
@@ -32,7 +34,7 @@ class FakeInteraction:
 @pytest.fixture
 def mock_session_manager_purge():
     """Create a mock SessionManager with sample messages for purge tests."""
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {},
         "messages": [
             {
@@ -58,18 +60,13 @@ def mock_session_manager_purge():
                 "content": ["Response 2"]
             },
         ]
-    }
+    })
 
     manager = SessionManager(
-        profile={
-            "default_ai": "claude",
-            "models": {"claude": "claude-haiku-4-5"},
-            "timeout": 300,
-            "input_mode": "quick",
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-            "api_keys": {},
-        },
+        profile=make_profile(
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+        ),
         current_ai="claude",
         current_model="claude-haiku-4-5",
         chat=chat_data,
@@ -79,10 +76,10 @@ def mock_session_manager_purge():
     )
 
     # Set up hex IDs as the tests expect
-    manager.chat["messages"][0]["hex_id"] = "a3f"
-    manager.chat["messages"][1]["hex_id"] = "b2c"
-    manager.chat["messages"][2]["hex_id"] = "c1d"
-    manager.chat["messages"][3]["hex_id"] = "d4e"
+    manager.chat.messages[0].hex_id = "a3f"
+    manager.chat.messages[1].hex_id = "b2c"
+    manager.chat.messages[2].hex_id = "c1d"
+    manager.chat.messages[3].hex_id = "d4e"
     manager._state.hex_id_set = {"a3f", "b2c", "c1d", "d4e"}
 
     return manager
@@ -119,7 +116,7 @@ async def test_purge_single_message(command_handler_purge, mock_session_manager_
     assert "[b2c]" in result
 
     # Verify message was deleted
-    messages = mock_session_manager_purge.chat["messages"]
+    messages = mock_session_manager_purge.chat.messages
     assert len(messages) == 3
 
 
@@ -136,7 +133,7 @@ async def test_purge_multiple_messages(command_handler_purge, mock_session_manag
     assert "[c1d]" in result
 
     # Verify messages were deleted
-    messages = mock_session_manager_purge.chat["messages"]
+    messages = mock_session_manager_purge.chat.messages
     assert len(messages) == 2
 
 
@@ -150,7 +147,7 @@ async def test_purge_invalid_hex_id(command_handler_purge, mock_session_manager_
     assert "Invalid hex ID: zzz" in result
 
     # Verify no messages were deleted
-    messages = mock_session_manager_purge.chat["messages"]
+    messages = mock_session_manager_purge.chat.messages
     assert len(messages) == 4
 
 
@@ -160,22 +157,22 @@ async def test_purge_preserves_remaining_hex_ids(command_handler_purge, mock_ses
     handler = command_handler_purge
 
     original_ids = [
-        msg.get("hex_id")
-        for msg in mock_session_manager_purge.chat["messages"]
+        msg.hex_id
+        for msg in mock_session_manager_purge.chat.messages
     ]
 
     # Purge middle message
     await handler.purge_messages("b2c")
 
     # Remaining IDs should be preserved
-    remaining_ids = [msg.get("hex_id") for msg in mock_session_manager_purge.chat["messages"]]
+    remaining_ids = [msg.hex_id for msg in mock_session_manager_purge.chat.messages]
     assert remaining_ids == [original_ids[0], original_ids[2], original_ids[3]]
 
 
 @pytest.mark.asyncio
 async def test_purge_no_messages(command_handler_purge, mock_session_manager_purge):
     """Test purge with no messages in chat."""
-    mock_session_manager_purge.chat["messages"] = []
+    mock_session_manager_purge.chat.messages = []
 
     handler = command_handler_purge
 
@@ -208,7 +205,7 @@ async def test_purge_multiple_messages_order_independent(command_handler_purge, 
     assert "Purged 2 message" in result
 
     # Verify correct messages remain
-    messages = mock_session_manager_purge.chat["messages"]
+    messages = mock_session_manager_purge.chat.messages
     assert len(messages) == 2
 
 
@@ -220,4 +217,4 @@ async def test_purge_cancelled_on_non_yes(command_handler_purge, mock_session_ma
     result = await command_handler_purge.purge_messages("a3f")
 
     assert result == "Purge cancelled"
-    assert len(mock_session_manager_purge.chat["messages"]) == 4
+    assert len(mock_session_manager_purge.chat.messages) == 4

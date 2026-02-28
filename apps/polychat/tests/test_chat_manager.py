@@ -8,6 +8,7 @@ from polychat.chat_manager import (
     generate_chat_filename,
     rename_chat,
 )
+from polychat.domain.chat import ChatListEntry
 from polychat.ui.chat_ui import format_chat_info
 
 
@@ -44,10 +45,10 @@ def test_list_chats_single_valid_file(tmp_path):
     chats = list_chats(str(tmp_path))
 
     assert len(chats) == 1
-    assert chats[0]["filename"] == "test-chat.json"
-    assert chats[0]["title"] == "Test Chat"
-    assert chats[0]["message_count"] == 2
-    assert chats[0]["updated_utc"] == "2026-02-02T12:00:00+00:00"
+    assert chats[0].filename == "test-chat.json"
+    assert chats[0].title == "Test Chat"
+    assert chats[0].message_count == 2
+    assert chats[0].updated_utc == "2026-02-02T12:00:00+00:00"
 
 
 def test_list_chats_multiple_files_sorted(tmp_path):
@@ -75,9 +76,9 @@ def test_list_chats_multiple_files_sorted(tmp_path):
 
     # Should be sorted by updated_at (most recent first)
     assert len(chats) == 3
-    assert chats[0]["filename"] == "new.json"
-    assert chats[1]["filename"] == "middle.json"
-    assert chats[2]["filename"] == "old.json"
+    assert chats[0].filename == "new.json"
+    assert chats[1].filename == "middle.json"
+    assert chats[2].filename == "old.json"
 
 
 def test_list_chats_missing_metadata(tmp_path):
@@ -93,8 +94,8 @@ def test_list_chats_missing_metadata(tmp_path):
 
     # Should handle gracefully with None values
     assert len(chats) == 1
-    assert chats[0]["title"] is None
-    assert chats[0]["updated_utc"] is None
+    assert chats[0].title is None
+    assert chats[0].updated_utc is None
 
 
 def test_list_chats_invalid_json(tmp_path):
@@ -109,7 +110,7 @@ def test_list_chats_invalid_json(tmp_path):
 
     # Should skip invalid file
     assert len(chats) == 1
-    assert chats[0]["filename"] == "valid.json"
+    assert chats[0].filename == "valid.json"
 
 
 def test_list_chats_ignores_non_json_files(tmp_path):
@@ -126,17 +127,19 @@ def test_list_chats_ignores_non_json_files(tmp_path):
 
     # Should only find JSON file
     assert len(chats) == 1
-    assert chats[0]["filename"] == "chat.json"
+    assert chats[0].filename == "chat.json"
 
 
 def test_format_chat_info_with_title():
     """Test formatting chat info with title."""
-    chat = {
-        "filename": "test-chat.json",
-        "title": "My Important Chat",
-        "message_count": 42,
-        "updated_utc": "2026-02-08T14:30:00+00:00",
-    }
+    chat = ChatListEntry(
+        filename="test-chat.json",
+        path="/tmp/test-chat.json",
+        title="My Important Chat",
+        created_utc=None,
+        updated_utc="2026-02-08T14:30:00+00:00",
+        message_count=42,
+    )
 
     formatted = format_chat_info(chat, 1)
 
@@ -150,12 +153,14 @@ def test_format_chat_info_with_title():
 
 def test_format_chat_info_no_title():
     """Test formatting chat info without title."""
-    chat = {
-        "filename": "untitled.json",
-        "title": None,
-        "message_count": 0,
-        "updated_utc": None,
-    }
+    chat = ChatListEntry(
+        filename="untitled.json",
+        path="/tmp/untitled.json",
+        title=None,
+        created_utc=None,
+        updated_utc=None,
+        message_count=0,
+    )
 
     formatted = format_chat_info(chat, 5)
 
@@ -168,12 +173,14 @@ def test_format_chat_info_no_title():
 
 def test_format_chat_info_invalid_timestamp():
     """Test formatting with invalid timestamp."""
-    chat = {
-        "filename": "test.json",
-        "title": "Test",
-        "message_count": 1,
-        "updated_utc": "invalid-timestamp",
-    }
+    chat = ChatListEntry(
+        filename="test.json",
+        path="/tmp/test.json",
+        title="Test",
+        created_utc=None,
+        updated_utc="invalid-timestamp",
+        message_count=1,
+    )
 
     formatted = format_chat_info(chat, 1)
 

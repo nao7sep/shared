@@ -1,9 +1,8 @@
 """Tests for markdown module."""
 
-import pytest
-from pathlib import Path
 
 from tk.markdown import generate_todo
+from tk.models import Task
 
 
 class TestGenerateTodo:
@@ -23,22 +22,8 @@ class TestGenerateTodo:
         """Test generating TODO.md with only pending tasks."""
         output_path = temp_dir / "TODO.md"
         tasks = [
-            {
-                "text": "Task one",
-                "status": "pending",
-                "created_utc": "2026-02-01T10:00:00+00:00",
-                "handled_utc": None,
-                "subjective_date": None,
-                "note": None,
-            },
-            {
-                "text": "Task two",
-                "status": "pending",
-                "created_utc": "2026-02-02T10:00:00+00:00",
-                "handled_utc": None,
-                "subjective_date": None,
-                "note": None,
-            },
+            Task(text="Task one", status="pending", created_utc="2026-02-01T10:00:00+00:00"),
+            Task(text="Task two", status="pending", created_utc="2026-02-02T10:00:00+00:00"),
         ]
 
         generate_todo(tasks, str(output_path))
@@ -52,7 +37,7 @@ class TestGenerateTodo:
         """Test generating TODO.md with history section."""
         output_path = temp_dir / "TODO.md"
 
-        generate_todo(sample_tasks_data["tasks"], str(output_path))
+        generate_todo(sample_tasks_data.tasks, str(output_path))
 
         content = output_path.read_text()
         assert "# TODO" in content
@@ -86,30 +71,12 @@ class TestGenerateTodo:
         """Test that history dates are descending."""
         output_path = temp_dir / "TODO.md"
         tasks = [
-            {
-                "text": "Task 1",
-                "status": "done",
-                "created_utc": "2026-02-07T10:00:00+00:00",
-                "handled_utc": "2026-02-07T15:00:00+00:00",
-                "subjective_date": "2026-02-07",
-                "note": None,
-            },
-            {
-                "text": "Task 2",
-                "status": "done",
-                "created_utc": "2026-02-09T10:00:00+00:00",
-                "handled_utc": "2026-02-09T15:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": None,
-            },
-            {
-                "text": "Task 3",
-                "status": "done",
-                "created_utc": "2026-02-08T10:00:00+00:00",
-                "handled_utc": "2026-02-08T15:00:00+00:00",
-                "subjective_date": "2026-02-08",
-                "note": None,
-            },
+            Task(text="Task 1", status="done", created_utc="2026-02-07T10:00:00+00:00",
+                 handled_utc="2026-02-07T15:00:00+00:00", subjective_date="2026-02-07"),
+            Task(text="Task 2", status="done", created_utc="2026-02-09T10:00:00+00:00",
+                 handled_utc="2026-02-09T15:00:00+00:00", subjective_date="2026-02-09"),
+            Task(text="Task 3", status="done", created_utc="2026-02-08T10:00:00+00:00",
+                 handled_utc="2026-02-08T15:00:00+00:00", subjective_date="2026-02-08"),
         ]
 
         generate_todo(tasks, str(output_path))
@@ -126,22 +93,10 @@ class TestGenerateTodo:
         """Test that tasks within date are sorted by handled_utc."""
         output_path = temp_dir / "TODO.md"
         tasks = [
-            {
-                "text": "Task at 12:00",
-                "status": "done",
-                "created_utc": "2026-02-09T10:00:00+00:00",
-                "handled_utc": "2026-02-09T12:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": None,
-            },
-            {
-                "text": "Task at 10:00",
-                "status": "done",
-                "created_utc": "2026-02-09T08:00:00+00:00",
-                "handled_utc": "2026-02-09T10:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": None,
-            },
+            Task(text="Task at 12:00", status="done", created_utc="2026-02-09T10:00:00+00:00",
+                 handled_utc="2026-02-09T12:00:00+00:00", subjective_date="2026-02-09"),
+            Task(text="Task at 10:00", status="done", created_utc="2026-02-09T08:00:00+00:00",
+                 handled_utc="2026-02-09T10:00:00+00:00", subjective_date="2026-02-09"),
         ]
 
         generate_todo(tasks, str(output_path))
@@ -157,14 +112,9 @@ class TestGenerateTodo:
         """Test that notes are included with => format."""
         output_path = temp_dir / "TODO.md"
         tasks = [
-            {
-                "text": "Task with note",
-                "status": "done",
-                "created_utc": "2026-02-09T10:00:00+00:00",
-                "handled_utc": "2026-02-09T15:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": "This is a note",
-            },
+            Task(text="Task with note", status="done", created_utc="2026-02-09T10:00:00+00:00",
+                 handled_utc="2026-02-09T15:00:00+00:00", subjective_date="2026-02-09",
+                 note="This is a note"),
         ]
 
         generate_todo(tasks, str(output_path))
@@ -176,22 +126,10 @@ class TestGenerateTodo:
         """Test that status emojis are correct."""
         output_path = temp_dir / "TODO.md"
         tasks = [
-            {
-                "text": "Done task",
-                "status": "done",
-                "created_utc": "2026-02-09T10:00:00+00:00",
-                "handled_utc": "2026-02-09T15:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": None,
-            },
-            {
-                "text": "Cancelled task",
-                "status": "cancelled",
-                "created_utc": "2026-02-09T10:00:00+00:00",
-                "handled_utc": "2026-02-09T16:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": None,
-            },
+            Task(text="Done task", status="done", created_utc="2026-02-09T10:00:00+00:00",
+                 handled_utc="2026-02-09T15:00:00+00:00", subjective_date="2026-02-09"),
+            Task(text="Cancelled task", status="cancelled", created_utc="2026-02-09T10:00:00+00:00",
+                 handled_utc="2026-02-09T16:00:00+00:00", subjective_date="2026-02-09"),
         ]
 
         generate_todo(tasks, str(output_path))
@@ -204,22 +142,10 @@ class TestGenerateTodo:
         """Test that done and cancelled tasks are merged by date."""
         output_path = temp_dir / "TODO.md"
         tasks = [
-            {
-                "text": "Done task",
-                "status": "done",
-                "created_utc": "2026-02-09T10:00:00+00:00",
-                "handled_utc": "2026-02-09T15:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": None,
-            },
-            {
-                "text": "Cancelled task",
-                "status": "cancelled",
-                "created_utc": "2026-02-09T11:00:00+00:00",
-                "handled_utc": "2026-02-09T16:00:00+00:00",
-                "subjective_date": "2026-02-09",
-                "note": None,
-            },
+            Task(text="Done task", status="done", created_utc="2026-02-09T10:00:00+00:00",
+                 handled_utc="2026-02-09T15:00:00+00:00", subjective_date="2026-02-09"),
+            Task(text="Cancelled task", status="cancelled", created_utc="2026-02-09T11:00:00+00:00",
+                 handled_utc="2026-02-09T16:00:00+00:00", subjective_date="2026-02-09"),
         ]
 
         generate_todo(tasks, str(output_path))

@@ -1,4 +1,4 @@
-"""Session access descriptors and dict-like helpers for SessionManager."""
+"""Session access descriptors and state helpers for SessionManager."""
 
 from __future__ import annotations
 
@@ -63,35 +63,12 @@ class StateField(Generic[T]):
         setattr(instance._state, self._field_name, value)
 
 
-def state_getitem(state: SessionState, key: str) -> Any:
-    """Get SessionState value by key with KeyError contract."""
-    if hasattr(state, key):
-        return getattr(state, key)
-    raise KeyError(f"Unknown session key: {key}")
-
-
-def state_setitem(state: SessionState, key: str, value: Any) -> None:
-    """Set SessionState value by key with KeyError contract."""
-    if hasattr(state, key):
-        setattr(state, key, value)
-        return
-    raise KeyError(f"Unknown session key: {key}")
-
-
-def state_get(state: SessionState, key: str, default: Any = None) -> Any:
-    """Get SessionState value by key with default fallback."""
-    try:
-        return state_getitem(state, key)
-    except KeyError:
-        return default
-
-
 def state_to_dict(
     state: SessionState,
     *,
     message_hex_ids: dict[int, str],
 ) -> dict[str, Any]:
-    """Serialize SessionState to a diagnostic dictionary."""
+    """Serialize SessionState for diagnostics."""
     return {
         "current_ai": state.current_ai,
         "current_model": state.current_model,

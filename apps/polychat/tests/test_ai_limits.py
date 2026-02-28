@@ -1,5 +1,6 @@
 """Tests for centralized AI limit resolution."""
 
+from test_helpers import make_profile
 from polychat.ai.limits import (
     resolve_profile_limits,
     resolve_request_limits,
@@ -8,22 +9,20 @@ from polychat.ai.limits import (
 
 
 def test_resolve_profile_limits_merges_default_provider_and_helper():
-    profile = {
-        "ai_limits": {
-            "default": {
-                "max_output_tokens": 900,
-                "search_max_output_tokens": 1200,
-            },
-            "providers": {
-                "claude": {
-                    "max_output_tokens": 800,
-                }
-            },
-            "helper": {
-                "max_output_tokens": 300,
-            },
-        }
-    }
+    profile = make_profile(ai_limits={
+        "default": {
+            "max_output_tokens": 900,
+            "search_max_output_tokens": 1200,
+        },
+        "providers": {
+            "claude": {
+                "max_output_tokens": 800,
+            }
+        },
+        "helper": {
+            "max_output_tokens": 300,
+        },
+    })
 
     interactive = resolve_profile_limits(profile, "claude")
     helper = resolve_profile_limits(profile, "claude", helper=True)
@@ -36,14 +35,12 @@ def test_resolve_profile_limits_merges_default_provider_and_helper():
 
 
 def test_resolve_profile_limits_ignores_invalid_values():
-    profile = {
-        "ai_limits": {
-            "default": {
-                "max_output_tokens": 0,
-                "search_max_output_tokens": -1,
-            }
+    profile = make_profile(ai_limits={
+        "default": {
+            "max_output_tokens": 0,
+            "search_max_output_tokens": -1,
         }
-    }
+    })
 
     limits = resolve_profile_limits(profile, "openai")
     assert limits["max_output_tokens"] is None
@@ -70,20 +67,18 @@ def test_select_max_output_tokens_returns_none_when_unset():
 
 
 def test_resolve_request_limits_applies_claude_fallback_when_unset():
-    limits = resolve_request_limits(profile={}, provider="claude", search=False)
+    limits = resolve_request_limits(profile=make_profile(), provider="claude", search=False)
 
     assert limits["max_output_tokens"] == 4096
 
 
 def test_resolve_request_limits_applies_helper_overrides():
-    profile = {
-        "ai_limits": {
-            "default": {"max_output_tokens": 1000},
-            "helper": {
-                "max_output_tokens": 250,
-            },
-        }
-    }
+    profile = make_profile(ai_limits={
+        "default": {"max_output_tokens": 1000},
+        "helper": {
+            "max_output_tokens": 250,
+        },
+    })
 
     limits = resolve_request_limits(
         profile=profile,

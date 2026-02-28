@@ -254,8 +254,8 @@ class TestLoadProfile:
 
         profile = load_profile(str(profile_path))
 
-        assert profile["timezone"] == "Asia/Tokyo"
-        assert profile["subjective_day_start"] == "04:00:00"
+        assert profile.timezone == "Asia/Tokyo"
+        assert profile.subjective_day_start == "04:00:00"
 
     def test_load_profile_maps_paths(self, temp_dir):
         """Test that load_profile maps relative paths."""
@@ -274,9 +274,9 @@ class TestLoadProfile:
         profile = load_profile(str(profile_path))
 
         # Paths should be absolute now
-        assert Path(profile["data_path"]).is_absolute()
-        assert Path(profile["output_path"]).is_absolute()
-        assert str(temp_dir) in profile["data_path"]
+        assert Path(profile.data_path).is_absolute()
+        assert Path(profile.output_path).is_absolute()
+        assert str(temp_dir) in profile.data_path
 
     def test_load_profile_sets_defaults(self, temp_dir):
         """Test that load_profile sets default sync settings."""
@@ -294,8 +294,8 @@ class TestLoadProfile:
 
         profile = load_profile(str(profile_path))
 
-        assert profile["auto_sync"] is True
-        assert profile["sync_on_exit"] is False
+        assert profile.auto_sync is True
+        assert profile.sync_on_exit is False
 
 
 class TestCreateProfile:

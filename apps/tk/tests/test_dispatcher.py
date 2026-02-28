@@ -200,9 +200,9 @@ class TestHelpRendering:
 
         for cmd in dispatcher.COMMAND_REGISTRY:
             display_usage = next(
-                row["display_usage"]
+                row.display_usage
                 for row in dispatcher.command_doc_entries()
-                if row["command"] == cmd
+                if row.command == cmd
             )
             assert display_usage in help_text
 

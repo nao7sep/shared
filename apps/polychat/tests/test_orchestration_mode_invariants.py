@@ -8,18 +8,20 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from polychat.commands.types import CommandSignal
+from polychat.domain.chat import ChatDocument
 from polychat.orchestrator import ChatOrchestrator
 from polychat.orchestration.types import ContinueAction, PrintAction, SendAction
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 @pytest.fixture
 def manager() -> SessionManager:
     return SessionManager(
-        profile={
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-        },
+        profile=make_profile(
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+        ),
         current_ai="claude",
         current_model="claude-haiku-4-5",
     )
@@ -30,14 +32,14 @@ def orchestrator(manager: SessionManager) -> ChatOrchestrator:
     return ChatOrchestrator(manager)
 
 
-def _chat_with_pending_error() -> dict:
-    return {
+def _chat_with_pending_error() -> ChatDocument:
+    return ChatDocument.from_raw({
         "metadata": {},
         "messages": [
             {"role": "user", "content": "hello"},
             {"role": "error", "content": "timeout"},
         ],
-    }
+    })
 
 
 @pytest.mark.asyncio
@@ -61,7 +63,7 @@ async def test_pending_error_allows_retry_mode_send(orchestrator: ChatOrchestrat
 async def test_pending_error_allows_secret_mode_send(orchestrator: ChatOrchestrator) -> None:
     chat_data = _chat_with_pending_error()
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-    orchestrator.manager.enter_secret_mode(chat_data["messages"])
+    orchestrator.manager.enter_secret_mode(chat_data.messages)
 
     action = await orchestrator.handle_user_message(
         "secret question",
@@ -75,13 +77,13 @@ async def test_pending_error_allows_secret_mode_send(orchestrator: ChatOrchestra
 
 @pytest.mark.asyncio
 async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrchestrator) -> None:
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {},
         "messages": [
             {"role": "user", "content": "hello"},
             {"role": "assistant", "content": "hi"},
         ],
-    }
+    })
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
     orchestrator.manager.enter_retry_mode(
         [{"role": "user", "content": "hello"}],
@@ -125,10 +127,10 @@ async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -
 async def test_secret_mode_ai_response_does_not_mutate_or_persist_chat(
     orchestrator: ChatOrchestrator,
 ) -> None:
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {},
         "messages": [{"role": "user", "content": "persisted"}],
-    }
+    })
     before = deepcopy(chat_data)
     reserved_hex_id = orchestrator.manager.reserve_hex_id()
 

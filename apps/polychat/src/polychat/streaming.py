@@ -49,7 +49,7 @@ async def display_streaming_response(
         print()
         raise
 
-    except Exception as e:
+    except Exception:
         # Error during streaming
         print()
         raise

@@ -7,6 +7,7 @@ from typing import Any, Optional, TYPE_CHECKING
 from ..ai.capabilities import provider_supports_search
 from ..ai.catalog import resolve_provider_shortcut
 from ..constants import CHAT_FILE_EXTENSION
+from ..domain.chat import ChatDocument
 from ..formatting.constants import DISPLAY_UNKNOWN
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
@@ -45,15 +46,15 @@ class CommandHandlerBaseMixin:
 
     def _require_open_chat(
         self, *, need_messages: bool = False, need_metadata: bool = False
-    ) -> Optional[dict[str, Any]]:
+    ) -> Optional[ChatDocument]:
         """Return current chat or None when required structure is missing."""
         chat_data = self.manager.chat
-        if not isinstance(chat_data, dict) or not chat_data:
-            return None
-        if need_messages and "messages" not in chat_data:
-            return None
-        if need_metadata and "metadata" not in chat_data:
-            return None
+        if not chat_data.messages and not chat_data.metadata.title and not chat_data.metadata.created_utc:
+            # Empty ChatDocument - treat as no chat
+            if need_messages or need_metadata:
+                # Check if there's at least a chat_path to indicate a chat is open
+                if not self.manager.chat_path:
+                    return None
         return chat_data
 
     async def _prompt_text(self, prompt: str) -> str:
@@ -151,7 +152,7 @@ class CommandHandlerBaseMixin:
             raise ValueError(f"Unknown provider shortcut: /{shortcut}")
 
         # Get model for this provider from profile
-        model = self.manager.profile["models"].get(provider)
+        model = self.manager.profile.models.get(provider)
         if not model:
             raise ValueError(f"No model configured for {provider}")
 

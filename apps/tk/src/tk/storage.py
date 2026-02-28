@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from tk.models import TaskStatus
+from tk.models import TaskStatus, TaskStore
 
 _VALID_TASK_STATUSES = {status.value for status in TaskStatus}
 
@@ -33,30 +33,28 @@ def validate_tasks_structure(data: dict[str, Any]) -> None:
             raise ValueError(f"Task {i} has invalid status: {task['status']}")
 
 
-def load_tasks(path: str) -> dict[str, Any]:
+def load_tasks(path: str) -> TaskStore:
     """Load tasks from JSON and validate structure."""
     task_path = Path(path)
 
     if not task_path.exists():
         task_path.parent.mkdir(parents=True, exist_ok=True)
-        return {"tasks": []}
+        return TaskStore()
 
     try:
         with open(task_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         validate_tasks_structure(data)
-        return data
+        return TaskStore.from_dict(data)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in tasks file: {e}")
 
 
-def save_tasks(path: str, data: dict[str, Any] | Any) -> None:
+def save_tasks(path: str, tasks_data: TaskStore) -> None:
     """Save tasks payload to JSON."""
-    payload = data.to_dict() if hasattr(data, "to_dict") else data
-
     task_path = Path(path)
     task_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(task_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
+        json.dump(tasks_data.to_dict(), f, indent=2, ensure_ascii=False)

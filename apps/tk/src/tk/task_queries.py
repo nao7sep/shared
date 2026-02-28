@@ -1,33 +1,31 @@
 """Task grouping and read-model helpers for presentation layers."""
 
-from typing import Any
-
-from tk.models import TaskStatus
+from tk.models import Task, TaskStatus
 
 _PENDING_STATUS = TaskStatus.PENDING.value
 _DONE_STATUS = TaskStatus.DONE.value
 _CANCELLED_STATUS = TaskStatus.CANCELLED.value
 
 
-def group_tasks_for_display(tasks: list[Any]) -> dict[str, Any]:
+def group_tasks_for_display(tasks: list[Task]) -> dict[str, list]:
     """Group and sort tasks for TODO/history display."""
-    result: dict[str, Any] = {
+    result: dict[str, list] = {
         _PENDING_STATUS: [],
         _DONE_STATUS: [],
         _CANCELLED_STATUS: [],
     }
 
     for task in tasks:
-        if task["status"] == _PENDING_STATUS:
+        if task.status == _PENDING_STATUS:
             result[_PENDING_STATUS].append(task)
 
-    result[_PENDING_STATUS].sort(key=lambda t: t.get("created_utc", ""))
+    result[_PENDING_STATUS].sort(key=lambda t: t.created_utc)
 
     for status in (_DONE_STATUS, _CANCELLED_STATUS):
         handled_with_indices = [
             (i, task)
             for i, task in enumerate(tasks)
-            if task["status"] == status
+            if task.status == status
         ]
         grouped = group_handled_tasks(handled_with_indices, include_unknown=True)
         result[status] = [(date, [task for _, task in date_tasks]) for date, date_tasks in grouped]
@@ -36,15 +34,15 @@ def group_tasks_for_display(tasks: list[Any]) -> dict[str, Any]:
 
 
 def group_handled_tasks(
-    handled_with_indices: list[tuple[int, Any]],
+    handled_with_indices: list[tuple[int, Task]],
     *,
     include_unknown: bool,
-) -> list[tuple[str, list[tuple[int, Any]]]]:
+) -> list[tuple[str, list[tuple[int, Task]]]]:
     """Group handled tasks by subjective date with deterministic ordering."""
-    grouped: dict[str, list[tuple[int, Any]]] = {}
+    grouped: dict[str, list[tuple[int, Task]]] = {}
 
     for array_index, task in handled_with_indices:
-        date = task.get("subjective_date")
+        date = task.subjective_date
         if not date:
             if not include_unknown:
                 continue
@@ -55,7 +53,7 @@ def group_handled_tasks(
         grouped[date].append((array_index, task))
 
     for date in grouped:
-        grouped[date].sort(key=lambda x: x[1].get("handled_utc", ""))
+        grouped[date].sort(key=lambda x: x[1].handled_utc or "")
 
     known = sorted(
         [(date, items) for date, items in grouped.items() if date != "unknown"],

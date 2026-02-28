@@ -154,7 +154,7 @@ def _dedupe_and_number(citations: list[Citation]) -> list[Citation]:
 def normalize_citations(citations: object) -> list[Citation]:
     """Normalize citation shape, numbering, and deduplicate.
 
-    Output dict key order is: number, title, url.
+    Output key order is: number, title, url.
     """
     if not isinstance(citations, list):
         return []

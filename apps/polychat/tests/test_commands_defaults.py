@@ -2,33 +2,31 @@
 
 import pytest
 from polychat.commands import CommandHandler
+from polychat.domain.chat import ChatDocument
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 @pytest.fixture
 def mock_session_manager_defaults():
     """Create a mock SessionManager for defaults tests."""
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {
             "system_prompt": None,
         },
         "messages": []
-    }
+    })
 
     manager = SessionManager(
-        profile={
-            "default_ai": "claude",
-            "models": {
+        profile=make_profile(
+            models={
                 "openai": "gpt-5-mini",
                 "claude": "claude-haiku-4-5",
                 "gemini": "gemini-3-flash-preview",
             },
-            "timeout": 300,
-            "input_mode": "quick",
-            "api_keys": {},
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-        },
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+        ),
         current_ai="openai",
         current_model="gpt-5-mini",
         helper_ai="claude",
@@ -67,13 +65,13 @@ async def test_model_default_command(command_handler_defaults, mock_session_mana
 async def test_timeout_default_command(command_handler_defaults, mock_session_manager_defaults):
     """Test /timeout default command reverts to profile default."""
     # Modify timeout
-    mock_session_manager_defaults.profile["timeout"] = 60
+    mock_session_manager_defaults._state.profile.timeout = 60
 
     result = await command_handler_defaults.set_timeout("default")
 
     # Should revert to startup profile default
     assert result == "Reverted to profile default: 300 seconds"
-    assert mock_session_manager_defaults.profile["timeout"] == 300
+    assert mock_session_manager_defaults.profile.timeout == 300
 
 
 @pytest.mark.asyncio
@@ -84,14 +82,14 @@ async def test_timeout_default_with_zero(command_handler_defaults, mock_session_
     result = await command_handler_defaults.set_timeout("default")
 
     assert "wait forever" in result
-    assert mock_session_manager_defaults.profile["timeout"] == 0
+    assert mock_session_manager_defaults.profile.timeout == 0
 
 
 @pytest.mark.asyncio
 async def test_model_default_uses_profile_default_ai(command_handler_defaults, mock_session_manager_defaults):
     """Test that /model default uses default_ai from profile."""
     # Change profile's default_ai
-    mock_session_manager_defaults.profile["default_ai"] = "gemini"
+    mock_session_manager_defaults._state.profile.default_ai = "gemini"
 
     result = await command_handler_defaults.set_model("default")
 
@@ -135,5 +133,5 @@ async def test_timeout_set_clears_provider_cache(command_handler_defaults, mock_
     result = await command_handler_defaults.set_timeout("45")
 
     assert result == "Timeout set to 45 seconds"
-    assert mock_session_manager_defaults.profile["timeout"] == 45
+    assert mock_session_manager_defaults.profile.timeout == 45
     assert mock_session_manager_defaults._state._provider_cache == {}

@@ -134,7 +134,7 @@ def run_setup_wizard() -> Optional[str]:
 
 
 def _build_profile(api_keys: dict[str, str]) -> dict:
-    """Build profile dictionary from collected API keys."""
+    """Build profile from collected API keys."""
     # Only include providers that have keys
     configured_providers = [
         (pid, dname, model)

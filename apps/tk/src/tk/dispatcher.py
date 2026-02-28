@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from tk import commands, formatters
 from tk.errors import TkUsageError
-from tk.models import HistoryListPayload, PendingListPayload
+from tk.models import CommandDocEntry, HistoryListPayload, PendingListPayload
 from tk.session import Session
 
 COMMAND_ALIASES = {
@@ -194,51 +194,51 @@ def _display_usage(command: str, usage: str) -> str:
     return f"{usage} ({alias})"
 
 
-def command_doc_entries() -> list[dict[str, str]]:
+def command_doc_entries() -> list[CommandDocEntry]:
     """Return command metadata used for help and doc checks."""
-    entries: list[dict[str, str]] = []
+    entries: list[CommandDocEntry] = []
     for command, handler in COMMAND_REGISTRY.items():
         entries.append(
-            {
-                "command": command,
-                "alias": _alias_for_command(command) or "",
-                "usage": handler.usage,
-                "summary": handler.summary,
-                "display_usage": _display_usage(command, handler.usage),
-            }
+            CommandDocEntry(
+                command=command,
+                alias=_alias_for_command(command) or "",
+                usage=handler.usage,
+                summary=handler.summary,
+                display_usage=_display_usage(command, handler.usage),
+            )
         )
 
     entries.append(
-        {
-            "command": "exit",
-            "alias": "quit",
-            "usage": "exit / quit",
-            "summary": "Exit (Ctrl-D also works)",
-            "display_usage": "exit / quit",
-        }
+        CommandDocEntry(
+            command="exit",
+            alias="quit",
+            usage="exit / quit",
+            summary="Exit (Ctrl-D also works)",
+            display_usage="exit / quit",
+        )
     )
     return entries
 
 
 def render_help_text() -> str:
     """Render help text directly from command registry metadata."""
-    entries_by_command = {entry["command"]: entry for entry in command_doc_entries()}
+    entries_by_command = {entry.command: entry for entry in command_doc_entries()}
     rows = [entries_by_command[cmd] for group in _HELP_COMMAND_GROUPS for cmd in group]
     rows.append(entries_by_command["exit"])
-    width = max(len(row["display_usage"]) for row in rows)
+    width = max(len(row.display_usage) for row in rows)
 
     lines = ["Available commands:"]
     for group in _HELP_COMMAND_GROUPS:
         for command in group:
             entry = entries_by_command[command]
             lines.append(
-                f"  {entry['display_usage'].ljust(width)} - {entry['summary']}"
+                f"  {entry.display_usage.ljust(width)} - {entry.summary}"
             )
         lines.append("")
 
     exit_entry = entries_by_command["exit"]
     lines.append(
-        f"  {exit_entry['display_usage'].ljust(width)} - {exit_entry['summary']}"
+        f"  {exit_entry.display_usage.ljust(width)} - {exit_entry.summary}"
     )
     lines.append("")
     lines.append("Run 'list', 'history', 'today', 'yesterday', or 'recent' first to get task numbers.")

@@ -9,6 +9,7 @@ from ..chat import (
     get_messages_for_ai,
     get_retry_context_for_last_interaction,
 )
+from ..domain.chat import ChatDocument
 from ..session.state import has_pending_error, pending_error_guidance
 from .types import (
     ActionMode,
@@ -35,7 +36,7 @@ class MessageEntryHandlersMixin:
         retry_user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
         chat_path: Optional[str] = None,
-        chat_data: Optional[dict] = None,
+        chat_data: Optional[ChatDocument] = None,
     ) -> OrchestratorAction:
         """Build a send action with optional execution metadata."""
         return SendAction(
@@ -52,7 +53,7 @@ class MessageEntryHandlersMixin:
         self,
         user_input: str,
         chat_path: Optional[str],
-        chat_data: Optional[dict],
+        chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Process user input and return the next orchestration action."""
         if not chat_path:
@@ -63,7 +64,7 @@ class MessageEntryHandlersMixin:
                 )
             )
 
-        if not isinstance(chat_data, dict):
+        if chat_data is None:
             return PrintAction(message="No chat data loaded.")
 
         if has_pending_error(chat_data) and not self.manager.retry_mode and not self.manager.secret_mode:
@@ -80,7 +81,7 @@ class MessageEntryHandlersMixin:
     async def _handle_secret_message(
         self,
         user_input: str,
-        chat_data: dict,
+        chat_data: ChatDocument,
     ) -> OrchestratorAction:
         """Handle one message while secret mode is enabled."""
         secret_context = get_messages_for_ai(chat_data)
@@ -94,14 +95,14 @@ class MessageEntryHandlersMixin:
     async def _handle_retry_message(
         self,
         user_input: str,
-        chat_data: dict,
+        chat_data: ChatDocument,
     ) -> OrchestratorAction:
         """Handle one message while retry mode is enabled."""
         try:
             retry_context = self.manager.get_retry_context()
         except ValueError:
             retry_context = get_retry_context_for_last_interaction(chat_data)
-            target_index = len(chat_data.get("messages", [])) - 1
+            target_index = len(chat_data.messages) - 1
             self.manager.enter_retry_mode(
                 retry_context,
                 target_index=target_index if target_index >= 0 else None,
@@ -120,12 +121,12 @@ class MessageEntryHandlersMixin:
     async def _handle_normal_message(
         self,
         user_input: str,
-        chat_data: dict,
+        chat_data: ChatDocument,
         chat_path: str,
     ) -> OrchestratorAction:
         """Handle one message in normal mode and persist the user turn pre-send."""
         add_user_message(chat_data, user_input)
-        new_msg_index = len(chat_data["messages"]) - 1
+        new_msg_index = len(chat_data.messages) - 1
         self.manager.assign_message_hex_id(new_msg_index)
 
         messages = get_messages_for_ai(chat_data)

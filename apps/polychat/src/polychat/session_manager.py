@@ -6,6 +6,9 @@ a clean interface for session management.
 
 from typing import Any, Optional
 
+from .ai.types import Citation
+from .domain.chat import ChatDocument, RetryAttempt
+from .domain.profile import RuntimeProfile
 from .session.state import (
     SessionState,
     assign_new_message_hex_id,
@@ -15,13 +18,10 @@ from .session import operations as session_ops
 from . import hex_id
 from .session.accessors import (
     StateField,
-    state_get,
-    state_getitem,
-    state_setitem,
     state_to_dict,
 )
 from .prompts.system_prompt import load_system_prompt as resolve_system_prompt
-from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC, format_timeout, normalize_timeout
+from .timeouts import format_timeout, normalize_timeout
 
 
 def _validate_input_mode(value: str) -> None:
@@ -33,36 +33,17 @@ def _validate_input_mode(value: str) -> None:
 class SessionManager:
     """Manages session state with a unified interface.
 
-    This class wraps SessionState and provides:
-    - Single source of truth for session data
-    - Clean API for state access and modification
-    - Encapsulated state transitions (chat switching, mode changes)
-    - Automatic hex ID management
-    - Provider caching
-    - Dict-like access helpers for diagnostics and tests
-
-    Example:
-        manager = SessionManager(
-            profile=profile_data,
-            current_ai="claude",
-            current_model="claude-haiku-4-5",
-        )
-
-        # Property access (preferred)
-        print(manager.current_ai)
-        manager.switch_chat(chat_path, chat_data)
-
-        # Dict-like access
-        print(manager["current_ai"])
-        manager["input_mode"] = "compose"
+    Wraps SessionState providing single source of truth, clean API for
+    state access and modification, encapsulated state transitions,
+    automatic hex ID management, and provider caching.
     """
 
     current_ai = StateField[str]("current_ai")
     current_model = StateField[str]("current_model")
     helper_ai = StateField[str]("helper_ai")
     helper_model = StateField[str]("helper_model")
-    profile = StateField[dict[str, Any]]("profile", readonly=True)
-    chat = StateField[dict[str, Any]]("chat", readonly=True)
+    profile = StateField[RuntimeProfile]("profile", readonly=True)
+    chat = StateField[ChatDocument]("chat", readonly=True)
     system_prompt = StateField[Optional[str]]("system_prompt")
     system_prompt_path = StateField[Optional[str]]("system_prompt_path")
     chat_path = StateField[Optional[str]]("chat_path")
@@ -76,12 +57,12 @@ class SessionManager:
 
     def __init__(
         self,
-        profile: dict[str, Any],
+        profile: RuntimeProfile,
         current_ai: str,
         current_model: str,
         helper_ai: Optional[str] = None,
         helper_model: Optional[str] = None,
-        chat: Optional[dict[str, Any]] = None,
+        chat: Optional[ChatDocument] = None,
         chat_path: Optional[str] = None,
         profile_path: Optional[str] = None,
         log_file: Optional[str] = None,
@@ -92,7 +73,7 @@ class SessionManager:
         """Initialize session manager.
 
         Args:
-            profile: Profile dictionary with configuration
+            profile: Runtime profile configuration
             current_ai: Current AI provider name
             current_model: Current model name
             helper_ai: Helper AI provider name (defaults to current_ai)
@@ -109,11 +90,11 @@ class SessionManager:
         helper_ai = helper_ai or current_ai
         helper_model = helper_model or current_model
 
-        default_timeout = self._normalize_timeout(
-            profile.get("timeout", DEFAULT_PROFILE_TIMEOUT_SEC)
-        )
-        profile["timeout"] = default_timeout
+        default_timeout = self._normalize_timeout(profile.timeout)
+        profile.timeout = default_timeout
         self._default_timeout = default_timeout
+
+        chat_doc = chat if chat is not None else ChatDocument.empty()
 
         self._state = SessionState(
             current_ai=current_ai,
@@ -121,7 +102,7 @@ class SessionManager:
             helper_ai=helper_ai,
             helper_model=helper_model,
             profile=profile,
-            chat=chat or {},
+            chat=chat_doc,
             chat_path=chat_path,
             profile_path=profile_path,
             log_file=log_file,
@@ -130,44 +111,28 @@ class SessionManager:
             input_mode=input_mode,
         )
 
-        # Initialize hex IDs if chat is loaded
-        if chat and "messages" in chat:
+        # Initialize hex IDs if chat has messages
+        if chat_doc.messages:
             initialize_message_hex_ids(self._state)
 
     @property
     def message_hex_ids(self) -> dict[int, str]:
         """Message hex IDs (index → hex_id)."""
-        messages = self._state.chat.get("messages", []) if isinstance(self._state.chat, dict) else []
-        return hex_id.build_hex_map(messages)
+        return hex_id.build_hex_map(self._state.chat.messages)
 
     # ===================================================================
-    # Dict-Like Access (Backward Compatibility)
+    # Serialization
     # ===================================================================
-
-    def __getitem__(self, key: str) -> Any:
-        """Get state value by key (dict-like access)."""
-        return state_getitem(self._state, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        """Set state value by key (dict-like access)."""
-        state_setitem(self._state, key, value)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get state value with default (dict-like access)."""
-        return state_get(self._state, key, default)
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert state to a plain dictionary.
-
-        Useful for diagnostics, snapshots, and tests.
-        """
+        """Convert state to a plain dictionary for diagnostics and tests."""
         return state_to_dict(self._state, message_hex_ids=self.message_hex_ids)
 
     # ===================================================================
     # Chat Management
     # ===================================================================
 
-    def switch_chat(self, chat_path: str, chat_data: dict[str, Any]) -> None:
+    def switch_chat(self, chat_path: str, chat_data: ChatDocument) -> None:
         """Switch to a different chat.
 
         This handles all the necessary state transitions:
@@ -177,7 +142,7 @@ class SessionManager:
 
         Args:
             chat_path: Path to the new chat file
-            chat_data: Chat data dictionary
+            chat_data: Chat data (ChatDocument)
         """
         session_ops.switch_chat(
             self._state,
@@ -216,7 +181,7 @@ class SessionManager:
     def set_timeout(self, timeout: Any) -> int | float:
         """Update active timeout and invalidate provider cache."""
         normalized = self._normalize_timeout(timeout)
-        self._state.profile["timeout"] = normalized
+        self._state.profile.timeout = normalized
         self.clear_provider_cache()
         return normalized
 
@@ -232,7 +197,7 @@ class SessionManager:
         self,
         *,
         chat_path: Optional[str] = None,
-        chat_data: Optional[dict[str, Any]] = None,
+        chat_data: Optional[ChatDocument] = None,
     ) -> bool:
         """Persist current chat state.
 
@@ -251,14 +216,14 @@ class SessionManager:
 
     @staticmethod
     def load_system_prompt(
-        profile_data: dict[str, Any],
+        profile_data: RuntimeProfile,
         profile_path: Optional[str] = None,
         strict: bool = False,
     ) -> tuple[Optional[str], Optional[str], Optional[str]]:
         """Resolve and load system prompt content from profile data.
 
         Args:
-            profile_data: Loaded profile dictionary
+            profile_data: RuntimeProfile instance
             profile_path: Optional raw profile path for preserving original system_prompt text
             strict: If True, raise ValueError when path-based prompt loading fails
 
@@ -304,7 +269,7 @@ class SessionManager:
         user_msg: str,
         assistant_msg: str,
         retry_hex_id: Optional[str] = None,
-        citations: Optional[list[dict[str, Any]]] = None,
+        citations: Optional[list[Citation]] = None,
     ) -> str:
         """Store a retry attempt and return its runtime hex ID."""
         return session_ops.add_retry_attempt(
@@ -315,7 +280,7 @@ class SessionManager:
             citations=citations,
         )
 
-    def get_retry_attempt(self, retry_hex_id: str) -> Optional[dict[str, Any]]:
+    def get_retry_attempt(self, retry_hex_id: str) -> Optional[RetryAttempt]:
         """Get one retry attempt by runtime hex ID."""
         return session_ops.get_retry_attempt(self._state, retry_hex_id)
 
@@ -403,8 +368,8 @@ class SessionManager:
     def pop_message(
         self,
         message_index: int = -1,
-        chat_data: Optional[dict[str, Any]] = None,
-    ) -> Optional[dict[str, Any]]:
+        chat_data: Optional[ChatDocument] = None,
+    ) -> Optional[Any]:
         """Pop a message and atomically clean up its runtime hex ID.
 
         Args:
@@ -412,7 +377,7 @@ class SessionManager:
             chat_data: Optional chat object override (defaults to current session chat)
 
         Returns:
-            Popped message dict, or None when the chat has no messages.
+            Popped ChatMessage, or None when the chat has no messages.
         """
         return session_ops.pop_message(
             self._state,

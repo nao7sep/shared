@@ -5,7 +5,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from polychat.ai.runtime import send_message_to_ai, validate_and_get_provider
+from polychat.domain.chat import ChatDocument
+from polychat.domain.profile import RuntimeProfile
 from polychat.session.state import SessionState
+from test_helpers import make_profile
 
 
 async def _empty_stream():
@@ -24,7 +27,7 @@ async def test_send_message_to_ai_omits_limit_kwargs_when_unset():
             messages=[{"role": "user", "content": "hi"}],
             model="gpt-5-mini",
             provider_name="openai",
-            profile={},
+            profile=make_profile(),
             search=False,
         )
 
@@ -37,8 +40,8 @@ async def test_send_message_to_ai_applies_profile_limits():
     provider = MagicMock()
     provider.send_message = MagicMock(return_value=_empty_stream())
 
-    profile = {
-        "ai_limits": {
+    profile = make_profile(
+        ai_limits={
             "default": {"max_output_tokens": 1000},
             "providers": {
                 "claude": {
@@ -46,7 +49,7 @@ async def test_send_message_to_ai_applies_profile_limits():
                 }
             },
         }
-    }
+    )
 
     with patch("polychat.ai.runtime.log_event"):
         await send_message_to_ai(
@@ -73,7 +76,7 @@ async def test_send_message_to_ai_applies_claude_fallback_limit_when_unset():
             messages=[{"role": "user", "content": "hi"}],
             model="claude-haiku-4-5",
             provider_name="claude",
-            profile={},
+            profile=make_profile(),
             search=False,
         )
 
@@ -88,14 +91,15 @@ def _build_session(
     model: str = "gpt-5-mini",
     ai_limits: dict | None = None,
 ) -> SessionState:
-    profile = {
-        "timeout": timeout,
-        "api_keys": {
-            provider: {"type": "direct", "value": "test-key"},
-        },
-    }
-    if ai_limits is not None:
-        profile["ai_limits"] = ai_limits
+    profile = RuntimeProfile(
+        default_ai=provider,
+        models={provider: model},
+        chats_dir=".",
+        logs_dir=".",
+        api_keys={provider: {"type": "direct", "value": "test-key"}},
+        timeout=timeout,
+        ai_limits=ai_limits,
+    )
 
     return SessionState(
         current_ai=provider,
@@ -103,7 +107,7 @@ def _build_session(
         helper_ai=provider,
         helper_model=model,
         profile=profile,
-        chat={},
+        chat=ChatDocument.empty(),
     )
 
 

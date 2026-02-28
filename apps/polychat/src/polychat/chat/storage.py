@@ -9,7 +9,11 @@ from typing import Any
 
 import aiofiles  # type: ignore[import-untyped]
 
-from ..domain.chat import REQUIRED_METADATA_KEYS as DOMAIN_REQUIRED_METADATA_KEYS, ChatDocument
+from ..domain.chat import (
+    REQUIRED_METADATA_KEYS as DOMAIN_REQUIRED_METADATA_KEYS,
+    ChatDocument,
+    ChatMetadata,
+)
 
 REQUIRED_METADATA_KEYS = DOMAIN_REQUIRED_METADATA_KEYS
 
@@ -38,50 +42,46 @@ def _load_existing_persistable_chat(chat_path: Path) -> dict[str, Any] | None:
         return None
 
 
-def _sync_in_memory_metadata(data: dict[str, Any], metadata: dict[str, Any]) -> None:
+def _sync_in_memory_metadata(doc: ChatDocument, metadata: ChatMetadata) -> None:
     """Mirror persisted created/updated timestamps into in-memory chat data."""
-    target = data.get("metadata")
-    if isinstance(target, dict):
-        target["created_utc"] = metadata.get("created_utc")
-        target["updated_utc"] = metadata.get("updated_utc")
+    doc.metadata.created_utc = metadata.created_utc
+    doc.metadata.updated_utc = metadata.updated_utc
 
 
-def load_chat(path: str) -> dict[str, Any]:
+def load_chat(path: str) -> ChatDocument:
     """Load chat history from JSON file."""
     chat_path = Path(path)
 
     if not chat_path.exists():
-        return ChatDocument.empty().to_dict()
+        return ChatDocument.empty()
 
     try:
         with open(chat_path, "r", encoding="utf-8") as f:
             data: Any = json.load(f)
 
-        document = ChatDocument.from_raw(data, strip_runtime_hex_id=True)
-        return document.to_dict(include_runtime_hex_id=False)
+        return ChatDocument.from_raw(data, strip_runtime_hex_id=True)
 
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in chat history file: {e}")
 
 
-async def save_chat(path: str, data: dict[str, Any]) -> None:
+async def save_chat(path: str, data: ChatDocument) -> None:
     """Save chat history to JSON file (async)."""
     chat_path = Path(path)
-    document = ChatDocument.from_raw(data, strip_runtime_hex_id=False)
-    persistable_data = document.to_dict(include_runtime_hex_id=False)
+    persistable_data = data.to_dict(include_runtime_hex_id=False)
     existing_data = _load_existing_persistable_chat(chat_path)
 
     if existing_data is not None and _canonical_for_change_detection(
         persistable_data
     ) == _canonical_for_change_detection(existing_data):
-        existing_metadata = existing_data.get("metadata")
-        if isinstance(existing_metadata, dict):
-            _sync_in_memory_metadata(data, existing_metadata)
+        existing_metadata_raw = existing_data.get("metadata")
+        if isinstance(existing_metadata_raw, dict):
+            _sync_in_memory_metadata(data, ChatMetadata.from_raw(existing_metadata_raw))
         return
 
-    document.touch_updated_utc()
-    persistable_data = document.to_dict(include_runtime_hex_id=False)
-    _sync_in_memory_metadata(data, document.metadata.to_dict())
+    data.touch_updated_utc()
+    persistable_data = data.to_dict(include_runtime_hex_id=False)
+    _sync_in_memory_metadata(data, data.metadata)
 
     chat_path.parent.mkdir(parents=True, exist_ok=True)
 

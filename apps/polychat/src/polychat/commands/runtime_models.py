@@ -85,8 +85,8 @@ class RuntimeModelCommandHandlers:
 
         if args == "default":
             profile_data = self._deps.manager.profile
-            default_ai = profile_data["default_ai"]
-            default_model = profile_data["models"][default_ai]
+            default_ai = profile_data.default_ai
+            default_model = profile_data.models[default_ai]
 
             self._deps.manager.current_ai = default_ai
             self._deps.manager.current_model = default_model
@@ -138,8 +138,8 @@ class RuntimeModelCommandHandlers:
 
         if args == "default":
             profile_data = self._deps.manager.profile
-            helper_ai_name = profile_data.get("default_helper_ai", profile_data["default_ai"])
-            helper_model_name = profile_data["models"][helper_ai_name]
+            helper_ai_name = profile_data.default_helper_ai or profile_data.default_ai
+            helper_model_name = profile_data.models[helper_ai_name]
 
             self._deps.manager.helper_ai = helper_ai_name
             self._deps.manager.helper_model = helper_model_name
@@ -151,7 +151,7 @@ class RuntimeModelCommandHandlers:
 
         provider_shortcut = resolve_provider_shortcut(lowered)
         if provider_shortcut is not None:
-            provider_model = self._deps.manager.profile["models"].get(provider_shortcut)
+            provider_model = self._deps.manager.profile.models.get(provider_shortcut)
             if not provider_model:
                 return f"No model configured for {provider_shortcut} in profile"
             self._deps.manager.helper_ai = provider_shortcut
@@ -159,7 +159,7 @@ class RuntimeModelCommandHandlers:
             return f"Helper AI set to {provider_shortcut} ({provider_model})"
 
         if lowered in get_all_providers():
-            provider_model = self._deps.manager.profile["models"].get(lowered)
+            provider_model = self._deps.manager.profile.models.get(lowered)
             if not provider_model:
                 return f"No model configured for {lowered} in profile"
             self._deps.manager.helper_ai = lowered

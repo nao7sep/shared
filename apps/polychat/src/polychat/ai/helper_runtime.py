@@ -8,13 +8,15 @@ import logging
 import time
 from typing import Optional, Any
 
+from ..domain.profile import RuntimeProfile
+
 logger = logging.getLogger(__name__)
 
 
 async def invoke_helper_ai(
     helper_ai: str,
     helper_model: str,
-    profile: dict[str, Any],
+    profile: RuntimeProfile,
     messages: list[dict],
     system_prompt: Optional[str] = None,
     task: str = "helper_task",
@@ -25,7 +27,7 @@ async def invoke_helper_ai(
     Args:
         helper_ai: Helper AI provider name
         helper_model: Helper AI model name
-        profile: Profile dictionary with API keys
+        profile: Runtime profile with API keys
         messages: Messages to send (typically a single prompt)
         system_prompt: Optional system prompt
 
@@ -49,7 +51,7 @@ async def invoke_helper_ai(
     )
 
     # Get API key for helper AI
-    key_config = profile["api_keys"].get(helper_ai)
+    key_config = profile.api_keys.get(helper_ai)
     if not key_config:
         log_event(
             "helper_ai_error",

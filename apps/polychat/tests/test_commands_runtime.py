@@ -6,6 +6,7 @@ import pytest
 
 from polychat.commands import CommandHandler
 from polychat.commands.types import CommandSignal
+from polychat.domain.chat import ChatMessage
 
 
 class _InteractionStub:
@@ -55,7 +56,7 @@ async def test_secret_on_when_already_on(command_handler, mock_session_manager):
 
 @pytest.mark.asyncio
 async def test_system_show_prefers_chat_unmapped_path(command_handler, mock_session_manager):
-    mock_session_manager.chat["metadata"]["system_prompt"] = "~/prompts/custom.txt"
+    mock_session_manager.chat.metadata.system_prompt = "~/prompts/custom.txt"
     mock_session_manager.system_prompt_path = "/mapped/path/custom.txt"
 
     result = await command_handler.set_system_prompt("")
@@ -71,7 +72,7 @@ async def test_system_persona_name_shortcut(command_handler, mock_session_manage
     from pathlib import Path
     
     # Initialize system_prompt in metadata (normally done when chat is created)
-    mock_session_manager.chat["metadata"]["system_prompt"] = None
+    mock_session_manager.chat.metadata.system_prompt = None
     
     # Mock the app root to point to our tmp directory
     app_root = tmp_path / "app"
@@ -91,7 +92,7 @@ async def test_system_persona_name_shortcut(command_handler, mock_session_manage
         assert result == "System prompt set to: razor persona"
         assert mock_session_manager.system_prompt == "Test razor persona prompt"
         assert mock_session_manager.system_prompt_path == "@/prompts/system/razor.txt"
-        assert mock_session_manager.chat["metadata"]["system_prompt"] == "@/prompts/system/razor.txt"
+        assert mock_session_manager.chat.metadata.system_prompt == "@/prompts/system/razor.txt"
     finally:
         path_utils.get_app_root = original_get_app_root
 
@@ -105,38 +106,42 @@ async def test_secret_off_when_already_off(command_handler, mock_session_manager
 
 @pytest.mark.asyncio
 async def test_retry_mode_excludes_last_user_assistant_interaction(command_handler, mock_session_manager):
-    mock_session_manager.chat["messages"] = [
-        {"role": "user", "content": "hello"},
-        {"role": "assistant", "content": "hello!"},
-        {"role": "user", "content": "nice to meet you"},
-        {"role": "assistant", "content": "nice to meet you too!"},
+    mock_session_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": "hello"}),
+        ChatMessage.from_raw({"role": "assistant", "content": "hello!"}),
+        ChatMessage.from_raw({"role": "user", "content": "nice to meet you"}),
+        ChatMessage.from_raw({"role": "assistant", "content": "nice to meet you too!"}),
     ]
 
     result = await command_handler.retry_mode("")
 
     assert result == "Retry mode enabled"
-    assert mock_session_manager.get_retry_context() == [
-        {"role": "user", "content": "hello"},
-        {"role": "assistant", "content": "hello!"},
-    ]
+    ctx = mock_session_manager.get_retry_context()
+    assert len(ctx) == 2
+    assert ctx[0]["role"] == "user"
+    assert ctx[0]["content"] == ["hello"]
+    assert ctx[1]["role"] == "assistant"
+    assert ctx[1]["content"] == ["hello!"]
 
 
 @pytest.mark.asyncio
 async def test_retry_mode_excludes_failed_user_message_after_error(command_handler, mock_session_manager):
-    mock_session_manager.chat["messages"] = [
-        {"role": "user", "content": "hello"},
-        {"role": "assistant", "content": "hello!"},
-        {"role": "user", "content": "this failed"},
-        {"role": "error", "content": "timeout"},
+    mock_session_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": "hello"}),
+        ChatMessage.from_raw({"role": "assistant", "content": "hello!"}),
+        ChatMessage.from_raw({"role": "user", "content": "this failed"}),
+        ChatMessage.from_raw({"role": "error", "content": "timeout"}),
     ]
 
     result = await command_handler.retry_mode("")
 
     assert result == "Retry mode enabled"
-    assert mock_session_manager.get_retry_context() == [
-        {"role": "user", "content": "hello"},
-        {"role": "assistant", "content": "hello!"},
-    ]
+    ctx = mock_session_manager.get_retry_context()
+    assert len(ctx) == 2
+    assert ctx[0]["role"] == "user"
+    assert ctx[0]["content"] == ["hello"]
+    assert ctx[1]["role"] == "assistant"
+    assert ctx[1]["content"] == ["hello!"]
 
 
 @pytest.mark.asyncio

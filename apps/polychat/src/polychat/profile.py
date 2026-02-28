@@ -63,14 +63,14 @@ def map_system_prompt_path(system_prompt_path: str | None) -> str | None:
     return map_path(system_prompt_path)
 
 
-def load_profile(path: str) -> dict[str, Any]:
+def load_profile(path: str) -> RuntimeProfile:
     """Load profile from JSON file.
 
     Args:
         path: Path to profile file (can have ~, absolute)
 
     Returns:
-        Profile dictionary with absolute paths
+        RuntimeProfile with absolute paths
 
     Raises:
         FileNotFoundError: If profile doesn't exist
@@ -111,15 +111,14 @@ def load_profile(path: str) -> dict[str, Any]:
         if isinstance(key_config, dict) and key_config.get("type") == "json":
             key_config["path"] = map_path(key_config["path"])
 
-    runtime_profile = RuntimeProfile.from_dict(profile)
-    return runtime_profile.to_dict()
+    return RuntimeProfile.from_dict(profile)
 
 
 def validate_profile(profile: dict[str, Any]) -> None:
-    """Validate profile structure.
+    """Validate raw profile structure before conversion to RuntimeProfile.
 
     Args:
-        profile: Profile dictionary
+        profile: Raw profile data loaded from JSON
 
     Raises:
         ValueError: If profile is invalid
@@ -130,7 +129,7 @@ def validate_profile(profile: dict[str, Any]) -> None:
     if missing:
         raise ValueError(f"Profile missing required fields: {', '.join(missing)}")
 
-    # Validate models is a dict and non-empty
+    # Validate models is non-empty
     if not isinstance(profile["models"], dict):
         raise ValueError("'models' must be a dictionary")
 

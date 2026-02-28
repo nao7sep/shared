@@ -1,10 +1,9 @@
 """TODO.md generation from task data."""
 
 from pathlib import Path
-from typing import Any
 
 from tk import data
-from tk.models import TaskStatus
+from tk.models import Task, TaskStatus
 
 _PENDING_STATUS = TaskStatus.PENDING.value
 _DONE_STATUS = TaskStatus.DONE.value
@@ -19,11 +18,11 @@ def _write_todo(lines: list[str], output_path: str) -> None:
         f.write("\n".join(lines))
 
 
-def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
+def generate_todo(tasks: list[Task], output_path: str) -> None:
     """Generate TODO.md from tasks.
 
     Args:
-        tasks: List of task dictionaries
+        tasks: List of Task models
         output_path: Path to TODO.md
 
     Structure:
@@ -50,7 +49,7 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     # Pending section
     if sorted_data[_PENDING_STATUS]:
         for task in sorted_data[_PENDING_STATUS]:
-            lines.append(f"- {task['text']}")
+            lines.append(f"- {task.text}")
     else:
         lines.append("No pending tasks.")
 
@@ -69,7 +68,7 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
     lines.append("")
 
     # Merge done and cancelled by date
-    all_dates = {}
+    all_dates: dict[str, list[Task]] = {}
 
     # Add done tasks
     for date, date_tasks in sorted_data[_DONE_STATUS]:
@@ -94,12 +93,12 @@ def generate_todo(tasks: list[dict[str, Any]], output_path: str) -> None:
         lines.append(f"### {date}")
 
         # Sort tasks within date by handled_utc.
-        date_tasks = sorted(all_dates[date], key=lambda t: t.get("handled_utc", ""))
+        date_tasks = sorted(all_dates[date], key=lambda t: t.handled_utc or "")
 
         for task in date_tasks:
-            text = task["text"]
-            note = task.get("note")
-            status_emoji = "✅" if task["status"] == _DONE_STATUS else "❌"
+            text = task.text
+            note = task.note
+            status_emoji = "✅" if task.status == _DONE_STATUS else "❌"
 
             if note:
                 lines.append(f"- {status_emoji} {text} => {note}")

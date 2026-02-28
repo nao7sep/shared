@@ -2,7 +2,9 @@
 
 import pytest
 from polychat.commands import CommandHandler
+from polychat.domain.chat import ChatDocument, ChatMessage
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 class FakeInteraction:
@@ -31,24 +33,19 @@ class FakeInteraction:
 
 @pytest.fixture
 def rewind_manager():
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {},
         "messages": [
             {"role": "user", "content": ["Q1"], "hex_id": "a3f"},
             {"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
             {"role": "user", "content": ["Q2"], "hex_id": "c1d"},
         ],
-    }
+    })
     manager = SessionManager(
-        profile={
-            "default_ai": "claude",
-            "models": {"claude": "claude-haiku-4-5"},
-            "timeout": 300,
-            "input_mode": "quick",
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-            "api_keys": {},
-        },
+        profile=make_profile(
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+        ),
         current_ai="claude",
         current_model="claude-haiku-4-5",
         chat=chat_data,
@@ -65,38 +62,38 @@ def rewind_handler(rewind_manager):
 
 @pytest.mark.asyncio
 async def test_rewind_accepts_hex_id_only(rewind_handler, rewind_manager):
-    target_hex_id = rewind_manager.chat["messages"][1]["hex_id"]
+    target_hex_id = rewind_manager.chat.messages[1].hex_id
     result = await rewind_handler.rewind_messages(target_hex_id)
     assert result == f"Deleted 2 message(s) from [{target_hex_id}] onwards"
-    assert len(rewind_manager.chat["messages"]) == 1
+    assert len(rewind_manager.chat.messages) == 1
 
 
 @pytest.mark.asyncio
 async def test_rewind_accepts_last(rewind_handler, rewind_manager):
-    rewind_manager.chat["messages"] = [
-        {"role": "user", "content": ["Q1"], "hex_id": "a3f"},
-        {"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
-        {"role": "user", "content": ["Q2"], "hex_id": "c1d"},
-        {"role": "assistant", "content": ["A2"], "model": "claude-haiku-4-5", "hex_id": "d4e"},
+    rewind_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": ["Q1"], "hex_id": "a3f"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),
+        ChatMessage.from_raw({"role": "user", "content": ["Q2"], "hex_id": "c1d"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A2"], "model": "claude-haiku-4-5", "hex_id": "d4e"}),
     ]
 
     result = await rewind_handler.rewind_messages("last")
     assert result == "Deleted 2 message(s) from [c1d] onwards"
-    assert len(rewind_manager.chat["messages"]) == 2
+    assert len(rewind_manager.chat.messages) == 2
 
 
 @pytest.mark.asyncio
 async def test_rewind_no_args_defaults_to_last(rewind_handler, rewind_manager):
-    rewind_manager.chat["messages"] = [
-        {"role": "user", "content": ["Q1"], "hex_id": "a3f"},
-        {"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
-        {"role": "error", "content": ["timeout"], "hex_id": "c1d"},
+    rewind_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": ["Q1"], "hex_id": "a3f"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),
+        ChatMessage.from_raw({"role": "error", "content": ["timeout"], "hex_id": "c1d"}),
     ]
 
     result = await rewind_handler.rewind_messages("")
 
     assert result == "Deleted 1 message(s) from [c1d] onwards"
-    assert len(rewind_manager.chat["messages"]) == 2
+    assert len(rewind_manager.chat.messages) == 2
 
 
 @pytest.mark.asyncio
@@ -107,54 +104,54 @@ async def test_rewind_rejects_integer_target(rewind_handler):
 
 @pytest.mark.asyncio
 async def test_rewind_last_deletes_last_user_assistant_pair(rewind_handler, rewind_manager):
-    rewind_manager.chat["messages"] = [
-        {"role": "user", "content": ["Q1"], "hex_id": "a3f"},
-        {"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
-        {"role": "user", "content": ["Q2"], "hex_id": "c1d"},
-        {"role": "assistant", "content": ["A2"], "model": "claude-haiku-4-5", "hex_id": "d4e"},
+    rewind_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": ["Q1"], "hex_id": "a3f"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),
+        ChatMessage.from_raw({"role": "user", "content": ["Q2"], "hex_id": "c1d"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A2"], "model": "claude-haiku-4-5", "hex_id": "d4e"}),
     ]
 
     result = await rewind_handler.rewind_messages("last")
 
     assert result == "Deleted 2 message(s) from [c1d] onwards"
-    assert len(rewind_manager.chat["messages"]) == 2
+    assert len(rewind_manager.chat.messages) == 2
 
 
 @pytest.mark.asyncio
 async def test_rewind_last_deletes_last_user_error_pair(rewind_handler, rewind_manager):
-    rewind_manager.chat["messages"] = [
-        {"role": "user", "content": ["Q1"], "hex_id": "a3f"},
-        {"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
-        {"role": "user", "content": ["Q2"], "hex_id": "c1d"},
-        {"role": "error", "content": ["timeout"], "hex_id": "d4e"},
+    rewind_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": ["Q1"], "hex_id": "a3f"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),
+        ChatMessage.from_raw({"role": "user", "content": ["Q2"], "hex_id": "c1d"}),
+        ChatMessage.from_raw({"role": "error", "content": ["timeout"], "hex_id": "d4e"}),
     ]
 
     result = await rewind_handler.rewind_messages("last")
 
     assert result == "Deleted 2 message(s) from [c1d] onwards"
-    assert len(rewind_manager.chat["messages"]) == 2
+    assert len(rewind_manager.chat.messages) == 2
 
 
 @pytest.mark.asyncio
 async def test_rewind_last_deletes_trailing_error_after_good_pair(rewind_handler, rewind_manager):
-    rewind_manager.chat["messages"] = [
-        {"role": "user", "content": ["good user"], "hex_id": "a3f"},
-        {"role": "assistant", "content": ["good answer"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
-        {"role": "error", "content": ["timeout"], "hex_id": "c1d"},
+    rewind_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": ["good user"], "hex_id": "a3f"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["good answer"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),
+        ChatMessage.from_raw({"role": "error", "content": ["timeout"], "hex_id": "c1d"}),
     ]
 
     result = await rewind_handler.rewind_messages("last")
 
     assert result == "Deleted 1 message(s) from [c1d] onwards"
-    assert len(rewind_manager.chat["messages"]) == 2
+    assert len(rewind_manager.chat.messages) == 2
 
 
 @pytest.mark.asyncio
 async def test_rewind_last_rejects_incomplete_tail(rewind_handler, rewind_manager):
-    rewind_manager.chat["messages"] = [
-        {"role": "user", "content": ["Q1"], "hex_id": "a3f"},
-        {"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
-        {"role": "user", "content": ["Q2"], "hex_id": "c1d"},
+    rewind_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": ["Q1"], "hex_id": "a3f"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),
+        ChatMessage.from_raw({"role": "user", "content": ["Q2"], "hex_id": "c1d"}),
     ]
 
     with pytest.raises(ValueError, match="complete user\\+assistant or user\\+error turn"):
@@ -170,15 +167,15 @@ async def test_rewind_turn_keyword_removed(rewind_handler):
 @pytest.mark.asyncio
 async def test_rewind_cancelled_on_non_yes(rewind_handler, rewind_manager):
     rewind_handler.interaction = FakeInteraction(["no"])
-    rewind_manager.chat["messages"] = [
-        {"role": "user", "content": ["Q1"], "hex_id": "a3f"},
-        {"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"},
-        {"role": "user", "content": ["Q2"], "hex_id": "c1d"},
-        {"role": "assistant", "content": ["A2"], "model": "claude-haiku-4-5", "hex_id": "d4e"},
+    rewind_manager.chat.messages = [
+        ChatMessage.from_raw({"role": "user", "content": ["Q1"], "hex_id": "a3f"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),
+        ChatMessage.from_raw({"role": "user", "content": ["Q2"], "hex_id": "c1d"}),
+        ChatMessage.from_raw({"role": "assistant", "content": ["A2"], "model": "claude-haiku-4-5", "hex_id": "d4e"}),
     ]
-    initial_len = len(rewind_manager.chat["messages"])
+    initial_len = len(rewind_manager.chat.messages)
 
     result = await rewind_handler.rewind_messages("last")
 
     assert result == "Rewind cancelled"
-    assert len(rewind_manager.chat["messages"]) == initial_len
+    assert len(rewind_manager.chat.messages) == initial_len

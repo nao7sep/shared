@@ -2,25 +2,24 @@
 
 import pytest
 
+from polychat.domain.chat import ChatDocument
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 @pytest.fixture
 def session_manager():
     """Create a session manager for testing."""
-    profile = {
-        "default_ai": "openai",
-        "models": {"openai": "gpt-5"},
-        "timeout": 300,
-    }
-    chat = {"messages": [], "metadata": {}}
     return SessionManager(
-        profile=profile,
+        profile=make_profile(
+            default_ai="openai",
+            models={"openai": "gpt-5"},
+        ),
         current_ai="openai",
         current_model="gpt-5",
         helper_ai="openai",
         helper_model="gpt-5-mini",
-        chat=chat,
+        chat=ChatDocument.empty(),
     )
 
 

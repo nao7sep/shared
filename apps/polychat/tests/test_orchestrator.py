@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, patch
 
 from polychat.commands.types import CommandSignal
+from polychat.domain.chat import ChatDocument
 from polychat.orchestrator import ChatOrchestrator
 from polychat.orchestration.types import (
     BreakAction,
@@ -12,16 +13,17 @@ from polychat.orchestration.types import (
     SendAction,
 )
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 @pytest.fixture
 def session_manager():
     """Create a test session manager."""
     manager = SessionManager(
-        profile={
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-        },
+        profile=make_profile(
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+        ),
         current_ai="claude",
         current_model="claude-haiku-4-5",
     )
@@ -37,7 +39,7 @@ def orchestrator(session_manager):
 @pytest.fixture
 def sample_chat_data():
     """Create sample chat data."""
-    return {
+    return ChatDocument.from_raw({
         "metadata": {
             "title": "Test Chat",
             "created_utc": "2026-02-02T00:00:00Z",
@@ -46,7 +48,7 @@ def sample_chat_data():
             {"role": "user", "content": "Hello"},
             {"role": "assistant", "content": "Hi there", "model": "claude-haiku-4-5"},
         ],
-    }
+    })
 
 
 class TestOrchestratorActionTypes:
@@ -71,7 +73,7 @@ class TestOrchestratorActionTypes:
 
     def test_create_action_with_chat_data(self):
         """Test creating action with chat data."""
-        chat_data = {"messages": []}
+        chat_data = ChatDocument.from_raw({"metadata": {}, "messages": []})
         action = ContinueAction(
             chat_path="/test/chat.json",
             chat_data=chat_data,
@@ -80,7 +82,7 @@ class TestOrchestratorActionTypes:
         assert isinstance(action, ContinueAction)
         assert action.kind == "continue"
         assert action.chat_path == "/test/chat.json"
-        assert action.chat_data == chat_data
+        assert action.chat_data is chat_data
 
 
 class TestExitSignal:
@@ -105,7 +107,7 @@ class TestNewChatSignal:
     async def test_new_chat_signal(self, orchestrator, sample_chat_data):
         """Test creating new chat."""
         with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
-            mock_load_chat.return_value = {"messages": []}
+            mock_load_chat.return_value = ChatDocument.from_raw({"metadata": {}, "messages": []})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
                     CommandSignal(kind="new_chat", chat_path="/test/new-chat.json"),
@@ -122,14 +124,14 @@ class TestNewChatSignal:
             # Should return continue action with new chat
             assert isinstance(action, ContinueAction)
             assert action.chat_path == "/test/new-chat.json"
-            assert action.chat_data == {"messages": []}
+            assert isinstance(action.chat_data, ChatDocument) and len(action.chat_data.messages) == 0
             assert "Created and opened new chat" in action.message
 
     @pytest.mark.asyncio
     async def test_new_chat_without_current_chat(self, orchestrator):
         """Test creating new chat when no current chat."""
         with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
-            mock_load_chat.return_value = {"messages": []}
+            mock_load_chat.return_value = ChatDocument.from_raw({"metadata": {}, "messages": []})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
                     CommandSignal(kind="new_chat", chat_path="/test/new-chat.json"),
@@ -154,7 +156,7 @@ class TestOpenChatSignal:
     async def test_open_chat_signal(self, orchestrator, sample_chat_data):
         """Test opening existing chat."""
         with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
-            mock_load_chat.return_value = {"messages": [{"role": "user", "content": "Test"}]}
+            mock_load_chat.return_value = ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "Test"}]})
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
                 action = await orchestrator.handle_command_response(
                     CommandSignal(kind="open_chat", chat_path="/test/existing-chat.json"),
@@ -193,7 +195,7 @@ class TestCloseChatSignal:
             # Should return continue action with empty chat
             assert isinstance(action, ContinueAction)
             assert action.chat_path is None
-            assert action.chat_data == {}
+            assert isinstance(action.chat_data, ChatDocument)
             assert action.message == "Chat closed"
 
     @pytest.mark.asyncio
@@ -223,7 +225,7 @@ class TestRenameChatSignal:
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="rename_current", chat_path="/test/renamed-chat.json"),
             current_chat_path="/test/old-chat.json",
-            current_chat_data={},
+            current_chat_data=ChatDocument.empty(),
         )
 
         assert isinstance(action, ContinueAction)
@@ -246,7 +248,7 @@ class TestDeleteChatSignal:
         # Should clear chat and return action
         assert isinstance(action, ContinueAction)
         assert action.chat_path is None
-        assert action.chat_data == {}
+        assert isinstance(action.chat_data, ChatDocument)
         assert "Deleted" in action.message
 
 
@@ -263,7 +265,7 @@ class TestRetryModeSignals:
             target_index=1,
         )
         retry_hex_id = orchestrator.manager.add_retry_attempt("Retry question", "Retry answer")
-        original_hex_id = sample_chat_data["messages"][1].get("hex_id")
+        original_hex_id = sample_chat_data.messages[1].hex_id
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_command_response(
@@ -280,14 +282,14 @@ class TestRetryModeSignals:
         assert f"Applied retry [{retry_hex_id}]" == action.message
 
         # Should replace retried turn with retry user + selected assistant response.
-        assert len(sample_chat_data["messages"]) == 2
-        updated_user = sample_chat_data["messages"][0]
-        updated_assistant = sample_chat_data["messages"][1]
-        assert updated_user["role"] == "user"
-        assert updated_user["content"] == ["Retry question"]
-        assert updated_assistant["role"] == "assistant"
-        assert updated_assistant["content"] == ["Retry answer"]
-        assert updated_assistant.get("hex_id") == original_hex_id
+        assert len(sample_chat_data.messages) == 2
+        updated_user = sample_chat_data.messages[0]
+        updated_assistant = sample_chat_data.messages[1]
+        assert updated_user.role == "user"
+        assert updated_user.content == ["Retry question"]
+        assert updated_assistant.role == "assistant"
+        assert updated_assistant.content == ["Retry answer"]
+        assert updated_assistant.hex_id == original_hex_id
 
         # Should exit retry mode
         assert orchestrator.manager.retry_mode is False
@@ -314,15 +316,15 @@ class TestRetryModeSignals:
             )
 
         assert isinstance(action, PrintAction)
-        assert sample_chat_data["messages"][0]["content"] == ["Retry question"]
-        assert sample_chat_data["messages"][1]["citations"] == [
+        assert sample_chat_data.messages[0].content == ["Retry question"]
+        assert sample_chat_data.messages[1].citations == [
             {"url": "https://example.com", "title": "Example"}
         ]
 
     @pytest.mark.asyncio
     async def test_apply_retry_replaces_failed_user_error_turn(self, orchestrator):
         """Applying retry after an error should replace failed user+error with user+assistant."""
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {},
             "messages": [
                 {"role": "user", "content": "hello"},
@@ -330,7 +332,7 @@ class TestRetryModeSignals:
                 {"role": "user", "content": "broken request"},
                 {"role": "error", "content": "timeout"},
             ],
-        }
+        })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
         orchestrator.manager.enter_retry_mode(
             [{"role": "user", "content": "hello"}, {"role": "assistant", "content": "hi"}],
@@ -346,24 +348,24 @@ class TestRetryModeSignals:
             )
 
         assert isinstance(action, PrintAction)
-        assert len(chat_data["messages"]) == 4
-        assert chat_data["messages"][2]["role"] == "user"
-        assert chat_data["messages"][2]["content"] == ["try again"]
-        assert chat_data["messages"][3]["role"] == "assistant"
-        assert chat_data["messages"][3]["model"] == orchestrator.manager.current_model
-        assert chat_data["messages"][3]["content"] == ["done"]
+        assert len(chat_data.messages) == 4
+        assert chat_data.messages[2].role == "user"
+        assert chat_data.messages[2].content == ["try again"]
+        assert chat_data.messages[3].role == "assistant"
+        assert chat_data.messages[3].model == orchestrator.manager.current_model
+        assert chat_data.messages[3].content == ["done"]
 
     @pytest.mark.asyncio
     async def test_apply_retry_replaces_only_trailing_error_after_good_pair(self, orchestrator):
         """Applying retry should treat trailing error as standalone and keep prior good pair."""
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {},
             "messages": [
                 {"role": "user", "content": "good user"},
                 {"role": "assistant", "content": "good assistant"},
                 {"role": "error", "content": "timeout"},
             ],
-        }
+        })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
         orchestrator.manager.enter_retry_mode(
             [{"role": "user", "content": "good user"}, {"role": "assistant", "content": "good assistant"}],
@@ -379,15 +381,15 @@ class TestRetryModeSignals:
             )
 
         assert isinstance(action, PrintAction)
-        assert len(chat_data["messages"]) == 4
-        assert chat_data["messages"][0]["role"] == "user"
-        assert chat_data["messages"][0]["content"] == "good user"
-        assert chat_data["messages"][1]["role"] == "assistant"
-        assert chat_data["messages"][1]["content"] == "good assistant"
-        assert chat_data["messages"][2]["role"] == "user"
-        assert chat_data["messages"][2]["content"] == ["retry user"]
-        assert chat_data["messages"][3]["role"] == "assistant"
-        assert chat_data["messages"][3]["content"] == ["retry answer"]
+        assert len(chat_data.messages) == 4
+        assert chat_data.messages[0].role == "user"
+        assert chat_data.messages[0].content == ["good user"]
+        assert chat_data.messages[1].role == "assistant"
+        assert chat_data.messages[1].content == ["good assistant"]
+        assert chat_data.messages[2].role == "user"
+        assert chat_data.messages[2].content == ["retry user"]
+        assert chat_data.messages[3].role == "assistant"
+        assert chat_data.messages[3].content == ["retry answer"]
 
     @pytest.mark.asyncio
     async def test_apply_retry_when_not_in_retry_mode(self, orchestrator):
@@ -395,7 +397,7 @@ class TestRetryModeSignals:
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="apply_retry", value="abc"),
             current_chat_path="/test/chat.json",
-            current_chat_data={},
+            current_chat_data=ChatDocument.empty(),
         )
 
         assert isinstance(action, PrintAction)
@@ -570,13 +572,13 @@ class TestRegularMessages:
     @pytest.mark.asyncio
     async def test_pending_error_message_excludes_secret_guidance(self, orchestrator):
         """Pending-error guidance should point to retry/rewind only."""
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {},
             "messages": [
                 {"role": "user", "content": ["hello"]},
                 {"role": "error", "content": ["oops"]},
             ],
-        }
+        })
 
         action = await orchestrator.handle_user_message(
             "new input",
@@ -609,7 +611,7 @@ class TestRetryModeMessages:
 
     @pytest.mark.asyncio
     async def test_retry_mode_send_excludes_retried_user_assistant_pair(self, orchestrator):
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {},
             "messages": [
                 {"role": "user", "content": "hello"},
@@ -617,7 +619,7 @@ class TestRetryModeMessages:
                 {"role": "user", "content": "nice to meet you"},
                 {"role": "assistant", "content": "nice to meet you too!"},
             ],
-        }
+        })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
         orchestrator.manager.enter_retry_mode(
             [
@@ -649,7 +651,7 @@ class TestSessionManagerIntegration:
     async def test_chat_switching_updates_session_manager(self, orchestrator):
         """Test that chat switching updates the session manager."""
         with patch("polychat.orchestration.chat_switching.load_chat") as mock_load_chat:
-            mock_load_chat.return_value = {
+            mock_load_chat.return_value = ChatDocument.from_raw({
                 "metadata": {
                     "title": None,
                     "summary": None,
@@ -658,7 +660,7 @@ class TestSessionManagerIntegration:
                     "updated_utc": None,
                 },
                 "messages": [],
-            }
+            })
 
             with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock):
                 await orchestrator.handle_command_response(
@@ -668,7 +670,7 @@ class TestSessionManagerIntegration:
                 )
 
             # Session manager should be updated
-            assert orchestrator.manager.chat["messages"] == []
+            assert orchestrator.manager.chat.messages == []
 
     @pytest.mark.asyncio
     async def test_close_chat_clears_session_manager(self, orchestrator, sample_chat_data):
@@ -684,16 +686,16 @@ class TestSessionManagerIntegration:
             )
 
             # Session manager chat should be empty
-            assert orchestrator.manager.chat == {}
+            assert isinstance(orchestrator.manager.chat, ChatDocument)
 
 
 class TestCancelHandling:
     @pytest.mark.asyncio
     async def test_handle_user_cancel_normal_mode_saves_consistent_chat(self, orchestrator):
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {"title": "Cancel Test"},
             "messages": [{"role": "user", "content": "pending"}],
-        }
+        })
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_user_cancel(
@@ -703,7 +705,7 @@ class TestCancelHandling:
             )
 
             assert isinstance(action, PrintAction)
-            assert chat_data["messages"] == []
+            assert chat_data.messages == []
             mock_save.assert_awaited_once_with(
                 chat_path="/test/chat.json",
                 chat_data=chat_data,
@@ -711,7 +713,7 @@ class TestCancelHandling:
 
     @pytest.mark.asyncio
     async def test_handle_user_cancel_retry_mode_does_not_save(self, orchestrator):
-        chat_data = {"metadata": {}, "messages": []}
+        chat_data = ChatDocument.from_raw({"metadata": {}, "messages": []})
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             action = await orchestrator.handle_user_cancel(chat_data, "retry")
@@ -723,10 +725,10 @@ class TestCancelHandling:
 class TestPreSendValidationRollback:
     @pytest.mark.asyncio
     async def test_normal_mode_rolls_back_pending_user_message(self, orchestrator):
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {"title": "Validation rollback"},
             "messages": [{"role": "assistant", "content": ["existing"]}],
-        }
+        })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
 
         action = await orchestrator._handle_normal_message(
@@ -737,7 +739,7 @@ class TestPreSendValidationRollback:
 
         assert isinstance(action, SendAction)
         assert action.mode == "normal"
-        assert chat_data["messages"][-1]["role"] == "user"
+        assert chat_data.messages[-1].role == "user"
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
             rolled_back = await orchestrator.rollback_pre_send_failure(
@@ -747,8 +749,8 @@ class TestPreSendValidationRollback:
             )
 
             assert rolled_back is True
-            assert len(chat_data["messages"]) == 1
-            assert chat_data["messages"][-1]["role"] == "assistant"
+            assert len(chat_data.messages) == 1
+            assert chat_data.messages[-1].role == "assistant"
             mock_save.assert_awaited_once_with(
                 chat_path="/test/chat.json",
                 chat_data=chat_data,
@@ -756,10 +758,10 @@ class TestPreSendValidationRollback:
 
     @pytest.mark.asyncio
     async def test_non_normal_mode_does_not_mutate_chat(self, orchestrator):
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {},
             "messages": [{"role": "user", "content": ["base"]}],
-        }
+        })
         orchestrator.manager._state.hex_id_set.add("abc")
 
         with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
@@ -771,7 +773,7 @@ class TestPreSendValidationRollback:
             )
 
             assert rolled_back is False
-            assert len(chat_data["messages"]) == 1
+            assert len(chat_data.messages) == 1
             assert "abc" not in orchestrator.manager.hex_id_set
             mock_save.assert_not_called()
 
@@ -779,15 +781,15 @@ class TestPreSendValidationRollback:
 class TestSecretModeContext:
     @pytest.mark.asyncio
     async def test_secret_mode_uses_current_chat_history_each_turn(self, orchestrator):
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
             "metadata": {},
             "messages": [
                 {"role": "user", "content": ["u1"]},
                 {"role": "assistant", "content": ["a1"]},
             ],
-        }
+        })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-        orchestrator.manager.enter_secret_mode(chat_data["messages"])
+        orchestrator.manager.enter_secret_mode([m.to_dict() for m in chat_data.messages])
 
         first = await orchestrator.handle_user_message(
             "secret one",
@@ -798,8 +800,9 @@ class TestSecretModeContext:
         assert [m["content"] for m in first.messages[:-1]] == [["u1"], ["a1"]]
 
         # Simulate persisted history changing between secret turns.
-        chat_data["messages"].append({"role": "user", "content": ["u2"]})
-        chat_data["messages"].append({"role": "assistant", "content": ["a2"]})
+        from polychat.domain.chat import ChatMessage as _CM
+        chat_data.messages.append(_CM.from_raw({"role": "user", "content": ["u2"]}))
+        chat_data.messages.append(_CM.from_raw({"role": "assistant", "content": ["a2"]}))
 
         second = await orchestrator.handle_user_message(
             "secret two",

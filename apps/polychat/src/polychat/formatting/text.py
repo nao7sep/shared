@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Callable
+from typing import Callable, TypeVar
 
 from .constants import BORDERLINE_CHAR, BORDERLINE_WIDTH, TRUNCATE_SEARCH_RADIUS
+
+T = TypeVar("T")
 
 
 def text_to_lines(text: str) -> list[str]:
@@ -90,8 +92,8 @@ def make_borderline(width: int | None = None, char: str | None = None) -> str:
 
 
 def format_messages(
-    messages: list[dict],
-    message_formatter: Callable[[dict], str],
+    messages: list[T],
+    message_formatter: Callable[[T], str],
     borderline_width: int | None = None,
 ) -> str:
     """Format messages with borderlines using custom formatter."""

@@ -2,13 +2,15 @@
 
 import pytest
 from polychat.commands import CommandHandler
+from polychat.domain.chat import ChatDocument
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 @pytest.fixture
 def mock_session_manager_with_messages():
     """Create a mock SessionManager with sample messages."""
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {},
         "messages": [
             {
@@ -44,18 +46,13 @@ def mock_session_manager_with_messages():
                 "content": ["The weather is sunny today!"]
             },
         ]
-    }
+    })
 
     manager = SessionManager(
-        profile={
-            "default_ai": "claude",
-            "models": {"claude": "claude-haiku-4-5"},
-            "timeout": 300,
-            "input_mode": "quick",
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-            "api_keys": {},
-        },
+        profile=make_profile(
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+        ),
         current_ai="claude",
         current_model="claude-haiku-4-5",
         chat=chat_data,
@@ -65,12 +62,12 @@ def mock_session_manager_with_messages():
     )
 
     # Set up hex IDs as the tests expect
-    manager.chat["messages"][0]["hex_id"] = "a3f"
-    manager.chat["messages"][1]["hex_id"] = "b2c"
-    manager.chat["messages"][2]["hex_id"] = "c1d"
-    manager.chat["messages"][3]["hex_id"] = "d4e"
-    manager.chat["messages"][4]["hex_id"] = "e5f"
-    manager.chat["messages"][5]["hex_id"] = "f6a"
+    manager.chat.messages[0].hex_id = "a3f"
+    manager.chat.messages[1].hex_id = "b2c"
+    manager.chat.messages[2].hex_id = "c1d"
+    manager.chat.messages[3].hex_id = "d4e"
+    manager.chat.messages[4].hex_id = "e5f"
+    manager.chat.messages[5].hex_id = "f6a"
     manager._state.hex_id_set = {"a3f", "b2c", "c1d", "d4e", "e5f", "f6a"}
 
     return manager
@@ -163,9 +160,9 @@ async def test_history_errors_only(command_handler_with_messages, mock_session_m
 async def test_history_no_errors(command_handler_with_messages, mock_session_manager_with_messages):
     """Test /history errors when no errors exist."""
     # Remove error message
-    mock_session_manager_with_messages.chat["messages"] = [
-        msg for msg in mock_session_manager_with_messages.chat["messages"]
-        if msg.get("role") != "error"
+    mock_session_manager_with_messages.chat.messages = [
+        msg for msg in mock_session_manager_with_messages.chat.messages
+        if msg.role != "error"
     ]
 
     handler = command_handler_with_messages
@@ -202,7 +199,7 @@ async def test_history_truncates_long_messages(command_handler_with_messages, mo
     """Test that /history truncates long messages."""
     # Add a very long message
     long_content = "x" * 200
-    mock_session_manager_with_messages.chat["messages"][0]["content"] = [long_content]
+    mock_session_manager_with_messages.chat.messages[0].content = [long_content]
 
     handler = command_handler_with_messages
 

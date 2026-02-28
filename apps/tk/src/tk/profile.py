@@ -13,6 +13,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from tk.errors import TkConfigError
+from tk.models import Profile
 
 _TIME_WITH_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2}):(\d{2})$")
 _TIME_WITHOUT_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2})$")
@@ -219,14 +220,14 @@ def validate_profile(profile: dict[str, Any]) -> None:
         raise TkConfigError(f"Invalid timezone: {profile['timezone']}") from e
 
 
-def load_profile(path: str) -> dict[str, Any]:
+def load_profile(path: str) -> Profile:
     """Load and validate profile from JSON file.
 
     Args:
         path: Path to profile file
 
     Returns:
-        Profile dictionary with absolute paths
+        Profile model with absolute paths
 
     Raises:
         FileNotFoundError: If profile doesn't exist
@@ -242,32 +243,32 @@ def load_profile(path: str) -> dict[str, Any]:
         )
 
     with open(profile_path, "r", encoding="utf-8") as f:
-        profile = json.load(f)
+        raw = json.load(f)
 
-    validate_profile(profile)
+    validate_profile(raw)
 
     # Set defaults for optional sync settings (backward compatibility)
-    if "auto_sync" not in profile:
-        profile["auto_sync"] = True
-    if "sync_on_exit" not in profile:
-        profile["sync_on_exit"] = False
+    if "auto_sync" not in raw:
+        raw["auto_sync"] = True
+    if "sync_on_exit" not in raw:
+        raw["sync_on_exit"] = False
 
     # Map relative paths
     profile_dir = str(profile_path.parent)
-    profile["data_path"] = map_path(profile["data_path"], profile_dir)
-    profile["output_path"] = map_path(profile["output_path"], profile_dir)
+    raw["data_path"] = map_path(raw["data_path"], profile_dir)
+    raw["output_path"] = map_path(raw["output_path"], profile_dir)
 
-    return profile
+    return Profile.from_dict(raw)
 
 
-def create_profile(path: str) -> dict[str, Any]:
+def create_profile(path: str) -> Profile:
     """Create new profile with defaults.
 
     Args:
         path: Where to save the profile
 
     Returns:
-        Created profile dictionary
+        Created Profile model
 
     Defaults:
         - timezone: system timezone
@@ -293,7 +294,7 @@ def create_profile(path: str) -> dict[str, Any]:
         print("Falling back to UTC. Edit the profile JSON to set your timezone manually.")
         system_timezone = "UTC"
 
-    profile = {
+    raw = {
         "data_path": "./tasks.json",
         "output_path": "./TODO.md",
         "timezone": system_timezone,
@@ -304,6 +305,11 @@ def create_profile(path: str) -> dict[str, Any]:
 
     # Save profile
     with open(profile_path, "w", encoding="utf-8") as f:
-        json.dump(profile, f, indent=2, ensure_ascii=False)
+        json.dump(raw, f, indent=2, ensure_ascii=False)
 
-    return profile
+    # Return with mapped paths
+    profile_dir = str(profile_path.parent)
+    raw["data_path"] = map_path(raw["data_path"], profile_dir)
+    raw["output_path"] = map_path(raw["output_path"], profile_dir)
+
+    return Profile.from_dict(raw)

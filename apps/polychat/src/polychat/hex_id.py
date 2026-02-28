@@ -6,7 +6,7 @@ change on each app run.
 """
 
 import random
-from typing import Any, Set
+from typing import Set
 
 
 HEX_ID_MIN_DIGITS = 3
@@ -93,22 +93,22 @@ def assign_hex_ids(
     return hex_map
 
 
-def build_hex_map(messages: list[dict[str, Any]]) -> dict[int, str]:
-    """Build index->hex_id map from message objects."""
+def build_hex_map(messages: list) -> dict[int, str]:
+    """Build index→hex_id map from ChatMessage objects."""
     hex_map: dict[int, str] = {}
     for index, message in enumerate(messages):
-        hid = message.get("hex_id")
+        hid = getattr(message, "hex_id", None)
         if isinstance(hid, str):
             hex_map[index] = hid
     return hex_map
 
 
-def get_message_index(hex_id: str, source: list[dict[str, Any]] | dict[int, str]) -> int | None:
+def get_message_index(hex_id: str, source: list | dict[int, str]) -> int | None:
     """Get message index from hex ID.
 
     Args:
         hex_id: Hex ID to look up
-        source: Message list (preferred) or index->hex_id map
+        source: ChatMessage list or index→hex_id map
 
     Returns:
         Message index, or None if not found
@@ -120,12 +120,12 @@ def get_message_index(hex_id: str, source: list[dict[str, Any]] | dict[int, str]
     return None
 
 
-def get_hex_id(index: int, source: list[dict[str, Any]] | dict[int, str]) -> str | None:
+def get_hex_id(index: int, source: list | dict[int, str]) -> str | None:
     """Get hex ID from message index.
 
     Args:
         index: Message index
-        source: Message list (preferred) or index->hex_id map
+        source: ChatMessage list or index→hex_id map
 
     Returns:
         Hex ID, or None if not found

@@ -142,7 +142,7 @@ def main() -> None:
             raise ValueError("Invalid profile path: path is required")
 
         profile_data = profile.load_profile(mapped_profile_path)
-        effective_log_path = mapped_log_path or build_run_log_path(profile_data["logs_dir"])
+        effective_log_path = mapped_log_path or build_run_log_path(profile_data.logs_dir)
         setup_logging(effective_log_path)
 
         chat_path = None
@@ -166,16 +166,16 @@ def main() -> None:
             profile_file=mapped_profile_path,
             chat_file=mapped_chat_path,
             log_file=effective_log_path,
-            chats_dir=profile_data.get("chats_dir"),
-            logs_dir=profile_data.get("logs_dir"),
-            assistant_provider=profile_data.get("default_ai"),
-            assistant_model=profile_data.get("models", {}).get(profile_data.get("default_ai", ""), DISPLAY_UNKNOWN),
-            helper_provider=profile_data.get("default_helper_ai", profile_data.get("default_ai")),
-            helper_model=profile_data.get("models", {}).get(
-                profile_data.get("default_helper_ai", profile_data.get("default_ai", "")),
+            chats_dir=profile_data.chats_dir,
+            logs_dir=profile_data.logs_dir,
+            assistant_provider=profile_data.default_ai,
+            assistant_model=profile_data.models.get(profile_data.default_ai, DISPLAY_UNKNOWN),
+            helper_provider=profile_data.default_helper_ai or profile_data.default_ai,
+            helper_model=profile_data.models.get(
+                profile_data.default_helper_ai or profile_data.default_ai,
                 DISPLAY_UNKNOWN,
             ),
-            input_mode=profile_data.get("input_mode", "quick"),
+            input_mode=profile_data.input_mode or "quick",
             timeout=resolve_profile_timeout(profile_data),
             system_prompt=system_prompt_path,
         )

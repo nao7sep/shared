@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from ..chat import load_chat
+from ..domain.chat import ChatDocument
 from ..logging import log_event
 from .types import ContinueAction, OrchestratorAction
 
@@ -21,7 +22,7 @@ class ChatSwitchingHandlersMixin:
         self,
         new_chat_path: str,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Handle create-and-switch to new chat path."""
         if current_chat_path and current_chat_data:
@@ -43,7 +44,7 @@ class ChatSwitchingHandlersMixin:
             chat_file=new_chat_path,
             trigger="new",
             previous_chat_file=current_chat_path,
-            message_count=len(new_chat_data.get("messages", [])),
+            message_count=len(new_chat_data.messages),
         )
 
         return ContinueAction(
@@ -56,7 +57,7 @@ class ChatSwitchingHandlersMixin:
         self,
         new_chat_path: str,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Handle open-and-switch to selected chat path."""
         if current_chat_path and current_chat_data:
@@ -73,7 +74,7 @@ class ChatSwitchingHandlersMixin:
             chat_file=new_chat_path,
             trigger="open",
             previous_chat_file=current_chat_path,
-            message_count=len(new_chat_data.get("messages", [])),
+            message_count=len(new_chat_data.messages),
         )
 
         return ContinueAction(
@@ -85,7 +86,7 @@ class ChatSwitchingHandlersMixin:
     async def _handle_close_chat(
         self,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Handle close-chat signal."""
         if current_chat_path and current_chat_data:
@@ -99,13 +100,13 @@ class ChatSwitchingHandlersMixin:
         log_event(
             "chat_close",
             chat_file=current_chat_path,
-            message_count=len(current_chat_data.get("messages", [])) if current_chat_data else 0,
+            message_count=len(current_chat_data.messages) if current_chat_data else 0,
         )
 
         return ContinueAction(
             message="Chat closed",
             chat_path=None,
-            chat_data={},
+            chat_data=ChatDocument.empty(),
         )
 
     def _handle_rename_current(self, new_chat_path: str) -> OrchestratorAction:
@@ -128,7 +129,7 @@ class ChatSwitchingHandlersMixin:
         self,
         deleted_filename: str,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Handle deletion of the currently open chat."""
         del current_chat_data
@@ -142,5 +143,5 @@ class ChatSwitchingHandlersMixin:
         return ContinueAction(
             message=f"Deleted: {deleted_filename}",
             chat_path=None,
-            chat_data={},
+            chat_data=ChatDocument.empty(),
         )

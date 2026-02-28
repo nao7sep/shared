@@ -39,19 +39,6 @@ class TestTask:
                 created_utc="2026-02-23T10:00:00+00:00",
             )
 
-    def test_task_dict_compat_setitem(self):
-        task = Task(
-            text="Before",
-            status=TaskStatus.PENDING.value,
-            created_utc="2026-02-23T10:00:00+00:00",
-        )
-
-        task["text"] = "After"
-        task["status"] = TaskStatus.DONE.value
-
-        assert task["text"] == "After"
-        assert task["status"] == TaskStatus.DONE.value
-
 
 class TestTaskStore:
     """Test task store behavior."""
@@ -72,22 +59,6 @@ class TestTaskStore:
 
         store = TaskStore.from_dict(payload)
         assert store.to_dict() == payload
-
-    def test_task_store_dict_compat_set_tasks(self):
-        store = TaskStore()
-        store["tasks"] = [
-            {
-                "text": "Task one",
-                "status": "pending",
-                "created_utc": "2026-02-01T10:00:00+00:00",
-                "handled_utc": None,
-                "subjective_date": None,
-                "note": None,
-            }
-        ]
-
-        assert len(store.tasks) == 1
-        assert store.tasks[0].text == "Task one"
 
     def test_task_store_update_task(self):
         store = TaskStore.from_dict(
@@ -127,7 +98,7 @@ class TestProfile:
         assert profile.auto_sync is True
         assert profile.sync_on_exit is False
 
-    def test_profile_dict_compat(self):
+    def test_profile_attribute_access(self):
         profile = Profile.from_dict(
             {
                 "timezone": "Asia/Tokyo",
@@ -139,15 +110,15 @@ class TestProfile:
             }
         )
 
-        profile["auto_sync"] = True
-        assert profile["auto_sync"] is True
-        assert profile.get("timezone") == "Asia/Tokyo"
+        profile.auto_sync = True
+        assert profile.auto_sync is True
+        assert profile.timezone == "Asia/Tokyo"
 
 
 class TestPayloadDtos:
     """Test presenter payload DTOs."""
 
-    def test_pending_payload_dict_compat(self):
+    def test_pending_payload(self):
         task = Task(
             text="Task one",
             status=TaskStatus.PENDING.value,
@@ -157,11 +128,11 @@ class TestPayloadDtos:
             items=[TaskListItem(display_num=1, array_index=0, task=task)]
         )
 
-        assert "items" in payload
-        assert payload["items"][0]["display_num"] == 1
-        assert payload["items"][0]["task"]["text"] == "Task one"
+        assert len(payload.items) == 1
+        assert payload.items[0].display_num == 1
+        assert payload.items[0].task.text == "Task one"
 
-    def test_history_payload_dict_compat(self):
+    def test_history_payload(self):
         task = Task(
             text="Task two",
             status=TaskStatus.DONE.value,
@@ -179,5 +150,5 @@ class TestPayloadDtos:
             filters=HistoryFilters(days=7),
         )
 
-        assert payload["groups"][0]["date"] == "2026-02-02"
-        assert payload["filters"].get("days") == 7
+        assert payload.groups[0].date == "2026-02-02"
+        assert payload.filters.days == 7

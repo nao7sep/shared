@@ -1,10 +1,12 @@
 """Tests for REPL/session orchestration state transitions."""
 
+from polychat.domain.chat import ChatDocument
 from polychat.session.state import (
     SessionState,
     initialize_message_hex_ids,
 )
 from polychat.commands.types import CommandSignal
+from test_helpers import make_profile
 
 
 class TestCommandSignals:
@@ -64,7 +66,7 @@ class TestChatSwitchingOrchestration:
     def test_new_chat_state_initialization(self):
         """Test state initialization when creating new chat."""
         # Simulate creating new chat
-        new_chat_data = {
+        new_chat_data = ChatDocument.from_raw({
             "metadata": {
                 "title": None,
                 "summary": None,
@@ -73,14 +75,14 @@ class TestChatSwitchingOrchestration:
                 "updated_utc": None,
             },
             "messages": [],
-        }
+        })
 
         session = SessionState(
             current_ai="claude",
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
+            profile=make_profile(),
             chat=new_chat_data,
         )
 
@@ -88,7 +90,7 @@ class TestChatSwitchingOrchestration:
         initialize_message_hex_ids(session)
 
         assert session.chat == new_chat_data
-        assert session.chat["messages"] == []
+        assert session.chat.messages == []
         assert session.hex_id_set == set()
 
     def test_open_chat_replaces_current(self):
@@ -99,20 +101,20 @@ class TestChatSwitchingOrchestration:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={"messages": [{"role": "user", "content": "old"}]},
+            profile=make_profile(),
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "old"}]}),
         )
         initialize_message_hex_ids(session)
-        old_hex_ids = [m["hex_id"] for m in session.chat["messages"]]
+        old_hex_ids = [m.hex_id for m in session.chat.messages]
 
         # Open new chat
-        new_chat = {"messages": [{"role": "user", "content": "new"}]}
+        new_chat = ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "new"}]})
         session.chat = new_chat
         initialize_message_hex_ids(session)
 
         # Should have different hex IDs
         assert session.chat == new_chat
-        assert [m["hex_id"] for m in session.chat["messages"]] != old_hex_ids
+        assert [m.hex_id for m in session.chat.messages] != old_hex_ids
 
     def test_close_chat_clears_state(self):
         """Test closing chat clears chat-related state."""
@@ -121,13 +123,13 @@ class TestChatSwitchingOrchestration:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={"messages": [{"role": "user", "content": "test"}]},
+            profile=make_profile(),
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "test"}]}),
         )
         initialize_message_hex_ids(session)
 
         # Simulate closing chat
-        session.chat = {}
+        session.chat = ChatDocument.empty()
         session.hex_id_set.clear()
         session.retry_mode = False
         session.retry_base_messages.clear()
@@ -136,8 +138,8 @@ class TestChatSwitchingOrchestration:
         session.secret_mode = False
         session.secret_base_messages.clear()
 
-        assert session.chat == {}
-        assert session.chat == {}
+        assert isinstance(session.chat, ChatDocument)
+        assert session.chat.messages == []
         assert session.hex_id_set == set()
         assert session.retry_mode is False
         assert session.secret_mode is False
@@ -149,8 +151,8 @@ class TestChatSwitchingOrchestration:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={"messages": []},
+            profile=make_profile(),
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": []}),
             retry_mode=True,
             secret_mode=True,
         )
@@ -172,19 +174,20 @@ class TestRetryModeOrchestration:
 
     def test_enter_retry_mode_freezes_context(self):
         """Test entering retry mode freezes message context."""
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
+            "metadata": {},
             "messages": [
                 {"role": "user", "content": "Question"},
                 {"role": "assistant", "content": "Bad answer"},
             ]
-        }
+        })
 
         session = SessionState(
             current_ai="claude",
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
+            profile=make_profile(),
             chat=chat_data,
         )
 
@@ -195,7 +198,7 @@ class TestRetryModeOrchestration:
         assert session.retry_mode is True
         assert len(session.retry_base_messages) == 1
         # Original chat unchanged
-        assert len(chat_data["messages"]) == 2
+        assert len(chat_data.messages) == 2
 
     def test_retry_attempt_uses_frozen_context(self):
         """Test retry attempt uses frozen context plus new user message."""
@@ -204,8 +207,8 @@ class TestRetryModeOrchestration:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={},
+            profile=make_profile(),
+            chat=ChatDocument.empty(),
             retry_mode=True,
         )
         session.retry_base_messages = [{"role": "user", "content": "Original"}]
@@ -222,20 +225,22 @@ class TestRetryModeOrchestration:
 
     def test_apply_retry_replaces_messages(self):
         """Test applying retry replaces original messages."""
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
+            "metadata": {},
             "messages": [
                 {"role": "user", "content": "Original question"},
                 {"role": "assistant", "content": "Bad answer"},
             ]
-        }
+        })
 
         selected_assistant_msg = "Better answer"
 
         # Simulate applying retry by replacing only the target message.
-        chat_data["messages"][-1] = {"role": "assistant", "content": selected_assistant_msg}
-        assert len(chat_data["messages"]) == 2
-        assert chat_data["messages"][0]["content"] == "Original question"
-        assert chat_data["messages"][1]["content"] == "Better answer"
+        from polychat.domain.chat import ChatMessage
+        chat_data.messages[-1] = ChatMessage.from_raw({"role": "assistant", "content": selected_assistant_msg})
+        assert len(chat_data.messages) == 2
+        assert chat_data.messages[0].content == ["Original question"]
+        assert chat_data.messages[1].content == ["Better answer"]
 
     def test_cancel_retry_clears_state(self):
         """Test cancelling retry clears retry state."""
@@ -244,8 +249,8 @@ class TestRetryModeOrchestration:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={},
+            profile=make_profile(),
+            chat=ChatDocument.empty(),
             retry_mode=True,
         )
         session.retry_base_messages = [{"role": "user", "content": "base"}]
@@ -271,19 +276,20 @@ class TestSecretModeOrchestration:
 
     def test_enter_secret_mode_freezes_context(self):
         """Test entering secret mode freezes message context."""
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
+            "metadata": {},
             "messages": [
                 {"role": "user", "content": "Public question"},
                 {"role": "assistant", "content": "Public answer"},
             ]
-        }
+        })
 
         session = SessionState(
             current_ai="claude",
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
+            profile=make_profile(),
             chat=chat_data,
         )
 
@@ -299,14 +305,14 @@ class TestSecretModeOrchestration:
 
     def test_secret_message_not_saved(self):
         """Test secret messages aren't saved to chat."""
-        chat_data = {"messages": [{"role": "user", "content": "Public"}]}
+        chat_data = ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "Public"}]})
 
         session = SessionState(
             current_ai="claude",
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
+            profile=make_profile(),
             chat=chat_data,
             secret_mode=True,
         )
@@ -322,8 +328,8 @@ class TestSecretModeOrchestration:
         assert temp_messages[-1]["content"] == "Secret question"
 
         # Original chat unchanged
-        assert len(chat_data["messages"]) == 1
-        assert chat_data["messages"][-1]["content"] == "Public"
+        assert len(chat_data.messages) == 1
+        assert chat_data.messages[-1].content == ["Public"]
 
     def test_clear_secret_context(self):
         """Test clearing secret context."""
@@ -332,8 +338,8 @@ class TestSecretModeOrchestration:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={},
+            profile=make_profile(),
+            chat=ChatDocument.empty(),
             secret_mode=True,
         )
         session.secret_base_messages = [{"role": "user", "content": "frozen"}]
@@ -355,8 +361,8 @@ class TestProviderSwitching:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={},
+            profile=make_profile(),
+            chat=ChatDocument.empty(),
         )
 
         # Simulate provider switch
@@ -373,8 +379,8 @@ class TestProviderSwitching:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={},
+            profile=make_profile(),
+            chat=ChatDocument.empty(),
         )
 
         # Cache providers
@@ -399,8 +405,8 @@ class TestInputModeToggle:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={},
+            profile=make_profile(),
+            chat=ChatDocument.empty(),
             input_mode="quick",
         )
 
@@ -416,8 +422,8 @@ class TestInputModeToggle:
             current_model="claude-haiku-4-5",
             helper_ai="claude",
             helper_model="claude-haiku-4-5",
-            profile={},
-            chat={},
+            profile=make_profile(),
+            chat=ChatDocument.empty(),
             input_mode="compose",
         )
 

@@ -1,11 +1,30 @@
-"""Helper functions for integration tests with real API keys."""
+"""Helper functions for PolyChat tests."""
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
+
+from polychat.domain.profile import RuntimeProfile
 
 _DEV_API_KEYS_FILENAME = ".dev-api-keys.json"
 _config_cache: Optional[dict] = None
+
+
+def make_profile(**overrides: Any) -> RuntimeProfile:
+    """Build a RuntimeProfile with sensible test defaults.
+
+    Any keyword argument overrides the corresponding field.
+    """
+    defaults: dict[str, Any] = {
+        "default_ai": "claude",
+        "models": {"claude": "claude-haiku-4-5"},
+        "chats_dir": ".",
+        "logs_dir": ".",
+        "api_keys": {},
+        "timeout": 300,
+    }
+    defaults.update(overrides)
+    return RuntimeProfile.from_dict(defaults)
 
 
 def find_test_api_keys_file() -> Optional[Path]:

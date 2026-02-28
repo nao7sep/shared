@@ -1,7 +1,6 @@
 """Session state container for tk runtime."""
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from tk.models import Profile, Task, TaskStore
 
@@ -11,24 +10,20 @@ class Session:
     """In-memory runtime state for a tk session."""
 
     profile_path: str | None = None
-    profile: Profile | dict[str, Any] | None = None
-    tasks: TaskStore | dict[str, Any] | None = None
+    profile: Profile | None = None
+    tasks: TaskStore | None = None
     last_list: list[tuple[int, int]] = field(default_factory=list)
 
     def require_profile(self) -> Profile:
         """Return loaded profile or raise if missing."""
         if self.profile is None:
             raise ValueError("No profile loaded")
-        if isinstance(self.profile, dict):
-            self.profile = Profile.from_dict(self.profile)
         return self.profile
 
     def require_tasks(self) -> TaskStore:
         """Return loaded task data or raise if missing."""
         if self.tasks is None:
             raise ValueError("No tasks loaded")
-        if isinstance(self.tasks, dict):
-            self.tasks = TaskStore.from_dict(self.tasks)
         return self.tasks
 
     def set_last_list(self, mapping: list[tuple[int, int]]) -> None:

@@ -22,10 +22,10 @@ class RuntimeMutationCommandHandlers:
         """Rewind chat history by deleting a target message and all following."""
         chat_data = self._deps.manager.chat
 
-        if not chat_data or "messages" not in chat_data:
+        if not chat_data.messages and not self._deps.manager.chat_path:
             return "No chat is currently open"
 
-        messages = chat_data["messages"]
+        messages = chat_data.messages
 
         if not messages:
             return "No messages to delete"
@@ -36,10 +36,10 @@ class RuntimeMutationCommandHandlers:
 
         if target == "last":
             tail = messages[-1]
-            tail_role = tail.get("role")
+            tail_role = tail.role
 
             if tail_role == "error":
-                if len(messages) >= 2 and messages[-2].get("role") == "user":
+                if len(messages) >= 2 and messages[-2].role == "user":
                     index = len(messages) - 2
                 else:
                     index = len(messages) - 1
@@ -47,7 +47,7 @@ class RuntimeMutationCommandHandlers:
                 if len(messages) < 2:
                     raise ValueError("No complete turn to delete")
                 prev = messages[-2]
-                if tail_role != "assistant" or prev.get("role") != "user":
+                if tail_role != "assistant" or prev.role != "user":
                     raise ValueError(
                         "Last interaction is not a complete user+assistant or user+error turn"
                     )
@@ -65,7 +65,7 @@ class RuntimeMutationCommandHandlers:
             if hex_display:
                 target_label = f"[{hex_display}]"
             elif target == "last":
-                target_label = "last error" if messages[index].get("role") == "error" else "last turn"
+                target_label = "last error" if messages[index].role == "error" else "last turn"
             else:
                 target_label = "selected target"
 
@@ -73,7 +73,7 @@ class RuntimeMutationCommandHandlers:
             if not await self._deps._confirm_yes("Type 'yes' to confirm rewind: "):
                 return "Rewind cancelled"
 
-            messages = chat_data["messages"]
+            messages = chat_data.messages
             for index_to_remove in range(len(messages) - 1, index - 1, -1):
                 self._deps.manager.remove_message_hex_id(index_to_remove)
 
@@ -94,7 +94,7 @@ class RuntimeMutationCommandHandlers:
         if chat_data is None:
             return "No chat is currently open"
 
-        messages = chat_data["messages"]
+        messages = chat_data.messages
 
         if not messages:
             return "No messages to purge"
@@ -118,6 +118,7 @@ class RuntimeMutationCommandHandlers:
             return "Purge cancelled"
 
         deleted_count = 0
+        messages = chat_data.messages
         for msg_index, _hid in indices_to_delete:
             self._deps.manager.remove_message_hex_id(msg_index)
             del messages[msg_index]

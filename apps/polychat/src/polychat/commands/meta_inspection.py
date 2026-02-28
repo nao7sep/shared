@@ -46,7 +46,7 @@ class MetadataInspectionCommandHandlers:
         chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
-        messages = chat_data["messages"]
+        messages = chat_data.messages
 
         if not messages:
             return "No messages in chat history"
@@ -69,7 +69,7 @@ class MetadataInspectionCommandHandlers:
                     return f"Invalid argument: {args.strip()}. Use a number, 'all', or 'errors'"
 
         if errors_only:
-            filtered_messages = [(i, msg) for i, msg in enumerate(messages) if msg.get("role") == "error"]
+            filtered_messages = [(i, msg) for i, msg in enumerate(messages) if msg.role == "error"]
             display_messages = filtered_messages
             total_count = len(messages)
         elif show_all:
@@ -117,7 +117,7 @@ class MetadataInspectionCommandHandlers:
         chat_data = self._deps._require_open_chat(need_messages=True)
         if chat_data is None:
             return "No chat is currently open"
-        messages = chat_data["messages"]
+        messages = chat_data.messages
 
         msg_index = hex_id.get_message_index(args.strip(), messages)
 
@@ -125,8 +125,8 @@ class MetadataInspectionCommandHandlers:
             return f"Invalid hex ID: {args.strip()}"
 
         msg = messages[msg_index]
-        role = msg.get("role", DISPLAY_UNKNOWN)
-        timestamp_utc = msg.get("timestamp_utc", "")
+        role = msg.role or DISPLAY_UNKNOWN
+        timestamp_utc = msg.timestamp_utc or ""
 
         if timestamp_utc:
             time_str = self._deps._to_local_time(timestamp_utc, DATETIME_FORMAT_FULL)
@@ -134,7 +134,7 @@ class MetadataInspectionCommandHandlers:
             time_str = DISPLAY_UNKNOWN
 
         if role == "assistant":
-            model = msg.get("model", DISPLAY_UNKNOWN)
+            model = msg.model or DISPLAY_UNKNOWN
             role_display = f"Assistant | {model}"
         else:
             role_display = role.capitalize()
@@ -156,22 +156,22 @@ class MetadataInspectionCommandHandlers:
         chat_path = self._deps.manager.chat_path
         log_file = self._deps.manager.log_file
 
-        chat_data = self._deps.manager.chat or {}
-        messages = chat_data.get("messages", []) if isinstance(chat_data, dict) else []
-        metadata = chat_data.get("metadata", {}) if isinstance(chat_data, dict) else {}
+        chat_data = self._deps.manager.chat
+        messages = chat_data.messages
+        metadata = chat_data.metadata
 
         timeout = resolve_profile_timeout(profile_data)
         timeout_display = self._deps.manager.format_timeout(timeout)
 
-        chat_title = metadata.get("title") or DISPLAY_NONE
+        chat_title = metadata.title or DISPLAY_NONE
 
-        raw_summary = metadata.get("summary") or ""
+        raw_summary = metadata.summary or ""
         if raw_summary:
             chat_summary = truncate_text(minify_text(raw_summary), MESSAGE_PREVIEW_LENGTH)
         else:
             chat_summary = DISPLAY_NONE
 
-        chat_system_prompt = metadata.get("system_prompt")
+        chat_system_prompt = metadata.system_prompt
         if chat_system_prompt:
             try:
                 from ..path_utils import map_path
@@ -180,14 +180,14 @@ class MetadataInspectionCommandHandlers:
             except (ValueError, FileNotFoundError):
                 system_prompt_display = chat_system_prompt
         else:
-            system_prompt_display = profile_data.get("system_prompt", DISPLAY_NONE)
+            system_prompt_display = getattr(profile_data, "system_prompt", None) or DISPLAY_NONE
 
-        title_prompt = profile_data.get("title_prompt", DISPLAY_NONE)
-        summary_prompt = profile_data.get("summary_prompt", DISPLAY_NONE)
-        safety_prompt = profile_data.get("safety_prompt", DISPLAY_NONE)
+        title_prompt = getattr(profile_data, "title_prompt", None) or DISPLAY_NONE
+        summary_prompt = getattr(profile_data, "summary_prompt", None) or DISPLAY_NONE
+        safety_prompt = getattr(profile_data, "safety_prompt", None) or DISPLAY_NONE
 
         updated_local = DISPLAY_UNKNOWN
-        updated_utc = metadata.get("updated_utc")
+        updated_utc = metadata.updated_utc
         if updated_utc:
             updated_local = self._deps._to_local_time(updated_utc, DATETIME_FORMAT_SHORT)
 
@@ -195,8 +195,8 @@ class MetadataInspectionCommandHandlers:
             "Session Status",
             make_borderline(),
             "Directories",
-            f"Chats:     {profile_data.get('chats_dir', DISPLAY_UNKNOWN)}",
-            f"Logs:      {profile_data.get('logs_dir', DISPLAY_UNKNOWN)}",
+            f"Chats:     {getattr(profile_data, 'chats_dir', DISPLAY_UNKNOWN)}",
+            f"Logs:      {getattr(profile_data, 'logs_dir', DISPLAY_UNKNOWN)}",
             "",
             "Files",
             f"Profile:   {profile_path}",

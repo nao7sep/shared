@@ -4,8 +4,8 @@ import json
 import pytest
 import tempfile
 from pathlib import Path
-from datetime import datetime, timezone
 
+from tk.models import Profile, Task, TaskStore
 from tk.session import Session
 
 
@@ -38,51 +38,49 @@ def sample_profile(temp_dir):
 @pytest.fixture
 def sample_tasks_data():
     """Create sample tasks data structure."""
-    return {
-        "tasks": [
-            {
-                "text": "Task one",
-                "status": "pending",
-                "created_utc": "2026-02-01T10:00:00+00:00",
-                "handled_utc": None,
-                "subjective_date": None,
-                "note": None,
-            },
-            {
-                "text": "Task two",
-                "status": "done",
-                "created_utc": "2026-02-02T10:00:00+00:00",
-                "handled_utc": "2026-02-02T15:00:00+00:00",
-                "subjective_date": "2026-02-02",
-                "note": "Completed successfully",
-            },
-            {
-                "text": "Task three",
-                "status": "cancelled",
-                "created_utc": "2026-02-03T10:00:00+00:00",
-                "handled_utc": "2026-02-03T12:00:00+00:00",
-                "subjective_date": "2026-02-03",
-                "note": None,
-            },
-        ]
-    }
+    return TaskStore(tasks=[
+        Task(
+            text="Task one",
+            status="pending",
+            created_utc="2026-02-01T10:00:00+00:00",
+            handled_utc=None,
+            subjective_date=None,
+            note=None,
+        ),
+        Task(
+            text="Task two",
+            status="done",
+            created_utc="2026-02-02T10:00:00+00:00",
+            handled_utc="2026-02-02T15:00:00+00:00",
+            subjective_date="2026-02-02",
+            note="Completed successfully",
+        ),
+        Task(
+            text="Task three",
+            status="cancelled",
+            created_utc="2026-02-03T10:00:00+00:00",
+            handled_utc="2026-02-03T12:00:00+00:00",
+            subjective_date="2026-02-03",
+            note=None,
+        ),
+    ])
 
 
 @pytest.fixture
 def sample_session(temp_dir, sample_tasks_data):
     """Create initialized Session object."""
-    profile = {
-        "timezone": "Asia/Tokyo",
-        "subjective_day_start": "04:00:00",
-        "data_path": str(temp_dir / "tasks.json"),
-        "output_path": str(temp_dir / "TODO.md"),
-        "auto_sync": False,  # Disable for most tests
-        "sync_on_exit": False,
-    }
+    prof = Profile(
+        timezone="Asia/Tokyo",
+        subjective_day_start="04:00:00",
+        data_path=str(temp_dir / "tasks.json"),
+        output_path=str(temp_dir / "TODO.md"),
+        auto_sync=False,
+        sync_on_exit=False,
+    )
 
     session = Session()
     session.profile_path = str(temp_dir / "profile.json")
-    session.profile = profile
+    session.profile = prof
     session.tasks = sample_tasks_data
 
     return session

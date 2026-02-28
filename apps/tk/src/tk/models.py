@@ -14,15 +14,6 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-_TASK_FIELDS = ("text", "status", "created_utc", "handled_utc", "subjective_date", "note")
-_PROFILE_FIELDS = (
-    "timezone",
-    "subjective_day_start",
-    "data_path",
-    "output_path",
-    "auto_sync",
-    "sync_on_exit",
-)
 _VALID_TASK_STATUSES = {status.value for status in TaskStatus}
 
 
@@ -76,38 +67,6 @@ class Task:
             "subjective_date": self.subjective_date,
             "note": self.note,
         }
-
-    # Dict-like interface kept for existing call sites.
-    def __getitem__(self, key: str) -> Any:
-        if key not in _TASK_FIELDS:
-            raise KeyError(key)
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        if key not in _TASK_FIELDS:
-            raise KeyError(key)
-
-        if key == "status":
-            self.status = _coerce_task_status(str(value))
-            return
-
-        if key in ("handled_utc", "subjective_date", "note"):
-            setattr(self, key, None if value is None else str(value))
-            return
-
-        setattr(self, key, str(value))
-
-    def get(self, key: str, default: Any = None) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    def keys(self) -> tuple[str, ...]:
-        return _TASK_FIELDS
-
-    def __contains__(self, key: str) -> bool:
-        return key in _TASK_FIELDS
 
 
 @dataclass
@@ -173,7 +132,12 @@ class TaskStore:
             return False
 
         for key, value in updates.items():
-            task[key] = value
+            if key == "status":
+                task.status = _coerce_task_status(str(value))
+            elif key in ("handled_utc", "subjective_date", "note"):
+                setattr(task, key, None if value is None else str(value))
+            else:
+                setattr(task, key, str(value))
         return True
 
     def delete_task(self, index: int) -> bool:
@@ -182,33 +146,6 @@ class TaskStore:
             self.tasks.pop(index)
             return True
         return False
-
-    # Dict-like interface kept for existing call sites.
-    def __getitem__(self, key: str) -> Any:
-        if key != "tasks":
-            raise KeyError(key)
-        return self.tasks
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        if key != "tasks":
-            raise KeyError(key)
-        if not isinstance(value, list):
-            raise ValueError("Invalid tasks file structure: 'tasks' must be an array")
-        self.tasks = [
-            task if isinstance(task, Task) else Task.from_dict(task)
-            for task in value
-        ]
-
-    def get(self, key: str, default: Any = None) -> Any:
-        if key == "tasks":
-            return self.tasks
-        return default
-
-    def keys(self) -> tuple[str, ...]:
-        return ("tasks",)
-
-    def __contains__(self, key: str) -> bool:
-        return key == "tasks"
 
 
 @dataclass
@@ -245,32 +182,6 @@ class Profile:
             "sync_on_exit": self.sync_on_exit,
         }
 
-    # Dict-like interface kept for existing call sites.
-    def __getitem__(self, key: str) -> Any:
-        if key not in _PROFILE_FIELDS:
-            raise KeyError(key)
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        if key not in _PROFILE_FIELDS:
-            raise KeyError(key)
-        if key in ("auto_sync", "sync_on_exit"):
-            setattr(self, key, bool(value))
-        else:
-            setattr(self, key, str(value))
-
-    def get(self, key: str, default: Any = None) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    def keys(self) -> tuple[str, ...]:
-        return _PROFILE_FIELDS
-
-    def __contains__(self, key: str) -> bool:
-        return key in _PROFILE_FIELDS
-
 
 @dataclass
 class TaskListItem:
@@ -280,40 +191,12 @@ class TaskListItem:
     array_index: int
     task: Task
 
-    def __getitem__(self, key: str) -> Any:
-        if key == "display_num":
-            return self.display_num
-        if key == "array_index":
-            return self.array_index
-        if key == "task":
-            return self.task
-        raise KeyError(key)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
 
 @dataclass
 class PendingListPayload:
     """Pending-list payload for presenters."""
 
     items: list[TaskListItem] = field(default_factory=list)
-
-    def __getitem__(self, key: str) -> Any:
-        if key == "items":
-            return self.items
-        raise KeyError(key)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        if key == "items":
-            return self.items
-        return default
-
-    def __contains__(self, key: str) -> bool:
-        return key == "items"
 
 
 @dataclass
@@ -324,21 +207,6 @@ class HistoryFilters:
     working_days: int | None = None
     specific_date: str | None = None
 
-    def __getitem__(self, key: str) -> Any:
-        if key == "days":
-            return self.days
-        if key == "working_days":
-            return self.working_days
-        if key == "specific_date":
-            return self.specific_date
-        raise KeyError(key)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
 
 @dataclass
 class HistoryGroup:
@@ -346,19 +214,6 @@ class HistoryGroup:
 
     date: str
     items: list[TaskListItem] = field(default_factory=list)
-
-    def __getitem__(self, key: str) -> Any:
-        if key == "date":
-            return self.date
-        if key == "items":
-            return self.items
-        raise KeyError(key)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
 
 
 @dataclass
@@ -368,19 +223,21 @@ class HistoryListPayload:
     groups: list[HistoryGroup] = field(default_factory=list)
     filters: HistoryFilters = field(default_factory=HistoryFilters)
 
-    def __getitem__(self, key: str) -> Any:
-        if key == "groups":
-            return self.groups
-        if key == "filters":
-            return self.filters
-        raise KeyError(key)
 
-    def get(self, key: str, default: Any = None) -> Any:
-        if key == "groups":
-            return self.groups
-        if key == "filters":
-            return self.filters
-        return default
+@dataclass
+class DoneCancelResult:
+    """Result of interactive done/cancel prompts."""
 
-    def __contains__(self, key: str) -> bool:
-        return key in ("groups", "filters")
+    note: str | None
+    date: str
+
+
+@dataclass
+class CommandDocEntry:
+    """Metadata for a single command in the help/doc system."""
+
+    command: str
+    alias: str
+    usage: str
+    summary: str
+    display_usage: str

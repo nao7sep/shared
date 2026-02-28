@@ -158,10 +158,10 @@ def test_load_profile_valid(tmp_path):
 
     profile = load_profile(str(profile_path))
 
-    assert profile["default_ai"] == "claude"
-    assert profile["models"]["claude"] == "claude-haiku-4-5"
-    assert profile["chats_dir"] == str(chats_dir)
-    assert profile["logs_dir"] == str(logs_dir)
+    assert profile.default_ai == "claude"
+    assert profile.models["claude"] == "claude-haiku-4-5"
+    assert profile.chats_dir == str(chats_dir)
+    assert profile.logs_dir == str(logs_dir)
 
 
 def test_load_profile_maps_tilde_paths(tmp_path):
@@ -185,8 +185,8 @@ def test_load_profile_maps_tilde_paths(tmp_path):
     profile = load_profile(str(profile_path))
 
     # Should map tilde to home directory
-    assert profile["chats_dir"] == str(Path.home() / "chats")
-    assert profile["logs_dir"] == str(Path.home() / "logs")
+    assert profile.chats_dir == str(Path.home() / "chats")
+    assert profile.logs_dir == str(Path.home() / "logs")
 
 
 def test_load_profile_maps_at_paths(tmp_path):
@@ -211,9 +211,9 @@ def test_load_profile_maps_at_paths(tmp_path):
 
     # Should map @ to app root
     app_root = str(get_app_root())
-    assert profile["chats_dir"].startswith(app_root)
-    assert profile["logs_dir"].startswith(app_root)
-    assert profile["system_prompt"].startswith(app_root)
+    assert profile.chats_dir.startswith(app_root)
+    assert profile.logs_dir.startswith(app_root)
+    assert profile.system_prompt.startswith(app_root)
 
 
 def test_load_profile_maps_json_api_key_path(tmp_path):
@@ -243,7 +243,7 @@ def test_load_profile_maps_json_api_key_path(tmp_path):
     profile = load_profile(str(profile_path))
 
     # Should map tilde in JSON key path
-    api_key_path = profile["api_keys"]["claude"]["path"]
+    api_key_path = profile.api_keys["claude"]["path"]
     assert api_key_path == str(Path.home() / ".secrets/keys.json")
 
 
@@ -265,7 +265,7 @@ def test_load_profile_sets_default_timeout(tmp_path):
 
     profile = load_profile(str(profile_path))
 
-    assert profile["timeout"] == 300
+    assert profile.timeout == 300
 
 
 def test_validate_profile_missing_required_fields():

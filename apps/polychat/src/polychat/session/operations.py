@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .. import hex_id
+from ..ai.types import Citation
+from ..domain.chat import ChatDocument, ChatMessage, RetryAttempt
 from .state import SessionState, initialize_message_hex_ids
 
 
@@ -16,7 +18,7 @@ from .state import SessionState, initialize_message_hex_ids
 def switch_chat(
     state: SessionState,
     chat_path: str,
-    chat_data: dict[str, Any],
+    chat_data: ChatDocument,
     *,
     system_prompt_path: str | None,
 ) -> None:
@@ -25,8 +27,7 @@ def switch_chat(
     state.chat_path = chat_path
 
     # Keep older chats aligned with active session system prompt metadata.
-    metadata = chat_data.get("metadata") if isinstance(chat_data, dict) else None
-    if isinstance(metadata, dict) and system_prompt_path and not metadata.get("system_prompt"):
+    if system_prompt_path and not chat_data.metadata.system_prompt:
         from ..chat import update_metadata
 
         update_metadata(chat_data, system_prompt=system_prompt_path)
@@ -37,7 +38,7 @@ def switch_chat(
 
 def close_chat(state: SessionState) -> None:
     """Close current chat and clear related runtime state."""
-    state.chat = {}
+    state.chat = ChatDocument.empty()
     state.chat_path = None
     state.hex_id_set.clear()
     clear_chat_scoped_state(state)
@@ -95,7 +96,7 @@ def add_retry_attempt(
     user_msg: str,
     assistant_msg: str,
     retry_hex_id: Optional[str] = None,
-    citations: Optional[list[dict[str, Any]]] = None,
+    citations: Optional[list[Citation]] = None,
 ) -> str:
     """Store a retry attempt and return its runtime hex ID."""
     if not state.retry_mode:
@@ -105,19 +106,18 @@ def add_retry_attempt(
         retry_hex_id = hex_id.generate_hex_id(state.hex_id_set)
     else:
         state.hex_id_set.add(retry_hex_id)
-    state.retry_attempts[retry_hex_id] = {
-        "user_msg": user_msg,
-        "assistant_msg": assistant_msg,
-    }
-    if citations:
-        state.retry_attempts[retry_hex_id]["citations"] = citations
+    state.retry_attempts[retry_hex_id] = RetryAttempt(
+        user_msg=user_msg,
+        assistant_msg=assistant_msg,
+        citations=citations if citations else None,
+    )
     return retry_hex_id
 
 
 def get_retry_attempt(
     state: SessionState,
     retry_hex_id: str,
-) -> Optional[dict[str, Any]]:
+) -> Optional[RetryAttempt]:
     """Get one retry attempt by runtime hex ID."""
     return state.retry_attempts.get(retry_hex_id)
 
@@ -183,19 +183,20 @@ def exit_secret_mode(state: SessionState) -> None:
 
 def get_message_hex_id(state: SessionState, message_index: int) -> Optional[str]:
     """Get hex ID for a message index."""
-    messages = state.chat.get("messages", []) if isinstance(state.chat, dict) else []
+    messages = state.chat.messages
     if message_index < 0 or message_index >= len(messages):
         return None
-    hid = messages[message_index].get("hex_id")
+    hid = messages[message_index].hex_id
     return hid if isinstance(hid, str) else None
 
 
 def remove_message_hex_id(state: SessionState, message_index: int) -> None:
     """Remove hex ID for a message index."""
-    messages = state.chat.get("messages", []) if isinstance(state.chat, dict) else []
+    messages = state.chat.messages
     if message_index < 0 or message_index >= len(messages):
         return
-    hex_to_remove = messages[message_index].pop("hex_id", None)
+    hex_to_remove = messages[message_index].hex_id
+    messages[message_index].hex_id = None
     if isinstance(hex_to_remove, str):
         state.hex_id_set.discard(hex_to_remove)
 
@@ -203,23 +204,21 @@ def remove_message_hex_id(state: SessionState, message_index: int) -> None:
 def pop_message(
     state: SessionState,
     message_index: int = -1,
-    chat_data: Optional[dict[str, Any]] = None,
-) -> Optional[dict[str, Any]]:
+    chat_data: Optional[ChatDocument] = None,
+) -> Optional[ChatMessage]:
     """Pop a message and atomically clean up its runtime hex ID."""
     target_chat = chat_data if chat_data is not None else state.chat
-    if not isinstance(target_chat, dict):
-        return None
 
-    messages = target_chat.get("messages")
-    if not isinstance(messages, list) or not messages:
+    messages = target_chat.messages
+    if not messages:
         return None
 
     popped = messages.pop(message_index)
-    if isinstance(popped, dict):
-        hex_to_remove = popped.pop("hex_id", None)
-        if isinstance(hex_to_remove, str):
-            state.hex_id_set.discard(hex_to_remove)
-    return popped if isinstance(popped, dict) else None
+    hex_to_remove = popped.hex_id
+    popped.hex_id = None
+    if isinstance(hex_to_remove, str):
+        state.hex_id_set.discard(hex_to_remove)
+    return popped
 
 
 # ===================================================================
@@ -231,7 +230,7 @@ async def save_current_chat(
     state: SessionState,
     *,
     chat_path: Optional[str] = None,
-    chat_data: Optional[dict[str, Any]] = None,
+    chat_data: Optional[ChatDocument] = None,
 ) -> bool:
     """Persist current chat state.
 
@@ -240,7 +239,7 @@ async def save_current_chat(
     path = chat_path if chat_path is not None else state.chat_path
     data = chat_data if chat_data is not None else state.chat
 
-    if not path or not isinstance(data, dict):
+    if not path or data is None:
         return False
 
     from .. import chat as chat_module

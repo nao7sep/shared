@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional
 
 from ..commands.types import CommandSignal
+from ..domain.chat import ChatDocument, ChatMessage, RetryAttempt
 from ..formatting.text import text_to_lines
 from .types import (
     BreakAction,
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from ..session_manager import SessionManager
 
 SignalDispatchHandler = Callable[
-    [CommandSignal, Optional[str], Optional[dict]],
+    [CommandSignal, Optional[str], Optional[ChatDocument]],
     Awaitable[OrchestratorAction],
 ]
 
@@ -33,7 +34,7 @@ class RetryReplacementPlan:
 
     replace_start: int
     replace_end: int
-    replacement_messages: list[dict[str, Any]]
+    replacement_messages: list[ChatMessage]
 
 
 def _utc_timestamp() -> str:
@@ -41,17 +42,17 @@ def _utc_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def resolve_replace_start(messages: list[dict[str, Any]], target_index: int) -> int:
+def resolve_replace_start(messages: list[ChatMessage], target_index: int) -> int:
     """Resolve where replacement should start for retry apply."""
-    if target_index > 0 and messages[target_index - 1].get("role") == "user":
+    if target_index > 0 and messages[target_index - 1].role == "user":
         return target_index - 1
     return target_index
 
 
 def build_retry_replacement_plan(
-    messages: list[dict[str, Any]],
+    messages: list[ChatMessage],
     target_index: int,
-    retry_attempt: dict[str, Any],
+    retry_attempt: RetryAttempt,
     current_model: str,
     *,
     timestamp_factory: Optional[TimestampFactory] = None,
@@ -64,36 +65,32 @@ def build_retry_replacement_plan(
     replace_start = resolve_replace_start(messages, target_index)
 
     existing_user_hex_id = (
-        messages[replace_start].get("hex_id")
+        messages[replace_start].hex_id
         if replace_start != target_index
         else None
     )
-    existing_assistant_hex_id = messages[target_index].get("hex_id")
+    existing_assistant_hex_id = messages[target_index].hex_id
 
-    replaced_user_message: dict[str, Any] = {
-        "timestamp_utc": make_timestamp(),
-        "role": "user",
-        "content": text_to_lines(retry_attempt["user_msg"]),
-    }
-    if isinstance(existing_user_hex_id, str):
-        replaced_user_message["hex_id"] = existing_user_hex_id
+    user_msg = ChatMessage(
+        timestamp_utc=make_timestamp(),
+        role="user",
+        content=text_to_lines(retry_attempt.user_msg),
+        hex_id=existing_user_hex_id if isinstance(existing_user_hex_id, str) else None,
+    )
 
-    replaced_assistant_message: dict[str, Any] = {
-        "timestamp_utc": make_timestamp(),
-        "role": "assistant",
-        "model": current_model,
-        "content": text_to_lines(retry_attempt["assistant_msg"]),
-    }
-    citations = retry_attempt.get("citations")
-    if citations:
-        replaced_assistant_message["citations"] = citations
-    if isinstance(existing_assistant_hex_id, str):
-        replaced_assistant_message["hex_id"] = existing_assistant_hex_id
+    assistant_msg = ChatMessage(
+        timestamp_utc=make_timestamp(),
+        role="assistant",
+        model=current_model,
+        content=text_to_lines(retry_attempt.assistant_msg),
+        citations=retry_attempt.citations,
+        hex_id=existing_assistant_hex_id if isinstance(existing_assistant_hex_id, str) else None,
+    )
 
     return RetryReplacementPlan(
         replace_start=replace_start,
         replace_end=target_index,
-        replacement_messages=[replaced_user_message, replaced_assistant_message],
+        replacement_messages=[user_msg, assistant_msg],
     )
 
 
@@ -121,7 +118,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         signal: CommandSignal,
         *,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Handle typed command-layer control signals."""
         handler = self._signal_handlers().get(signal.kind)
@@ -133,7 +130,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         del signal, current_chat_path, current_chat_data
         return BreakAction()
@@ -142,7 +139,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         if not signal.chat_path:
             return PrintAction(message="Error: Invalid command signal (missing new chat path)")
@@ -152,7 +149,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         if not signal.chat_path:
             return PrintAction(message="Error: Invalid command signal (missing open chat path)")
@@ -162,7 +159,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         del signal
         return await self._handle_close_chat(current_chat_path, current_chat_data)
@@ -171,7 +168,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         del current_chat_path, current_chat_data
         if not signal.chat_path:
@@ -182,7 +179,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         if signal.value is None:
             return PrintAction(message="Error: Invalid command signal (missing deleted filename)")
@@ -196,7 +193,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         retry_hex_id = (signal.value or "").strip().lower()
         if not retry_hex_id:
@@ -207,7 +204,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         del signal, current_chat_path, current_chat_data
         return self._handle_cancel_retry()
@@ -216,7 +213,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         self,
         signal: CommandSignal,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         del signal, current_chat_path, current_chat_data
         return self._handle_clear_secret_context()
@@ -224,7 +221,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
     async def _persist_chat_after_command(
         self,
         chat_path: Optional[str],
-        chat_data: Optional[dict],
+        chat_data: Optional[ChatDocument],
     ) -> None:
         """Persist chat after a command response when required by save policy."""
         await self.manager.save_current_chat(chat_path=chat_path, chat_data=chat_data)
@@ -232,7 +229,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
     async def _handle_apply_retry(
         self,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
         retry_hex_id: str,
     ) -> OrchestratorAction:
         """Handle apply-retry signal."""
@@ -246,7 +243,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         if not retry_attempt:
             return PrintAction(message=f"Retry ID not found: {retry_hex_id}")
 
-        messages = current_chat_data.get("messages", [])
+        messages = current_chat_data.messages
         target_index = self.manager.get_retry_target_index()
         if target_index is None or target_index < 0 or target_index >= len(messages):
             return PrintAction(message="Retry target is no longer valid")

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional, Protocol
+from typing import TYPE_CHECKING, Optional, Protocol
 
+from ..domain.profile import RuntimeProfile
 from ..ui.interaction import UserInteractionPort
 
 if TYPE_CHECKING:
@@ -18,8 +19,8 @@ class HelperAIInvoker(Protocol):
         self,
         helper_ai: str,
         helper_model: str,
-        profile: dict[str, Any],
-        messages: list[dict[str, Any]],
+        profile: RuntimeProfile,
+        messages: list[dict],
         system_prompt: Optional[str] = None,
         *,
         task: str = "helper_task",

@@ -19,11 +19,11 @@ def _readme_commands_section() -> str:
     return content[start:end]
 
 
-def _expected_readme_line(entry: dict[str, str]) -> str:
-    command = entry["command"]
-    alias = entry["alias"]
-    usage = entry["usage"]
-    summary = entry["summary"]
+def _expected_readme_line(entry) -> str:
+    command = entry.command
+    alias = entry.alias
+    usage = entry.usage
+    summary = entry.summary
 
     label = command if not alias else f"{command} ({alias})"
     args = ""
@@ -40,7 +40,7 @@ def test_readme_command_lines_match_dispatcher_metadata():
 
     for entry in dispatcher.command_doc_entries():
         # README documents exit/quit as a combined line outside registry commands.
-        if entry["command"] == "exit":
+        if entry.command == "exit":
             continue
 
         expected = _expected_readme_line(entry)

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping, TypedDict
 
+from ..domain.profile import RuntimeProfile
+
 
 DEFAULT_CLAUDE_MAX_OUTPUT_TOKENS = 4096
 
@@ -52,27 +54,16 @@ def _read_limit_block(config: Mapping[str, Any] | None) -> AIRequestLimits:
 
 
 def resolve_profile_limits(
-    profile: Mapping[str, Any] | None,
+    profile: RuntimeProfile | None,
     provider: str,
     *,
     helper: bool = False,
 ) -> AIRequestLimits:
-    """Resolve effective limits from profile-level configuration.
-
-    Expected optional profile structure:
-
-    {
-      "ai_limits": {
-        "default": {...},
-        "providers": {"claude": {...}},
-        "helper": {...}
-      }
-    }
-    """
-    if not isinstance(profile, Mapping):
+    """Resolve effective limits from profile-level configuration."""
+    if profile is None:
         return {}
 
-    raw_limits = profile.get("ai_limits")
+    raw_limits = profile.ai_limits
     if not isinstance(raw_limits, Mapping):
         return {}
 
@@ -118,7 +109,7 @@ def claude_effective_max_output_tokens(max_output_tokens: Any) -> int:
 
 
 def resolve_request_limits(
-    profile: Mapping[str, Any] | None,
+    profile: RuntimeProfile | None,
     provider: str,
     *,
     helper: bool = False,

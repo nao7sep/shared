@@ -1,9 +1,28 @@
 """Unified API key loading interface for PolyChat."""
 
-from typing import Any, cast
+from typing import Required, TypedDict, cast
 
 
-def load_api_key(provider: str, config: dict[str, Any]) -> str:
+class KeyConfig(TypedDict, total=False):
+    """Typed configuration for API key loading.
+
+    Discriminated by ``type`` field. Additional fields depend on the type:
+      env      → key
+      keychain → service, account
+      credential → service, account
+      json     → path, key
+      direct   → value (testing only)
+    """
+
+    type: Required[str]
+    key: str
+    value: str
+    service: str
+    account: str
+    path: str
+
+
+def load_api_key(provider: str, config: KeyConfig) -> str:
     """Load API key based on configuration.
 
     Args:

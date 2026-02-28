@@ -42,7 +42,7 @@ class ChatFileCommandHandlers:
         Returns:
             Command text or typed new-chat control signal
         """
-        chats_dir = self._deps.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile.chats_dir
 
         # Generate filename
         name = args.strip() if args else None
@@ -71,7 +71,7 @@ class ChatFileCommandHandlers:
         Returns:
             Typed open-chat control signal or error message
         """
-        chats_dir = self._deps.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile.chats_dir
 
         selected_path: str | None
         if args.strip():
@@ -136,7 +136,7 @@ class ChatFileCommandHandlers:
         Returns:
             Command text or typed rename-current signal
         """
-        chats_dir = self._deps.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile.chats_dir
 
         # Parse args
         parts = args.strip().split(None, 1)
@@ -208,7 +208,7 @@ class ChatFileCommandHandlers:
         Returns:
             Command text or typed delete-current signal
         """
-        chats_dir = self._deps.manager.profile["chats_dir"]
+        chats_dir = self._deps.manager.profile.chats_dir
 
         if not args.strip():
             # Interactive selection

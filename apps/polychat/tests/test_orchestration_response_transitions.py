@@ -4,6 +4,7 @@ from typing import cast
 
 import pytest
 
+from polychat.domain.chat import ChatDocument
 from polychat.orchestration.types import ActionMode
 from polychat.orchestration.response_handlers import (
     build_transition_state,
@@ -16,11 +17,16 @@ from polychat.orchestration.response_handlers import (
 )
 
 
+def _cd(messages: list[dict] | None = None) -> ChatDocument:
+    """Shorthand to build a ChatDocument for tests."""
+    return ChatDocument.from_raw({"metadata": {}, "messages": messages or []})
+
+
 def test_build_transition_state_tracks_context_and_hex() -> None:
     state = build_transition_state(
         "normal",
         chat_path="/tmp/chat.json",
-        chat_data={"messages": []},
+        chat_data=_cd(),
         assistant_hex_id="abc123",
     )
     assert state.mode == "normal"
@@ -42,16 +48,16 @@ def test_build_transition_state_without_context_or_hex() -> None:
 @pytest.mark.parametrize(
     ("mode", "chat_path", "chat_data", "expected"),
     [
-        ("normal", "/tmp/chat.json", {"messages": []}, True),
-        ("normal", None, {"messages": []}, False),
-        ("retry", "/tmp/chat.json", {"messages": []}, False),
-        ("secret", "/tmp/chat.json", {"messages": []}, False),
+        ("normal", "/tmp/chat.json", ChatDocument.from_raw({"metadata": {}, "messages": []}), True),
+        ("normal", None, ChatDocument.from_raw({"metadata": {}, "messages": []}), False),
+        ("retry", "/tmp/chat.json", ChatDocument.from_raw({"metadata": {}, "messages": []}), False),
+        ("secret", "/tmp/chat.json", ChatDocument.from_raw({"metadata": {}, "messages": []}), False),
     ],
 )
 def test_can_mutate_normal_chat_requires_normal_mode_and_context(
     mode: ActionMode,
     chat_path: str | None,
-    chat_data: dict | None,
+    chat_data: ChatDocument | None,
     expected: bool,
 ) -> None:
     state = build_transition_state(
@@ -67,7 +73,7 @@ def test_should_release_for_error_normal_mode_requires_context() -> None:
     with_context = build_transition_state(
         "normal",
         chat_path="/tmp/chat.json",
-        chat_data={"messages": []},
+        chat_data=_cd(),
         assistant_hex_id="abc",
     )
     no_context = build_transition_state(
@@ -128,7 +134,7 @@ def test_should_release_for_rollback_depends_only_on_hex_presence() -> None:
     without_hex = build_transition_state(
         "normal",
         chat_path="/tmp/chat.json",
-        chat_data={"messages": []},
+        chat_data=_cd(),
         assistant_hex_id=None,
     )
 
@@ -137,12 +143,12 @@ def test_should_release_for_rollback_depends_only_on_hex_presence() -> None:
 
 
 def test_has_trailing_user_message_detection() -> None:
-    trailing_user = {"messages": [{"role": "assistant"}, {"role": "user"}]}
-    trailing_assistant = {"messages": [{"role": "user"}, {"role": "assistant"}]}
+    trailing_user = _cd([{"role": "assistant", "content": ""}, {"role": "user", "content": ""}])
+    trailing_assistant = _cd([{"role": "user", "content": ""}, {"role": "assistant", "content": ""}])
 
     assert has_trailing_user_message(trailing_user) is True
     assert has_trailing_user_message(trailing_assistant) is False
-    assert has_trailing_user_message({"messages": []}) is False
+    assert has_trailing_user_message(_cd()) is False
     assert has_trailing_user_message(None) is False
 
 
@@ -150,17 +156,17 @@ def test_should_rollback_pre_send_requires_normal_context_and_trailing_user() ->
     normal_state = build_transition_state(
         "normal",
         chat_path="/tmp/chat.json",
-        chat_data={"messages": [{"role": "user"}]},
+        chat_data=_cd([{"role": "user", "content": ""}]),
         assistant_hex_id=None,
     )
     retry_state = build_transition_state(
         "retry",
         chat_path="/tmp/chat.json",
-        chat_data={"messages": [{"role": "user"}]},
+        chat_data=_cd([{"role": "user", "content": ""}]),
         assistant_hex_id=None,
     )
-    trailing_user = {"messages": [{"role": "assistant"}, {"role": "user"}]}
-    trailing_assistant = {"messages": [{"role": "assistant"}]}
+    trailing_user = _cd([{"role": "assistant", "content": ""}, {"role": "user", "content": ""}])
+    trailing_assistant = _cd([{"role": "assistant", "content": ""}])
 
     assert should_rollback_pre_send(normal_state, trailing_user) is True
     assert should_rollback_pre_send(normal_state, trailing_assistant) is False

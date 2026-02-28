@@ -3,13 +3,15 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 from polychat.commands import CommandHandler
+from polychat.domain.chat import ChatDocument
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 @pytest.fixture
 def mock_session_manager_safe():
     """Create a mock SessionManager for safe tests."""
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {},
         "messages": [
             {
@@ -29,28 +31,22 @@ def mock_session_manager_safe():
                 "content": ["My API key is sk-abc123"]
             }
         ]
-    }
+    })
 
     manager = SessionManager(
-        profile={
-            "default_ai": "claude",
-            "models": {
-                "claude": "claude-haiku-4-5",
-            },
-            "timeout": 300,
-            "input_mode": "quick",
-            "title_prompt": "/test/prompts/title.txt",
-            "summary_prompt": "/test/prompts/summary.txt",
-            "safety_prompt": "/test/prompts/safety.txt",
-            "chats_dir": "/test/chats",
-            "logs_dir": "/test/logs",
-            "api_keys": {
+        profile=make_profile(
+            title_prompt="/test/prompts/title.txt",
+            summary_prompt="/test/prompts/summary.txt",
+            safety_prompt="/test/prompts/safety.txt",
+            chats_dir="/test/chats",
+            logs_dir="/test/logs",
+            api_keys={
                 "claude": {
                     "type": "direct",
                     "value": "test-key"
                 }
             },
-        },
+        ),
         current_ai="claude",
         current_model="claude-haiku-4-5",
         helper_ai="claude",
@@ -62,9 +58,9 @@ def mock_session_manager_safe():
     )
 
     # Set up hex IDs as the tests expect
-    manager.chat["messages"][0]["hex_id"] = "a3f"
-    manager.chat["messages"][1]["hex_id"] = "b2c"
-    manager.chat["messages"][2]["hex_id"] = "c1d"
+    manager.chat.messages[0].hex_id = "a3f"
+    manager.chat.messages[1].hex_id = "b2c"
+    manager.chat.messages[2].hex_id = "c1d"
     manager._state.hex_id_set = {"a3f", "b2c", "c1d"}
 
     return manager
@@ -79,7 +75,7 @@ def command_handler_safe(mock_session_manager_safe):
 @pytest.mark.asyncio
 async def test_safe_command_no_messages(command_handler_safe, mock_session_manager_safe):
     """Test /safe command with no messages."""
-    mock_session_manager_safe.chat["messages"] = []
+    mock_session_manager_safe.chat.messages = []
     handler = command_handler_safe
 
     result = await handler.check_safety("")
@@ -176,12 +172,13 @@ async def test_safe_command_error_handling(command_handler_safe, mock_session_ma
 @pytest.mark.asyncio
 async def test_format_message_for_safety_check(command_handler_safe, mock_session_manager_safe):
     """Test message formatting for safety check."""
+    from polychat.domain.chat import ChatMessage
     from polychat.formatting.history import format_message_for_safety_check
     from polychat.formatting.text import format_messages
 
     messages = [
-        {"role": "user", "content": ["Test message 1"]},
-        {"role": "assistant", "content": ["Test message 2"]}
+        ChatMessage(role="user", content=["Test message 1"]),
+        ChatMessage(role="assistant", content=["Test message 2"]),
     ]
 
     formatted = format_messages(messages, format_message_for_safety_check)
@@ -197,7 +194,7 @@ async def test_format_message_with_hex_ids(command_handler_safe, mock_session_ma
     from polychat.formatting.history import format_for_safety_check
 
     # Use messages with hex IDs from session
-    messages = mock_session_manager_safe.chat["messages"][:1]
+    messages = mock_session_manager_safe.chat.messages[:1]
 
     formatted = format_for_safety_check(messages)
 

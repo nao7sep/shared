@@ -2,10 +2,10 @@
 
 import json
 import pytest
-from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime
 
 from tk import data
+from tk.models import Task, TaskStore
 
 
 class TestLoadTasks:
@@ -16,7 +16,8 @@ class TestLoadTasks:
         path = temp_dir / "nonexistent.json"
         result = data.load_tasks(str(path))
 
-        assert result == {"tasks": []}
+        assert isinstance(result, TaskStore)
+        assert result.tasks == []
         assert not path.exists()
 
     def test_load_tasks_creates_directory(self, temp_dir):
@@ -24,19 +25,20 @@ class TestLoadTasks:
         path = temp_dir / "subdir" / "tasks.json"
         result = data.load_tasks(str(path))
 
-        assert result == {"tasks": []}
+        assert isinstance(result, TaskStore)
+        assert result.tasks == []
         assert path.parent.exists()
 
     def test_load_tasks_valid_file(self, temp_dir, sample_tasks_data):
         """Test loading valid tasks file."""
         path = temp_dir / "tasks.json"
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(sample_tasks_data, f)
+            json.dump(sample_tasks_data.to_dict(), f)
 
         result = data.load_tasks(str(path))
 
-        assert result == sample_tasks_data
-        assert len(result["tasks"]) == 3
+        assert isinstance(result, TaskStore)
+        assert len(result.tasks) == 3
 
     def test_load_tasks_invalid_json(self, temp_dir):
         """Test that invalid JSON raises ValueError."""
@@ -138,7 +140,7 @@ class TestSaveTasks:
     def test_save_tasks_creates_directory(self, temp_dir):
         """Test that save_tasks creates parent directory."""
         path = temp_dir / "subdir" / "tasks.json"
-        tasks_data = {"tasks": []}
+        tasks_data = TaskStore()
 
         data.save_tasks(str(path), tasks_data)
 
@@ -155,21 +157,21 @@ class TestSaveTasks:
         with open(path, "r", encoding="utf-8") as f:
             loaded = json.load(f)
 
-        assert loaded == sample_tasks_data
+        assert loaded == sample_tasks_data.to_dict()
 
     def test_save_tasks_preserves_encoding(self, temp_dir):
         """Test that UTF-8 encoding works correctly."""
         path = temp_dir / "tasks.json"
-        tasks_data = {
-            "tasks": [{
-                "text": "日本語タスク 🚀",
-                "status": "pending",
-                "created_utc": "2026-02-09T10:00:00+00:00",
-                "handled_utc": None,
-                "subjective_date": None,
-                "note": None,
-            }]
-        }
+        tasks_data = TaskStore(tasks=[
+            Task(
+                text="日本語タスク 🚀",
+                status="pending",
+                created_utc="2026-02-09T10:00:00+00:00",
+                handled_utc=None,
+                subjective_date=None,
+                note=None,
+            )
+        ])
 
         data.save_tasks(str(path), tasks_data)
 
@@ -185,7 +187,7 @@ class TestAddTask:
 
     def test_add_task_returns_index(self):
         """Test that add_task returns correct index."""
-        tasks_data = {"tasks": []}
+        tasks_data = TaskStore()
 
         index = data.add_task(tasks_data, "First task")
         assert index == 0
@@ -195,44 +197,44 @@ class TestAddTask:
 
     def test_add_task_structure(self):
         """Test that add_task creates correct task structure."""
-        tasks_data = {"tasks": []}
+        tasks_data = TaskStore()
 
         data.add_task(tasks_data, "Test task")
 
-        task = tasks_data["tasks"][0]
-        assert task["text"] == "Test task"
-        assert task["status"] == "pending"
-        assert task["created_utc"] is not None
-        assert task["handled_utc"] is None
-        assert task["subjective_date"] is None
-        assert task["note"] is None
+        task = tasks_data.tasks[0]
+        assert task.text == "Test task"
+        assert task.status == "pending"
+        assert task.created_utc is not None
+        assert task.handled_utc is None
+        assert task.subjective_date is None
+        assert task.note is None
 
     def test_add_task_status_pending(self):
         """Test that new tasks have 'pending' status."""
-        tasks_data = {"tasks": []}
+        tasks_data = TaskStore()
 
         data.add_task(tasks_data, "Test task")
 
-        assert tasks_data["tasks"][0]["status"] == "pending"
+        assert tasks_data.tasks[0].status == "pending"
 
     def test_add_task_nulls_set_correctly(self):
         """Test that handled fields are null for new tasks."""
-        tasks_data = {"tasks": []}
+        tasks_data = TaskStore()
 
         data.add_task(tasks_data, "Test task")
 
-        task = tasks_data["tasks"][0]
-        assert task["handled_utc"] is None
-        assert task["subjective_date"] is None
-        assert task["note"] is None
+        task = tasks_data.tasks[0]
+        assert task.handled_utc is None
+        assert task.subjective_date is None
+        assert task.note is None
 
     def test_add_task_timestamp_utc(self):
         """Test that created_utc is UTC timestamp."""
-        tasks_data = {"tasks": []}
+        tasks_data = TaskStore()
 
         data.add_task(tasks_data, "Test task")
 
-        created_utc = tasks_data["tasks"][0]["created_utc"]
+        created_utc = tasks_data.tasks[0].created_utc
         # Should be able to parse as ISO format
         dt = datetime.fromisoformat(created_utc.replace('Z', '+00:00'))
         assert dt.tzinfo is not None
@@ -246,7 +248,7 @@ class TestUpdateTask:
         result = data.update_task(sample_tasks_data, 0, text="Updated text")
 
         assert result is True
-        assert sample_tasks_data["tasks"][0]["text"] == "Updated text"
+        assert sample_tasks_data.tasks[0].text == "Updated text"
 
     def test_update_task_invalid_field(self, sample_tasks_data):
         """Test that invalid field raises ValueError."""
@@ -270,10 +272,10 @@ class TestUpdateTask:
         )
 
         assert result is True
-        task = sample_tasks_data["tasks"][0]
-        assert task["status"] == "done"
-        assert task["note"] == "Completed"
-        assert task["subjective_date"] == "2026-02-09"
+        task = sample_tasks_data.tasks[0]
+        assert task.status == "done"
+        assert task.note == "Completed"
+        assert task.subjective_date == "2026-02-09"
 
     def test_update_task_invalid_field_mixed(self, sample_tasks_data):
         """Test that mixed valid/invalid fields rejects all."""
@@ -286,7 +288,7 @@ class TestUpdateTask:
             )
 
         # Original should be unchanged
-        assert sample_tasks_data["tasks"][0]["text"] == "Task one"
+        assert sample_tasks_data.tasks[0].text == "Task one"
 
 
 class TestDeleteTask:
@@ -294,12 +296,12 @@ class TestDeleteTask:
 
     def test_delete_task_valid_index(self, sample_tasks_data):
         """Test deleting task by valid index."""
-        original_count = len(sample_tasks_data["tasks"])
+        original_count = len(sample_tasks_data.tasks)
 
         result = data.delete_task(sample_tasks_data, 1)
 
         assert result is True
-        assert len(sample_tasks_data["tasks"]) == original_count - 1
+        assert len(sample_tasks_data.tasks) == original_count - 1
 
     def test_delete_task_invalid_index(self, sample_tasks_data):
         """Test that invalid index returns False."""
@@ -310,12 +312,12 @@ class TestDeleteTask:
     def test_delete_task_shifts_indices(self, sample_tasks_data):
         """Test that deleting shifts subsequent indices."""
         # Task at index 2 before deletion
-        task_text = sample_tasks_data["tasks"][2]["text"]
+        task_text = sample_tasks_data.tasks[2].text
 
         data.delete_task(sample_tasks_data, 0)
 
         # Now at index 1
-        assert sample_tasks_data["tasks"][1]["text"] == task_text
+        assert sample_tasks_data.tasks[1].text == task_text
 
 
 class TestGroupHandledTasks:
@@ -330,9 +332,9 @@ class TestGroupHandledTasks:
     def test_group_handled_tasks_by_date(self):
         """Test that tasks are grouped by subjective_date."""
         tasks = [
-            (0, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
-            (1, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T11:00:00+00:00"}),
-            (2, {"subjective_date": "2026-02-08", "handled_utc": "2026-02-08T10:00:00+00:00"}),
+            (0, Task(text="t1", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T10:00:00+00:00")),
+            (1, Task(text="t2", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T11:00:00+00:00")),
+            (2, Task(text="t3", status="done", created_utc="2026-02-08T09:00:00+00:00", subjective_date="2026-02-08", handled_utc="2026-02-08T10:00:00+00:00")),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -345,8 +347,8 @@ class TestGroupHandledTasks:
     def test_group_handled_tasks_unknown(self):
         """Test handling of tasks with missing dates."""
         tasks = [
-            (0, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
-            (1, {"subjective_date": None, "handled_utc": "2026-02-08T10:00:00+00:00"}),
+            (0, Task(text="t1", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T10:00:00+00:00")),
+            (1, Task(text="t2", status="done", created_utc="2026-02-08T09:00:00+00:00", subjective_date=None, handled_utc="2026-02-08T10:00:00+00:00")),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -358,9 +360,9 @@ class TestGroupHandledTasks:
     def test_group_handled_tasks_sort_dates_desc(self):
         """Test that dates are sorted descending."""
         tasks = [
-            (0, {"subjective_date": "2026-02-07", "handled_utc": "2026-02-07T10:00:00+00:00"}),
-            (1, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
-            (2, {"subjective_date": "2026-02-08", "handled_utc": "2026-02-08T10:00:00+00:00"}),
+            (0, Task(text="t1", status="done", created_utc="2026-02-07T09:00:00+00:00", subjective_date="2026-02-07", handled_utc="2026-02-07T10:00:00+00:00")),
+            (1, Task(text="t2", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T10:00:00+00:00")),
+            (2, Task(text="t3", status="done", created_utc="2026-02-08T09:00:00+00:00", subjective_date="2026-02-08", handled_utc="2026-02-08T10:00:00+00:00")),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -371,9 +373,9 @@ class TestGroupHandledTasks:
     def test_group_handled_tasks_sort_within_date(self):
         """Test that tasks within date are sorted by handled_utc ascending."""
         tasks = [
-            (0, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T12:00:00+00:00"}),
-            (1, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T10:00:00+00:00"}),
-            (2, {"subjective_date": "2026-02-09", "handled_utc": "2026-02-09T11:00:00+00:00"}),
+            (0, Task(text="t1", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T12:00:00+00:00")),
+            (1, Task(text="t2", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T10:00:00+00:00")),
+            (2, Task(text="t3", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T11:00:00+00:00")),
         ]
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
@@ -381,7 +383,7 @@ class TestGroupHandledTasks:
         # Get the tasks for 2026-02-09
         for date, date_tasks in result:
             if date == "2026-02-09":
-                handled_times = [t["handled_utc"] for _, t in date_tasks]
+                handled_times = [t.handled_utc for _, t in date_tasks]
                 assert handled_times == [
                     "2026-02-09T10:00:00+00:00",
                     "2026-02-09T11:00:00+00:00",

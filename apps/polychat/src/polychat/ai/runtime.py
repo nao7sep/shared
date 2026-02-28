@@ -5,6 +5,7 @@ import time
 from typing import Any, AsyncIterator, Optional, Protocol
 
 from ..keys.loader import load_api_key, validate_api_key
+from ..domain.profile import RuntimeProfile
 from ..logging import (
     extract_http_error_context,
     estimate_message_chars,
@@ -55,7 +56,7 @@ class SessionContext(Protocol):
         ...
 
     @property
-    def profile(self) -> dict[str, Any]:
+    def profile(self) -> RuntimeProfile:
         ...
 
     def get_cached_provider(
@@ -175,7 +176,7 @@ async def send_message_to_ai(
     model: str,
     system_prompt: Optional[str] = None,
     provider_name: Optional[str] = None,
-    profile: Optional[dict] = None,
+    profile: Optional[RuntimeProfile] = None,
     mode: str = "normal",
     chat_path: Optional[str] = None,
     search: bool = False,
@@ -268,7 +269,7 @@ def validate_and_get_provider(
 ) -> tuple[Optional[ProviderInstance], Optional[str]]:
     """Validate API key and get provider instance."""
     provider_name = session.current_ai
-    key_config = session.profile["api_keys"].get(provider_name)
+    key_config = session.profile.api_keys.get(provider_name)
 
     if not key_config:
         log_event(

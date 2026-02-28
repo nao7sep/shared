@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, TypeAlias
 
+from ..domain.chat import ChatDocument
+
 
 ActionMode = Literal["normal", "retry", "secret"]
 
@@ -30,7 +32,7 @@ class ContinueAction:
 
     message: str | None = None
     chat_path: str | None = None
-    chat_data: dict[str, Any] | None = None
+    chat_data: ChatDocument | None = None
     kind: Literal["continue"] = "continue"
 
 
@@ -44,7 +46,7 @@ class SendAction:
     retry_user_input: str | None = None
     assistant_hex_id: str | None = None
     chat_path: str | None = None
-    chat_data: dict[str, Any] | None = None
+    chat_data: ChatDocument | None = None
     kind: Literal["send"] = "send"
 
 

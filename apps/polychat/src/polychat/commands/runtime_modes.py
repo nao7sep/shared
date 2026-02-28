@@ -37,7 +37,7 @@ class RuntimeModeCommandHandlers:
         value = args.strip().lower()
 
         if value == "default":
-            profile_mode = self._deps.manager.profile.get("input_mode", "quick")
+            profile_mode = self._deps.manager.profile.input_mode
             if profile_mode not in ("quick", "compose"):
                 profile_mode = "quick"
             self._deps.manager.input_mode = profile_mode
@@ -69,7 +69,7 @@ class RuntimeModeCommandHandlers:
 
         if not args:
             current_path = (
-                chat_data["metadata"].get("system_prompt")
+                chat_data.metadata.system_prompt
                 or self._deps.manager.system_prompt_path
             )
             if current_path:
@@ -84,7 +84,7 @@ class RuntimeModeCommandHandlers:
             return "System prompt removed from chat"
 
         if args == "default":
-            if not self._deps.manager.profile.get("system_prompt"):
+            if not self._deps.manager.profile.system_prompt:
                 return "No default system prompt configured in profile"
 
             (
@@ -152,16 +152,16 @@ class RuntimeModeCommandHandlers:
         """Enter retry mode (ask again without saving previous attempt)."""
         chat_data = self._deps.manager.chat
 
-        if not chat_data or "messages" not in chat_data:
+        if not chat_data.messages and not self._deps.manager.chat_path:
             return "No chat is currently open"
 
-        messages = chat_data["messages"]
+        messages = chat_data.messages
 
         if not messages:
             return "No messages to retry"
 
         last_msg = messages[-1]
-        if last_msg["role"] not in ("assistant", "error"):
+        if last_msg.role not in ("assistant", "error"):
             return "Last message is not an assistant response or error. Nothing to retry."
 
         retry_context = chat.get_retry_context_for_last_interaction(chat_data)
@@ -200,7 +200,7 @@ class RuntimeModeCommandHandlers:
         """Show or set secret mode (messages not saved to history)."""
         chat_data = self._deps.manager.chat
 
-        if not chat_data or "messages" not in chat_data:
+        if not chat_data.messages and not self._deps.manager.chat_path:
             return "No chat is currently open"
 
         normalized = args.strip().lower()
@@ -230,7 +230,7 @@ class RuntimeModeCommandHandlers:
         """Show or set search mode (web search enabled)."""
         chat_data = self._deps.manager.chat
 
-        if not chat_data or "messages" not in chat_data:
+        if not chat_data.messages and not self._deps.manager.chat_path:
             return "No chat is currently open"
 
         normalized = args.strip().lower()

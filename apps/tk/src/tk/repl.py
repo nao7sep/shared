@@ -113,7 +113,8 @@ def _prepare_interactive_command(
                 session.clear_last_list()
                 return "Cancelled."
 
-            kwargs.update(result)
+            kwargs["note"] = result.note
+            kwargs["date"] = result.date
 
         except KeyboardInterrupt:
             print()
@@ -134,7 +135,7 @@ def _prepare_interactive_command(
 def repl(session: Session) -> None:
     """Run the REPL loop."""
     try:
-        import readline
+        import readline  # noqa: F401 — side-effect import for line editing
     except ImportError:
         pass
 
@@ -192,10 +193,5 @@ def repl(session: Session) -> None:
 
     profile_data = session.profile
     tasks_data = session.tasks
-    if profile_data and tasks_data and profile_data.get("sync_on_exit", False):
-        markdown.generate_todo(
-            tasks_data.to_dict()["tasks"] if hasattr(tasks_data, "to_dict") else tasks_data["tasks"],
-            profile_data["output_path"],
-        )
-
-    pass  # summary removed — "Exiting." is the farewell
+    if profile_data and tasks_data and profile_data.sync_on_exit:
+        markdown.generate_todo(tasks_data.tasks, profile_data.output_path)

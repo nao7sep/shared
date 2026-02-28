@@ -5,16 +5,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from polychat.ai.helper_runtime import invoke_helper_ai
+from polychat.domain.profile import RuntimeProfile
 
 
 @pytest.mark.asyncio
 async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
     """Helper invocation should use non-streaming API and pass session for caching."""
-    profile_data = {
-        "api_keys": {
-            "claude": {"type": "direct", "value": "test-key"},
-        }
-    }
+    profile = RuntimeProfile(
+        default_ai="claude",
+        models={"claude": "claude-haiku-4-5"},
+        chats_dir=".",
+        logs_dir=".",
+        api_keys={"claude": {"type": "direct", "value": "test-key"}},
+        timeout=300,
+    )
     provider = MagicMock()
     provider.get_full_response = AsyncMock(
         return_value=("  helper output  ", {"usage": {"total_tokens": 12}})
@@ -27,7 +31,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
                 response = await invoke_helper_ai(
                     helper_ai="claude",
                     helper_model="claude-haiku-4-5",
-                    profile=profile_data,
+                    profile=profile,
                     messages=[{"role": "user", "content": "Generate title"}],
                     system_prompt="Do task",
                     task="title_generation",
@@ -35,7 +39,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
                 )
 
     assert response == "helper output"
-    mock_load_key.assert_called_once_with("claude", profile_data["api_keys"]["claude"])
+    mock_load_key.assert_called_once_with("claude", profile.api_keys["claude"])
     mock_get_provider.assert_called_once_with("claude", "test-key", session=session)
     provider.get_full_response.assert_awaited_once_with(
         messages=[{"role": "user", "content": "Generate title"}],
@@ -51,30 +55,40 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
 @pytest.mark.asyncio
 async def test_invoke_helper_ai_missing_api_key_raises_value_error():
     """Missing helper API key should fail with clear ValueError."""
-    profile_data = {"api_keys": {}}
+    profile = RuntimeProfile(
+        default_ai="claude",
+        models={"claude": "claude-haiku-4-5"},
+        chats_dir=".",
+        logs_dir=".",
+        api_keys={},
+        timeout=300,
+    )
 
     with patch("polychat.logging.log_event"):
         with pytest.raises(ValueError, match="No API key configured for helper AI: claude"):
             await invoke_helper_ai(
                 helper_ai="claude",
                 helper_model="claude-haiku-4-5",
-                profile=profile_data,
+                profile=profile,
                 messages=[{"role": "user", "content": "test"}],
             )
 
 
 @pytest.mark.asyncio
 async def test_invoke_helper_ai_applies_helper_limits_when_configured():
-    profile_data = {
-        "api_keys": {
-            "claude": {"type": "direct", "value": "test-key"},
-        },
-        "ai_limits": {
+    profile = RuntimeProfile(
+        default_ai="claude",
+        models={"claude": "claude-haiku-4-5"},
+        chats_dir=".",
+        logs_dir=".",
+        api_keys={"claude": {"type": "direct", "value": "test-key"}},
+        timeout=300,
+        ai_limits={
             "helper": {
                 "max_output_tokens": 123,
             }
         },
-    }
+    )
     provider = MagicMock()
     provider.get_full_response = AsyncMock(return_value=("ok", {"usage": {}}))
 
@@ -84,7 +98,7 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
                 await invoke_helper_ai(
                     helper_ai="claude",
                     helper_model="claude-haiku-4-5",
-                    profile=profile_data,
+                    profile=profile,
                     messages=[{"role": "user", "content": "Generate title"}],
                 )
 

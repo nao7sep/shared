@@ -6,7 +6,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_show_status_all_fields_align_values(command_handler, mock_session_manager):
     """All field values should begin in the same column."""
-    mock_session_manager.chat["metadata"]["system_prompt"] = "@/prompts/system/default.txt"
+    mock_session_manager.chat.metadata.system_prompt = "@/prompts/system/default.txt"
 
     result = await command_handler.show_status("")
 
@@ -51,7 +51,7 @@ async def test_show_status_all_fields_align_values(command_handler, mock_session
 @pytest.mark.asyncio
 async def test_show_status_system_prompt_none_has_readable_spacing(command_handler, mock_session_manager):
     """System prompt should include a separator space even when unset."""
-    mock_session_manager.chat["metadata"]["system_prompt"] = None
+    mock_session_manager.chat.metadata.system_prompt = None
     mock_session_manager.system_prompt_path = None
 
     result = await command_handler.show_status("")

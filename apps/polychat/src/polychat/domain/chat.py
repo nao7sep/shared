@@ -1,4 +1,4 @@
-"""Typed chat domain models and dict serialization helpers."""
+"""Typed chat domain models and serialization helpers."""
 
 from __future__ import annotations
 
@@ -97,6 +97,27 @@ class ChatMetadata:
         }
         payload.update(self.extras)
         return payload
+
+
+@dataclass(slots=True, frozen=True)
+class ChatListEntry:
+    """Structured record returned by list_chats()."""
+
+    filename: str
+    path: str
+    title: str | None
+    created_utc: str | None
+    updated_utc: str | None
+    message_count: int
+
+
+@dataclass(slots=True)
+class RetryAttempt:
+    """Structured retry attempt stored during retry mode."""
+
+    user_msg: str
+    assistant_msg: str
+    citations: list[Citation] | None = None
 
 
 @dataclass(slots=True)

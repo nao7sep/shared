@@ -7,6 +7,8 @@ from typing import Any, Mapping
 
 import httpx
 
+from .domain.profile import RuntimeProfile
+
 
 # Profile-level timeout defaults and mode behavior.
 # The previous default of 30 s caused 504 DEADLINE_EXCEEDED errors from
@@ -67,10 +69,12 @@ def _normalize_timeout_value(value: Any, fallback: int | float) -> int | float:
     return normalized
 
 
-def resolve_profile_timeout(profile: Mapping[str, Any] | None) -> int | float:
+def resolve_profile_timeout(profile: RuntimeProfile | Mapping[str, Any] | None) -> int | float:
     """Resolve session/profile timeout with a safe default."""
     raw_timeout = None
-    if isinstance(profile, Mapping):
+    if isinstance(profile, RuntimeProfile):
+        raw_timeout = profile.timeout
+    elif isinstance(profile, Mapping):
         raw_timeout = profile.get("timeout")
     return _normalize_timeout_value(raw_timeout, DEFAULT_PROFILE_TIMEOUT_SEC)
 

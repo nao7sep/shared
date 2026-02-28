@@ -15,6 +15,7 @@ from ..formatting.citations import format_citation_list
 from ..logging import log_event
 from ..orchestrator import ChatOrchestrator
 from ..orchestration.types import PrintAction, SendAction
+from ..domain.chat import ChatDocument
 from ..session_manager import SessionManager
 from ..streaming import display_streaming_response
 
@@ -25,7 +26,7 @@ async def execute_send_action(
     manager: SessionManager,
     orchestrator: ChatOrchestrator,
     fallback_chat_path: Optional[str],
-    fallback_chat_data: Optional[dict],
+    fallback_chat_data: Optional[ChatDocument],
 ) -> None:
     """Execute one orchestrator SendAction and print response output."""
     effective_path = action.chat_path if action.chat_path is not None else fallback_chat_path

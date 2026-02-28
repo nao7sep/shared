@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
 
+from ..domain.chat import ChatListEntry
 from .constants import DATETIME_FORMAT_SHORT, DISPLAY_UNKNOWN
 
 
@@ -21,12 +21,12 @@ def _format_updated_time(updated_utc: object) -> str:
         return str(DISPLAY_UNKNOWN)
 
 
-def format_chat_list_item(chat: dict[str, Any], index: int) -> str:
+def format_chat_list_item(chat: ChatListEntry, index: int) -> str:
     """Format one chat record for interactive list display."""
-    filename = str(chat.get("filename", DISPLAY_UNKNOWN))
-    title = chat.get("title")
-    msg_count = int(chat.get("message_count", 0) or 0)
-    updated = _format_updated_time(chat.get("updated_utc"))
+    filename = chat.filename
+    title = chat.title
+    msg_count = chat.message_count
+    updated = _format_updated_time(chat.updated_utc)
 
     header = f"[{index}] {filename} | {msg_count} msgs | {updated}"
     if isinstance(title, str) and title.strip():

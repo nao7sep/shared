@@ -44,9 +44,9 @@ class RuntimeProfile:
 
     @classmethod
     def from_dict(cls, profile: Mapping[str, Any]) -> RuntimeProfile:
-        """Create typed runtime profile from raw mapped profile data."""
+        """Create typed runtime profile from raw profile data."""
         if not isinstance(profile, Mapping):
-            raise ValueError("Profile must be a dictionary-like mapping")
+            raise ValueError("Profile must be a mapping")
 
         missing = [
             key
@@ -128,7 +128,7 @@ class RuntimeProfile:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize runtime profile to standard dict shape."""
+        """Serialize runtime profile for JSON persistence."""
         profile: dict[str, Any] = {
             "default_ai": self.default_ai,
             "models": dict(self.models),

@@ -1,7 +1,9 @@
 """Tests for web search feature."""
 
 from polychat.ai.capabilities import SEARCH_SUPPORTED_PROVIDERS, provider_supports_search
+from polychat.domain.chat import ChatDocument
 from polychat.session.state import SessionState
+from test_helpers import make_profile
 
 
 def test_search_supported_providers():
@@ -28,8 +30,8 @@ def test_session_state_search_mode_default():
         current_model="gpt-5",
         helper_ai="openai",
         helper_model="gpt-5-mini",
-        profile={},
-        chat={},
+        profile=make_profile(),
+        chat=ChatDocument.empty(),
     )
     assert state.search_mode is False
 
@@ -41,8 +43,8 @@ def test_session_state_search_mode_can_be_set():
         current_model="gpt-5",
         helper_ai="openai",
         helper_model="gpt-5-mini",
-        profile={},
-        chat={},
+        profile=make_profile(),
+        chat=ChatDocument.empty(),
     )
     state.search_mode = True
     assert state.search_mode is True
@@ -55,8 +57,8 @@ def test_session_state_both_modes_can_be_enabled():
         current_model="gpt-5",
         helper_ai="openai",
         helper_model="gpt-5-mini",
-        profile={},
-        chat={},
+        profile=make_profile(),
+        chat=ChatDocument.empty(),
     )
     state.secret_mode = True
     state.search_mode = True
@@ -71,8 +73,8 @@ def test_session_state_modes_are_independent():
         current_model="gpt-5",
         helper_ai="openai",
         helper_model="gpt-5-mini",
-        profile={},
-        chat={},
+        profile=make_profile(),
+        chat=ChatDocument.empty(),
     )
 
     # Enable search, verify secret is still off

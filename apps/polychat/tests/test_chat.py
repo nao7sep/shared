@@ -3,6 +3,7 @@
 import asyncio
 import json
 import pytest
+from polychat.domain.chat import ChatDocument
 from polychat.chat import (
     load_chat,
     save_chat,
@@ -22,11 +23,11 @@ def test_load_chat_nonexistent_file(tmp_path):
     chat = load_chat(str(chat_path))
 
     # Should return empty structure
-    assert "metadata" in chat
-    assert "messages" in chat
-    assert chat["messages"] == []
-    assert chat["metadata"]["title"] is None
-    assert chat["metadata"]["created_utc"] is None
+    assert hasattr(chat, "metadata")
+    assert hasattr(chat, "messages")
+    assert len(chat.messages) == 0
+    assert chat.metadata.title is None
+    assert chat.metadata.created_utc is None
 
 
 def test_load_chat_valid_file(tmp_path):
@@ -56,9 +57,9 @@ def test_load_chat_valid_file(tmp_path):
 
     chat = load_chat(str(chat_path))
 
-    assert chat["metadata"]["title"] == "Test Chat"
-    assert len(chat["messages"]) == 1
-    assert chat["messages"][0]["role"] == "user"
+    assert chat.metadata.title == "Test Chat"
+    assert len(chat.messages) == 1
+    assert chat.messages[0].role == "user"
 
 
 def test_load_chat_invalid_json(tmp_path):
@@ -123,12 +124,12 @@ def test_load_chat_normalizes_string_content_and_metadata_defaults(tmp_path):
 
     loaded = load_chat(str(chat_path))
 
-    assert loaded["messages"][0]["content"] == ["Hello", "World"]
-    assert loaded["metadata"]["title"] == "Legacy"
-    assert loaded["metadata"]["summary"] is None
-    assert loaded["metadata"]["system_prompt"] is None
-    assert loaded["metadata"]["created_utc"] is None
-    assert loaded["metadata"]["updated_utc"] is None
+    assert loaded.messages[0].content == ["Hello", "World"]
+    assert loaded.metadata.title == "Legacy"
+    assert loaded.metadata.summary is None
+    assert loaded.metadata.system_prompt is None
+    assert loaded.metadata.created_utc is None
+    assert loaded.metadata.updated_utc is None
 
 
 def test_load_chat_rejects_invalid_metadata_type(tmp_path):
@@ -182,7 +183,7 @@ def test_load_chat_casts_list_content_entries_to_strings(tmp_path):
         json.dump(chat_data, f)
 
     loaded = load_chat(str(chat_path))
-    assert loaded["messages"][0]["content"] == ["ok", "1", "None"]
+    assert loaded.messages[0].content == ["ok", "1", "None"]
 
 
 @pytest.mark.asyncio
@@ -190,7 +191,7 @@ async def test_save_chat_basic(tmp_path):
     """Test basic chat save operation."""
     chat_path = tmp_path / "save_test.json"
 
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {
             "title": "Save Test",
             "summary": None,
@@ -205,7 +206,7 @@ async def test_save_chat_basic(tmp_path):
                 "content": ["Test message"]
             }
         ]
-    }
+    })
 
     await save_chat(str(chat_path), chat_data)
 
@@ -225,7 +226,7 @@ async def test_save_chat_creates_directory(tmp_path):
     """Test that save_chat creates parent directory if missing."""
     chat_path = tmp_path / "nested" / "dir" / "chat.json"
 
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {
             "title": None,
             "summary": None,
@@ -234,7 +235,7 @@ async def test_save_chat_creates_directory(tmp_path):
             "updated_utc": None,
         },
         "messages": []
-    }
+    })
 
     await save_chat(str(chat_path), chat_data)
 
@@ -248,7 +249,7 @@ async def test_save_chat_updates_timestamps(tmp_path):
     """save_chat should update timestamps only when persisted payload changes."""
     chat_path = tmp_path / "timestamps.json"
 
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {
             "title": None,
             "summary": None,
@@ -257,35 +258,35 @@ async def test_save_chat_updates_timestamps(tmp_path):
             "updated_utc": None,
         },
         "messages": []
-    }
+    })
 
     await save_chat(str(chat_path), chat_data)
 
     # Both should be set
-    assert chat_data["metadata"]["created_utc"] is not None
-    assert chat_data["metadata"]["updated_utc"] is not None
+    assert chat_data.metadata.created_utc is not None
+    assert chat_data.metadata.updated_utc is not None
 
     # They should be the same on first save
-    assert chat_data["metadata"]["created_utc"] == chat_data["metadata"]["updated_utc"]
+    assert chat_data.metadata.created_utc == chat_data.metadata.updated_utc
 
     # Save again without mutation: no-op write should keep updated_at stable
-    original_created = chat_data["metadata"]["created_utc"]
-    original_updated = chat_data["metadata"]["updated_utc"]
+    original_created = chat_data.metadata.created_utc
+    original_updated = chat_data.metadata.updated_utc
     await asyncio.sleep(0.001)
     await save_chat(str(chat_path), chat_data)
 
     # No persisted change -> created_at and updated_at should remain unchanged.
-    assert chat_data["metadata"]["created_utc"] == original_created
-    assert chat_data["metadata"]["updated_utc"] == original_updated
+    assert chat_data.metadata.created_utc == original_created
+    assert chat_data.metadata.updated_utc == original_updated
 
     # Mutate persisted payload and save again.
-    chat_data["metadata"]["title"] = "Updated"
+    chat_data.metadata.title = "Updated"
     await asyncio.sleep(0.001)
     await save_chat(str(chat_path), chat_data)
 
     # created_at should stay fixed; updated_at should move forward on mutation.
-    assert chat_data["metadata"]["created_utc"] == original_created
-    assert chat_data["metadata"]["updated_utc"] != original_updated
+    assert chat_data.metadata.created_utc == original_created
+    assert chat_data.metadata.updated_utc != original_updated
 
 
 @pytest.mark.asyncio
@@ -293,7 +294,7 @@ async def test_save_chat_json_format(tmp_path):
     """Test that saved JSON is properly formatted."""
     chat_path = tmp_path / "formatted.json"
 
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {
             "title": "Formatted Test",
             "summary": None,
@@ -302,7 +303,7 @@ async def test_save_chat_json_format(tmp_path):
             "updated_utc": None,
         },
         "messages": []
-    }
+    })
 
     await save_chat(str(chat_path), chat_data)
 
@@ -320,7 +321,7 @@ async def test_save_chat_json_format(tmp_path):
 async def test_save_chat_does_not_persist_hex_id(tmp_path):
     """Runtime-only message hex IDs should not be written to disk."""
     chat_path = tmp_path / "no-hex-id.json"
-    chat_data = {
+    chat_data = ChatDocument.from_raw({
         "metadata": {
             "title": "Hex Test",
             "summary": None,
@@ -336,7 +337,7 @@ async def test_save_chat_does_not_persist_hex_id(tmp_path):
                 "hex_id": "a3f",
             }
         ],
-    }
+    })
 
     await save_chat(str(chat_path), chat_data)
 
@@ -345,28 +346,28 @@ async def test_save_chat_does_not_persist_hex_id(tmp_path):
 
     assert "hex_id" not in saved_data["messages"][0]
     # In-memory object keeps runtime field for session UX.
-    assert chat_data["messages"][0]["hex_id"] == "a3f"
+    assert chat_data.messages[0].hex_id == "a3f"
 
 
 def test_add_user_message(sample_chat):
     """Test adding user message."""
     add_user_message(sample_chat, "New message")
 
-    messages = sample_chat["messages"]
+    messages = sample_chat.messages
     assert len(messages) == 3
-    assert messages[-1]["role"] == "user"
-    assert messages[-1]["content"] == ["New message"]
+    assert messages[-1].role == "user"
+    assert messages[-1].content == ["New message"]
 
 
 def test_add_assistant_message(sample_chat):
     """Test adding assistant message."""
     add_assistant_message(sample_chat, "Response text", "gpt-5-mini")
 
-    messages = sample_chat["messages"]
+    messages = sample_chat.messages
     assert len(messages) == 3
-    assert messages[-1]["role"] == "assistant"
-    assert messages[-1]["content"] == ["Response text"]
-    assert messages[-1]["model"] == "gpt-5-mini"
+    assert messages[-1].role == "assistant"
+    assert messages[-1].content == ["Response text"]
+    assert messages[-1].model == "gpt-5-mini"
 
 
 def test_add_assistant_message_with_citations(sample_chat):
@@ -374,11 +375,11 @@ def test_add_assistant_message_with_citations(sample_chat):
     citations = [{"url": "https://example.com", "title": "Example"}]
     add_assistant_message(sample_chat, "Response text", "gpt-5-mini", citations=citations)
 
-    messages = sample_chat["messages"]
+    messages = sample_chat.messages
     assert len(messages) == 3
-    assert messages[-1]["role"] == "assistant"
-    assert messages[-1]["model"] == "gpt-5-mini"
-    assert messages[-1]["citations"] == citations
+    assert messages[-1].role == "assistant"
+    assert messages[-1].model == "gpt-5-mini"
+    assert messages[-1].citations == citations
 
 
 def test_add_error_message(sample_chat):
@@ -389,11 +390,11 @@ def test_add_error_message(sample_chat):
         {"error_code": 429}
     )
 
-    messages = sample_chat["messages"]
+    messages = sample_chat.messages
     assert len(messages) == 3
-    assert messages[-1]["role"] == "error"
-    assert messages[-1]["content"] == ["API Error"]
-    assert messages[-1]["details"]["error_code"] == 429
+    assert messages[-1].role == "error"
+    assert messages[-1].content == ["API Error"]
+    assert messages[-1].details["error_code"] == 429
 
 
 def test_delete_message_and_following(sample_chat):
@@ -406,7 +407,7 @@ def test_delete_message_and_following(sample_chat):
     count = delete_message_and_following(sample_chat, 1)
 
     assert count == 3  # Deleted 3 messages
-    assert len(sample_chat["messages"]) == 1
+    assert len(sample_chat.messages) == 1
 
 
 def test_delete_message_invalid_index(sample_chat):
@@ -419,8 +420,8 @@ def test_update_metadata(sample_chat):
     """Test updating metadata."""
     update_metadata(sample_chat, title="New Title", summary="New Summary")
 
-    assert sample_chat["metadata"]["title"] == "New Title"
-    assert sample_chat["metadata"]["summary"] == "New Summary"
+    assert sample_chat.metadata.title == "New Title"
+    assert sample_chat.metadata.summary == "New Summary"
 
 
 def test_update_metadata_invalid_field(sample_chat):

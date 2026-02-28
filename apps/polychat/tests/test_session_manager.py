@@ -3,7 +3,10 @@
 import json
 
 import pytest
+from polychat.domain.profile import RuntimeProfile
+from polychat.domain.chat import ChatDocument, ChatMessage
 from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 class TestSessionManagerCreation:
@@ -12,7 +15,7 @@ class TestSessionManagerCreation:
     def test_create_minimal_manager(self):
         """Test creating manager with minimal required arguments."""
         manager = SessionManager(
-            profile={"timeout": 300},
+            profile=make_profile(timeout=300),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -21,14 +24,15 @@ class TestSessionManagerCreation:
         assert manager.current_model == "claude-haiku-4-5"
         assert manager.helper_ai == "claude"  # Defaults to current_ai
         assert manager.helper_model == "claude-haiku-4-5"  # Defaults to current_model
-        assert manager.profile == {"timeout": 300}
-        assert manager.chat == {}
+        assert isinstance(manager.profile, RuntimeProfile)
+        assert manager.profile.timeout == 300
+        assert isinstance(manager.chat, ChatDocument)
         assert manager.input_mode == "quick"
 
     def test_create_with_explicit_helper(self):
         """Test creating manager with explicit helper AI."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
             helper_ai="openai",
@@ -41,43 +45,56 @@ class TestSessionManagerCreation:
 
     def test_create_with_chat(self):
         """Test creating manager with existing chat."""
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
+            "metadata": {},
             "messages": [
                 {"role": "user", "content": "Hello"},
                 {"role": "assistant", "content": "Hi"},
             ]
-        }
+        })
 
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
             chat=chat_data,
         )
 
-        assert manager.chat == chat_data
+        assert isinstance(manager.chat, ChatDocument)
+        assert len(manager.chat.messages) == 2
         # Hex IDs should be initialized
         assert len(manager.message_hex_ids) == 2
         assert len(manager.hex_id_set) == 2
 
     def test_create_tracks_default_timeout(self):
         manager = SessionManager(
-            profile={"timeout": 45},
+            profile=make_profile(timeout=45),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
 
         assert manager.default_timeout == 45
-        assert manager.profile["timeout"] == 45
+        assert manager.profile.timeout == 45
 
 
 class TestSystemPromptLoading:
     """Test SessionManager system prompt loading."""
 
+    def _profile_with_system_prompt(self, system_prompt: str) -> RuntimeProfile:
+        return RuntimeProfile(
+            default_ai="claude",
+            models={"claude": "claude-haiku-4-5"},
+            chats_dir=".",
+            logs_dir=".",
+            api_keys={},
+            timeout=300,
+            system_prompt=system_prompt,
+        )
+
     def test_load_system_prompt_from_file(self, tmp_path):
         prompt_file = tmp_path / "prompt.txt"
         prompt_file.write_text("Prompt from file\n", encoding="utf-8")
-        profile_data = {"system_prompt": str(prompt_file)}
+        profile_data = self._profile_with_system_prompt(str(prompt_file))
 
         prompt, prompt_path, warning = SessionManager.load_system_prompt(profile_data)
 
@@ -86,7 +103,7 @@ class TestSystemPromptLoading:
         assert warning is None
 
     def test_load_system_prompt_returns_warning_on_missing_file(self):
-        profile_data = {"system_prompt": "/tmp/nonexistent-prompt-file.txt"}
+        profile_data = self._profile_with_system_prompt("/tmp/nonexistent-prompt-file.txt")
 
         prompt, prompt_path, warning = SessionManager.load_system_prompt(profile_data)
 
@@ -95,7 +112,7 @@ class TestSystemPromptLoading:
         assert warning is not None
 
     def test_load_system_prompt_strict_raises_on_missing_file(self):
-        profile_data = {"system_prompt": "/tmp/nonexistent-prompt-file.txt"}
+        profile_data = self._profile_with_system_prompt("/tmp/nonexistent-prompt-file.txt")
 
         with pytest.raises(ValueError, match="Could not load system prompt"):
             SessionManager.load_system_prompt(profile_data, strict=True)
@@ -108,7 +125,7 @@ class TestSystemPromptLoading:
             json.dumps({"system_prompt": str(prompt_file)}), encoding="utf-8"
         )
         # Simulate load_profile-mapped value while preserving a raw profile source.
-        profile_data = {"system_prompt": str(prompt_file.resolve())}
+        profile_data = self._profile_with_system_prompt(str(prompt_file.resolve()))
 
         prompt, prompt_path, warning = SessionManager.load_system_prompt(
             profile_data,
@@ -126,7 +143,7 @@ class TestPropertyAccess:
     def test_read_properties(self):
         """Test reading properties."""
         manager = SessionManager(
-            profile={"timeout": 300},
+            profile=make_profile(timeout=300),
             current_ai="claude",
             current_model="claude-haiku-4-5",
             system_prompt="Be helpful",
@@ -135,7 +152,8 @@ class TestPropertyAccess:
 
         assert manager.current_ai == "claude"
         assert manager.current_model == "claude-haiku-4-5"
-        assert manager.profile == {"timeout": 300}
+        assert isinstance(manager.profile, RuntimeProfile)
+        assert manager.profile.timeout == 300
         assert manager.system_prompt == "Be helpful"
         assert manager.input_mode == "compose"
         assert manager.retry_mode is False
@@ -144,7 +162,7 @@ class TestPropertyAccess:
     def test_write_properties(self):
         """Test writing properties."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -163,7 +181,7 @@ class TestPropertyAccess:
     def test_invalid_input_mode_rejected(self):
         """Test that invalid input mode is rejected."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -175,7 +193,7 @@ class TestPropertyAccess:
 class TestTimeoutManagement:
     def test_set_timeout_normalizes_and_clears_cache(self):
         manager = SessionManager(
-            profile={"timeout": 300},
+            profile=make_profile(timeout=300),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -184,79 +202,30 @@ class TestTimeoutManagement:
         timeout = manager.set_timeout(60.0)
 
         assert timeout == 60
-        assert manager.profile["timeout"] == 60
+        assert manager.profile.timeout == 60
         assert manager.get_cached_provider("claude", "k") is None
 
     def test_reset_timeout_to_default_uses_startup_value(self):
         manager = SessionManager(
-            profile={"timeout": 300},
+            profile=make_profile(timeout=300),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
-        manager.profile["timeout"] = 90
+        manager._state.profile.timeout = 90
 
         timeout = manager.reset_timeout_to_default()
 
         assert timeout == 300
-        assert manager.profile["timeout"] == 300
+        assert manager.profile.timeout == 300
 
 
-class TestDictLikeAccess:
-    """Test dict-like access (backward compatibility)."""
-
-    def test_getitem_access(self):
-        """Test accessing values via dict-like syntax."""
-        manager = SessionManager(
-            profile={"timeout": 300},
-            current_ai="claude",
-            current_model="claude-haiku-4-5",
-        )
-
-        assert manager["current_ai"] == "claude"
-        assert manager["current_model"] == "claude-haiku-4-5"
-        assert manager["profile"] == {"timeout": 300}
-        assert manager["input_mode"] == "quick"
-
-    def test_setitem_access(self):
-        """Test setting values via dict-like syntax."""
-        manager = SessionManager(
-            profile={},
-            current_ai="claude",
-            current_model="claude-haiku-4-5",
-        )
-
-        manager["current_ai"] = "openai"
-        manager["input_mode"] = "compose"
-
-        assert manager["current_ai"] == "openai"
-        assert manager["input_mode"] == "compose"
-
-    def test_get_with_default(self):
-        """Test get() method with default value."""
-        manager = SessionManager(
-            profile={},
-            current_ai="claude",
-            current_model="claude-haiku-4-5",
-        )
-
-        assert manager.get("current_ai") == "claude"
-        assert manager.get("nonexistent", "default") == "default"
-
-    def test_invalid_key_raises_error(self):
-        """Test that accessing invalid key raises KeyError."""
-        manager = SessionManager(
-            profile={},
-            current_ai="claude",
-            current_model="claude-haiku-4-5",
-        )
-
-        with pytest.raises(KeyError, match="Unknown session key"):
-            _ = manager["invalid_key"]
+class TestSerialization:
+    """Test serialization of session state."""
 
     def test_to_dict_conversion(self):
-        """Test converting manager to dictionary."""
+        """Test converting manager to a diagnostic snapshot."""
         manager = SessionManager(
-            profile={"timeout": 300},
+            profile=make_profile(timeout=300),
             current_ai="claude",
             current_model="claude-haiku-4-5",
             input_mode="compose",
@@ -267,7 +236,8 @@ class TestDictLikeAccess:
         assert isinstance(session_dict, dict)
         assert session_dict["current_ai"] == "claude"
         assert session_dict["current_model"] == "claude-haiku-4-5"
-        assert session_dict["profile"] == {"timeout": 300}
+        assert isinstance(session_dict["profile"], RuntimeProfile)
+        assert session_dict["profile"].timeout == 300
         assert session_dict["input_mode"] == "compose"
         assert session_dict["retry_mode"] is False
 
@@ -278,10 +248,10 @@ class TestChatManagement:
     def test_switch_chat(self):
         """Test switching to a different chat."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
-            chat={"messages": [{"role": "user", "content": "old"}]},
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "old"}]}),
         )
 
         # Enter retry mode to test that it gets cleared
@@ -289,11 +259,12 @@ class TestChatManagement:
         assert manager.retry_mode is True
 
         # Switch to new chat
-        new_chat = {"messages": [{"role": "user", "content": "new"}]}
+        new_chat = ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "new"}]})
         manager.switch_chat("/path/to/new.json", new_chat)
 
         # Chat should be updated
-        assert manager.chat == new_chat
+        assert len(manager.chat.messages) == 1
+        assert manager.chat.messages[0].role == "user"
 
         # Hex IDs should be reinitialized
         assert len(manager.message_hex_ids) == 1
@@ -304,26 +275,26 @@ class TestChatManagement:
     def test_switch_chat_backfills_missing_system_prompt_metadata(self):
         """Switching to old chats should backfill missing system prompt metadata."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
             system_prompt_path="@/prompts/system/default.txt",
         )
 
-        new_chat = {
+        new_chat = ChatDocument.from_raw({
             "metadata": {"title": "Legacy", "system_prompt": None},
             "messages": [],
-        }
+        })
         manager.switch_chat("/path/to/new.json", new_chat)
-        assert manager.chat["metadata"]["system_prompt"] == "@/prompts/system/default.txt"
+        assert manager.chat.metadata.system_prompt == "@/prompts/system/default.txt"
 
     def test_close_chat(self):
         """Test closing current chat."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
-            chat={"messages": [{"role": "user", "content": "test"}]},
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "test"}]}),
         )
 
         # Set up some state
@@ -333,7 +304,7 @@ class TestChatManagement:
         manager.close_chat()
 
         # Chat should be empty
-        assert manager.chat == {}
+        assert isinstance(manager.chat, ChatDocument)
 
         # Hex IDs should be cleared
         assert manager.message_hex_ids == {}
@@ -349,7 +320,7 @@ class TestRetryModeManagement:
     def test_enter_retry_mode(self):
         """Test entering retry mode."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -363,7 +334,7 @@ class TestRetryModeManagement:
     def test_cannot_enter_retry_while_in_secret_mode(self):
         """Test that entering retry mode while in secret mode raises error."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -376,7 +347,7 @@ class TestRetryModeManagement:
     def test_add_and_get_retry_attempt(self):
         """Test storing and retrieving retry attempts by hex ID."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -386,13 +357,13 @@ class TestRetryModeManagement:
 
         attempt = manager.get_retry_attempt(retry_hex_id)
         assert attempt is not None
-        assert attempt["user_msg"] == "new question"
-        assert attempt["assistant_msg"] == "new answer"
+        assert attempt.user_msg == "new question"
+        assert attempt.assistant_msg == "new answer"
 
     def test_get_latest_retry_attempt_id(self):
         """Most recently added retry attempt ID should be returned."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -407,7 +378,7 @@ class TestRetryModeManagement:
     def test_get_latest_retry_attempt_id_empty(self):
         """No retry attempts should return None."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -419,7 +390,7 @@ class TestRetryModeManagement:
     def test_add_retry_attempt_without_mode_raises_error(self):
         """Test that adding retry attempt outside retry mode raises error."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -430,7 +401,7 @@ class TestRetryModeManagement:
     def test_get_retry_context_without_mode_raises_error(self):
         """Test that getting retry context outside retry mode raises error."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -441,7 +412,7 @@ class TestRetryModeManagement:
     def test_exit_retry_mode(self):
         """Test exiting retry mode clears all state."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -463,7 +434,7 @@ class TestSecretModeManagement:
     def test_enter_secret_mode(self):
         """Test entering secret mode."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -480,7 +451,7 @@ class TestSecretModeManagement:
     def test_cannot_enter_secret_while_in_retry_mode(self):
         """Test that entering secret mode while in retry mode raises error."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -493,7 +464,7 @@ class TestSecretModeManagement:
     def test_get_secret_context_without_mode_raises_error(self):
         """Test that getting secret context outside secret mode raises error."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -504,7 +475,7 @@ class TestSecretModeManagement:
     def test_exit_secret_mode(self):
         """Test exiting secret mode clears all state."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -521,17 +492,17 @@ class TestHexIdManagement:
     def test_assign_message_hex_id(self):
         """Test assigning hex ID to a new message."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
-            chat={"messages": [{"role": "user", "content": "Hello"}]},
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "Hello"}]}),
         )
 
         # Should have 1 hex ID from initialization
         assert len(manager.message_hex_ids) == 1
 
         # Add a second message, then assign ID
-        manager.chat["messages"].append({"role": "assistant", "content": "Hi"})
+        manager.chat.messages.append(ChatMessage.from_raw({"role": "assistant", "content": "Hi"}))
 
         # Assign new hex ID for second message
         hex_id = manager.assign_message_hex_id(1)
@@ -543,10 +514,10 @@ class TestHexIdManagement:
     def test_get_message_hex_id(self):
         """Test getting hex ID for a message."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
-            chat={"messages": [{"role": "user", "content": "Hello"}]},
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "Hello"}]}),
         )
 
         hex_id = manager.get_message_hex_id(0)
@@ -559,10 +530,10 @@ class TestHexIdManagement:
     def test_remove_message_hex_id(self):
         """Test removing hex ID for a message."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
-            chat={"messages": [{"role": "user", "content": "Hello"}]},
+            chat=ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "Hello"}]}),
         )
 
         initial_count = len(manager.message_hex_ids)
@@ -578,15 +549,16 @@ class TestHexIdManagement:
     def test_pop_message_removes_hex_id_from_set(self):
         """Popping a message should atomically clean up its hex_id tracking."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
-            chat={
+            chat=ChatDocument.from_raw({
+                "metadata": {},
                 "messages": [
                     {"role": "user", "content": "Hello"},
                     {"role": "assistant", "content": "Hi"},
                 ]
-            },
+            }),
         )
         popped_hex = manager.get_message_hex_id(1)
         assert popped_hex in manager.hex_id_set
@@ -595,20 +567,21 @@ class TestHexIdManagement:
 
         assert popped is not None
         assert popped_hex not in manager.hex_id_set
-        assert len(manager.chat["messages"]) == 1
+        assert len(manager.chat.messages) == 1
 
     def test_pop_message_with_explicit_chat_data(self):
         """pop_message should support explicit chat objects used by orchestrator."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
-        chat_data = {
+        chat_data = ChatDocument.from_raw({
+            "metadata": {},
             "messages": [
                 {"role": "user", "content": "Hello", "hex_id": "abc"},
             ]
-        }
+        })
         manager._state.hex_id_set.add("abc")
 
         popped = manager.pop_message(-1, chat_data)
@@ -623,7 +596,7 @@ class TestProviderCaching:
     def test_cache_and_retrieve_provider(self):
         """Test caching and retrieving provider."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -638,7 +611,7 @@ class TestProviderCaching:
     def test_cache_miss_returns_none(self):
         """Test that cache miss returns None."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -653,7 +626,7 @@ class TestProviderSwitching:
     def test_switch_provider(self):
         """Test switching to different provider."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )
@@ -666,7 +639,7 @@ class TestProviderSwitching:
     def test_toggle_input_mode(self):
         """Test toggling input mode."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
             input_mode="quick",
@@ -689,7 +662,7 @@ class TestStateSafety:
     def test_modes_are_mutually_exclusive(self):
         """Test that retry and secret modes are mutually exclusive."""
         manager = SessionManager(
-            profile={},
+            profile=make_profile(),
             current_ai="claude",
             current_model="claude-haiku-4-5",
         )

@@ -6,6 +6,7 @@ from typing import Optional
 
 from . import chat  # noqa: F401 - kept for compatibility with existing patch targets
 from .commands.types import CommandResult, CommandSignal
+from .domain.chat import ChatDocument
 from .orchestration.message_entry import MessageEntryHandlersMixin
 from .orchestration.response_handlers import ResponseHandlersMixin
 from .orchestration.signals import CommandSignalHandlersMixin
@@ -27,7 +28,7 @@ class ChatOrchestrator(
         self,
         response: CommandResult,
         current_chat_path: Optional[str],
-        current_chat_data: Optional[dict],
+        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Process command result and return a typed action for REPL."""
         if isinstance(response, CommandSignal):
