@@ -42,6 +42,14 @@ Use a single markdown file with:
 - `## Out of Scope`
 - `## Open Questions`
 
+## Existing Files
+
+When the output directory already contains files:
+
+- List filenames and directory structure to avoid naming collisions.
+- Do not read the contents of existing files.
+- Do not update or overwrite existing files.
+
 ## Output
 
 Save as `{short-description}.md` in `shared/prompts/specs/` unless the user asks for a different location.

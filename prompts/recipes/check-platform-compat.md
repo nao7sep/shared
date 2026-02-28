@@ -51,6 +51,14 @@ Before starting, determine which platforms are relevant by checking:
 - Platform differences that are handled by a dependency the project already uses.
 - Issues in test code that only runs in CI on a known platform.
 
+## Existing Files
+
+When the output directory already contains files:
+
+- List filenames and directory structure to avoid naming collisions.
+- Do not read the contents of existing files.
+- Do not update or overwrite existing files.
+
 ## Output
 
 - All good: report inline, no file.

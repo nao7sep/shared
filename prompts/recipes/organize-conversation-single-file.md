@@ -29,6 +29,14 @@ Use a single markdown file with:
 
 If topics build on each other, order sections by dependency. If topics are independent, use self-contained sections.
 
+## Existing Files
+
+When the output directory already contains files:
+
+- List filenames and directory structure to avoid naming collisions.
+- Do not read the contents of existing files.
+- Do not update or overwrite existing files.
+
 ## Output
 
 Save as `{YYYY-MM-DD}_{short-description}.md` in a location relevant to the current app/task context.

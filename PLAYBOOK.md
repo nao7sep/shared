@@ -105,3 +105,4 @@ Never use raw dicts for structured data. If data has more than one field and liv
 
 - **Git: read-only only.** AI may run git commands that inspect the repo (log, diff, status, show, blame, etc.) but must never run commands that create, modify, or delete commits, branches, tags, or remote state. Those operations are my responsibility.
 - **TODO.md is managed by `tk`** and synced with a JSON data file. Never edit `TODO.md` directly.
+- **Document output isolation.** When creating new documents (plans, specs, organized notes, etc.), AI may list directory contents — names and structure — to avoid filename collisions, but must not read the contents of existing files in the output directory. Never update or overwrite existing files.

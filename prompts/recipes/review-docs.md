@@ -28,6 +28,14 @@ After multiple rounds of implementation, docs often drift from reality. Verify e
 - Leave out implementation details unless they directly affect usage.
 - Keep language direct and example-heavy.
 
+## Existing Files
+
+When the output directory already contains files:
+
+- List filenames and directory structure to avoid naming collisions.
+- Do not read the contents of existing files.
+- Do not update or overwrite existing files.
+
 ## Output
 
 - All good: report inline, no file.

@@ -40,3 +40,11 @@ Always include a `README.md` that explains:
 - Key assumptions introduced while filling missing parts
 
 Keep documents action-oriented and example-heavy. Ensure a new reader can understand and use the subject without seeing the original conversation.
+
+## Existing Files
+
+When the output directory already contains files:
+
+- List filenames and directory structure to avoid naming collisions.
+- Do not read the contents of existing files.
+- Do not update or overwrite existing files.

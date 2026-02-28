@@ -38,6 +38,14 @@ Number them sequentially; note dependencies where one step must complete before 
 Anything that was raised but not resolved in the conversation.
 ```
 
+## Existing Files
+
+When the output directory already contains files:
+
+- List filenames and directory structure to avoid naming collisions.
+- Do not read the contents of existing files.
+- Do not update or overwrite existing files.
+
 ## Output
 
 Save the plan as `{YYYY-MM-DD}_{short-description}.md` in a location relevant to the current app/task context.

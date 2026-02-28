@@ -45,6 +45,14 @@ Read source code files only. Skip markdown (except README.md), plain text, logs,
 - Formatting or style enforcement.
 - Performance optimizations unless the current code is clearly wasteful (e.g., O(n²) where O(n) is trivial).
 
+## Existing Files
+
+When the output directory already contains files:
+
+- List filenames and directory structure to avoid naming collisions.
+- Do not read the contents of existing files.
+- Do not update or overwrite existing files.
+
 ## Output
 
 - All good: report inline, no file.
