@@ -59,11 +59,7 @@ async def test_runtime_only_commands_do_not_bump_updated_at(tmp_path: Path) -> N
 
     for command in ("/search on", "/search", "/retry", "/help", "/status", "/history 1"):
         response = await handler.execute_command(command)
-        await orchestrator.handle_command_response(
-            response,
-            current_chat_path=manager.chat_path,
-            current_chat_data=manager.chat,
-        )
+        await orchestrator.handle_command_response(response)
 
     after = manager.chat.metadata.updated_utc
     assert after == before
@@ -76,31 +72,19 @@ async def test_mutating_commands_bump_updated_at_only_on_real_changes(tmp_path: 
     initial = manager.chat.metadata.updated_utc
 
     response = await handler.execute_command("/title First title")
-    await orchestrator.handle_command_response(
-        response,
-        current_chat_path=manager.chat_path,
-        current_chat_data=manager.chat,
-    )
+    await orchestrator.handle_command_response(response)
     updated_after_title = manager.chat.metadata.updated_utc
     assert updated_after_title != initial
 
     await asyncio.sleep(0.001)
     response = await handler.execute_command("/title First title")
-    await orchestrator.handle_command_response(
-        response,
-        current_chat_path=manager.chat_path,
-        current_chat_data=manager.chat,
-    )
+    await orchestrator.handle_command_response(response)
     unchanged_after_same_title = manager.chat.metadata.updated_utc
     assert unchanged_after_same_title == updated_after_title
 
     await asyncio.sleep(0.001)
     response = await handler.execute_command("/summary New summary")
-    await orchestrator.handle_command_response(
-        response,
-        current_chat_path=manager.chat_path,
-        current_chat_data=manager.chat,
-    )
+    await orchestrator.handle_command_response(response)
     updated_after_summary = manager.chat.metadata.updated_utc
     assert updated_after_summary != unchanged_after_same_title
 

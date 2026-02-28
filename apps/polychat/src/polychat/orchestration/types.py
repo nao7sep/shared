@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
-from ..domain.chat import ChatDocument, ChatMessage
+from ..domain.chat import ChatMessage
 
 
 ActionMode = Literal["normal", "retry", "secret"]
@@ -28,11 +28,13 @@ class PrintAction:
 
 @dataclass(slots=True, frozen=True)
 class ContinueAction:
-    """Continue REPL loop, optionally updating active chat context."""
+    """Continue REPL loop, optionally printing a message.
+
+    Chat state is always read from SessionManager — this action
+    does not carry chat_path or chat_data.
+    """
 
     message: str | None = None
-    chat_path: str | None = None
-    chat_data: ChatDocument | None = None
     kind: Literal["continue"] = "continue"
 
 
@@ -45,8 +47,6 @@ class SendAction:
     search_enabled: bool | None = None
     retry_user_input: str | None = None
     assistant_hex_id: str | None = None
-    chat_path: str | None = None
-    chat_data: ChatDocument | None = None
     kind: Literal["send"] = "send"
 
 

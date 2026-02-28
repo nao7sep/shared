@@ -115,7 +115,7 @@ def print_startup_banner(
     else:
         print("Input Mode:       compose (Enter inserts new line | Option/Alt+Enter sends)")
     print("Ctrl+J also sends in both modes")
-    print("Type /help for commands • /exit or Ctrl+C to quit")
+    print("Type /help for commands • /exit or Ctrl-D to quit")
     print(borderline)
 
 
@@ -186,12 +186,12 @@ async def repl_loop(
     )
 
     prompt_session = create_prompt_session(manager)
-    print_startup_banner(manager, profile_data, chat_path)
+    print_startup_banner(manager, profile_data, manager.chat_path)
 
     while True:
         try:
             print()
-            print_mode_banner(manager, chat_data)
+            print_mode_banner(manager, manager.chat)
 
             user_input = await prompt_session.prompt_async(
                 "",
@@ -213,33 +213,23 @@ async def repl_loop(
                         command=command_name,
                         args_summary=summarize_command_args(command_name, command_args),
                         elapsed_ms=round((time.perf_counter() - command_started) * 1000, 1),
-                        chat_file=chat_path,
+                        chat_file=manager.chat_path,
                     )
 
-                    action = await orchestrator.handle_command_response(
-                        response,
-                        chat_path,
-                        chat_data,
-                    )
+                    action = await orchestrator.handle_command_response(response)
 
                     if isinstance(action, BreakAction):
                         log_event(
                             "session_stop",
                             level=logging.INFO,
                             reason="exit_command",
-                            chat_file=chat_path,
-                            message_count=len(chat_data.messages) if chat_data else 0,
+                            chat_file=manager.chat_path,
+                            message_count=len(manager.chat.messages),
                         )
                         print("Goodbye!")
                         break
 
                     elif isinstance(action, ContinueAction):
-                        if action.chat_path is not None:
-                            chat_path = action.chat_path
-                            manager.chat_path = chat_path
-                        if action.chat_data is not None:
-                            chat_data = action.chat_data
-
                         if action.message:
                             print(action.message)
 
@@ -251,8 +241,6 @@ async def repl_loop(
                             action,
                             manager=manager,
                             orchestrator=orchestrator,
-                            fallback_chat_path=chat_path,
-                            fallback_chat_data=chat_data,
                         )
 
                 except ValueError as error:
@@ -264,7 +252,7 @@ async def repl_loop(
                         args_summary=summarize_command_args(command_name, command_args),
                         error_type=type(error).__name__,
                         error=str(error),
-                        chat_file=chat_path,
+                        chat_file=manager.chat_path,
                     )
                     print(f"Error: {error}")
                 except Exception as error:
@@ -276,7 +264,7 @@ async def repl_loop(
                         args_summary=summarize_command_args(command_name, command_args),
                         error_type=type(error).__name__,
                         error=str(error),
-                        chat_file=chat_path,
+                        chat_file=manager.chat_path,
                     )
                     logging.error(
                         "Unexpected command error (command=%s): %s",
@@ -287,7 +275,7 @@ async def repl_loop(
                     print(f"Error: {error}")
                 continue
 
-            action = await orchestrator.handle_user_message(user_input, chat_path, chat_data)
+            action = await orchestrator.handle_user_message(user_input)
 
             if isinstance(action, PrintAction):
                 print()
@@ -299,8 +287,6 @@ async def repl_loop(
                     action,
                     manager=manager,
                     orchestrator=orchestrator,
-                    fallback_chat_path=chat_path,
-                    fallback_chat_data=chat_data,
                 )
                 continue
 
@@ -309,8 +295,8 @@ async def repl_loop(
                 "session_stop",
                 level=logging.INFO,
                 reason="keyboard_interrupt_or_eof",
-                chat_file=chat_path,
-                message_count=len(chat_data.messages) if chat_data else 0,
+                chat_file=manager.chat_path,
+                message_count=len(manager.chat.messages),
             )
             print("Goodbye!")
             break

@@ -9,7 +9,7 @@ from ..chat import (
     get_messages_for_ai,
     get_retry_context_for_last_interaction,
 )
-from ..domain.chat import ChatDocument, ChatMessage
+from ..domain.chat import ChatMessage
 from ..session.state import has_pending_error, pending_error_guidance
 from .types import (
     ActionMode,
@@ -35,8 +35,6 @@ class MessageEntryHandlersMixin:
         search_enabled: Optional[bool] = None,
         retry_user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
-        chat_path: Optional[str] = None,
-        chat_data: Optional[ChatDocument] = None,
     ) -> OrchestratorAction:
         """Build a send action with optional execution metadata."""
         return SendAction(
@@ -45,17 +43,16 @@ class MessageEntryHandlersMixin:
             search_enabled=search_enabled,
             retry_user_input=retry_user_input,
             assistant_hex_id=assistant_hex_id,
-            chat_path=chat_path,
-            chat_data=chat_data,
         )
 
     async def handle_user_message(
         self,
         user_input: str,
-        chat_path: Optional[str],
-        chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Process user input and return the next orchestration action."""
+        chat_path = self.manager.chat_path
+        chat_data = self.manager.chat
+
         if not chat_path:
             return PrintAction(
                 message=(
@@ -71,19 +68,19 @@ class MessageEntryHandlersMixin:
             return PrintAction(message=pending_error_guidance())
 
         if self.manager.secret_mode:
-            return await self._handle_secret_message(user_input, chat_data)
+            return await self._handle_secret_message(user_input)
 
         if self.manager.retry_mode:
-            return await self._handle_retry_message(user_input, chat_data)
+            return await self._handle_retry_message(user_input)
 
-        return await self._handle_normal_message(user_input, chat_data, chat_path)
+        return await self._handle_normal_message(user_input)
 
     async def _handle_secret_message(
         self,
         user_input: str,
-        chat_data: ChatDocument,
     ) -> OrchestratorAction:
         """Handle one message while secret mode is enabled."""
+        chat_data = self.manager.chat
         secret_context = get_messages_for_ai(chat_data)
         temp_messages = secret_context + [ChatMessage.new_user(user_input)]
 
@@ -95,9 +92,9 @@ class MessageEntryHandlersMixin:
     async def _handle_retry_message(
         self,
         user_input: str,
-        chat_data: ChatDocument,
     ) -> OrchestratorAction:
         """Handle one message while retry mode is enabled."""
+        chat_data = self.manager.chat
         try:
             retry_context = self.manager.get_retry_context()
         except ValueError:
@@ -121,10 +118,9 @@ class MessageEntryHandlersMixin:
     async def _handle_normal_message(
         self,
         user_input: str,
-        chat_data: ChatDocument,
-        chat_path: str,
     ) -> OrchestratorAction:
         """Handle one message in normal mode and persist the user turn pre-send."""
+        chat_data = self.manager.chat
         add_user_message(chat_data, user_input)
         new_msg_index = len(chat_data.messages) - 1
         self.manager.assign_message_hex_id(new_msg_index)
@@ -134,6 +130,4 @@ class MessageEntryHandlersMixin:
         return self._build_send_action(
             messages=messages,
             mode="normal",
-            chat_path=chat_path,
-            chat_data=chat_data,
         )

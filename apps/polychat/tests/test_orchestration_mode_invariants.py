@@ -50,8 +50,6 @@ async def test_pending_error_allows_retry_mode_send(orchestrator: ChatOrchestrat
 
     action = await orchestrator.handle_user_message(
         "retry question",
-        "/test/chat.json",
-        chat_data,
     )
 
     assert isinstance(action, SendAction)
@@ -67,8 +65,6 @@ async def test_pending_error_allows_secret_mode_send(orchestrator: ChatOrchestra
 
     action = await orchestrator.handle_user_message(
         "secret question",
-        "/test/chat.json",
-        chat_data,
     )
 
     assert isinstance(action, SendAction)
@@ -94,8 +90,6 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
     with patch.object(orchestrator.manager, "save_current_chat", new_callable=AsyncMock) as mock_save:
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="apply_retry", value=retry_hex_id),
-            current_chat_path="/test/chat.json",
-            current_chat_data=chat_data,
         )
 
     assert isinstance(action, PrintAction)
@@ -111,8 +105,6 @@ async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -
 
     action = await orchestrator.handle_command_response(
         CommandSignal(kind="cancel_retry"),
-        current_chat_path=None,
-        current_chat_data=None,
     )
 
     assert isinstance(action, PrintAction)

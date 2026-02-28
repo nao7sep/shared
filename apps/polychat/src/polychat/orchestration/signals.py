@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Awaitable, Callable, Optional
 
 from ..commands.types import CommandSignal
-from ..domain.chat import ChatDocument, ChatMessage, RetryAttempt
+from ..domain.chat import ChatMessage, RetryAttempt
 from ..formatting.text import text_to_lines
 from .types import (
     BreakAction,
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ..session_manager import SessionManager
 
 SignalDispatchHandler = Callable[
-    [CommandSignal, Optional[str], Optional[ChatDocument]],
+    [CommandSignal],
     Awaitable[OrchestratorAction],
 ]
 
@@ -116,61 +116,47 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
     async def _handle_command_signal(
         self,
         signal: CommandSignal,
-        *,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         """Handle typed command-layer control signals."""
         handler = self._signal_handlers().get(signal.kind)
         if handler is None:
             return PrintAction(message=f"Error: Unknown command signal '{signal.kind}'")
-        return await handler(signal, current_chat_path, current_chat_data)
+        return await handler(signal)
 
     async def _dispatch_exit(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
-        del signal, current_chat_path, current_chat_data
+        del signal
         return BreakAction()
 
     async def _dispatch_new_chat(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         if not signal.chat_path:
             return PrintAction(message="Error: Invalid command signal (missing new chat path)")
-        return await self._handle_new_chat(signal.chat_path, current_chat_path, current_chat_data)
+        return await self._handle_new_chat(signal.chat_path)
 
     async def _dispatch_open_chat(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         if not signal.chat_path:
             return PrintAction(message="Error: Invalid command signal (missing open chat path)")
-        return await self._handle_open_chat(signal.chat_path, current_chat_path, current_chat_data)
+        return await self._handle_open_chat(signal.chat_path)
 
     async def _dispatch_close_chat(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         del signal
-        return await self._handle_close_chat(current_chat_path, current_chat_data)
+        return await self._handle_close_chat()
 
     async def _dispatch_rename_current(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
-        del current_chat_path, current_chat_data
         if not signal.chat_path:
             return PrintAction(message="Error: Invalid command signal (missing rename path)")
         return self._handle_rename_current(signal.chat_path)
@@ -178,63 +164,51 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
     async def _dispatch_delete_current(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         if signal.value is None:
             return PrintAction(message="Error: Invalid command signal (missing deleted filename)")
-        return await self._handle_delete_current(
-            signal.value,
-            current_chat_path,
-            current_chat_data,
-        )
+        return await self._handle_delete_current(signal.value)
 
     async def _dispatch_apply_retry(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
         retry_hex_id = (signal.value or "").strip().lower()
         if not retry_hex_id:
             return PrintAction(message="Retry ID not found")
-        return await self._handle_apply_retry(current_chat_path, current_chat_data, retry_hex_id)
+        return await self._handle_apply_retry(retry_hex_id)
 
     async def _dispatch_cancel_retry(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
-        del signal, current_chat_path, current_chat_data
+        del signal
         return self._handle_cancel_retry()
 
     async def _dispatch_clear_secret_context(
         self,
         signal: CommandSignal,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
     ) -> OrchestratorAction:
-        del signal, current_chat_path, current_chat_data
+        del signal
         return self._handle_clear_secret_context()
 
-    async def _persist_chat_after_command(
-        self,
-        chat_path: Optional[str],
-        chat_data: Optional[ChatDocument],
-    ) -> None:
+    async def _persist_chat_after_command(self) -> None:
         """Persist chat after a command response when required by save policy."""
-        await self.manager.save_current_chat(chat_path=chat_path, chat_data=chat_data)
+        await self.manager.save_current_chat(
+            chat_path=self.manager.chat_path,
+            chat_data=self.manager.chat,
+        )
 
     async def _handle_apply_retry(
         self,
-        current_chat_path: Optional[str],
-        current_chat_data: Optional[ChatDocument],
         retry_hex_id: str,
     ) -> OrchestratorAction:
         """Handle apply-retry signal."""
         if not self.manager.retry_mode:
             return PrintAction(message="Not in retry mode")
+
+        current_chat_data = self.manager.chat
+        current_chat_path = self.manager.chat_path
 
         if not current_chat_data:
             return PrintAction(message="No chat open")
