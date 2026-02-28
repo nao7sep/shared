@@ -64,13 +64,13 @@ class MessageEntryHandlersMixin:
         if chat_data is None:
             return PrintAction(message="No chat data loaded.")
 
-        if has_pending_error(chat_data) and not self.manager.retry_mode and not self.manager.secret_mode:
+        if has_pending_error(chat_data) and not self.manager.retry.active and not self.manager.secret.active:
             return PrintAction(message=pending_error_guidance())
 
-        if self.manager.secret_mode:
+        if self.manager.secret.active:
             return await self._handle_secret_message(user_input)
 
-        if self.manager.retry_mode:
+        if self.manager.retry.active:
             return await self._handle_retry_message(user_input)
 
         return await self._handle_normal_message(user_input)

@@ -94,7 +94,7 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
 
     assert isinstance(action, PrintAction)
     assert action.message == "Retry target is no longer valid"
-    assert orchestrator.manager.retry_mode is True
+    assert orchestrator.manager.retry.active is True
     mock_save.assert_not_called()
 
 
@@ -109,7 +109,7 @@ async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -
 
     assert isinstance(action, PrintAction)
     assert action.message == "Cancelled retry mode"
-    assert orchestrator.manager.retry_mode is False
+    assert orchestrator.manager.retry.active is False
     assert orchestrator.manager.retry.latest_attempt_id() is None
     with pytest.raises(ValueError, match="Not in retry mode"):
         orchestrator.manager.retry.get_context()

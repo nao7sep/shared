@@ -271,7 +271,7 @@ class TestRetryModeSignals:
         assert updated_assistant.hex_id == original_hex_id
 
         # Should exit retry mode
-        assert orchestrator.manager.retry_mode is False
+        assert orchestrator.manager.retry.active is False
 
     @pytest.mark.asyncio
     async def test_apply_retry_preserves_citations(self, orchestrator, sample_chat_data):
@@ -386,7 +386,7 @@ class TestRetryModeSignals:
 
         assert isinstance(action, PrintAction)
         assert "Cancelled retry mode" in action.message
-        assert orchestrator.manager.retry_mode is False
+        assert orchestrator.manager.retry.active is False
 
     @pytest.mark.asyncio
     async def test_cancel_retry_when_not_in_retry_mode(self, orchestrator):
@@ -414,7 +414,7 @@ class TestSecretModeSignals:
 
         assert isinstance(action, PrintAction)
         assert "Secret mode disabled" in action.message
-        assert orchestrator.manager.secret_mode is False
+        assert orchestrator.manager.secret.active is False
 
     @pytest.mark.asyncio
     async def test_clear_secret_context_when_not_in_secret_mode(self, orchestrator):

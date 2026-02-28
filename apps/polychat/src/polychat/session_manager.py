@@ -132,17 +132,6 @@ class SessionManager:
         """Secret mode controller."""
         return self._state.secret
 
-    # Backward-compatible read-only properties for boolean checks.
-    @property
-    def retry_mode(self) -> bool:
-        """Whether retry mode is active (read-only; use ``retry.enter()``/``retry.exit()``)."""
-        return self._state.retry.active
-
-    @property
-    def secret_mode(self) -> bool:
-        """Whether secret mode is active (read-only; use ``secret.enter()``/``secret.exit()``)."""
-        return self._state.secret.active
-
     @property
     def message_hex_ids(self) -> dict[int, str]:
         """Message hex IDs (index → hex_id)."""

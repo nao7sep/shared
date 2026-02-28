@@ -24,7 +24,7 @@ class _InteractionStub:
 async def test_secret_no_args_shows_state_off(command_handler, mock_session_manager):
     result = await command_handler.secret_mode_command("")
     assert result == "Secret mode: off"
-    assert mock_session_manager.secret_mode is False
+    assert mock_session_manager.secret.active is False
 
 
 @pytest.mark.asyncio
@@ -32,18 +32,18 @@ async def test_secret_no_args_shows_state_on(command_handler, mock_session_manag
     mock_session_manager.secret.enter([])
     result = await command_handler.secret_mode_command("")
     assert result == "Secret mode: on"
-    assert mock_session_manager.secret_mode is True
+    assert mock_session_manager.secret.active is True
 
 
 @pytest.mark.asyncio
 async def test_secret_on_off_still_work(command_handler, mock_session_manager):
     result_on = await command_handler.secret_mode_command("on")
     assert result_on == "Secret mode enabled"
-    assert mock_session_manager.secret_mode is True
+    assert mock_session_manager.secret.active is True
 
     result_off = await command_handler.secret_mode_command("off")
     assert result_off == "Secret mode disabled"
-    assert mock_session_manager.secret_mode is False
+    assert mock_session_manager.secret.active is False
 
 
 @pytest.mark.asyncio
@@ -51,7 +51,7 @@ async def test_secret_on_when_already_on(command_handler, mock_session_manager):
     mock_session_manager.secret.enter([])
     result = await command_handler.secret_mode_command("on")
     assert result == "Secret mode already on"
-    assert mock_session_manager.secret_mode is True
+    assert mock_session_manager.secret.active is True
 
 
 @pytest.mark.asyncio
@@ -101,7 +101,7 @@ async def test_system_persona_name_shortcut(command_handler, mock_session_manage
 async def test_secret_off_when_already_off(command_handler, mock_session_manager):
     result = await command_handler.secret_mode_command("off")
     assert result == "Secret mode already off"
-    assert mock_session_manager.secret_mode is False
+    assert mock_session_manager.secret.active is False
 
 
 @pytest.mark.asyncio

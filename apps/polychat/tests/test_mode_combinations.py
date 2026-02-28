@@ -28,7 +28,7 @@ def test_session_manager_both_modes_enabled(session_manager):
     session_manager.secret.enter([])
     session_manager.search_mode = True
 
-    assert session_manager.secret_mode is True
+    assert session_manager.secret.active is True
     assert session_manager.search_mode is True
 
 
@@ -36,11 +36,11 @@ def test_session_manager_modes_independent(session_manager):
     """Modes can be toggled independently."""
     session_manager.search_mode = True
     assert session_manager.search_mode is True
-    assert session_manager.secret_mode is False
+    assert session_manager.secret.active is False
 
     session_manager.search_mode = False
     session_manager.secret.enter([])
-    assert session_manager.secret_mode is True
+    assert session_manager.secret.active is True
     assert session_manager.search_mode is False
 
 
@@ -52,7 +52,7 @@ def test_session_manager_clear_chat_clears_modes(session_manager):
     session_manager._clear_chat_scoped_state()
 
     assert session_manager.search_mode is False
-    assert session_manager.secret_mode is False
+    assert session_manager.secret.active is False
 
 
 def test_session_manager_to_dict_includes_modes(session_manager):
@@ -73,7 +73,7 @@ def test_mode_combination_case1_both_persistent(session_manager):
     session_manager.secret.enter([])
     session_manager.search_mode = True
 
-    assert session_manager.secret_mode is True
+    assert session_manager.secret.active is True
     assert session_manager.search_mode is True
 
     state_dict = session_manager.to_dict()

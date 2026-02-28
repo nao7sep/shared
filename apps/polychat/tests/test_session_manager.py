@@ -156,8 +156,8 @@ class TestPropertyAccess:
         assert manager.profile.timeout == 300
         assert manager.system_prompt == "Be helpful"
         assert manager.input_mode == "compose"
-        assert manager.retry_mode is False
-        assert manager.secret_mode is False
+        assert manager.retry.active is False
+        assert manager.secret.active is False
 
     def test_write_properties(self):
         """Test writing properties."""
@@ -256,7 +256,7 @@ class TestChatManagement:
 
         # Enter retry mode to test that it gets cleared
         manager.retry.enter([ChatMessage.new_user("old")])
-        assert manager.retry_mode is True
+        assert manager.retry.active is True
 
         # Switch to new chat
         new_chat = ChatDocument.from_raw({"metadata": {}, "messages": [{"role": "user", "content": "new"}]})
@@ -270,7 +270,7 @@ class TestChatManagement:
         assert len(manager.message_hex_ids) == 1
 
         # Retry mode should be cleared
-        assert manager.retry_mode is False
+        assert manager.retry.active is False
 
     def test_switch_chat_backfills_missing_system_prompt_metadata(self):
         """Switching to old chats should backfill missing system prompt metadata."""
@@ -311,7 +311,7 @@ class TestChatManagement:
         assert manager.hex_id_set == set()
 
         # Secret mode should be cleared
-        assert manager.secret_mode is False
+        assert manager.secret.active is False
 
 
 class TestRetryModeManagement:
@@ -328,7 +328,7 @@ class TestRetryModeManagement:
         base_messages = [ChatMessage.new_user("question")]
         manager.retry.enter(base_messages)
 
-        assert manager.retry_mode is True
+        assert manager.retry.active is True
         assert manager.retry.get_context() == base_messages
 
     def test_cannot_enter_retry_while_in_secret_mode(self):
@@ -423,7 +423,7 @@ class TestRetryModeManagement:
 
         manager.retry.exit()
 
-        assert manager.retry_mode is False
+        assert manager.retry.active is False
         assert manager.retry.get_attempt(retry_hex_id) is None
         assert retry_hex_id not in manager.hex_id_set
 
@@ -445,7 +445,7 @@ class TestSecretModeManagement:
         ]
         manager.secret.enter(base_messages)
 
-        assert manager.secret_mode is True
+        assert manager.secret.active is True
         assert manager.secret.get_context() == base_messages
 
     def test_cannot_enter_secret_while_in_retry_mode(self):
@@ -483,7 +483,7 @@ class TestSecretModeManagement:
         manager.secret.enter([ChatMessage.new_user("frozen")])
         manager.secret.exit()
 
-        assert manager.secret_mode is False
+        assert manager.secret.active is False
 
 
 class TestHexIdManagement:
@@ -669,7 +669,7 @@ class TestStateSafety:
 
         # Enter retry mode
         manager.retry.enter([])
-        assert manager.retry_mode is True
+        assert manager.retry.active is True
 
         # Cannot enter secret mode
         with pytest.raises(ValueError):
@@ -678,7 +678,7 @@ class TestStateSafety:
         # Exit retry, enter secret
         manager.retry.exit()
         manager.secret.enter([])
-        assert manager.secret_mode is True
+        assert manager.secret.active is True
 
         # Cannot enter retry mode
         with pytest.raises(ValueError):

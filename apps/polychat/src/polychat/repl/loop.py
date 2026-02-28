@@ -121,11 +121,11 @@ def print_startup_banner(
 
 def print_mode_banner(manager: SessionManager, chat_data: Optional[ChatDocument]) -> None:
     """Print mode-state banner shown before each prompt."""
-    if has_pending_error(chat_data) and not manager.retry_mode:
+    if has_pending_error(chat_data) and not manager.retry.active:
         print(pending_error_guidance(compact=True))
-    elif manager.retry_mode:
+    elif manager.retry.active:
         print(f"{EMOJI_MODE_RETRY} RETRY MODE - Use /apply to accept, /cancel to abort")
-    elif manager.secret_mode:
+    elif manager.secret.active:
         print(f"{EMOJI_MODE_SECRET} SECRET MODE - Messages not saved to history")
 
 

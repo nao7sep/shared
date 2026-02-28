@@ -19,6 +19,76 @@ from ..session_manager import SessionManager
 from ..streaming import display_streaming_response
 
 
+def _resolve_effective_mode(base_mode: str, use_search: bool) -> str:
+    """Combine base request mode with search flag."""
+    if not use_search:
+        return base_mode
+    if base_mode == "secret":
+        return "search+secret"
+    if base_mode == "retry":
+        return "search+retry"
+    return "search"
+
+
+async def _process_citations(
+    metadata: dict,
+) -> list[Citation]:
+    """Normalize, resolve, and display citations from response metadata."""
+    citations: list[Citation] = normalize_citations(metadata.get("citations"))
+    if citations:
+        citations = await resolve_vertex_citation_urls(citations)
+    if citations:
+        metadata["citations"] = citations
+        print()
+        for line in format_citation_list(citations):
+            print(line)
+    return citations
+
+
+def _log_response_metrics(
+    *,
+    metadata: dict,
+    response_text: str,
+    first_token_time: Optional[float],
+    effective_request_mode: str,
+    manager: SessionManager,
+    effective_path: str,
+) -> None:
+    """Calculate timing/cost metrics and emit a structured log event."""
+    end_time = time.perf_counter()
+    latency_ms = round((end_time - metadata["started"]) * 1000, 1)
+
+    ttft_ms = None
+    if first_token_time is not None:
+        ttft_ms = round((first_token_time - metadata["started"]) * 1000, 1)
+
+    usage = metadata.get("usage", {})
+
+    cost_line = format_cost_line(manager.current_model, usage)
+    if cost_line:
+        print()
+        print(cost_line)
+
+    cost_est = estimate_cost(manager.current_model, usage)
+    log_event(
+        "ai_response",
+        level=logging.INFO,
+        mode=effective_request_mode,
+        provider=manager.current_ai,
+        model=manager.current_model,
+        chat_file=effective_path,
+        latency_ms=latency_ms,
+        ttft_ms=ttft_ms,
+        output_chars=len(response_text),
+        input_tokens=usage.get("prompt_tokens"),
+        cached_tokens=usage.get("cached_tokens"),
+        cache_write_tokens=usage.get("cache_write_tokens"),
+        output_tokens=usage.get("completion_tokens"),
+        total_tokens=usage.get("total_tokens"),
+        estimated_cost=format_cost_usd(cost_est.total_cost) if cost_est is not None else None,
+    )
+
+
 async def execute_send_action(
     action: SendAction,
     *,
@@ -62,14 +132,7 @@ async def execute_send_action(
     try:
         print()
         print(prefix, end="", flush=True)
-        effective_request_mode: str = action.mode
-        if use_search:
-            if action.mode == "secret":
-                effective_request_mode = "search+secret"
-            elif action.mode == "retry":
-                effective_request_mode = "search+retry"
-            else:
-                effective_request_mode = "search"
+        effective_request_mode = _resolve_effective_mode(action.mode, use_search)
 
         response_stream, metadata = await send_message_to_ai(
             provider_instance,
@@ -87,47 +150,15 @@ async def execute_send_action(
             prefix="",
         )
 
-        citations: list[Citation] = normalize_citations(metadata.get("citations"))
-        if citations:
-            citations = await resolve_vertex_citation_urls(citations)
+        await _process_citations(metadata)
 
-        if citations:
-            metadata["citations"] = citations
-            print()
-            for line in format_citation_list(citations):
-                print(line)
-
-        end_time = time.perf_counter()
-        latency_ms = round((end_time - metadata["started"]) * 1000, 1)
-
-        ttft_ms = None
-        if first_token_time is not None:
-            ttft_ms = round((first_token_time - metadata["started"]) * 1000, 1)
-
-        usage = metadata.get("usage", {})
-
-        cost_line = format_cost_line(manager.current_model, usage)
-        if cost_line:
-            print()
-            print(cost_line)
-
-        cost_est = estimate_cost(manager.current_model, usage)
-        log_event(
-            "ai_response",
-            level=logging.INFO,
-            mode=effective_request_mode,
-            provider=manager.current_ai,
-            model=manager.current_model,
-            chat_file=effective_path,
-            latency_ms=latency_ms,
-            ttft_ms=ttft_ms,
-            output_chars=len(response_text),
-            input_tokens=usage.get("prompt_tokens"),
-            cached_tokens=usage.get("cached_tokens"),
-            cache_write_tokens=usage.get("cache_write_tokens"),
-            output_tokens=usage.get("completion_tokens"),
-            total_tokens=usage.get("total_tokens"),
-            estimated_cost=format_cost_usd(cost_est.total_cost) if cost_est is not None else None,
+        _log_response_metrics(
+            metadata=metadata,
+            response_text=response_text,
+            first_token_time=first_token_time,
+            effective_request_mode=effective_request_mode,
+            manager=manager,
+            effective_path=effective_path,
         )
 
         result = await orchestrator.handle_ai_response(
@@ -137,7 +168,7 @@ async def execute_send_action(
             action.mode,
             user_input=action.retry_user_input,
             assistant_hex_id=action.assistant_hex_id,
-            citations=citations,
+            citations=normalize_citations(metadata.get("citations")),
         )
 
         if isinstance(result, PrintAction):

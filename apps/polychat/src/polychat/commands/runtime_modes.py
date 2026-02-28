@@ -173,7 +173,7 @@ class RuntimeModeCommandHandlers:
 
     async def apply_retry(self, args: str) -> CommandResult:
         """Apply current retry attempt and exit retry mode."""
-        if not self._deps.manager.retry_mode:
+        if not self._deps.manager.retry.active:
             return "Not in retry mode"
 
         normalized_args = args.strip().lower()
@@ -191,7 +191,7 @@ class RuntimeModeCommandHandlers:
 
     async def cancel_retry(self, args: str) -> CommandResult:
         """Cancel retry mode and keep original messages."""
-        if not self._deps.manager.retry_mode:
+        if not self._deps.manager.retry.active:
             return "Not in retry mode"
 
         return CommandSignal(kind="cancel_retry")
@@ -206,17 +206,17 @@ class RuntimeModeCommandHandlers:
         normalized = args.strip().lower()
 
         if not normalized:
-            return "Secret mode: on" if self._deps.manager.secret_mode else "Secret mode: off"
+            return "Secret mode: on" if self._deps.manager.secret.active else "Secret mode: off"
 
         if normalized == "on":
-            if self._deps.manager.secret_mode:
+            if self._deps.manager.secret.active:
                 return "Secret mode already on"
             secret_context = chat.get_messages_for_ai(chat_data)
             self._deps.manager.secret.enter(secret_context)
             return "Secret mode enabled"
 
         if normalized == "off":
-            if self._deps.manager.secret_mode:
+            if self._deps.manager.secret.active:
                 self._deps.manager.secret.exit()
                 return "Secret mode disabled"
             return "Secret mode already off"

@@ -23,25 +23,19 @@ def _load_prompt_from_path(prompt_path: Optional[str], prompt_type: str = "promp
 
 def build_title_generation_prompt(context_text: str, prompt_path: Optional[str]) -> str:
     """Build helper prompt for title generation."""
-    from . import _load_prompt_from_path as load_prompt
-
-    template = load_prompt(prompt_path, prompt_type="title")
+    template = _load_prompt_from_path(prompt_path, prompt_type="title")
     return template.replace("{CONTEXT}", context_text)
 
 
 def build_summary_generation_prompt(context_text: str, prompt_path: Optional[str]) -> str:
     """Build helper prompt for summary generation."""
-    from . import _load_prompt_from_path as load_prompt
-
-    template = load_prompt(prompt_path, prompt_type="summary")
+    template = _load_prompt_from_path(prompt_path, prompt_type="summary")
     return template.replace("{CONTEXT}", context_text)
 
 
 def build_safety_check_prompt(content_to_check: str, prompt_path: Optional[str]) -> str:
     """Build helper prompt for safety checks."""
-    from . import _load_prompt_from_path as load_prompt
-
-    template = load_prompt(prompt_path, prompt_type="safety")
+    template = _load_prompt_from_path(prompt_path, prompt_type="safety")
     return template.replace("{CONTEXT}", content_to_check)
 
 
