@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/bin/zsh
 set -euo pipefail
 
 # Relative paths from repo root to skip.

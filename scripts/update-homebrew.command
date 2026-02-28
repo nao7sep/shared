@@ -1,9 +1,8 @@
-#!/bin/bash
+#!/bin/zsh
+set -euo pipefail
 
 # Update Homebrew and all packages
 # This script installs Homebrew if not present, then updates everything
-
-set -e  # Exit on any error
 
 echo ""
 echo "=== Homebrew Update ==="

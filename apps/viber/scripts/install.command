@@ -1,3 +1,4 @@
 #!/bin/zsh
+set -euo pipefail
 cd "$(dirname "$0")/.."
-uv tool install --editable .
+uv sync

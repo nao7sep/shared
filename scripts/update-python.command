@@ -1,10 +1,9 @@
-#!/bin/bash
+#!/bin/zsh
+set -euo pipefail
 
 # Update Python and uv
 # This script ensures Homebrew, Python, and uv are installed via Homebrew,
 # then updates Python and uv to their latest versions
-
-set -e  # Exit on any error
 
 echo ""
 echo "=== Python Update ==="
