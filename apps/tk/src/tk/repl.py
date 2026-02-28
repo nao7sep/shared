@@ -138,11 +138,11 @@ def repl(session: Session) -> None:
     except ImportError:
         pass
 
-    print("tk task manager")
-    print("Type 'exit' or 'quit' to exit, or Ctrl-D")
     print()
+    print("Type 'exit' or 'quit' to exit, or Ctrl-D")
 
     while True:
+        print()
         try:
             line = input("tk> ")
 
@@ -156,17 +156,16 @@ def repl(session: Session) -> None:
             prepared = _prepare_interactive_command(cmd, args, kwargs, session)
             if isinstance(prepared, str):
                 print(prepared)
-                print()
                 continue
 
             cmd, args, kwargs = prepared
             result = dispatcher.execute_command(cmd, args, kwargs, session)
 
             if result == "EXIT":
+                print("Exiting.")
                 break
 
             print(result)
-            print()
 
         except EOFError:
             print()
@@ -178,21 +177,18 @@ def repl(session: Session) -> None:
 
         except TkError as e:
             # Expected business logic errors (user errors, validation failures)
-            print(f"Error: {e}")
-            print()
+            print(f"ERROR: {e}")
 
         except ValueError as e:
             # Backward-compatible catch for any remaining ValueError paths.
-            print(f"Error: {e}")
-            print()
+            print(f"ERROR: {e}")
 
         except Exception as e:
             # Unexpected errors - provide more detail in debug mode
-            print(f"Unexpected error: {e}")
+            print(f"ERROR: {e}")
             if os.getenv("TK_DEBUG"):
                 print("Debug traceback:")
                 traceback.print_exc()
-            print()
 
     profile_data = session.profile
     tasks_data = session.tasks
@@ -202,18 +198,4 @@ def repl(session: Session) -> None:
             profile_data["output_path"],
         )
 
-    if tasks_data:
-        raw_tasks = tasks_data.to_dict()["tasks"] if hasattr(tasks_data, "to_dict") else tasks_data["tasks"]
-        pending_count = sum(
-            1 for t in raw_tasks if t["status"] == TaskStatus.PENDING.value
-        )
-        done_count = sum(
-            1 for t in raw_tasks if t["status"] == TaskStatus.DONE.value
-        )
-        cancelled_count = sum(
-            1 for t in raw_tasks if t["status"] == TaskStatus.CANCELLED.value
-        )
-
-        print(f"{pending_count} pending, {done_count} done, {cancelled_count} cancelled")
-
-    print()
+    pass  # summary removed — "Exiting." is the farewell

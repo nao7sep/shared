@@ -83,7 +83,7 @@ def main() -> None:
     try:
         db = load_database(app_args.data_path)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error loading data file: {exc}", file=sys.stderr)
+        print(f"ERROR: Could not load data file: {exc}", file=sys.stderr)
         sys.exit(1)
 
     removed_tasks = prune_orphan_tasks(db)
@@ -95,12 +95,12 @@ def main() -> None:
         try:
             render_check_pages(db, app_args.check_path)
         except Exception as exc:  # noqa: BLE001
-            print(f"Warning: Could not generate HTML check pages: {exc}", file=sys.stderr)
+            print(f"WARNING: Could not generate HTML check pages: {exc}", file=sys.stderr)
 
     try:
         run_repl(db, app_args.data_path, app_args.check_path)
     except ViberError as exc:
-        print(f"Fatal error: {exc}", file=sys.stderr)
+        print(f"ERROR: Fatal: {exc}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -116,6 +116,6 @@ def _resolve_path(raw: str, arg_name: str) -> Path:
 
 
 def _die(message: str) -> NoReturn:
-    print(f"Error: {message}", file=sys.stderr)
+    print(f"ERROR: {message}", file=sys.stderr)
     print("Run 'viber --help' for usage.", file=sys.stderr)
     sys.exit(1)

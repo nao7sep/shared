@@ -37,7 +37,8 @@ def prompt_chat_selection(
         return None
 
     # Display list
-    print(f"\nAvailable chats in: {chats_dir}")
+    print()
+    print(f"Available chats in: {chats_dir}")
     print(make_borderline())
 
     for i, chat in enumerate(chats, 1):
@@ -47,9 +48,11 @@ def prompt_chat_selection(
 
     # Prompt for selection
     if allow_cancel:
-        prompt = f"\nSelect chat number to {action} [Enter to cancel]: "
+        prompt = f"Select chat number to {action} [Enter to cancel]: "
     else:
-        prompt = f"\nSelect chat number to {action}: "
+        prompt = f"Select chat number to {action}: "
+
+    print()
 
     while True:
         selection = input(prompt).strip()

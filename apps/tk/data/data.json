@@ -698,11 +698,11 @@
     },
     {
       "text": "viber: we need \"undo\"",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-02-27T23:59:28.146389+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
-      "note": null
+      "handled_utc": "2026-02-28T00:40:38.187445+00:00",
+      "subjective_date": "2026-02-28",
+      "note": "implemented"
     },
     {
       "text": "revzip: extraction should restore timestamps",

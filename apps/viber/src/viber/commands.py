@@ -34,7 +34,6 @@ from .formatter import (
     format_project_ref,
     format_task,
     format_task_ref,
-    print_segment,
 )
 from .models import Assignment, AssignmentStatus, Database, assignment_key
 from .queries import pending_all, pending_by_project, pending_by_task
@@ -113,22 +112,22 @@ def execute_command(
     after_mutation: MutationHook,
 ) -> None:
     if isinstance(command, HelpCommand):
-        print_segment(_HELP_TEXT.splitlines())
+        print(_HELP_TEXT)
         return
 
     if isinstance(command, CreateGroupCommand):
         group = create_group(db, command.name)
         after_mutation({group.id}, None)
-        print_segment([f"Created group: {group.name} (g{group.id})"])
+        print(f"Created group: {group.name} (g{group.id})")
         return
 
     if isinstance(command, CreateProjectCommand):
         group = get_group(db, command.group_id)
         project = create_project(db, command.name, command.group_id)
         after_mutation({group.id}, None)
-        print_segment([
+        print(
             f"Created project: {project.name} (p{project.id}) in group {group.name} (g{group.id})"
-        ])
+        )
         return
 
     if isinstance(command, CreateTaskCommand):
@@ -139,7 +138,7 @@ def execute_command(
         else:
             scope_group = get_group(db, task.group_id)
             scope = f"group {scope_group.name} (g{scope_group.id})"
-        print_segment([f"Created task: {task.description} (t{task.id}) for {scope}"])
+        print(f"Created task: {task.description} (t{task.id}) for {scope}")
         return
 
     if isinstance(command, ReadCollectionCommand):
@@ -156,12 +155,12 @@ def execute_command(
         removed_names = {old_name} if old_name != group.name else None
         after_mutation({group.id}, removed_names)
         if old_name == group.name:
-            print_segment([f"Group name unchanged: {group.name} (g{group.id})"])
+            print(f"Group name unchanged: {group.name} (g{group.id})")
         else:
-            print_segment([
+            print(
                 f"Renamed group: {old_name} (g{group.id}) -> "
                 f"{group.name} (g{group.id})"
-            ])
+            )
         return
 
     if isinstance(command, UpdateProjectNameCommand):
@@ -169,57 +168,57 @@ def execute_command(
         project = update_project_name(db, command.project_id, command.new_name)
         after_mutation({project.group_id}, None)
         if old_name == project.name:
-            print_segment([f"Project name unchanged: {project.name} (p{project.id})"])
+            print(f"Project name unchanged: {project.name} (p{project.id})")
         else:
-            print_segment([
+            print(
                 f"Renamed project: {old_name} (p{project.id}) -> "
                 f"{project.name} (p{project.id})"
-            ])
+            )
         return
 
     if isinstance(command, UpdateProjectStateCommand):
         project = set_project_state(db, command.project_id, command.new_state)
         after_mutation({project.group_id}, None)
-        print_segment([
+        print(
             f"Updated project state: {project.name} (p{project.id}) -> {command.new_state.value}"
-        ])
+        )
         return
 
     if isinstance(command, UpdateAssignmentCommentCommand):
         update_assignment_comment(db, command.project_id, command.task_id, command.comment)
         after_mutation(set(), None)
         if command.comment:
-            print_segment([
+            print(
                 "Updated assignment comment for "
                 f"p{command.project_id} | t{command.task_id}: {command.comment}"
-            ])
+            )
         else:
-            print_segment([
+            print(
                 f"Cleared assignment comment for p{command.project_id} | t{command.task_id}"
-            ])
+            )
         return
 
     if isinstance(command, UpdateTaskDescriptionCommand):
         task = update_task_description(db, command.task_id, command.new_description)
         after_mutation(_task_affected_group_ids(db, task.group_id), None)
-        print_segment([f"Updated task: {format_task_ref(task)}"])
+        print(f"Updated task: {format_task_ref(task)}")
         return
 
     if isinstance(command, UpdateTaskDescriptionPromptCommand):
         task = get_task(db, command.task_id)
-        print_segment([f"Current task description: {task.description}"], trailing_blank=False)
+        print(f"Current task description: {task.description}")
         try:
             new_desc = input("New description: ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
-            print_segment(["Update cancelled."])
+            print("Update cancelled.")
             return
         if not new_desc:
-            print_segment(["Task description cannot be empty. Update cancelled."])
+            print("Task description cannot be empty. Update cancelled.")
             return
         task = update_task_description(db, command.task_id, new_desc)
         after_mutation(_task_affected_group_ids(db, task.group_id), None)
-        print_segment([f"Updated task: {format_task_ref(task)}"])
+        print(f"Updated task: {format_task_ref(task)}")
         return
 
     if isinstance(command, DeleteEntityCommand):
@@ -229,17 +228,14 @@ def execute_command(
     if isinstance(command, ViewAllCommand):
         entries = pending_all(db)
         if not entries:
-            print_segment(["Vibe is good. No pending assignments."])
+            print("Vibe is good. No pending assignments.")
         else:
-            lines = [
-                (
+            for e in entries:
+                print(
                     f"{format_project_ref(e.project)}"
                     f" | {format_group_ref(e.group)}"
                     f" | {format_task_ref(e.task)}"
                 )
-                for e in entries
-            ]
-            print_segment(lines)
         return
 
     if isinstance(command, ViewEntityCommand):
@@ -262,48 +258,50 @@ def execute_command(
         _exec_undo_entity(command, db, after_mutation)
         return
 
-    print_segment(["Unsupported command."])
+    print("Unsupported command.")
 
 
 def _exec_read_collection(command: ReadCollectionCommand, db: Database) -> None:
     if command.kind == "groups":
         groups = list_groups(db)
         if not groups:
-            print_segment(["No groups."])
+            print("No groups.")
         else:
-            print_segment([format_group(g) for g in groups])
+            for g in groups:
+                print(format_group(g))
         return
 
     if command.kind == "projects":
         projects = list_projects(db)
         if not projects:
-            print_segment(["No projects."])
+            print("No projects.")
             return
-        lines = [format_project(project, get_group(db, project.group_id)) for project in projects]
-        print_segment(lines)
+        for project in projects:
+            print(format_project(project, get_group(db, project.group_id)))
         return
 
     tasks = list_tasks(db)
     if not tasks:
-        print_segment(["No tasks."])
+        print("No tasks.")
     else:
-        print_segment([format_task(t, db) for t in tasks])
+        for t in tasks:
+            print(format_task(t, db))
 
 
 def _exec_read_entity(command: ReadEntityCommand, db: Database) -> None:
     if command.kind == "group":
         group = get_group(db, command.entity_id)
-        print_segment([format_group(group)])
+        print(format_group(group))
         return
 
     if command.kind == "project":
         project = get_project(db, command.entity_id)
         group = get_group(db, project.group_id)
-        print_segment([format_project(project, group)])
+        print(format_project(project, group))
         return
 
     task = get_task(db, command.entity_id)
-    print_segment([format_task(task, db)])
+    print(format_task(task, db))
 
 
 def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: MutationHook) -> None:
@@ -313,7 +311,7 @@ def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: Mut
             return
         group = delete_group(db, command.entity_id)
         after_mutation(None, {group.name})
-        print_segment([f"Deleted group: {group.name} (g{group.id})"])
+        print(f"Deleted group: {group.name} (g{group.id})")
         return
 
     if command.kind == "project":
@@ -324,7 +322,7 @@ def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: Mut
             return
         project = delete_project(db, command.entity_id)
         after_mutation(None, None)
-        print_segment([f"Deleted project: {project.name} (p{project.id})"])
+        print(f"Deleted project: {project.name} (p{project.id})")
         return
 
     task = get_task(db, command.entity_id)
@@ -332,7 +330,7 @@ def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: Mut
         return
     task = delete_task(db, command.entity_id)
     after_mutation(_task_affected_group_ids(db, task.group_id), None)
-    print_segment([f"Deleted task: {task.description} (t{task.id})"])
+    print(f"Deleted task: {task.description} (t{task.id})")
 
 
 def _exec_view_entity(command: ViewEntityCommand, db: Database) -> None:
@@ -342,24 +340,24 @@ def _exec_view_entity(command: ViewEntityCommand, db: Database) -> None:
         header = f"{format_project_ref(project)} | {format_group_ref(group)}"
         results = pending_by_project(db, command.entity_id)
         if not results:
-            print_segment([header, "No pending tasks."])
+            print(header)
+            print("No pending tasks.")
             return
-        lines: list[str] = [header]
+        print(header)
         for task, _assignment in results:
-            lines.append(format_task_ref(task))
-        print_segment(lines)
+            print(format_task_ref(task))
         return
 
     task = get_task(db, command.entity_id)
     task_results = pending_by_task(db, command.entity_id)
     header = format_task_ref(task)
     if not task_results:
-        print_segment([header, "No pending projects."])
+        print(header)
+        print("No pending projects.")
         return
-    lines = [header]
+    print(header)
     for project, group, _assignment in task_results:
-        lines.append(f"{format_project_ref(project)} | {format_group_ref(group)}")
-    print_segment(lines)
+        print(f"{format_project_ref(project)} | {format_group_ref(group)}")
 
 
 def _exec_resolve(
@@ -377,30 +375,25 @@ def _exec_resolve(
     assignment = db.assignments[key]
     verb_label = "ok" if command.status == AssignmentStatus.OK else "nah"
 
-    print_segment(
-        [
-            f"Resolving as '{verb_label}':",
-            f"  Project: {format_project_ref(project)}",
-            f"  Task:    {format_task_ref(task)}",
-            f"  Current: {assignment.status.value}",
-        ],
-        trailing_blank=False,
-    )
+    print(f"Resolving as '{verb_label}':")
+    print(f"  Project: {format_project_ref(project)}")
+    print(f"  Task:    {format_task_ref(task)}")
+    print(f"  Current: {assignment.status.value}")
 
     try:
         comment_raw = input("Comment (optional, Enter to skip): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
-        print_segment(["Cancelled."])
+        print("Cancelled.")
         return
 
     comment = comment_raw if comment_raw else None
     resolve_assignment(db, command.project_id, command.task_id, command.status, comment)
     after_mutation({project.group_id}, None)
-    print_segment([
+    print(
         f"Updated assignment: {format_project_ref(project)} | {format_task_ref(task)}"
         f" | {verb_label}"
-    ])
+    )
 
 
 def _exec_work(command: WorkEntityCommand, db: Database, after_mutation: MutationHook) -> None:
@@ -423,46 +416,49 @@ def _work_by_project(
 
     initial_results = pending_by_project(db, project.id)
     if not initial_results:
-        print_segment([f"No pending tasks for {format_project_ref(project)}"])
+        print(f"No pending tasks for {format_project_ref(project)}")
         return
 
+    continued = False
     while True:
         results = pending_by_project(db, project.id)
         if not results:
-            print_segment(["Work loop complete."])
+            if continued:
+                print()
+            print("Work loop complete.")
             return
 
-        lines = [f"Work loop: {format_project_ref(project)}"]
+        if continued:
+            print()
+        print(f"Work loop: {format_project_ref(project)}")
         for i, (task, _assignment) in enumerate(results, 1):
-            lines.append(f"{i}. {format_task(task, db)}")
-        print_segment(lines, trailing_blank=False)
+            print(f"{i}. {format_task(task, db)}")
+        continued = True
 
         selected = _prompt_work_item_selection(len(results))
         if selected is None:
-            print_segment(["Work loop exited."])
+            print("Work loop exited.")
             return
 
         task = results[selected - 1][0]
         status = _prompt_work_resolution_status()
         if status is None:
-            print_segment(["Cancelled."])
+            print("Cancelled.")
             continue
 
         cancelled, comment = _prompt_optional_comment()
         if cancelled:
-            print_segment(["Cancelled."])
+            print("Cancelled.")
             continue
 
         resolve_assignment(db, project.id, task.id, status, comment)
         after_mutation({project.group_id}, None)
         verb_label = "ok" if status == AssignmentStatus.OK else "nah"
-        print_segment([
-            (
-                f"Updated assignment: {format_project_ref(project)}"
-                f" | {format_task_ref(task)}"
-                f" | {verb_label}"
-            )
-        ])
+        print(
+            f"Updated assignment: {format_project_ref(project)}"
+            f" | {format_task_ref(task)}"
+            f" | {verb_label}"
+        )
 
 
 def _work_by_task(
@@ -475,46 +471,49 @@ def _work_by_task(
 
     initial_results = pending_by_task(db, task.id)
     if not initial_results:
-        print_segment([f"No pending projects for {format_task_ref(task)}"])
+        print(f"No pending projects for {format_task_ref(task)}")
         return
 
+    continued = False
     while True:
         results = pending_by_task(db, task.id)
         if not results:
-            print_segment(["Work loop complete."])
+            if continued:
+                print()
+            print("Work loop complete.")
             return
 
-        lines = [f"Work loop: {format_task_ref(task)}"]
+        if continued:
+            print()
+        print(f"Work loop: {format_task_ref(task)}")
         for i, (project, group, _assignment) in enumerate(results, 1):
-            lines.append(f"{i}. {format_project(project, group)}")
-        print_segment(lines, trailing_blank=False)
+            print(f"{i}. {format_project(project, group)}")
+        continued = True
 
         selected = _prompt_work_item_selection(len(results))
         if selected is None:
-            print_segment(["Work loop exited."])
+            print("Work loop exited.")
             return
 
         project = results[selected - 1][0]
         status = _prompt_work_resolution_status()
         if status is None:
-            print_segment(["Cancelled."])
+            print("Cancelled.")
             continue
 
         cancelled, comment = _prompt_optional_comment()
         if cancelled:
-            print_segment(["Cancelled."])
+            print("Cancelled.")
             continue
 
         resolve_assignment(db, project.id, task.id, status, comment)
         after_mutation({project.group_id}, None)
         verb_label = "ok" if status == AssignmentStatus.OK else "nah"
-        print_segment([
-            (
-                f"Updated assignment: {format_project_ref(project)}"
-                f" | {format_task_ref(task)}"
-                f" | {verb_label}"
-            )
-        ])
+        print(
+            f"Updated assignment: {format_project_ref(project)}"
+            f" | {format_task_ref(task)}"
+            f" | {verb_label}"
+        )
 
 
 def _prompt_work_item_selection(total_items: int) -> int | None:
@@ -562,15 +561,16 @@ def _prompt_optional_comment() -> tuple[bool, str | None]:
 
 
 def _confirm_action(lines: list[str]) -> bool:
-    print_segment(lines, trailing_blank=False)
+    for line in lines:
+        print(line)
     try:
         confirm = input("Type 'yes' to confirm delete [N]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
-        print_segment(["Cancelled."])
+        print("Cancelled.")
         return False
     if confirm != "yes":
-        print_segment(["Cancelled."])
+        print("Cancelled.")
         return False
     return True
 
@@ -589,14 +589,14 @@ def _exec_undo_assignment(
 
     assignment = db.assignments[key]
     if assignment.status == AssignmentStatus.PENDING:
-        print_segment(["Assignment is already pending."])
+        print("Assignment is already pending.")
         return
 
     undo_assignment(db, command.project_id, command.task_id)
     after_mutation({project.group_id}, None)
-    print_segment([
+    print(
         f"Undone: {format_project_ref(project)} | {format_task_ref(task)}"
-    ])
+    )
 
 
 def _exec_undo_entity(
@@ -628,7 +628,7 @@ def _exec_undo_entity(
         }
 
     if not targets:
-        print_segment([f"No resolved assignments for {label}."])
+        print(f"No resolved assignments for {label}.")
         return
 
     lines = [f"Undo {len(targets)} assignment(s) for {label}:"]
@@ -645,7 +645,7 @@ def _exec_undo_entity(
     for a in targets:
         undo_assignment(db, a.project_id, a.task_id)
     after_mutation(affected_group_ids, None)
-    print_segment([f"Undone {len(targets)} assignment(s)."])
+    print(f"Undone {len(targets)} assignment(s).")
 
 
 def _find_resolved_assignments(
@@ -669,15 +669,16 @@ def _find_resolved_assignments(
 
 def _confirm_undo(lines: list[str]) -> bool:
     """Show undo details and ask for y/N confirmation."""
-    print_segment(lines, trailing_blank=False)
+    for line in lines:
+        print(line)
     try:
         confirm = input("Confirm? [y/N]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
-        print_segment(["Cancelled."])
+        print("Cancelled.")
         return False
     if confirm not in ("y", "yes"):
-        print_segment(["Cancelled."])
+        print("Cancelled.")
         return False
     return True
 

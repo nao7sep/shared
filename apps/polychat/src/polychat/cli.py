@@ -157,7 +157,8 @@ def main() -> None:
             mapped_profile_path,
         )
         if system_prompt_warning:
-            print(f"Warning: {system_prompt_warning}")
+            print(f"Error: {system_prompt_warning}")
+            sys.exit(1)
 
         log_event(
             "app_start",
@@ -204,9 +205,11 @@ def main() -> None:
             reason="keyboard_interrupt",
             uptime_ms=round((time.perf_counter() - app_started) * 1000, 1),
         )
+        print()
         print("Interrupted")
         sys.exit(0)
     except Exception as e:
+        print()
         print(f"Error: {e}")
         log_event(
             "app_stop",

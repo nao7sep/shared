@@ -17,7 +17,9 @@ _ERROR_PREFIX = "ERROR:"
 
 
 def render_app_banner() -> str:
-    return "revzip"
+    from . import __version__
+
+    return f"revzip {__version__}"
 
 
 def render_loaded_parameters(

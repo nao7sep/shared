@@ -27,13 +27,9 @@ def run_repl(*, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet) -
         ignore_rule_set=ignore_rule_set,
     ):
         print(line)
-    print()
 
-    is_first_menu = True
     while True:
-        if not is_first_menu:
-            print()
-        is_first_menu = False
+        print()
         print(render_main_menu())
         choice_raw = _read_line("Select option: ")
         if choice_raw is None:
@@ -64,6 +60,7 @@ def _run_archive_action(
 ) -> None:
     progress = ConsoleProgressReporter()
 
+    print()
     comment_raw_value = _read_line("Archive comment: ")
     if comment_raw_value is None:
         print(render_error("Comment is required."))
@@ -80,11 +77,15 @@ def _run_archive_action(
         )
     except RevzipError as exc:
         progress.close_open_lines()
+        print()
         print(render_error(str(exc)))
         return
 
-    for symlink_rel in archive_result.skipped_symlinks_rel:
-        print(render_warning(f"Skipped symlink: {symlink_rel}"))
+    if archive_result.skipped_symlinks_rel:
+        print()
+        for symlink_rel in archive_result.skipped_symlinks_rel:
+            print(render_warning(f"Skipped symlink: {symlink_rel}"))
+    print()
     print(
         "Archived "
         f"{archive_result.archived_file_count} file(s) and "
@@ -98,27 +99,27 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
     snapshot_records, snapshot_warnings = discover_snapshots(
         dest_dir_abs=resolved_paths.dest_dir_abs
     )
-    for warning_line in render_snapshot_warning_lines(snapshot_warnings):
-        print(warning_line)
+    if snapshot_warnings:
+        print()
+        for warning_line in render_snapshot_warning_lines(snapshot_warnings):
+            print(warning_line)
 
     if not snapshot_records:
-        if snapshot_warnings:
-            print()
+        print()
         print("No valid snapshots available for extraction.")
         return
 
-    if snapshot_warnings:
-        print()
-    print("Available snapshots:")
     print()
+    print("Available snapshots:")
     for row in render_snapshot_rows(snapshot_records):
         print(row)
-    print()
 
+    print()
     selected_record = _prompt_snapshot_selection(snapshot_records)
     if selected_record is None:
         return
 
+    print()
     confirmation_raw = _read_line("Type yes to restore the selected snapshot: ")
     if confirmation_raw is None:
         print("Restore canceled.")

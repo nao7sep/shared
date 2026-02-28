@@ -11,6 +11,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 
+from .. import __version__
 from .. import chat
 from ..commands import CommandHandler
 from ..constants import REPL_HISTORY_FILE
@@ -97,7 +98,7 @@ def print_startup_banner(
     borderline = BORDERLINE_CHAR * BORDERLINE_WIDTH
 
     print(borderline)
-    print("PolyChat - Multi-AI CLI Chat Tool")
+    print(f"PolyChat {__version__} - Multi-AI CLI Chat Tool")
     print(borderline)
     print(f"Current Provider: {manager.current_ai}")
     print(f"Current Model:    {manager.current_model}")
@@ -112,9 +113,8 @@ def print_startup_banner(
     else:
         print("Input Mode:       compose (Enter inserts new line | Option/Alt+Enter sends)")
     print("Ctrl+J also sends in both modes")
-    print("Type /help for commands • Ctrl+D to exit")
+    print("Type /help for commands • /exit or Ctrl+C to quit")
     print(borderline)
-    print()
 
 
 def print_mode_banner(manager: SessionManager, chat_data: Optional[dict]) -> None:
@@ -189,6 +189,7 @@ async def repl_loop(
 
     while True:
         try:
+            print()
             print_mode_banner(manager, chat_data)
 
             user_input = await prompt_session.prompt_async(
@@ -240,11 +241,9 @@ async def repl_loop(
 
                         if action.message:
                             print(action.message)
-                            print()
 
                     elif isinstance(action, PrintAction):
                         print(action.message)
-                        print()
 
                     elif isinstance(action, SendAction):
                         await execute_send_action(
@@ -267,7 +266,6 @@ async def repl_loop(
                         chat_file=chat_path,
                     )
                     print(f"Error: {error}")
-                    print()
                 except Exception as error:
                     command_name, command_args = cmd_handler.parse_command(user_input)
                     log_event(
@@ -286,14 +284,13 @@ async def repl_loop(
                         exc_info=True,
                     )
                     print(f"Error: {error}")
-                    print()
                 continue
 
             action = await orchestrator.handle_user_message(user_input, chat_path, chat_data)
 
             if isinstance(action, PrintAction):
-                print(action.message)
                 print()
+                print(action.message)
                 continue
 
             if isinstance(action, SendAction):

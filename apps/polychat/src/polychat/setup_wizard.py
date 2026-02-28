@@ -68,7 +68,8 @@ def run_setup_wizard() -> Optional[str]:
         try:
             key = input(f"  {display_name} API key: ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nSetup cancelled.")
+            print()
+            print("Setup cancelled.")
             return None
         if key:
             api_keys[provider_id] = key
@@ -96,7 +97,8 @@ def run_setup_wizard() -> Optional[str]:
     try:
         confirm = input("Save and start PolyChat? (y/N): ").strip().lower()
     except (EOFError, KeyboardInterrupt):
-        print("\nSetup cancelled.")
+        print()
+        print("Setup cancelled.")
         return None
 
     if confirm not in ("y", "yes"):
@@ -126,7 +128,7 @@ def run_setup_wizard() -> Optional[str]:
     print()
     print(f"Profile:  {profile_path}")
     print(f"API keys: {api_keys_path}")
-    print()
+    print()  # Banner owns no leading blank, so wizard emits trailing separation
 
     return str(profile_path)
 

@@ -1,7 +1,7 @@
 """CLI output formatting helpers.
 
 Follows the shared CLI output formatting standards spec:
-- One blank line between semantic segments.
+- One blank line between semantic segments (leading-blank strategy).
 - Explicit empty-state feedback.
 - No colors or text decorations.
 - No hard-wrapping.
@@ -9,39 +9,11 @@ Follows the shared CLI output formatting standards spec:
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from datetime import datetime
 
 from .models import Assignment, AssignmentStatus, Database, Group, Project, ProjectState, Task
 
 _LOCAL_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-
-def print_banner(lines: Iterable[str]) -> None:
-    """Print initial banner segment (no leading blank), then one trailing blank."""
-    for line in lines:
-        print(line)
-    print()
-
-
-def print_blank() -> None:
-    """Print one blank line."""
-    print()
-
-
-def print_segment(
-    lines: Iterable[str],
-    *,
-    leading_blank: bool = False,
-    trailing_blank: bool = True,
-) -> None:
-    """Print a semantic output segment with configurable blank-line boundaries."""
-    if leading_blank:
-        print()
-    for line in lines:
-        print(line)
-    if trailing_blank:
-        print()
 
 
 def format_group_ref(group: Group) -> str:

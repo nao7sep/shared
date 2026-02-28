@@ -9,15 +9,17 @@ from typing import Any
 from .command_parser import CommandParseError, parse_command
 from .commands import MutationHook, execute_command
 from .errors import ViberError
-from .formatter import print_banner, print_segment
 from .models import Database
 from .renderer import remove_check_page, render_check_pages
 from .store import save_database
 
-_BANNER_LINES = (
-    "viber — cross-project maintenance tracker",
-    "Type 'help' for commands. Type 'exit' or 'quit' to leave.",
-)
+def _make_banner() -> str:
+    from . import __version__
+
+    return (
+        f"viber {__version__}\n"
+        "Type 'help' for commands. Type 'exit' or 'quit' to leave."
+    )
 _ALIASES = {
     "c": "create",
     "r": "read",
@@ -66,14 +68,15 @@ def run_repl(
 
 
 def _run_loop(db: Database, after_mutation: MutationHook) -> None:
-    print_banner(_BANNER_LINES)
+    print(_make_banner())
 
     while True:
         try:
+            print()
             raw = input("> ")
         except EOFError:
             print()
-            print_segment(["Goodbye."], trailing_blank=False)
+            print("Goodbye.")
             break
         except KeyboardInterrupt:
             print()
@@ -87,7 +90,7 @@ def _run_loop(db: Database, after_mutation: MutationHook) -> None:
         try:
             tokens = shlex.split(line)
         except ValueError as exc:
-            print_segment([f"Parse error: {exc}"])
+            print(f"ERROR: {exc}")
             continue
 
         if not tokens:
@@ -97,21 +100,22 @@ def _run_loop(db: Database, after_mutation: MutationHook) -> None:
         verb = _ALIASES.get(verb, verb)
 
         if verb in ("exit", "quit"):
-            print_segment(["Goodbye."], trailing_blank=False)
+            print("Goodbye.")
             break
 
         try:
             command = parse_command(verb, tokens[1:])
         except CommandParseError as exc:
-            print_segment(exc.lines)
+            for line in exc.lines:
+                print(line)
             continue
 
         try:
             execute_command(command, db, after_mutation)
         except ViberError as exc:
-            print_segment([f"Error: {exc}"])
+            print(f"ERROR: {exc}")
         except Exception as exc:  # noqa: BLE001
-            print_segment([f"Unexpected error: {exc}"])
+            print(f"ERROR: Unexpected: {exc}")
 
 
 def _configure_line_editor() -> None:

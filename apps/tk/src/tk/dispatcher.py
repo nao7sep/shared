@@ -227,7 +227,7 @@ def render_help_text() -> str:
     rows.append(entries_by_command["exit"])
     width = max(len(row["display_usage"]) for row in rows)
 
-    lines = ["Available commands:", ""]
+    lines = ["Available commands:"]
     for group in _HELP_COMMAND_GROUPS:
         for command in group:
             entry = entries_by_command[command]

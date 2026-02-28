@@ -13,6 +13,7 @@ from tk.session import Session
 
 def display_profile_info(prof: dict) -> None:
     """Display profile information on startup."""
+    print()
     print("Profile Information:")
     print(f"  Timezone: {prof['timezone']}")
 
@@ -23,7 +24,6 @@ def display_profile_info(prof: dict) -> None:
     print(f"  DST: {'Yes' if dst_in_effect else 'No'}")
     print(f"  Current time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Subjective day starts at: {prof['subjective_day_start']}")
-    print()
 
 
 def main() -> None:
@@ -57,9 +57,14 @@ Examples:
 
     args = parser.parse_args()
 
+    from tk import __version__
+    print(f"tk {__version__}")
+
     if args.command == "init":
         try:
             profile.create_profile(args.profile)
+
+            print()
             print(f"Profile created: {args.profile}")
 
             prof = profile.load_profile(args.profile)
@@ -73,14 +78,15 @@ Examples:
             print(f"Output file: {prof['output_path']}")
             print(f"Timezone: {prof['timezone']}")
             print(f"Subjective day starts at: {prof['subjective_day_start']}")
+
             print()
             print(f"Start the app with: tk --profile {args.profile}")
 
         except TkError as e:
-            print(f"Error creating profile: {e}")
+            print(f"\nERROR: {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Error creating profile: {e}")
+            print(f"\nERROR: {e}")
             sys.exit(1)
 
         return
@@ -99,18 +105,19 @@ Examples:
             display_profile_info(prof)
 
         except FileNotFoundError:
-            print(f"Profile not found: {args.profile}")
+            print(f"\nERROR: Profile not found: {args.profile}")
             print(f"Create it with: tk init --profile {args.profile}")
             sys.exit(1)
 
         except TkError as e:
-            print(f"Error loading profile: {e}")
+            print(f"\nERROR: {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Error loading profile: {e}")
+            print(f"\nERROR: {e}")
             sys.exit(1)
     else:
-        print("Error: No profile specified")
+        print()
+        print("ERROR: No profile specified")
         print()
         print("Create a new profile:")
         print("  tk init --profile <path>")

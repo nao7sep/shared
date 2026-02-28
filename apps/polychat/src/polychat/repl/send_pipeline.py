@@ -48,12 +48,12 @@ async def execute_send_action(
             mode=action.mode,
             assistant_hex_id=action.assistant_hex_id,
         )
-        print(f"Error: {validation_error}")
         print()
+        print(f"Error: {validation_error}")
         return
     if provider_instance is None:
-        print("Error: provider is unavailable")
         print()
+        print("Error: provider is unavailable")
         return
 
     if action.mode == "retry" and action.assistant_hex_id:
@@ -62,6 +62,7 @@ async def execute_send_action(
         prefix = f"{manager.current_ai.capitalize()}: "
 
     try:
+        print()
         print(prefix, end="", flush=True)
         effective_request_mode: str = action.mode
         if use_search:
@@ -94,6 +95,7 @@ async def execute_send_action(
 
         if citations:
             metadata["citations"] = citations
+            print()
             for line in format_citation_list(citations):
                 print(line)
 
@@ -141,8 +143,8 @@ async def execute_send_action(
         )
 
         if isinstance(result, PrintAction):
+            print()
             print(result.message)
-        print()
 
     except KeyboardInterrupt:
         cancel_result = await orchestrator.handle_user_cancel(
@@ -151,8 +153,8 @@ async def execute_send_action(
             chat_path=effective_path,
             assistant_hex_id=action.assistant_hex_id,
         )
-        print(cancel_result.message)
         print()
+        print(cancel_result.message)
         return
 
     except Exception as exc:
@@ -163,6 +165,6 @@ async def execute_send_action(
             action.mode,
             assistant_hex_id=action.assistant_hex_id,
         )
-        print(error_result.message)
         print()
+        print(error_result.message)
         return

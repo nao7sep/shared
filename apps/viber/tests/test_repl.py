@@ -169,7 +169,6 @@ def test_run_loop_aliases_are_mapped_to_full_verbs(monkeypatch: pytest.MonkeyPat
     ])
 
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
-    monkeypatch.setattr(repl_module, "print_banner", lambda _lines: None)
     monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
 
     def fake_parse(verb: str, args: list[str]) -> HelpCommand:

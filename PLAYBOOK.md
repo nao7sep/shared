@@ -103,4 +103,5 @@ Never use raw dicts for structured data. If data has more than one field and liv
 
 ## Guardrails
 
+- **Git: read-only only.** AI may run git commands that inspect the repo (log, diff, status, show, blame, etc.) but must never run commands that create, modify, or delete commits, branches, tags, or remote state. Those operations are my responsibility.
 - **TODO.md is managed by `tk`** and synced with a JSON data file. Never edit `TODO.md` directly.
