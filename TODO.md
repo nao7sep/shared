@@ -19,6 +19,11 @@
 - generalize publish.py as a any-python-app tool
 - prepare to end gemini subscription + maybe report how
 - extract tasks and ideas from voice recordings
+- play with x api. now we can pay as we go
+- viber: we need "undo"
+- revzip: extraction should restore timestamps
+- polychat: lime for user messages?
+- check all apps for dict usage. polychat in serious state :'(
 
 ## History
 
