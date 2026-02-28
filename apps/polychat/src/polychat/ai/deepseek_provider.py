@@ -3,8 +3,10 @@
 Note: DeepSeek uses OpenAI-compatible API.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 from openai import (
     APIConnectionError,
     RateLimitError,
@@ -40,6 +42,9 @@ from .provider_utils import format_chat_messages
 from .types import AIResponseMetadata
 
 
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
+
 class DeepSeekProvider:
     """DeepSeek provider implementation.
 
@@ -69,7 +74,7 @@ class DeepSeekProvider:
             max_retries=0,  # We handle retries explicitly with tenacity
         )
 
-    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+    def format_messages(self, chat_messages: list[ChatMessage]) -> list[dict[str, str]]:
         """Convert chat format to DeepSeek format."""
         return format_chat_messages(chat_messages)
 
@@ -93,7 +98,7 @@ class DeepSeekProvider:
     async def _create_chat_completion(
         self,
         model: str,
-        messages: list[dict],
+        messages: list[dict[str, str]],
         stream: bool,
         max_output_tokens: int | None = None,
     ):
@@ -121,7 +126,7 @@ class DeepSeekProvider:
 
     async def send_message(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
@@ -271,7 +276,7 @@ class DeepSeekProvider:
 
     async def get_full_response(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         search: bool = False,

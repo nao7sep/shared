@@ -1,6 +1,6 @@
 """Tests for REPL/session orchestration state transitions."""
 
-from polychat.domain.chat import ChatDocument
+from polychat.domain.chat import ChatDocument, ChatMessage
 from polychat.session.state import (
     SessionState,
     initialize_message_hex_ids,
@@ -193,7 +193,7 @@ class TestRetryModeOrchestration:
 
         # Enter retry mode - freeze context without last assistant message
         session.retry_mode = True
-        session.retry_base_messages = [{"role": "user", "content": "Question"}]
+        session.retry_base_messages = [ChatMessage.new_user("Question")]
 
         assert session.retry_mode is True
         assert len(session.retry_base_messages) == 1
@@ -211,17 +211,17 @@ class TestRetryModeOrchestration:
             chat=ChatDocument.empty(),
             retry_mode=True,
         )
-        session.retry_base_messages = [{"role": "user", "content": "Original"}]
+        session.retry_base_messages = [ChatMessage.new_user("Original")]
         retry_user_msg = "Try this instead"
 
         # Simulate building temp messages for retry
         temp_messages = session.retry_base_messages + [
-            {"role": "user", "content": retry_user_msg}
+            ChatMessage.new_user(retry_user_msg)
         ]
 
         assert len(temp_messages) == 2
-        assert temp_messages[0]["content"] == "Original"
-        assert temp_messages[1]["content"] == "Try this instead"
+        assert temp_messages[0].content == ["Original"]
+        assert temp_messages[1].content == ["Try this instead"]
 
     def test_apply_retry_replaces_messages(self):
         """Test applying retry replaces original messages."""
@@ -253,7 +253,7 @@ class TestRetryModeOrchestration:
             chat=ChatDocument.empty(),
             retry_mode=True,
         )
-        session.retry_base_messages = [{"role": "user", "content": "base"}]
+        session.retry_base_messages = [ChatMessage.new_user("base")]
         session.retry_target_index = 1
         session.retry_attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
         session_dict = {"retry_mode": True}
@@ -296,8 +296,8 @@ class TestSecretModeOrchestration:
         # Enter secret mode - freeze current context
         session.secret_mode = True
         session.secret_base_messages = [
-            {"role": "user", "content": "Public question"},
-            {"role": "assistant", "content": "Public answer"},
+            ChatMessage.new_user("Public question"),
+            ChatMessage.new_assistant("Public answer", model="test-model"),
         ]
 
         assert session.secret_mode is True
@@ -316,16 +316,16 @@ class TestSecretModeOrchestration:
             chat=chat_data,
             secret_mode=True,
         )
-        session.secret_base_messages = [{"role": "user", "content": "Public"}]
+        session.secret_base_messages = [ChatMessage.new_user("Public")]
 
         # Simulate secret question (built but not saved)
         temp_messages = session.secret_base_messages + [
-            {"role": "user", "content": "Secret question"}
+            ChatMessage.new_user("Secret question")
         ]
 
         # Temp messages have secret
         assert len(temp_messages) == 2
-        assert temp_messages[-1]["content"] == "Secret question"
+        assert temp_messages[-1].content == ["Secret question"]
 
         # Original chat unchanged
         assert len(chat_data.messages) == 1
@@ -342,7 +342,7 @@ class TestSecretModeOrchestration:
             chat=ChatDocument.empty(),
             secret_mode=True,
         )
-        session.secret_base_messages = [{"role": "user", "content": "frozen"}]
+        session.secret_base_messages = [ChatMessage.new_user("frozen")]
 
         # Clear secret context
         session.secret_base_messages.clear()

@@ -118,7 +118,6 @@ class RuntimeMutationCommandHandlers:
             return "Purge cancelled"
 
         deleted_count = 0
-        messages = chat_data.messages
         for msg_index, _hid in indices_to_delete:
             self._deps.manager.remove_message_hex_id(msg_index)
             del messages[msg_index]

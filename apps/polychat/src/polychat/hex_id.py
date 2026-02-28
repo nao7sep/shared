@@ -6,7 +6,10 @@ change on each app run.
 """
 
 import random
-from typing import Set
+from typing import TYPE_CHECKING, Set
+
+if TYPE_CHECKING:
+    from .domain.chat import ChatMessage
 
 
 HEX_ID_MIN_DIGITS = 3
@@ -93,17 +96,17 @@ def assign_hex_ids(
     return hex_map
 
 
-def build_hex_map(messages: list) -> dict[int, str]:
+def build_hex_map(messages: list[ChatMessage]) -> dict[int, str]:
     """Build index→hex_id map from ChatMessage objects."""
     hex_map: dict[int, str] = {}
     for index, message in enumerate(messages):
-        hid = getattr(message, "hex_id", None)
+        hid = message.hex_id
         if isinstance(hid, str):
             hex_map[index] = hid
     return hex_map
 
 
-def get_message_index(hex_id: str, source: list | dict[int, str]) -> int | None:
+def get_message_index(hex_id: str, source: list[ChatMessage] | dict[int, str]) -> int | None:
     """Get message index from hex ID.
 
     Args:
@@ -120,7 +123,7 @@ def get_message_index(hex_id: str, source: list | dict[int, str]) -> int | None:
     return None
 
 
-def get_hex_id(index: int, source: list | dict[int, str]) -> str | None:
+def get_hex_id(index: int, source: list[ChatMessage] | dict[int, str]) -> str | None:
     """Get hex ID from message index.
 
     Args:

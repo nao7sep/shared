@@ -6,11 +6,14 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..constants import APP_NAME, DATETIME_FORMAT_FILENAME, LOG_FILE_EXTENSION
 from .formatter import StructuredTextFormatter
 from .schema import LOG_PATH_FIELDS
+
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
 
 
 def _utc_now_roundtrip() -> str:
@@ -101,15 +104,11 @@ def summarize_command_args(_command: str, args: str) -> str:
     return summarize_text(args)
 
 
-def estimate_message_chars(messages: list[dict]) -> int:
+def estimate_message_chars(messages: list[ChatMessage]) -> int:
     """Estimate total character length across chat messages."""
     total = 0
     for msg in messages:
-        content = msg.get("content", "")
-        if isinstance(content, list):
-            total += sum(len(str(part)) for part in content)
-        else:
-            total += len(str(content))
+        total += sum(len(line) for line in msg.content)
     return total
 
 

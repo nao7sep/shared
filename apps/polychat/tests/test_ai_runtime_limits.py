@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from polychat.ai.runtime import send_message_to_ai, validate_and_get_provider
-from polychat.domain.chat import ChatDocument
+from polychat.domain.chat import ChatDocument, ChatMessage
 from polychat.domain.profile import RuntimeProfile
 from polychat.session.state import SessionState
 from test_helpers import make_profile
@@ -24,7 +24,7 @@ async def test_send_message_to_ai_omits_limit_kwargs_when_unset():
     with patch("polychat.ai.runtime.log_event"):
         await send_message_to_ai(
             provider_instance=provider,
-            messages=[{"role": "user", "content": "hi"}],
+            messages=[ChatMessage.new_user("hi")],
             model="gpt-5-mini",
             provider_name="openai",
             profile=make_profile(),
@@ -54,7 +54,7 @@ async def test_send_message_to_ai_applies_profile_limits():
     with patch("polychat.ai.runtime.log_event"):
         await send_message_to_ai(
             provider_instance=provider,
-            messages=[{"role": "user", "content": "hi"}],
+            messages=[ChatMessage.new_user("hi")],
             model="claude-haiku-4-5",
             provider_name="claude",
             profile=profile,
@@ -73,7 +73,7 @@ async def test_send_message_to_ai_applies_claude_fallback_limit_when_unset():
     with patch("polychat.ai.runtime.log_event"):
         await send_message_to_ai(
             provider_instance=provider,
-            messages=[{"role": "user", "content": "hi"}],
+            messages=[ChatMessage.new_user("hi")],
             model="claude-haiku-4-5",
             provider_name="claude",
             profile=make_profile(),

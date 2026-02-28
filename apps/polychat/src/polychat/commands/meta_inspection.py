@@ -180,11 +180,11 @@ class MetadataInspectionCommandHandlers:
             except (ValueError, FileNotFoundError):
                 system_prompt_display = chat_system_prompt
         else:
-            system_prompt_display = getattr(profile_data, "system_prompt", None) or DISPLAY_NONE
+            system_prompt_display = profile_data.system_prompt or DISPLAY_NONE
 
-        title_prompt = getattr(profile_data, "title_prompt", None) or DISPLAY_NONE
-        summary_prompt = getattr(profile_data, "summary_prompt", None) or DISPLAY_NONE
-        safety_prompt = getattr(profile_data, "safety_prompt", None) or DISPLAY_NONE
+        title_prompt = profile_data.title_prompt or DISPLAY_NONE
+        summary_prompt = profile_data.summary_prompt or DISPLAY_NONE
+        safety_prompt = profile_data.safety_prompt or DISPLAY_NONE
 
         updated_local = DISPLAY_UNKNOWN
         updated_utc = metadata.updated_utc
@@ -195,8 +195,8 @@ class MetadataInspectionCommandHandlers:
             "Session Status",
             make_borderline(),
             "Directories",
-            f"Chats:     {getattr(profile_data, 'chats_dir', DISPLAY_UNKNOWN)}",
-            f"Logs:      {getattr(profile_data, 'logs_dir', DISPLAY_UNKNOWN)}",
+            f"Chats:     {profile_data.chats_dir}",
+            f"Logs:      {profile_data.logs_dir}",
             "",
             "Files",
             f"Profile:   {profile_path}",

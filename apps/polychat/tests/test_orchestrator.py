@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, patch
 
 from polychat.commands.types import CommandSignal
-from polychat.domain.chat import ChatDocument
+from polychat.domain.chat import ChatDocument, ChatMessage
 from polychat.orchestrator import ChatOrchestrator
 from polychat.orchestration.types import (
     BreakAction,
@@ -261,7 +261,7 @@ class TestRetryModeSignals:
         # Enter retry mode first
         orchestrator.manager.switch_chat("/test/chat.json", sample_chat_data)
         orchestrator.manager.enter_retry_mode(
-            [{"role": "user", "content": "Original"}],
+            [ChatMessage.new_user("Original")],
             target_index=1,
         )
         retry_hex_id = orchestrator.manager.add_retry_attempt("Retry question", "Retry answer")
@@ -299,7 +299,7 @@ class TestRetryModeSignals:
         """Applied retry should persist citations when available."""
         orchestrator.manager.switch_chat("/test/chat.json", sample_chat_data)
         orchestrator.manager.enter_retry_mode(
-            [{"role": "user", "content": "Original"}],
+            [ChatMessage.new_user("Original")],
             target_index=1,
         )
         retry_hex_id = orchestrator.manager.add_retry_attempt(
@@ -335,7 +335,7 @@ class TestRetryModeSignals:
         })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
         orchestrator.manager.enter_retry_mode(
-            [{"role": "user", "content": "hello"}, {"role": "assistant", "content": "hi"}],
+            [ChatMessage.new_user("hello"), ChatMessage.new_assistant("hi", model="test-model")],
             target_index=3,
         )
         retry_hex_id = orchestrator.manager.add_retry_attempt("try again", "done")
@@ -368,7 +368,7 @@ class TestRetryModeSignals:
         })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
         orchestrator.manager.enter_retry_mode(
-            [{"role": "user", "content": "good user"}, {"role": "assistant", "content": "good assistant"}],
+            [ChatMessage.new_user("good user"), ChatMessage.new_assistant("good assistant", model="test-model")],
             target_index=2,
         )
         retry_hex_id = orchestrator.manager.add_retry_attempt("retry user", "retry answer")
@@ -407,7 +407,7 @@ class TestRetryModeSignals:
     async def test_cancel_retry_signal(self, orchestrator):
         """Test cancelling retry mode."""
         # Enter retry mode first
-        orchestrator.manager.enter_retry_mode([{"role": "user", "content": "Test"}])
+        orchestrator.manager.enter_retry_mode([ChatMessage.new_user("Test")])
 
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="cancel_retry"),
@@ -439,7 +439,7 @@ class TestSecretModeSignals:
     async def test_clear_secret_context_when_in_secret_mode(self, orchestrator):
         """Test clearing secret context when in secret mode."""
         # Enter secret mode first
-        orchestrator.manager.enter_secret_mode([{"role": "user", "content": "Base"}])
+        orchestrator.manager.enter_secret_mode([ChatMessage.new_user("Base")])
 
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="clear_secret_context"),
@@ -623,8 +623,8 @@ class TestRetryModeMessages:
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
         orchestrator.manager.enter_retry_mode(
             [
-                {"role": "user", "content": "hello"},
-                {"role": "assistant", "content": "hello!"},
+                ChatMessage.new_user("hello"),
+                ChatMessage.new_assistant("hello!", model="test-model"),
             ],
             target_index=3,
         )
@@ -637,11 +637,13 @@ class TestRetryModeMessages:
 
         assert isinstance(action, SendAction)
         assert action.mode == "retry"
-        assert action.messages == [
-            {"role": "user", "content": "hello"},
-            {"role": "assistant", "content": "hello!"},
-            {"role": "user", "content": "what did i just say?"},
-        ]
+        assert len(action.messages) == 3
+        assert action.messages[0].role == "user"
+        assert action.messages[0].content == ["hello"]
+        assert action.messages[1].role == "assistant"
+        assert action.messages[1].content == ["hello!"]
+        assert action.messages[2].role == "user"
+        assert action.messages[2].content == ["what did i just say?"]
 
 
 class TestSessionManagerIntegration:
@@ -789,7 +791,7 @@ class TestSecretModeContext:
             ],
         })
         orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-        orchestrator.manager.enter_secret_mode([m.to_dict() for m in chat_data.messages])
+        orchestrator.manager.enter_secret_mode(list(chat_data.messages))
 
         first = await orchestrator.handle_user_message(
             "secret one",
@@ -797,7 +799,7 @@ class TestSecretModeContext:
             chat_data,
         )
         assert isinstance(first, SendAction)
-        assert [m["content"] for m in first.messages[:-1]] == [["u1"], ["a1"]]
+        assert [m.content for m in first.messages[:-1]] == [["u1"], ["a1"]]
 
         # Simulate persisted history changing between secret turns.
         from polychat.domain.chat import ChatMessage as _CM
@@ -810,4 +812,4 @@ class TestSecretModeContext:
             chat_data,
         )
         assert isinstance(second, SendAction)
-        assert [m["content"] for m in second.messages[:-1]] == [["u1"], ["a1"], ["u2"], ["a2"]]
+        assert [m.content for m in second.messages[:-1]] == [["u1"], ["a1"], ["u2"], ["a2"]]

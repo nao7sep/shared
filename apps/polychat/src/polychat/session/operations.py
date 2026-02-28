@@ -69,7 +69,7 @@ def clear_chat_scoped_state(state: SessionState) -> None:
 
 def enter_retry_mode(
     state: SessionState,
-    base_messages: list[dict],
+    base_messages: list[ChatMessage],
     target_index: int | None = None,
 ) -> None:
     """Enter retry mode with frozen message context."""
@@ -84,7 +84,7 @@ def enter_retry_mode(
     state.retry_attempts.clear()
 
 
-def get_retry_context(state: SessionState) -> list[dict]:
+def get_retry_context(state: SessionState) -> list[ChatMessage]:
     """Return frozen retry context."""
     if not state.retry_mode:
         raise ValueError("Not in retry mode")
@@ -154,7 +154,7 @@ def exit_retry_mode(state: SessionState) -> None:
     state.retry_attempts.clear()
 
 
-def enter_secret_mode(state: SessionState, base_messages: list[dict]) -> None:
+def enter_secret_mode(state: SessionState, base_messages: list[ChatMessage]) -> None:
     """Enter secret mode and store context snapshot."""
     if state.retry_mode:
         raise ValueError("Cannot enter secret mode while in retry mode")
@@ -163,7 +163,7 @@ def enter_secret_mode(state: SessionState, base_messages: list[dict]) -> None:
     state.secret_base_messages = base_messages.copy()
 
 
-def get_secret_context(state: SessionState) -> list[dict]:
+def get_secret_context(state: SessionState) -> list[ChatMessage]:
     """Return secret-mode context snapshot."""
     if not state.secret_mode:
         raise ValueError("Not in secret mode")

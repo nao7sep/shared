@@ -11,6 +11,7 @@ from polychat.ai.gemini_provider import GeminiProvider
 from polychat.ai.grok_provider import GrokProvider
 from polychat.ai.openai_provider import OpenAIProvider
 from polychat.ai.perplexity_provider import PerplexityProvider
+from polychat.domain.chat import ChatMessage
 
 
 @pytest.mark.asyncio
@@ -103,7 +104,7 @@ async def test_claude_get_full_response_uses_dated_web_search_tool_name():
     )
 
     await provider.get_full_response(
-        messages=[{"role": "user", "content": "hi"}],
+        messages=[ChatMessage.new_user("hi")],
         model="claude-haiku-4-5",
         search=True,
     )
@@ -126,7 +127,7 @@ async def test_claude_get_full_response_applies_fallback_max_tokens():
     )
 
     await provider.get_full_response(
-        messages=[{"role": "user", "content": "hi"}],
+        messages=[ChatMessage.new_user("hi")],
         model="claude-haiku-4-5",
         max_output_tokens=None,
     )
@@ -168,7 +169,7 @@ async def test_gemini_get_full_response_forwards_max_output_tokens(monkeypatch):
     )
 
     await provider.get_full_response(
-        messages=[{"role": "user", "content": "hi"}],
+        messages=[ChatMessage.new_user("hi")],
         model="gemini-3-flash-preview",
         max_output_tokens=321,
     )

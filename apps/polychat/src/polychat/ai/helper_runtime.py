@@ -4,11 +4,16 @@ This module provides functions to invoke the helper AI for tasks like
 title generation, summary generation, and safety checks.
 """
 
+from __future__ import annotations
+
 import logging
 import time
-from typing import Optional, Any
+from typing import TYPE_CHECKING, Optional, Any
 
 from ..domain.profile import RuntimeProfile
+
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +22,7 @@ async def invoke_helper_ai(
     helper_ai: str,
     helper_model: str,
     profile: RuntimeProfile,
-    messages: list[dict],
+    messages: list[ChatMessage],
     system_prompt: Optional[str] = None,
     task: str = "helper_task",
     session: Optional[Any] = None,

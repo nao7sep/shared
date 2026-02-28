@@ -118,10 +118,10 @@ async def test_retry_mode_excludes_last_user_assistant_interaction(command_handl
     assert result == "Retry mode enabled"
     ctx = mock_session_manager.get_retry_context()
     assert len(ctx) == 2
-    assert ctx[0]["role"] == "user"
-    assert ctx[0]["content"] == ["hello"]
-    assert ctx[1]["role"] == "assistant"
-    assert ctx[1]["content"] == ["hello!"]
+    assert ctx[0].role == "user"
+    assert ctx[0].content == ["hello"]
+    assert ctx[1].role == "assistant"
+    assert ctx[1].content == ["hello!"]
 
 
 @pytest.mark.asyncio
@@ -138,15 +138,15 @@ async def test_retry_mode_excludes_failed_user_message_after_error(command_handl
     assert result == "Retry mode enabled"
     ctx = mock_session_manager.get_retry_context()
     assert len(ctx) == 2
-    assert ctx[0]["role"] == "user"
-    assert ctx[0]["content"] == ["hello"]
-    assert ctx[1]["role"] == "assistant"
-    assert ctx[1]["content"] == ["hello!"]
+    assert ctx[0].role == "user"
+    assert ctx[0].content == ["hello"]
+    assert ctx[1].role == "assistant"
+    assert ctx[1].content == ["hello!"]
 
 
 @pytest.mark.asyncio
 async def test_apply_no_args_uses_latest_retry_attempt(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([{"role": "user", "content": "base"}], target_index=1)
+    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
     first_id = mock_session_manager.add_retry_attempt("q1", "a1")
     latest_id = mock_session_manager.add_retry_attempt("q2", "a2")
 
@@ -158,7 +158,7 @@ async def test_apply_no_args_uses_latest_retry_attempt(command_handler, mock_ses
 
 @pytest.mark.asyncio
 async def test_apply_last_uses_latest_retry_attempt(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([{"role": "user", "content": "base"}], target_index=1)
+    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
     latest_id = mock_session_manager.add_retry_attempt("q2", "a2")
 
     result = await command_handler.apply_retry("last")
@@ -168,7 +168,7 @@ async def test_apply_last_uses_latest_retry_attempt(command_handler, mock_sessio
 
 @pytest.mark.asyncio
 async def test_apply_no_args_requires_retry_attempts(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([{"role": "user", "content": "base"}], target_index=1)
+    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
 
     result = await command_handler.apply_retry("")
 
@@ -177,7 +177,7 @@ async def test_apply_no_args_requires_retry_attempts(command_handler, mock_sessi
 
 @pytest.mark.asyncio
 async def test_apply_last_requires_retry_attempts(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([{"role": "user", "content": "base"}], target_index=1)
+    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
 
     result = await command_handler.apply_retry("last")
 
@@ -186,7 +186,7 @@ async def test_apply_last_requires_retry_attempts(command_handler, mock_session_
 
 @pytest.mark.asyncio
 async def test_apply_explicit_hex_id_still_supported(command_handler, mock_session_manager):
-    mock_session_manager.enter_retry_mode([{"role": "user", "content": "base"}], target_index=1)
+    mock_session_manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=1)
     retry_hex_id = mock_session_manager.add_retry_attempt("q", "a")
 
     result = await command_handler.apply_retry(retry_hex_id)

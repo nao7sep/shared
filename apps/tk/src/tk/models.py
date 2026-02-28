@@ -225,6 +225,15 @@ class HistoryListPayload:
 
 
 @dataclass
+class GroupedTaskDisplay:
+    """Tasks grouped by status for TODO/markdown display."""
+
+    pending: list[Task] = field(default_factory=list)
+    done: list[tuple[str, list[Task]]] = field(default_factory=list)
+    cancelled: list[tuple[str, list[Task]]] = field(default_factory=list)
+
+
+@dataclass
 class DoneCancelResult:
     """Result of interactive done/cancel prompts."""
 

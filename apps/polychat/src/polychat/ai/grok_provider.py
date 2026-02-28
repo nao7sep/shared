@@ -3,8 +3,10 @@
 Note: Grok uses OpenAI-compatible API.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 from openai import (
     AsyncOpenAI,
     APIConnectionError,
@@ -41,6 +43,9 @@ from .tools import grok_web_search_tools
 from .types import AIResponseMetadata, Citation
 
 
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
+
 class GrokProvider:
     """Grok (xAI) provider implementation.
 
@@ -67,7 +72,7 @@ class GrokProvider:
             max_retries=0,
         )
 
-    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+    def format_messages(self, chat_messages: list[ChatMessage]) -> list[dict[str, str]]:
         """Convert Chat format to Grok format."""
         return format_chat_messages(chat_messages)
 
@@ -89,7 +94,7 @@ class GrokProvider:
     async def _create_response(
         self,
         model: str,
-        input_items: list[dict],
+        input_items: list[dict[str, object]],
         stream: bool,
         search: bool = False,
         max_output_tokens: int | None = None,
@@ -138,7 +143,7 @@ class GrokProvider:
 
     async def send_message(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
@@ -227,7 +232,7 @@ class GrokProvider:
 
     async def get_full_response(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         search: bool = False,

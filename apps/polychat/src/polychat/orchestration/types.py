@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal, TypeAlias
+from typing import Literal, TypeAlias
 
-from ..domain.chat import ChatDocument
+from ..domain.chat import ChatDocument, ChatMessage
 
 
 ActionMode = Literal["normal", "retry", "secret"]
@@ -41,7 +41,7 @@ class SendAction:
     """Dispatch prepared messages to provider execution path."""
 
     mode: ActionMode
-    messages: list[dict[str, Any]]
+    messages: list[ChatMessage]
     search_enabled: bool | None = None
     retry_user_input: str | None = None
     assistant_hex_id: str | None = None

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from polychat.commands.types import CommandSignal
-from polychat.domain.chat import ChatDocument
+from polychat.domain.chat import ChatDocument, ChatMessage
 from polychat.orchestrator import ChatOrchestrator
 from polychat.orchestration.types import ContinueAction, PrintAction, SendAction
 from polychat.session_manager import SessionManager
@@ -46,7 +46,7 @@ def _chat_with_pending_error() -> ChatDocument:
 async def test_pending_error_allows_retry_mode_send(orchestrator: ChatOrchestrator) -> None:
     chat_data = _chat_with_pending_error()
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-    orchestrator.manager.enter_retry_mode([{"role": "user", "content": "hello"}], target_index=1)
+    orchestrator.manager.enter_retry_mode([ChatMessage.new_user("hello")], target_index=1)
 
     action = await orchestrator.handle_user_message(
         "retry question",
@@ -86,7 +86,7 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
     })
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
     orchestrator.manager.enter_retry_mode(
-        [{"role": "user", "content": "hello"}],
+        [ChatMessage.new_user("hello")],
         target_index=99,
     )
     retry_hex_id = orchestrator.manager.add_retry_attempt("retry q", "retry a")
@@ -106,7 +106,7 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
 
 @pytest.mark.asyncio
 async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -> None:
-    orchestrator.manager.enter_retry_mode([{"role": "user", "content": "base"}], target_index=0)
+    orchestrator.manager.enter_retry_mode([ChatMessage.new_user("base")], target_index=0)
     orchestrator.manager.add_retry_attempt("retry q", "retry a")
 
     action = await orchestrator.handle_command_response(

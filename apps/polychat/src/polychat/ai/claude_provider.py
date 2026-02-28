@@ -1,7 +1,9 @@
 """Claude (Anthropic) provider implementation for PolyChat."""
 
+from __future__ import annotations
+
 import logging
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
 from anthropic import AsyncAnthropic
 from anthropic import (
     RateLimitError,
@@ -41,6 +43,9 @@ from .tools import claude_web_search_tools
 from .types import AIResponseMetadata, Citation
 
 
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
+
 class ClaudeProvider:
     """Claude (Anthropic) provider implementation."""
 
@@ -78,7 +83,7 @@ class ClaudeProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+    def format_messages(self, chat_messages: list[ChatMessage]) -> list[dict[str, str]]:
         """Convert Chat format to Claude format.
 
         Args:
@@ -143,7 +148,7 @@ class ClaudeProvider:
 
     async def send_message(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
@@ -292,7 +297,7 @@ class ClaudeProvider:
 
     async def get_full_response(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         search: bool = False,

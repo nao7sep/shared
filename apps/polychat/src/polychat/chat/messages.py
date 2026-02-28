@@ -61,9 +61,9 @@ def update_metadata(data: ChatDocument, **kwargs: object) -> None:
 
 def get_messages_for_ai(
     data: ChatDocument, max_messages: int | None = None
-) -> list[dict[str, Any]]:
+) -> list[ChatMessage]:
     """Get messages formatted for AI (excluding error messages)."""
-    messages = [msg.to_dict() for msg in data.messages if msg.role in ("user", "assistant")]
+    messages = [msg for msg in data.messages if msg.role in ("user", "assistant")]
 
     if max_messages is not None:
         messages = messages[-max_messages:]
@@ -71,7 +71,7 @@ def get_messages_for_ai(
     return messages
 
 
-def get_retry_context_for_last_interaction(data: ChatDocument) -> list[dict[str, Any]]:
+def get_retry_context_for_last_interaction(data: ChatDocument) -> list[ChatMessage]:
     """Get retry context excluding the interaction currently being retried."""
     ai_messages = get_messages_for_ai(data)
     all_messages = data.messages
@@ -84,15 +84,15 @@ def get_retry_context_for_last_interaction(data: ChatDocument) -> list[dict[str,
     if last_role == "assistant":
         if (
             len(ai_messages) >= 2
-            and ai_messages[-1].get("role") == "assistant"
-            and ai_messages[-2].get("role") == "user"
+            and ai_messages[-1].role == "assistant"
+            and ai_messages[-2].role == "user"
         ):
             return ai_messages[:-2]
-        if ai_messages[-1].get("role") == "assistant":
+        if ai_messages[-1].role == "assistant":
             return ai_messages[:-1]
         return ai_messages
 
-    if last_role == "error" and ai_messages[-1].get("role") == "user":
+    if last_role == "error" and ai_messages[-1].role == "user":
         return ai_messages[:-1]
 
     return ai_messages

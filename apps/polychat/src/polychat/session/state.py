@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .. import hex_id
-from ..domain.chat import ChatDocument, RetryAttempt
+from ..domain.chat import ChatDocument, ChatMessage, RetryAttempt
 from ..domain.profile import RuntimeProfile
 
 
@@ -31,11 +31,11 @@ class SessionState:
     system_prompt_path: Optional[str] = None
     input_mode: str = "quick"
     retry_mode: bool = False
-    retry_base_messages: list = field(default_factory=list)
+    retry_base_messages: list[ChatMessage] = field(default_factory=list)
     retry_target_index: Optional[int] = None
     retry_attempts: dict[str, RetryAttempt] = field(default_factory=dict)
     secret_mode: bool = False
-    secret_base_messages: list = field(default_factory=list)
+    secret_base_messages: list[ChatMessage] = field(default_factory=list)
     search_mode: bool = False
     hex_id_set: set[str] = field(default_factory=set)
     _provider_cache: dict[tuple[str, str, int | float | None], Any] = field(

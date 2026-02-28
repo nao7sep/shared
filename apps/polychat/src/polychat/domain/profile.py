@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
+
+if TYPE_CHECKING:
+    from ..ai.types import AILimitsConfig
+    from ..keys.loader import KeyConfig
 
 
 _KNOWN_PROFILE_KEYS = {
@@ -31,7 +35,7 @@ class RuntimeProfile:
     models: dict[str, str]
     chats_dir: str
     logs_dir: str
-    api_keys: dict[str, dict[str, Any]]
+    api_keys: dict[str, KeyConfig]
     timeout: int | float
     input_mode: str = "quick"
     default_helper_ai: str | None = None
@@ -39,7 +43,7 @@ class RuntimeProfile:
     title_prompt: str | None = None
     summary_prompt: str | None = None
     safety_prompt: str | None = None
-    ai_limits: dict[str, Any] | None = None
+    ai_limits: AILimitsConfig | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -65,13 +69,13 @@ class RuntimeProfile:
         if not isinstance(api_keys_raw, Mapping):
             raise ValueError("'api_keys' must be a dictionary")
 
-        api_keys: dict[str, dict[str, Any]] = {}
+        api_keys: dict[str, KeyConfig] = {}
         for provider, key_config in api_keys_raw.items():
             if not isinstance(key_config, Mapping):
                 raise ValueError(
                     f"API key config for '{provider}' must be a dictionary"
                 )
-            api_keys[str(provider)] = dict(key_config)
+            api_keys[str(provider)] = dict(key_config)  # type: ignore[assignment]
 
         timeout = profile.get("timeout", 300)
         if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
@@ -88,7 +92,9 @@ class RuntimeProfile:
         }
 
         ai_limits_raw = profile.get("ai_limits")
-        ai_limits = dict(ai_limits_raw) if isinstance(ai_limits_raw, Mapping) else None
+        ai_limits: AILimitsConfig | None = (
+            dict(ai_limits_raw) if isinstance(ai_limits_raw, Mapping) else None  # type: ignore[assignment]
+        )
 
         return cls(
             default_ai=str(profile["default_ai"]),

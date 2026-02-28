@@ -5,9 +5,7 @@ from pathlib import Path
 from tk import data
 from tk.models import Task, TaskStatus
 
-_PENDING_STATUS = TaskStatus.PENDING.value
 _DONE_STATUS = TaskStatus.DONE.value
-_CANCELLED_STATUS = TaskStatus.CANCELLED.value
 
 
 def _write_todo(lines: list[str], output_path: str) -> None:
@@ -43,18 +41,18 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
     - Empty line after "## History"
     - File ends with empty line
     """
-    sorted_data = data.group_tasks_for_display(tasks)
+    grouped = data.group_tasks_for_display(tasks)
     lines = ["# TODO", ""]
 
     # Pending section
-    if sorted_data[_PENDING_STATUS]:
-        for task in sorted_data[_PENDING_STATUS]:
+    if grouped.pending:
+        for task in grouped.pending:
             lines.append(f"- {task.text}")
     else:
         lines.append("No pending tasks.")
 
     # Check if there are any handled tasks
-    has_handled = any(sorted_data[_DONE_STATUS]) or any(sorted_data[_CANCELLED_STATUS])
+    has_handled = bool(grouped.done) or bool(grouped.cancelled)
 
     if not has_handled:
         # No history to show, just end with empty line
@@ -70,14 +68,12 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
     # Merge done and cancelled by date
     all_dates: dict[str, list[Task]] = {}
 
-    # Add done tasks
-    for date, date_tasks in sorted_data[_DONE_STATUS]:
+    for date, date_tasks in grouped.done:
         if date not in all_dates:
             all_dates[date] = []
         all_dates[date].extend(date_tasks)
 
-    # Add cancelled tasks
-    for date, date_tasks in sorted_data[_CANCELLED_STATUS]:
+    for date, date_tasks in grouped.cancelled:
         if date not in all_dates:
             all_dates[date] = []
         all_dates[date].extend(date_tasks)

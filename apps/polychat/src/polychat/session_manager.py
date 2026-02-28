@@ -4,10 +4,12 @@ This module provides a SessionManager class that wraps SessionState and provides
 a clean interface for session management.
 """
 
+from __future__ import annotations
+
 from typing import Any, Optional
 
 from .ai.types import Citation
-from .domain.chat import ChatDocument, RetryAttempt
+from .domain.chat import ChatDocument, ChatMessage, RetryAttempt
 from .domain.profile import RuntimeProfile
 from .session.state import (
     SessionState,
@@ -240,7 +242,7 @@ class SessionManager:
     # Retry Mode Management
     # ===================================================================
 
-    def enter_retry_mode(self, base_messages: list[dict], target_index: int | None = None) -> None:
+    def enter_retry_mode(self, base_messages: list[ChatMessage], target_index: int | None = None) -> None:
         """Enter retry mode with frozen message context.
 
         Args:
@@ -253,7 +255,7 @@ class SessionManager:
             target_index=target_index,
         )
 
-    def get_retry_context(self) -> list[dict]:
+    def get_retry_context(self) -> list[ChatMessage]:
         """Get frozen retry context.
 
         Returns:
@@ -308,7 +310,7 @@ class SessionManager:
     # Secret Mode Management
     # ===================================================================
 
-    def enter_secret_mode(self, base_messages: list[dict]) -> None:
+    def enter_secret_mode(self, base_messages: list[ChatMessage]) -> None:
         """Enter secret mode and store a snapshot of persisted context.
 
         Args:
@@ -316,7 +318,7 @@ class SessionManager:
         """
         session_ops.enter_secret_mode(self._state, base_messages)
 
-    def get_secret_context(self) -> list[dict]:
+    def get_secret_context(self) -> list[ChatMessage]:
         """Get stored secret-mode context snapshot.
 
         Returns:

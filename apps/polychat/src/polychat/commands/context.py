@@ -9,6 +9,7 @@ from ..domain.profile import RuntimeProfile
 from ..ui.interaction import UserInteractionPort
 
 if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
     from ..session_manager import SessionManager
 
 
@@ -20,7 +21,7 @@ class HelperAIInvoker(Protocol):
         helper_ai: str,
         helper_model: str,
         profile: RuntimeProfile,
-        messages: list[dict],
+        messages: list[ChatMessage],
         system_prompt: Optional[str] = None,
         *,
         task: str = "helper_task",

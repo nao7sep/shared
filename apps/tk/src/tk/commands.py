@@ -13,7 +13,6 @@ from tk.models import (
     Task,
     TaskListItem,
     TaskStatus,
-    TaskStore,
 )
 from tk.session import Session
 from tk.validation import validate_date_format
@@ -24,18 +23,13 @@ _CANCELLED_STATUS = TaskStatus.CANCELLED.value
 _HANDLED_STATUSES = (_DONE_STATUS, _CANCELLED_STATUS)
 
 
-def _serialize_tasks(tasks_data: TaskStore) -> list[Task]:
-    """Return task list from store for markdown generation."""
-    return tasks_data.tasks
-
-
 def _sync_if_auto(session: Session) -> None:
     """Regenerate TODO.md if auto_sync is enabled."""
     prof = session.require_profile()
     tasks_data = session.require_tasks()
 
     if prof.auto_sync:
-        markdown.generate_todo(_serialize_tasks(tasks_data), prof.output_path)
+        markdown.generate_todo(tasks_data.tasks, prof.output_path)
 
 
 def get_default_subjective_date(session: Session) -> str:
@@ -318,7 +312,7 @@ def cmd_sync(session: Session) -> str:
     tasks_data = session.require_tasks()
 
     output_path = prof.output_path
-    markdown.generate_todo(_serialize_tasks(tasks_data), output_path)
+    markdown.generate_todo(tasks_data.tasks, output_path)
 
     filename = Path(output_path).name
     return f"{filename} regenerated."

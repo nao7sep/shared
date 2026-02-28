@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Optional
 
 from .. import hex_id
+from ..domain.chat import ChatMessage
 from ..domain.profile import RuntimeProfile
 from ..prompts.templates import (
     build_safety_check_prompt,
@@ -34,7 +35,7 @@ class MetadataGenerationCommandHandlers:
         helper_ai: str,
         helper_model: str,
         profile_data: RuntimeProfile,
-        messages: list[dict],
+        messages: list[ChatMessage],
         system_prompt: Optional[str],
         task: str,
     ) -> str:
@@ -70,19 +71,19 @@ class MetadataGenerationCommandHandlers:
         if chat_data is None:
             return "No chat is currently open"
 
-        if not chat_data.messages:
+        ai_messages = [m for m in chat_data.messages if m.role in ("user", "assistant")]
+        if not ai_messages:
             return "No messages in chat to generate title from"
 
-        context_text = format_for_ai_context(chat_data.messages)
+        context_text = format_for_ai_context(ai_messages)
 
         prompt_messages = [
-            {
-                "role": "user",
-                "content": build_title_generation_prompt(
+            ChatMessage.new_user(
+                build_title_generation_prompt(
                     context_text,
                     self._deps.manager.profile.title_prompt,
-                ),
-            }
+                )
+            )
         ]
 
         try:
@@ -131,19 +132,19 @@ class MetadataGenerationCommandHandlers:
         if chat_data is None:
             return "No chat is currently open"
 
-        if not chat_data.messages:
+        ai_messages = [m for m in chat_data.messages if m.role in ("user", "assistant")]
+        if not ai_messages:
             return "No messages in chat to generate summary from"
 
-        context_text = format_for_ai_context(chat_data.messages)
+        context_text = format_for_ai_context(ai_messages)
 
         prompt_messages = [
-            {
-                "role": "user",
-                "content": build_summary_generation_prompt(
+            ChatMessage.new_user(
+                build_summary_generation_prompt(
                     context_text,
                     self._deps.manager.profile.summary_prompt,
-                ),
-            }
+                )
+            )
         ]
 
         try:
@@ -192,13 +193,12 @@ class MetadataGenerationCommandHandlers:
             scope = "entire chat"
 
         prompt_messages = [
-            {
-                "role": "user",
-                "content": build_safety_check_prompt(
+            ChatMessage.new_user(
+                build_safety_check_prompt(
                     content_to_check,
                     self._deps.manager.profile.safety_prompt,
-                ),
-            }
+                )
+            )
         ]
 
         try:

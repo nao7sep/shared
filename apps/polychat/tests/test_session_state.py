@@ -272,7 +272,7 @@ class TestChatScopedState:
             chat=ChatDocument.empty(),
             retry_mode=True,
         )
-        session.retry_base_messages = [{"role": "user", "content": "old"}]
+        session.retry_base_messages = [ChatMessage.new_user("old")]
         session.retry_target_index = 3
         session.retry_attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
 
@@ -297,7 +297,7 @@ class TestChatScopedState:
             chat=ChatDocument.empty(),
             secret_mode=True,
         )
-        session.secret_base_messages = [{"role": "user", "content": "secret"}]
+        session.secret_base_messages = [ChatMessage.new_user("secret")]
 
         session.secret_mode = False
         session.secret_base_messages.clear()
@@ -317,8 +317,8 @@ class TestChatScopedState:
             retry_mode=True,
             secret_mode=True,
         )
-        session.retry_base_messages = [{"role": "user", "content": "retry"}]
-        session.secret_base_messages = [{"role": "user", "content": "secret"}]
+        session.retry_base_messages = [ChatMessage.new_user("retry")]
+        session.secret_base_messages = [ChatMessage.new_user("secret")]
 
         session.retry_mode = False
         session.secret_mode = False
@@ -400,7 +400,7 @@ class TestStateTransitions:
 
         # Simulate entering retry mode
         session.retry_mode = True
-        session.retry_base_messages = [{"role": "user", "content": "base"}]
+        session.retry_base_messages = [ChatMessage.new_user("base")]
 
         assert session.retry_mode is True
         assert len(session.retry_base_messages) == 1
@@ -419,7 +419,7 @@ class TestStateTransitions:
 
         # Simulate entering secret mode
         session.secret_mode = True
-        session.secret_base_messages = [{"role": "user", "content": "frozen"}]
+        session.secret_base_messages = [ChatMessage.new_user("frozen")]
 
         assert session.secret_mode is True
         assert len(session.secret_base_messages) == 1

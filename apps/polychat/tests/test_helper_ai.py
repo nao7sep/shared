@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from polychat.ai.helper_runtime import invoke_helper_ai
+from polychat.domain.chat import ChatMessage
 from polychat.domain.profile import RuntimeProfile
 
 
@@ -32,7 +33,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
                     helper_ai="claude",
                     helper_model="claude-haiku-4-5",
                     profile=profile,
-                    messages=[{"role": "user", "content": "Generate title"}],
+                    messages=[ChatMessage.new_user("Generate title")],
                     system_prompt="Do task",
                     task="title_generation",
                     session=session,
@@ -41,12 +42,13 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
     assert response == "helper output"
     mock_load_key.assert_called_once_with("claude", profile.api_keys["claude"])
     mock_get_provider.assert_called_once_with("claude", "test-key", session=session)
-    provider.get_full_response.assert_awaited_once_with(
-        messages=[{"role": "user", "content": "Generate title"}],
-        model="claude-haiku-4-5",
-        system_prompt="Do task",
-        max_output_tokens=4096,
-    )
+    call_kwargs = provider.get_full_response.await_args.kwargs
+    assert len(call_kwargs["messages"]) == 1
+    assert call_kwargs["messages"][0].role == "user"
+    assert call_kwargs["messages"][0].content == ["Generate title"]
+    assert call_kwargs["model"] == "claude-haiku-4-5"
+    assert call_kwargs["system_prompt"] == "Do task"
+    assert call_kwargs["max_output_tokens"] == 4096
     event_names = [call.args[0] for call in mock_log_event.call_args_list]
     assert "helper_ai_request" in event_names
     assert "helper_ai_response" in event_names
@@ -70,7 +72,7 @@ async def test_invoke_helper_ai_missing_api_key_raises_value_error():
                 helper_ai="claude",
                 helper_model="claude-haiku-4-5",
                 profile=profile,
-                messages=[{"role": "user", "content": "test"}],
+                messages=[ChatMessage.new_user("test")],
             )
 
 
@@ -99,12 +101,13 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
                     helper_ai="claude",
                     helper_model="claude-haiku-4-5",
                     profile=profile,
-                    messages=[{"role": "user", "content": "Generate title"}],
+                    messages=[ChatMessage.new_user("Generate title")],
                 )
 
-    provider.get_full_response.assert_awaited_once_with(
-        messages=[{"role": "user", "content": "Generate title"}],
-        model="claude-haiku-4-5",
-        system_prompt=None,
-        max_output_tokens=123,
-    )
+    call_kwargs = provider.get_full_response.await_args.kwargs
+    assert len(call_kwargs["messages"]) == 1
+    assert call_kwargs["messages"][0].role == "user"
+    assert call_kwargs["messages"][0].content == ["Generate title"]
+    assert call_kwargs["model"] == "claude-haiku-4-5"
+    assert call_kwargs["system_prompt"] is None
+    assert call_kwargs["max_output_tokens"] == 123

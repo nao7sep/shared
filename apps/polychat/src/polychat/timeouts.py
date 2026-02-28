@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Mapping
+from typing import Any
 
 import httpx
 
@@ -69,13 +69,9 @@ def _normalize_timeout_value(value: Any, fallback: int | float) -> int | float:
     return normalized
 
 
-def resolve_profile_timeout(profile: RuntimeProfile | Mapping[str, Any] | None) -> int | float:
+def resolve_profile_timeout(profile: RuntimeProfile | None) -> int | float:
     """Resolve session/profile timeout with a safe default."""
-    raw_timeout = None
-    if isinstance(profile, RuntimeProfile):
-        raw_timeout = profile.timeout
-    elif isinstance(profile, Mapping):
-        raw_timeout = profile.get("timeout")
+    raw_timeout = profile.timeout if profile is not None else None
     return _normalize_timeout_value(raw_timeout, DEFAULT_PROFILE_TIMEOUT_SEC)
 
 

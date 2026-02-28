@@ -3,24 +3,22 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from ..formatting.text import lines_to_text
 
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
 
-def format_chat_messages(chat_messages: Sequence[dict[str, object]]) -> list[dict[str, str]]:
-    """Convert PolyChat messages into simple role/content payloads."""
+
+def format_chat_messages(chat_messages: Sequence[ChatMessage]) -> list[dict[str, str]]:
+    """Convert ChatMessage objects into simple role/content dicts for provider SDKs."""
     formatted: list[dict[str, str]] = []
     for msg in chat_messages:
-        role = str(msg.get("role", ""))
-        raw_content = msg.get("content", "")
-        if isinstance(raw_content, list):
-            content = lines_to_text([str(part) for part in raw_content])
-        else:
-            content = str(raw_content)
         formatted.append(
             {
-                "role": role,
-                "content": content,
+                "role": msg.role,
+                "content": lines_to_text(msg.content),
             }
         )
     return formatted

@@ -236,8 +236,8 @@ class TestSerialization:
         assert isinstance(session_dict, dict)
         assert session_dict["current_ai"] == "claude"
         assert session_dict["current_model"] == "claude-haiku-4-5"
-        assert isinstance(session_dict["profile"], RuntimeProfile)
-        assert session_dict["profile"].timeout == 300
+        assert isinstance(session_dict["profile"], dict)
+        assert session_dict["profile"]["timeout"] == 300
         assert session_dict["input_mode"] == "compose"
         assert session_dict["retry_mode"] is False
 
@@ -255,7 +255,7 @@ class TestChatManagement:
         )
 
         # Enter retry mode to test that it gets cleared
-        manager.enter_retry_mode([{"role": "user", "content": "old"}])
+        manager.enter_retry_mode([ChatMessage.new_user("old")])
         assert manager.retry_mode is True
 
         # Switch to new chat
@@ -298,7 +298,7 @@ class TestChatManagement:
         )
 
         # Set up some state
-        manager.enter_secret_mode([{"role": "user", "content": "test"}])
+        manager.enter_secret_mode([ChatMessage.new_user("test")])
 
         # Close chat
         manager.close_chat()
@@ -325,7 +325,7 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        base_messages = [{"role": "user", "content": "question"}]
+        base_messages = [ChatMessage.new_user("question")]
         manager.enter_retry_mode(base_messages)
 
         assert manager.retry_mode is True
@@ -352,7 +352,7 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([{"role": "user", "content": "base"}])
+        manager.enter_retry_mode([ChatMessage.new_user("base")])
         retry_hex_id = manager.add_retry_attempt("new question", "new answer")
 
         attempt = manager.get_retry_attempt(retry_hex_id)
@@ -368,7 +368,7 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([{"role": "user", "content": "base"}])
+        manager.enter_retry_mode([ChatMessage.new_user("base")])
         first_id = manager.add_retry_attempt("q1", "a1")
         latest_id = manager.add_retry_attempt("q2", "a2")
 
@@ -383,7 +383,7 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([{"role": "user", "content": "base"}])
+        manager.enter_retry_mode([ChatMessage.new_user("base")])
 
         assert manager.get_latest_retry_attempt_id() is None
 
@@ -417,7 +417,7 @@ class TestRetryModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_retry_mode([{"role": "user", "content": "base"}])
+        manager.enter_retry_mode([ChatMessage.new_user("base")])
         retry_hex_id = manager.add_retry_attempt("question", "answer")
         assert retry_hex_id in manager.hex_id_set
 
@@ -440,8 +440,8 @@ class TestSecretModeManagement:
         )
 
         base_messages = [
-            {"role": "user", "content": "public"},
-            {"role": "assistant", "content": "response"},
+            ChatMessage.new_user("public"),
+            ChatMessage.new_assistant("response", model="test-model"),
         ]
         manager.enter_secret_mode(base_messages)
 
@@ -480,7 +480,7 @@ class TestSecretModeManagement:
             current_model="claude-haiku-4-5",
         )
 
-        manager.enter_secret_mode([{"role": "user", "content": "frozen"}])
+        manager.enter_secret_mode([ChatMessage.new_user("frozen")])
         manager.exit_secret_mode()
 
         assert manager.secret_mode is False

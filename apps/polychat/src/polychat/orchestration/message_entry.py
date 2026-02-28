@@ -9,7 +9,7 @@ from ..chat import (
     get_messages_for_ai,
     get_retry_context_for_last_interaction,
 )
-from ..domain.chat import ChatDocument
+from ..domain.chat import ChatDocument, ChatMessage
 from ..session.state import has_pending_error, pending_error_guidance
 from .types import (
     ActionMode,
@@ -30,7 +30,7 @@ class MessageEntryHandlersMixin:
     def _build_send_action(
         self,
         *,
-        messages: list[dict],
+        messages: list[ChatMessage],
         mode: ActionMode,
         search_enabled: Optional[bool] = None,
         retry_user_input: Optional[str] = None,
@@ -85,7 +85,7 @@ class MessageEntryHandlersMixin:
     ) -> OrchestratorAction:
         """Handle one message while secret mode is enabled."""
         secret_context = get_messages_for_ai(chat_data)
-        temp_messages = secret_context + [{"role": "user", "content": user_input}]
+        temp_messages = secret_context + [ChatMessage.new_user(user_input)]
 
         return self._build_send_action(
             messages=temp_messages,
@@ -109,7 +109,7 @@ class MessageEntryHandlersMixin:
             )
             retry_context = self.manager.get_retry_context()
 
-        temp_messages = retry_context + [{"role": "user", "content": user_input}]
+        temp_messages = retry_context + [ChatMessage.new_user(user_input)]
 
         return self._build_send_action(
             messages=temp_messages,

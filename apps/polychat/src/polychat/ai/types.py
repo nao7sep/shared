@@ -24,6 +24,21 @@ class Citation(TypedDict, total=False):
     url: str | None
 
 
+class AILimitBlock(TypedDict, total=False):
+    """Single limit configuration block (default, per-provider, or helper)."""
+
+    max_output_tokens: int | None
+    search_max_output_tokens: int | None
+
+
+class AILimitsConfig(TypedDict, total=False):
+    """Structured ``ai_limits`` profile configuration."""
+
+    default: AILimitBlock
+    providers: dict[str, AILimitBlock]
+    helper: AILimitBlock
+
+
 class AIResponseMetadata(TypedDict, total=False):
     """Streaming metadata shared between runtime, providers, and REPL."""
 

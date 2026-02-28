@@ -3,8 +3,10 @@
 Note: Perplexity uses OpenAI-compatible API.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 from openai import (
     APIConnectionError,
     RateLimitError,
@@ -39,6 +41,9 @@ from .provider_utils import format_chat_messages
 from .types import AIResponseMetadata, Citation
 
 
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
+
 class PerplexityProvider:
     """Perplexity provider implementation.
 
@@ -67,7 +72,7 @@ class PerplexityProvider:
             max_retries=0,
         )
 
-    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+    def format_messages(self, chat_messages: list[ChatMessage]) -> list[dict[str, str]]:
         """Convert Chat format to Perplexity format.
 
         IMPORTANT: Perplexity API requires messages to strictly alternate between
@@ -167,7 +172,7 @@ class PerplexityProvider:
     async def _create_chat_completion(
         self,
         model: str,
-        messages: list[dict],
+        messages: list[dict[str, str]],
         stream: bool,
         max_output_tokens: int | None = None,
     ):
@@ -196,7 +201,7 @@ class PerplexityProvider:
 
     async def send_message(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
@@ -314,7 +319,7 @@ class PerplexityProvider:
 
     async def get_full_response(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         search: bool = False,

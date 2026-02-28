@@ -440,7 +440,7 @@ def test_get_messages_for_ai(sample_chat):
 
     # Should only have user and assistant messages
     assert len(messages) == 2
-    assert all(msg["role"] in ("user", "assistant") for msg in messages)
+    assert all(msg.role in ("user", "assistant") for msg in messages)
 
 
 def test_get_messages_for_ai_with_limit(sample_chat):
@@ -453,4 +453,4 @@ def test_get_messages_for_ai_with_limit(sample_chat):
     messages = get_messages_for_ai(sample_chat, max_messages=2)
 
     assert len(messages) == 2
-    assert messages[0]["content"] == ["Message 3"]
+    assert messages[0].content == ["Message 3"]

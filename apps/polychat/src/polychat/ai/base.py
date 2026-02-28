@@ -3,9 +3,14 @@
 This module defines the Protocol that all AI providers must implement.
 """
 
-from typing import Protocol, AsyncIterator
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol, AsyncIterator
 
 from .types import AIResponseMetadata
+
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
 
 
 class AIProvider(Protocol):
@@ -16,7 +21,7 @@ class AIProvider(Protocol):
 
     async def send_message(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
@@ -45,7 +50,7 @@ class AIProvider(Protocol):
 
     async def get_full_response(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         search: bool = False,
@@ -69,12 +74,11 @@ class AIProvider(Protocol):
         """
         ...
 
-    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
-        """Convert Chat format to provider-specific format.
+    def format_messages(self, chat_messages: list[ChatMessage]) -> list[dict]:
+        """Convert ChatMessage objects to provider-specific format.
 
         Args:
-            chat_messages: Messages in PolyChat format
-                [{"role": "user", "content": ["line1", "line2"]}, ...]
+            chat_messages: List of ChatMessage objects with .role and .content attributes
 
         Returns:
             Messages in provider-specific format

@@ -1,7 +1,9 @@
 """Gemini (Google) provider implementation for PolyChat."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 from google import genai
 from google.genai import types
 from google.genai.errors import (
@@ -24,6 +26,9 @@ from .provider_utils import format_chat_messages
 from .tools import gemini_web_search_tools
 from .types import AIResponseMetadata, Citation
 
+
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
 
 class GeminiProvider:
     """Gemini (Google) provider implementation."""
@@ -61,7 +66,7 @@ class GeminiProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-    def format_messages(self, chat_messages: list[dict]) -> list[types.Content]:
+    def format_messages(self, chat_messages: list[ChatMessage]) -> list[types.Content]:
         """Convert Chat format to Gemini format.
 
         Args:
@@ -79,7 +84,7 @@ class GeminiProvider:
 
     async def send_message(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
@@ -212,7 +217,7 @@ class GeminiProvider:
 
     async def get_full_response(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         search: bool = False,

@@ -1,8 +1,10 @@
 """AI provider initialization, validation, and request/response runtime."""
 
+from __future__ import annotations
+
 import logging
 import time
-from typing import Any, AsyncIterator, Optional, Protocol
+from typing import TYPE_CHECKING, Any, AsyncIterator, Optional, Protocol
 
 from ..keys.loader import load_api_key, validate_api_key
 from ..domain.profile import RuntimeProfile
@@ -22,6 +24,9 @@ from .deepseek_provider import DeepSeekProvider
 from .limits import resolve_request_limits
 from .types import AIResponseMetadata
 from ..timeouts import resolve_ai_read_timeout, resolve_profile_timeout
+
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
 
 ProviderInstance = (
     OpenAIProvider
@@ -172,7 +177,7 @@ def get_provider_instance(
 
 async def send_message_to_ai(
     provider_instance: ProviderInstance,
-    messages: list[dict],
+    messages: list[ChatMessage],
     model: str,
     system_prompt: Optional[str] = None,
     provider_name: Optional[str] = None,

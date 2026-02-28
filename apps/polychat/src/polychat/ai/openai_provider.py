@@ -4,8 +4,10 @@ This provider uses the OpenAI Responses API (recommended for all new projects).
 See: https://platform.openai.com/docs/guides/text
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 from openai import AsyncOpenAI
 from openai import (
     APIConnectionError,
@@ -42,6 +44,9 @@ from .tools import openai_web_search_tools
 from .types import AIResponseMetadata, Citation
 
 
+if TYPE_CHECKING:
+    from ..domain.chat import ChatMessage
+
 class OpenAIProvider:
     """OpenAI (GPT) provider implementation using the Responses API."""
 
@@ -61,7 +66,7 @@ class OpenAIProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-    def format_messages(self, chat_messages: list[dict]) -> list[dict]:
+    def format_messages(self, chat_messages: list[ChatMessage]) -> list[dict[str, str]]:
         """Convert Chat format to OpenAI Responses API input format.
 
         Args:
@@ -90,7 +95,7 @@ class OpenAIProvider:
     async def _create_response(
         self,
         model: str,
-        input_items: list[dict],
+        input_items: list[dict[str, object]],
         stream: bool,
         search: bool = False,
         max_output_tokens: int | None = None,
@@ -120,7 +125,7 @@ class OpenAIProvider:
 
     async def send_message(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         stream: bool = True,
@@ -251,7 +256,7 @@ class OpenAIProvider:
 
     async def get_full_response(
         self,
-        messages: list[dict],
+        messages: list[ChatMessage],
         model: str,
         system_prompt: str | None = None,
         search: bool = False,
