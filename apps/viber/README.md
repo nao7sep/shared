@@ -52,7 +52,15 @@ view p<ID>                                  (v p<ID>)
 view t<ID>                                  (v t<ID>)
 
 ok p<ID> t<ID>                              (o p<ID> t<ID>)
+ok t<ID> p<ID>                              (o t<ID> p<ID>)
 nah p<ID> t<ID>                             (n p<ID> t<ID>)
+nah t<ID> p<ID>                             (n t<ID> p<ID>)
+
+undo p<ID> t<ID>                            (z p<ID> t<ID>)
+undo t<ID> p<ID>                            (z t<ID> p<ID>)
+undo g<ID>                                  (z g<ID>)
+undo p<ID>                                  (z p<ID>)
+undo t<ID>                                  (z t<ID>)
 
 work p<ID>                                  (w p<ID>)
 work t<ID>                                  (w t<ID>)
@@ -63,7 +71,8 @@ exit | quit
 
 ### Notes
 
-- `ok` and `nah` accept tokens in either order: `ok p3 t1` or `ok t1 p3`.
+- `ok` and `nah` accept tokens in either order: `ok p3 t1` or `ok t1 p3`. No confirmation required; prompts for optional comment only. `Ctrl+C` during the comment prompt cancels.
+- `undo p<ID> t<ID>` reverts a single assignment to `pending` (no confirmation). `undo g<ID>`, `undo p<ID>`, and `undo t<ID>` revert all resolved assignments for that entity (requires y/N confirmation). Comments are always cleared on undo.
 - `create task` requires explicit scope: trailing `g<ID>` for one group or `all` for all groups.
 - Use explicit project update forms only: `update p<ID> name ...` and `update p<ID> state ...`.
 - `update p<ID> t<ID>` with no comment clears the assignment comment.
@@ -99,7 +108,7 @@ Assignments are only generated for `active` projects at task creation time. No b
 - All timestamps are stored as UTC ISO 8601 with `Z` suffix.
 - `project.created_utc` is set when a project is created.
 - `task.created_utc` is set when a task is created.
-- `assignment.handled_utc` is `null` while pending, and set when resolved via `ok` or `nah`.
+- `assignment.handled_utc` is `null` while pending, set when resolved via `ok` or `nah`, and cleared by `undo`.
 - `read projects` / `read p<ID>` display `project | group | state | local-created-time`.
 - `read tasks` / `read t<ID>` display `task | group-or-all | local-created-time`.
 

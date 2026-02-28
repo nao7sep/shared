@@ -27,6 +27,7 @@ _ALIASES = {
     "o": "ok",
     "n": "nah",
     "w": "work",
+    "z": "undo",
 }
 
 readline_module: Any

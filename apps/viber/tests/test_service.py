@@ -23,6 +23,7 @@ from viber.service import (
     get_task,
     resolve_assignment,
     set_project_state,
+    undo_assignment,
     update_assignment_comment,
     update_group_name,
     update_project_name,
@@ -436,3 +437,47 @@ def test_reactivated_project_no_backfill() -> None:
     # new task after reactivation → gets assignment
     t2 = create_task(db, "Task after reactivation", None)
     assert assignment_key(p.id, t2.id) in db.assignments
+
+
+# ---------------------------------------------------------------------------
+# Undo assignment
+# ---------------------------------------------------------------------------
+
+
+def test_undo_assignment_resets_to_pending() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+
+    resolve_assignment(db, p.id, t.id, AssignmentStatus.OK, "Done")
+    a = undo_assignment(db, p.id, t.id)
+
+    assert a.status == AssignmentStatus.PENDING
+    assert a.comment is None
+    assert a.handled_utc is None
+
+
+def test_undo_assignment_clears_nah_with_comment() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+
+    resolve_assignment(db, p.id, t.id, AssignmentStatus.NAH, "Not applicable")
+    a = undo_assignment(db, p.id, t.id)
+
+    assert a.status == AssignmentStatus.PENDING
+    assert a.comment is None
+    assert a.handled_utc is None
+
+
+def test_undo_assignment_not_found() -> None:
+    db = make_db()
+    g1 = create_group(db, "Backend")
+    g2 = create_group(db, "Frontend")
+    create_project(db, "api", g1.id)
+    p2 = create_project(db, "ui", g2.id)
+    t = create_task(db, "Backend task", g1.id)
+    with pytest.raises(AssignmentNotFoundError):
+        undo_assignment(db, p2.id, t.id)

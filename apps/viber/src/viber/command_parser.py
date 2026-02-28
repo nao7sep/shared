@@ -122,6 +122,18 @@ class WorkEntityCommand(ParsedCommand):
     entity_id: int
 
 
+@dataclass(frozen=True)
+class UndoAssignmentCommand(ParsedCommand):
+    project_id: int
+    task_id: int
+
+
+@dataclass(frozen=True)
+class UndoEntityCommand(ParsedCommand):
+    kind: str  # group | project | task
+    entity_id: int
+
+
 def parse_command(verb: str, args: list[str]) -> ParsedCommand:
     if verb == "help":
         if args:
@@ -143,6 +155,8 @@ def parse_command(verb: str, args: list[str]) -> ParsedCommand:
         return _parse_resolve(args, AssignmentStatus.NAH)
     if verb == "work":
         return _parse_work(args)
+    if verb == "undo":
+        return _parse_undo(args)
     raise CommandParseError(f"Unknown command: '{verb}'. Type 'help' for available commands.")
 
 
@@ -382,6 +396,33 @@ def _parse_work(args: list[str]) -> ParsedCommand:
         return WorkEntityCommand(kind="task", entity_id=tid)
     raise CommandParseError(
         f"Unknown target '{token}'. Expected p<ID> or t<ID>."
+    )
+
+
+def _parse_undo(args: list[str]) -> ParsedCommand:
+    if len(args) == 2:
+        pid, tid = _parse_pt_tokens(args[0], args[1])
+        if pid is not None and tid is not None:
+            return UndoAssignmentCommand(project_id=pid, task_id=tid)
+        raise CommandParseError(
+            f"Expected p<ID> and t<ID> in either order. Got: {args[0]} {args[1]}"
+        )
+    if len(args) == 1:
+        token = args[0].lower()
+        gid = _parse_id_token(token, "g")
+        if gid is not None:
+            return UndoEntityCommand(kind="group", entity_id=gid)
+        pid = _parse_id_token(token, "p")
+        if pid is not None:
+            return UndoEntityCommand(kind="project", entity_id=pid)
+        tid = _parse_id_token(token, "t")
+        if tid is not None:
+            return UndoEntityCommand(kind="task", entity_id=tid)
+        raise CommandParseError(
+            f"Unknown target '{token}'. Expected g<ID>, p<ID>, or t<ID>."
+        )
+    raise CommandParseError(
+        "Usage: undo p<ID> t<ID> | undo g<ID> | undo p<ID> | undo t<ID>"
     )
 
 

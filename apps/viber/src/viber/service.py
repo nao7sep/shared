@@ -270,6 +270,21 @@ def update_assignment_comment(
     return assignment
 
 
+def undo_assignment(
+    db: Database,
+    project_id: int,
+    task_id: int,
+) -> Assignment:
+    """Reset assignment to pending, clear comment and handled_utc."""
+    get_project(db, project_id)
+    get_task(db, task_id)
+    assignment = get_assignment(db, project_id, task_id)
+    assignment.status = AssignmentStatus.PENDING
+    assignment.comment = None
+    assignment.handled_utc = None
+    return assignment
+
+
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------

@@ -21,11 +21,13 @@
 - extract tasks and ideas from voice recordings
 - play with x api. now we can pay as we go
 - viber: we need "undo"
-- revzip: extraction should restore timestamps
 - polychat: lime for user messages?
 - check all apps for dict usage. polychat in serious state :'(
 
 ## History
+
+### 2026-02-28
+- ✅ revzip: extraction should restore timestamps => checked. no timezone support due to zip limitations, but everything else is ok
 
 ### 2026-02-27
 - ❌ ensure windows compatibility of polychat => viber will take care of this

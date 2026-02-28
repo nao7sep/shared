@@ -14,6 +14,8 @@ from .command_parser import (
     ReadCollectionCommand,
     ReadEntityCommand,
     ResolveAssignmentCommand,
+    UndoAssignmentCommand,
+    UndoEntityCommand,
     UpdateAssignmentCommentCommand,
     UpdateGroupNameCommand,
     UpdateProjectNameCommand,
@@ -34,7 +36,7 @@ from .formatter import (
     format_task_ref,
     print_segment,
 )
-from .models import AssignmentStatus, Database, assignment_key
+from .models import Assignment, AssignmentStatus, Database, assignment_key
 from .queries import pending_all, pending_by_project, pending_by_task
 from .service import (
     create_group,
@@ -51,6 +53,7 @@ from .service import (
     list_tasks,
     resolve_assignment,
     set_project_state,
+    undo_assignment,
     update_assignment_comment,
     update_group_name,
     update_project_name,
@@ -89,6 +92,13 @@ view t<ID>                                         v t<ID> (pending projects for
 ok p<ID> t<ID>                                     o p<ID> t<ID>
 ok t<ID> p<ID>                                     o t<ID> p<ID>
 nah p<ID> t<ID>                                    n p<ID> t<ID>
+nah t<ID> p<ID>                                    n t<ID> p<ID>
+
+undo p<ID> t<ID>                                   z p<ID> t<ID>
+undo t<ID> p<ID>                                   z t<ID> p<ID>
+undo g<ID>                                         z g<ID>
+undo p<ID>                                         z p<ID>
+undo t<ID>                                         z t<ID>
 
 work p<ID>                                         w p<ID> (iterate pending tasks)
 work t<ID>                                         w t<ID> (iterate pending projects)
@@ -244,6 +254,14 @@ def execute_command(
         _exec_work(command, db, after_mutation)
         return
 
+    if isinstance(command, UndoAssignmentCommand):
+        _exec_undo_assignment(command, db, after_mutation)
+        return
+
+    if isinstance(command, UndoEntityCommand):
+        _exec_undo_entity(command, db, after_mutation)
+        return
+
     print_segment(["Unsupported command."])
 
 
@@ -370,21 +388,11 @@ def _exec_resolve(
     )
 
     try:
-        confirm = input("Confirm? [y/N]: ").strip().lower()
-    except (EOFError, KeyboardInterrupt):
-        print()
-        print_segment(["Cancelled."])
-        return
-
-    if confirm not in ("y", "yes"):
-        print_segment(["Cancelled."])
-        return
-
-    try:
         comment_raw = input("Comment (optional, Enter to skip): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
-        comment_raw = ""
+        print_segment(["Cancelled."])
+        return
 
     comment = comment_raw if comment_raw else None
     resolve_assignment(db, command.project_id, command.task_id, command.status, comment)
@@ -562,6 +570,113 @@ def _confirm_action(lines: list[str]) -> bool:
         print_segment(["Cancelled."])
         return False
     if confirm != "yes":
+        print_segment(["Cancelled."])
+        return False
+    return True
+
+
+def _exec_undo_assignment(
+    command: UndoAssignmentCommand,
+    db: Database,
+    after_mutation: MutationHook,
+) -> None:
+    project = get_project(db, command.project_id)
+    task = get_task(db, command.task_id)
+
+    key = assignment_key(command.project_id, command.task_id)
+    if key not in db.assignments:
+        raise AssignmentNotFoundError(command.project_id, command.task_id)
+
+    assignment = db.assignments[key]
+    if assignment.status == AssignmentStatus.PENDING:
+        print_segment(["Assignment is already pending."])
+        return
+
+    undo_assignment(db, command.project_id, command.task_id)
+    after_mutation({project.group_id}, None)
+    print_segment([
+        f"Undone: {format_project_ref(project)} | {format_task_ref(task)}"
+    ])
+
+
+def _exec_undo_entity(
+    command: UndoEntityCommand,
+    db: Database,
+    after_mutation: MutationHook,
+) -> None:
+    targets: list[Assignment]
+    label: str
+    affected_group_ids: set[int]
+
+    if command.kind == "group":
+        group = get_group(db, command.entity_id)
+        project_ids = {p.id for p in db.projects if p.group_id == group.id}
+        targets = _find_resolved_assignments(db, project_ids=project_ids)
+        label = f"group {format_group_ref(group)}"
+        affected_group_ids = {group.id}
+    elif command.kind == "project":
+        project = get_project(db, command.entity_id)
+        targets = _find_resolved_assignments(db, project_ids={project.id})
+        label = f"project {format_project_ref(project)}"
+        affected_group_ids = {project.group_id}
+    else:
+        task = get_task(db, command.entity_id)
+        targets = _find_resolved_assignments(db, task_ids={task.id})
+        label = f"task {format_task_ref(task)}"
+        affected_group_ids = {
+            get_project(db, a.project_id).group_id for a in targets
+        }
+
+    if not targets:
+        print_segment([f"No resolved assignments for {label}."])
+        return
+
+    lines = [f"Undo {len(targets)} assignment(s) for {label}:"]
+    for a in targets:
+        p = get_project(db, a.project_id)
+        t = get_task(db, a.task_id)
+        lines.append(
+            f"  {format_project_ref(p)} | {format_task_ref(t)} | {a.status.value}"
+        )
+
+    if not _confirm_undo(lines):
+        return
+
+    for a in targets:
+        undo_assignment(db, a.project_id, a.task_id)
+    after_mutation(affected_group_ids, None)
+    print_segment([f"Undone {len(targets)} assignment(s)."])
+
+
+def _find_resolved_assignments(
+    db: Database,
+    *,
+    project_ids: set[int] | None = None,
+    task_ids: set[int] | None = None,
+) -> list[Assignment]:
+    """Find non-pending assignments matching the given filters."""
+    results: list[Assignment] = []
+    for a in db.assignments.values():
+        if a.status == AssignmentStatus.PENDING:
+            continue
+        if project_ids is not None and a.project_id not in project_ids:
+            continue
+        if task_ids is not None and a.task_id not in task_ids:
+            continue
+        results.append(a)
+    return results
+
+
+def _confirm_undo(lines: list[str]) -> bool:
+    """Show undo details and ask for y/N confirmation."""
+    print_segment(lines, trailing_blank=False)
+    try:
+        confirm = input("Confirm? [y/N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        print_segment(["Cancelled."])
+        return False
+    if confirm not in ("y", "yes"):
         print_segment(["Cancelled."])
         return False
     return True

@@ -706,11 +706,11 @@
     },
     {
       "text": "revzip: extraction should restore timestamps",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-02-27T23:59:50.392689+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
-      "note": null
+      "handled_utc": "2026-02-28T00:26:46.443368+00:00",
+      "subjective_date": "2026-02-28",
+      "note": "checked. no timezone support due to zip limitations, but everything else is ok"
     },
     {
       "text": "polychat: lime for user messages?",

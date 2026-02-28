@@ -10,6 +10,8 @@ from viber.command_parser import (
     HelpCommand,
     ReadEntityCommand,
     ResolveAssignmentCommand,
+    UndoAssignmentCommand,
+    UndoEntityCommand,
     UpdateProjectStateCommand,
     ViewEntityCommand,
     WorkEntityCommand,
@@ -162,6 +164,7 @@ def test_run_loop_aliases_are_mapped_to_full_verbs(monkeypatch: pytest.MonkeyPat
         "o anything",
         "n anything",
         "w anything",
+        "z anything",
         "exit",
     ])
 
@@ -179,7 +182,9 @@ def test_run_loop_aliases_are_mapped_to_full_verbs(monkeypatch: pytest.MonkeyPat
     )
 
     repl_module._run_loop(Database(), lambda _gids, _removed: None)
-    assert seen_verbs == ["create", "read", "update", "delete", "view", "ok", "nah", "work"]
+    assert seen_verbs == [
+        "create", "read", "update", "delete", "view", "ok", "nah", "work", "undo",
+    ]
 
 
 def test_run_loop_quit_is_recognized(
@@ -265,3 +270,298 @@ def test_work_loop_project_cancel_keeps_assignment_pending(monkeypatch: pytest.M
     )
 
     assert db.assignments[assignment_key(p.id, t.id)].status == AssignmentStatus.PENDING
+
+
+# ---------------------------------------------------------------------------
+# Undo parser tests
+# ---------------------------------------------------------------------------
+
+
+def test_parse_undo_assignment_p_then_t() -> None:
+    cmd = parse_command("undo", ["p3", "t5"])
+    assert isinstance(cmd, UndoAssignmentCommand)
+    assert cmd.project_id == 3
+    assert cmd.task_id == 5
+
+
+def test_parse_undo_assignment_t_then_p() -> None:
+    cmd = parse_command("undo", ["t5", "p3"])
+    assert isinstance(cmd, UndoAssignmentCommand)
+    assert cmd.project_id == 3
+    assert cmd.task_id == 5
+
+
+def test_parse_undo_entity_group() -> None:
+    cmd = parse_command("undo", ["g1"])
+    assert isinstance(cmd, UndoEntityCommand)
+    assert cmd.kind == "group"
+    assert cmd.entity_id == 1
+
+
+def test_parse_undo_entity_project() -> None:
+    cmd = parse_command("undo", ["p2"])
+    assert isinstance(cmd, UndoEntityCommand)
+    assert cmd.kind == "project"
+    assert cmd.entity_id == 2
+
+
+def test_parse_undo_entity_task() -> None:
+    cmd = parse_command("undo", ["t3"])
+    assert isinstance(cmd, UndoEntityCommand)
+    assert cmd.kind == "task"
+    assert cmd.entity_id == 3
+
+
+def test_parse_undo_rejects_no_args() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("undo", [])
+
+
+def test_parse_undo_rejects_invalid_tokens() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("undo", ["foo"])
+
+
+def test_parse_undo_rejects_three_args() -> None:
+    with pytest.raises(CommandParseError):
+        parse_command("undo", ["p1", "t2", "extra"])
+
+
+# ---------------------------------------------------------------------------
+# ok/nah without confirmation
+# ---------------------------------------------------------------------------
+
+
+def test_ok_no_confirmation_resolves_with_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    inputs = iter(["looks good"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        ResolveAssignmentCommand(project_id=p.id, task_id=t.id, status=AssignmentStatus.OK),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    key = assignment_key(p.id, t.id)
+    assert db.assignments[key].status == AssignmentStatus.OK
+    assert db.assignments[key].comment == "looks good"
+
+
+def test_ok_no_confirmation_resolves_without_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    inputs = iter([""])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        ResolveAssignmentCommand(project_id=p.id, task_id=t.id, status=AssignmentStatus.OK),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    key = assignment_key(p.id, t.id)
+    assert db.assignments[key].status == AssignmentStatus.OK
+    assert db.assignments[key].comment is None
+
+
+def test_ok_ctrl_c_during_comment_cancels(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    def raise_interrupt(_prompt: str = "") -> str:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("builtins.input", raise_interrupt)
+
+    execute_command(
+        ResolveAssignmentCommand(project_id=p.id, task_id=t.id, status=AssignmentStatus.OK),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    key = assignment_key(p.id, t.id)
+    assert db.assignments[key].status == AssignmentStatus.PENDING
+
+
+# ---------------------------------------------------------------------------
+# Undo command tests
+# ---------------------------------------------------------------------------
+
+
+def test_undo_single_assignment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from viber.command_parser import UndoAssignmentCommand
+    from viber.service import resolve_assignment
+
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    resolve_assignment(db, p.id, t.id, AssignmentStatus.OK, "done")
+
+    execute_command(
+        UndoAssignmentCommand(project_id=p.id, task_id=t.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    key = assignment_key(p.id, t.id)
+    assert db.assignments[key].status == AssignmentStatus.PENDING
+    assert db.assignments[key].comment is None
+    assert db.assignments[key].handled_utc is None
+
+
+def test_undo_already_pending_shows_message(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from viber.command_parser import UndoAssignmentCommand
+
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    execute_command(
+        UndoAssignmentCommand(project_id=p.id, task_id=t.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    out = capsys.readouterr().out
+    assert "already pending" in out
+
+
+def test_undo_entity_project_with_confirmation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from viber.command_parser import UndoEntityCommand
+    from viber.service import resolve_assignment
+
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t1 = create_task(db, "Task A", None)
+    t2 = create_task(db, "Task B", None)
+
+    resolve_assignment(db, p.id, t1.id, AssignmentStatus.OK, "done")
+    resolve_assignment(db, p.id, t2.id, AssignmentStatus.NAH, "skip")
+
+    inputs = iter(["y"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        UndoEntityCommand(kind="project", entity_id=p.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    assert db.assignments[assignment_key(p.id, t1.id)].status == AssignmentStatus.PENDING
+    assert db.assignments[assignment_key(p.id, t1.id)].comment is None
+    assert db.assignments[assignment_key(p.id, t2.id)].status == AssignmentStatus.PENDING
+    assert db.assignments[assignment_key(p.id, t2.id)].comment is None
+
+
+def test_undo_entity_project_cancelled(monkeypatch: pytest.MonkeyPatch) -> None:
+    from viber.command_parser import UndoEntityCommand
+    from viber.service import resolve_assignment
+
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    resolve_assignment(db, p.id, t.id, AssignmentStatus.OK, "done")
+
+    inputs = iter(["n"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        UndoEntityCommand(kind="project", entity_id=p.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    assert db.assignments[assignment_key(p.id, t.id)].status == AssignmentStatus.OK
+
+
+def test_undo_entity_task_with_confirmation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from viber.command_parser import UndoEntityCommand
+    from viber.service import resolve_assignment
+
+    db = Database()
+    g = create_group(db, "Backend")
+    p1 = create_project(db, "api", g.id)
+    p2 = create_project(db, "auth", g.id)
+    t = create_task(db, "Task A", None)
+
+    resolve_assignment(db, p1.id, t.id, AssignmentStatus.OK, "done")
+    resolve_assignment(db, p2.id, t.id, AssignmentStatus.NAH, None)
+
+    inputs = iter(["y"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        UndoEntityCommand(kind="task", entity_id=t.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    assert db.assignments[assignment_key(p1.id, t.id)].status == AssignmentStatus.PENDING
+    assert db.assignments[assignment_key(p2.id, t.id)].status == AssignmentStatus.PENDING
+
+
+def test_undo_entity_group_with_confirmation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from viber.command_parser import UndoEntityCommand
+    from viber.service import resolve_assignment
+
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    resolve_assignment(db, p.id, t.id, AssignmentStatus.OK, "done")
+
+    inputs = iter(["y"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
+
+    execute_command(
+        UndoEntityCommand(kind="group", entity_id=g.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    assert db.assignments[assignment_key(p.id, t.id)].status == AssignmentStatus.PENDING
+
+
+def test_undo_entity_no_resolved_shows_message(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from viber.command_parser import UndoEntityCommand
+
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    create_task(db, "Task A", None)
+
+    execute_command(
+        UndoEntityCommand(kind="project", entity_id=p.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    out = capsys.readouterr().out
+    assert "No resolved assignments" in out
+
+
+# ---------------------------------------------------------------------------
+# Alias mapping (covered by updated test_run_loop_aliases_are_mapped_to_full_verbs above)
+# ---------------------------------------------------------------------------
