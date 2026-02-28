@@ -6,13 +6,15 @@ Audit the current project's source code for cross-platform compatibility issues.
 
 Read source code files only. Skip markdown (except README.md), plain text, logs, and data files.
 
+The default stance is that apps should be cross-platform unless there is a clear reason why it is impossible. A hard dependency on a platform-specific module (e.g., a macOS-only framework or a Windows-only COM library) is a valid reason to limit platform scope. Everything else should be made to work everywhere with reasonable effort.
+
 Before starting, determine which platforms are relevant by checking:
 - README or docs for stated platform support
 - CI configuration for tested platforms
 - If neither exists, infer from the project type:
-  - Local apps (CLI tools, desktop utilities): macOS is primary; Windows support is optional but worth flagging.
-  - Server or remote apps: Linux is the target.
-  - If the type is unclear, default to macOS + Linux.
+  - Local apps (CLI tools, desktop utilities): macOS is primary; Windows is secondary; Linux is rare but nice to have.
+  - Server or remote apps: Linux is primary; Windows (Azure) is secondary; macOS is not a target.
+  - If the type is unclear, default to macOS + Windows + Linux in that priority order.
 
 ## What To Check
 
@@ -34,6 +36,12 @@ Before starting, determine which platforms are relevant by checking:
 - Shebangs that won't work on Windows.
 - Subprocess calls that assume a specific shell (`/bin/sh`, `bash`, `cmd`).
 - Signal handling (`SIGTERM`, `SIGKILL`) that differs across platforms.
+
+### Conditional Platform Handling
+
+- Modules that behave differently or are unavailable on some platforms (e.g., `readline` on Windows) do not automatically make an app platform-incompatible. Flag these, but recommend conditional loading (e.g., import only when `os.name != "nt"`) rather than dropping platform support.
+- Look for opportunities where a platform check or a try/except import could replace a blanket platform restriction.
+- Only mark an app as single-platform when it has a hard, non-optional dependency on a platform-specific module with no reasonable workaround.
 
 ### Line Endings and Encoding
 
