@@ -95,7 +95,7 @@ class OpenAIProvider:
     async def _create_response(
         self,
         model: str,
-        input_items: list[dict[str, object]],
+        input_items: list[dict[str, str]],
         stream: bool,
         search: bool = False,
         max_output_tokens: int | None = None,

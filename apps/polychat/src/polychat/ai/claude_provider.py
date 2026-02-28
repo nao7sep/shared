@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 from anthropic import AsyncAnthropic
 from anthropic import (
     RateLimitError,
@@ -171,8 +171,8 @@ class ClaudeProvider:
             Response text chunks
         """
         try:
-            # Format messages
-            formatted_messages = self.format_messages(messages)
+            # Format messages (widened to Any: prompt caching mutates content to list)
+            formatted_messages: list[dict[str, Any]] = self.format_messages(messages)
 
             # Optionally add cache_control breakpoints for prompt caching
             if self.prompt_caching and formatted_messages:
@@ -316,8 +316,8 @@ class ClaudeProvider:
             Tuple of (response_text, metadata)
         """
         try:
-            # Format messages
-            formatted_messages = self.format_messages(messages)
+            # Format messages (widened to Any: prompt caching mutates content to list)
+            formatted_messages: list[dict[str, Any]] = self.format_messages(messages)
 
             # Optionally add cache_control breakpoints for prompt caching
             if self.prompt_caching and formatted_messages:

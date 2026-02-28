@@ -89,7 +89,8 @@ class CommandDispatcher:
     async def dispatch(self, command: str, args: str) -> CommandResult:
         """Dispatch one command with already-parsed args."""
         if command in PROVIDER_SHORTCUTS:
-            return self.base_handler.switch_provider_shortcut(command)
+            result: CommandResult = self.base_handler.switch_provider_shortcut(command)
+            return result
 
         command_handler = self._command_map.get(command)
         if command_handler is not None:
