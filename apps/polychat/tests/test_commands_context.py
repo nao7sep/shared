@@ -19,10 +19,11 @@ def test_command_handler_exposes_command_context(
 
 
 def test_command_handler_wires_explicit_command_handlers(command_handler) -> None:
-    assert isinstance(command_handler._runtime_model_commands, RuntimeModelCommandHandlers)
-    assert isinstance(command_handler._runtime_mode_commands, RuntimeModeCommandHandlers)
-    assert isinstance(command_handler._runtime_mutation_commands, RuntimeMutationCommandHandlers)
-    assert isinstance(command_handler._metadata_generation_commands, MetadataGenerationCommandHandlers)
-    assert isinstance(command_handler._metadata_inspection_commands, MetadataInspectionCommandHandlers)
-    assert isinstance(command_handler._chat_file_commands, ChatFileCommandHandlers)
-    assert isinstance(command_handler._misc_commands, MiscCommandHandlers)
+    groups = command_handler._handler_groups
+    assert isinstance(groups["runtime_model"], RuntimeModelCommandHandlers)
+    assert isinstance(groups["runtime_mode"], RuntimeModeCommandHandlers)
+    assert isinstance(groups["runtime_mutation"], RuntimeMutationCommandHandlers)
+    assert isinstance(groups["meta_generation"], MetadataGenerationCommandHandlers)
+    assert isinstance(groups["meta_inspection"], MetadataInspectionCommandHandlers)
+    assert isinstance(groups["chat_files"], ChatFileCommandHandlers)
+    assert isinstance(groups["misc"], MiscCommandHandlers)

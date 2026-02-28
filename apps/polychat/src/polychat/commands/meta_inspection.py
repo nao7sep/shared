@@ -231,16 +231,3 @@ class MetadataInspectionCommandHandlers:
         return "\n".join(output)
 
 
-class MetadataInspectionCommandsMixin(_CommandDependencies):
-    """Legacy adapter exposing metadata inspection commands on CommandHandler."""
-
-    _metadata_inspection_commands: MetadataInspectionCommandHandlers
-
-    async def show_history(self, args: str) -> str:
-        return await self._metadata_inspection_commands.show_history(args)
-
-    async def show_message(self, args: str) -> str:
-        return await self._metadata_inspection_commands.show_message(args)
-
-    async def show_status(self, args: str) -> str:
-        return await self._metadata_inspection_commands.show_status(args)

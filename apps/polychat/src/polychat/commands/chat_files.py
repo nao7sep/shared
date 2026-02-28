@@ -261,25 +261,3 @@ class ChatFileCommandHandlers:
             return f"Error deleting chat: {sanitize_error_message(str(e))}"
 
 
-class ChatFileCommandsMixin(_CommandDependencies):
-    """Legacy adapter exposing chat-file commands on CommandHandler."""
-
-    _chat_file_commands: ChatFileCommandHandlers
-
-    async def new_chat(self, args: str) -> CommandResult:
-        return await self._chat_file_commands.new_chat(args)
-
-    async def open_chat(self, args: str) -> CommandResult:
-        return await self._chat_file_commands.open_chat(args)
-
-    async def switch_chat(self, args: str) -> CommandResult:
-        return await self._chat_file_commands.switch_chat(args)
-
-    async def close_chat(self, args: str) -> CommandResult:
-        return await self._chat_file_commands.close_chat(args)
-
-    async def rename_chat_file(self, args: str) -> CommandResult:
-        return await self._chat_file_commands.rename_chat_file(args)
-
-    async def delete_chat_command(self, args: str) -> CommandResult:
-        return await self._chat_file_commands.delete_chat_command(args)

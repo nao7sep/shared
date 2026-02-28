@@ -23,13 +23,3 @@ class MiscCommandHandlers:
         return CommandSignal(kind="exit")
 
 
-class MiscCommandsMixin(_CommandDependencies):
-    """Legacy adapter exposing misc commands on CommandHandler."""
-
-    _misc_commands: MiscCommandHandlers
-
-    async def show_help(self, args: str) -> str:
-        return await self._misc_commands.show_help(args)
-
-    async def exit_app(self, args: str) -> CommandResult:
-        return await self._misc_commands.exit_app(args)

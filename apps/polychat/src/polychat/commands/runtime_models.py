@@ -211,16 +211,3 @@ class RuntimeModelCommandHandlers:
             )
 
 
-class RuntimeModelCommandsMixin(_CommandDependencies):
-    """Legacy adapter exposing runtime model commands on CommandHandler."""
-
-    _runtime_model_commands: RuntimeModelCommandHandlers
-
-    async def set_model(self, args: str) -> str:
-        return await self._runtime_model_commands.set_model(args)
-
-    async def set_helper(self, args: str) -> str:
-        return await self._runtime_model_commands.set_helper(args)
-
-    async def set_timeout(self, args: str) -> str:
-        return await self._runtime_model_commands.set_timeout(args)

@@ -261,28 +261,3 @@ class RuntimeModeCommandHandlers:
         raise ValueError("Invalid argument. Use /search on or /search off")
 
 
-class RuntimeModeCommandsMixin(_CommandDependencies):
-    """Legacy adapter exposing runtime mode commands on CommandHandler."""
-
-    _runtime_mode_commands: RuntimeModeCommandHandlers
-
-    async def set_input_mode(self, args: str) -> str:
-        return await self._runtime_mode_commands.set_input_mode(args)
-
-    async def set_system_prompt(self, args: str) -> str:
-        return await self._runtime_mode_commands.set_system_prompt(args)
-
-    async def retry_mode(self, args: str) -> str:
-        return await self._runtime_mode_commands.retry_mode(args)
-
-    async def apply_retry(self, args: str) -> CommandResult:
-        return await self._runtime_mode_commands.apply_retry(args)
-
-    async def cancel_retry(self, args: str) -> CommandResult:
-        return await self._runtime_mode_commands.cancel_retry(args)
-
-    async def secret_mode_command(self, args: str) -> str:
-        return await self._runtime_mode_commands.secret_mode_command(args)
-
-    async def search_mode_command(self, args: str) -> str:
-        return await self._runtime_mode_commands.search_mode_command(args)

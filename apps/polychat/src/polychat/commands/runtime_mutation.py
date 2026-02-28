@@ -127,13 +127,3 @@ class RuntimeMutationCommandHandlers:
         return f"Purged {deleted_count} message(s): {deleted_ids}"
 
 
-class RuntimeMutationCommandsMixin(_CommandDependencies):
-    """Legacy adapter exposing mutation commands on CommandHandler."""
-
-    _runtime_mutation_commands: RuntimeMutationCommandHandlers
-
-    async def rewind_messages(self, args: str) -> str:
-        return await self._runtime_mutation_commands.rewind_messages(args)
-
-    async def purge_messages(self, args: str) -> str:
-        return await self._runtime_mutation_commands.purge_messages(args)

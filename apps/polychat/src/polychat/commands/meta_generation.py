@@ -232,22 +232,3 @@ class MetadataGenerationCommandHandlers:
             return f"Error performing safety check: {error}"
 
 
-class MetadataGenerationCommandsMixin(_CommandDependencies):
-    """Legacy adapter exposing metadata generation commands on CommandHandler."""
-
-    _metadata_generation_commands: MetadataGenerationCommandHandlers
-
-    async def set_title(self, args: str) -> str:
-        return await self._metadata_generation_commands.set_title(args)
-
-    async def generate_title(self, args: str) -> str:
-        return await self._metadata_generation_commands.generate_title(args)
-
-    async def set_summary(self, args: str) -> str:
-        return await self._metadata_generation_commands.set_summary(args)
-
-    async def generate_summary(self, args: str) -> str:
-        return await self._metadata_generation_commands.generate_summary(args)
-
-    async def check_safety(self, args: str) -> str:
-        return await self._metadata_generation_commands.check_safety(args)
