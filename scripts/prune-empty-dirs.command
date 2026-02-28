@@ -19,7 +19,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 # Include hidden files in glob expansion and return an empty list for empty dirs.
-shopt -s dotglob nullglob
+setopt glob_dots null_glob
 
 to_lower() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]'

@@ -1,6 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 cd "$(dirname "$0")/.."
+uv sync --group dev
 echo "Running models integration test..."
 echo ""
 echo "Requires .dev-api-keys.json with valid API keys."
@@ -10,7 +11,7 @@ echo "  1. Test every model (34 models, slower)"
 echo "  2. Test default models only (7 models, faster)"
 echo "  3. Cancel"
 echo ""
-read -p "Select [1-3]: " choice
+read "choice?Select [1-3]: "
 
 case $choice in
     1)

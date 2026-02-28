@@ -17,6 +17,7 @@ from polychat.ai.grok_provider import GrokProvider
 from polychat.ai.perplexity_provider import PerplexityProvider
 from polychat.ai.mistral_provider import MistralProvider
 from polychat.ai.deepseek_provider import DeepSeekProvider
+from polychat.domain.chat import ChatMessage
 from tests.test_helpers import find_test_api_keys_file, load_test_config, is_ai_available
 
 
@@ -66,7 +67,7 @@ async def check_single_model(provider_name: str, model: str, api_key: str) -> di
         provider = provider_class(api_key=api_key, timeout=300.0)
 
         # Prepare messages
-        messages = [{"role": "user", "content": TEST_PROMPT}]
+        messages = [ChatMessage.new_user(TEST_PROMPT)]
 
         # Make API call with streaming
         chunks = []
@@ -84,6 +85,32 @@ async def check_single_model(provider_name: str, model: str, api_key: str) -> di
         result["error"] = str(e)
 
     return result
+
+
+@pytest.mark.asyncio
+async def test_check_single_model_passes_typed_messages(monkeypatch: pytest.MonkeyPatch):
+    """The integration helper should send typed ChatMessage objects to providers."""
+
+    class FakeProvider:
+        def __init__(self, api_key: str, timeout: float):
+            self.api_key = api_key
+            self.timeout = timeout
+
+        async def send_message(self, messages, model, stream=True):
+            assert len(messages) == 1
+            assert isinstance(messages[0], ChatMessage)
+            assert messages[0].role == "user"
+            assert messages[0].content == [TEST_PROMPT]
+            assert model == "fake-model"
+            assert stream is True
+            yield "OK"
+
+    monkeypatch.setitem(PROVIDER_CLASSES, "fake", FakeProvider)
+
+    result = await check_single_model("fake", "fake-model", "test-key")
+
+    assert result["status"] == "success"
+    assert result["response"] == "OK"
 
 
 @pytest.mark.integration

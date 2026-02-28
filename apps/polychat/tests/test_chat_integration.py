@@ -301,7 +301,7 @@ async def test_full_chat_flow():
 
         log(f"Saved to: {chat_file_path}", indent=1)
         log(f"Save time: {save_elapsed:.3f}s", indent=1)
-        log(f"Total messages: {len(chat['messages'])}", indent=1)
+        log(f"Total messages: {len(chat.messages)}", indent=1)
 
         # Verify file exists and check size
         file_size = chat_file_path.stat().st_size
@@ -320,7 +320,7 @@ async def test_full_chat_flow():
 
         log(f"Loaded from: {chat_file_path}", indent=1)
         log(f"Load time: {load_elapsed:.3f}s", indent=1)
-        log(f"Messages loaded: {len(loaded_chat['messages'])}", indent=1)
+        log(f"Messages loaded: {len(loaded_chat.messages)}", indent=1)
         log("")
 
         # ========================================================================
@@ -330,8 +330,8 @@ async def test_full_chat_flow():
         log("-" * 80)
 
         # Check message count matches
-        original_count = len(chat['messages'])
-        loaded_count = len(loaded_chat['messages'])
+        original_count = len(chat.messages)
+        loaded_count = len(loaded_chat.messages)
 
         log(f"Original message count: {original_count}", indent=1)
         log(f"Loaded message count: {loaded_count}", indent=1)
@@ -341,15 +341,15 @@ async def test_full_chat_flow():
         log("✓ Message count matches", indent=1)
 
         # Verify message structure
-        for i, (orig, loaded) in enumerate(zip(chat['messages'], loaded_chat['messages'])):
-            assert orig['role'] == loaded['role'], \
+        for i, (orig, loaded) in enumerate(zip(chat.messages, loaded_chat.messages)):
+            assert orig.role == loaded.role, \
                 f"Message {i}: role mismatch"
-            assert orig['content'] == loaded['content'], \
+            assert orig.content == loaded.content, \
                 f"Message {i}: content mismatch"
-            assert orig['timestamp_utc'] == loaded['timestamp_utc'], \
+            assert orig.timestamp_utc == loaded.timestamp_utc, \
                 f"Message {i}: timestamp mismatch"
-            if 'model' in orig:
-                assert orig['model'] == loaded['model'], \
+            if orig.model is not None:
+                assert orig.model == loaded.model, \
                     f"Message {i}: model mismatch"
 
         log("✓ All message data matches exactly", indent=1)
@@ -403,7 +403,7 @@ async def test_full_chat_flow():
         # Try to find the count in the response
         try:
             import re
-            actual_user_count = len([m for m in loaded_chat['messages'] if m['role'] == 'user'])
+            actual_user_count = len([m for m in loaded_chat.messages if m.role == "user"])
 
             # Try multiple patterns to extract count
             # Pattern 1: "Count: X" or "count: X"
@@ -443,7 +443,7 @@ async def test_full_chat_flow():
         log("=" * 80)
         log(f"✓ Tested {len(available_ais)} AI provider(s)")
         log(f"✓ Successful interactions: {interaction_count}")
-        log(f"✓ Total messages in chat: {len(chat['messages'])}")
+        log(f"✓ Total messages in chat: {len(chat.messages)}")
         log("✓ Chat saved and loaded successfully")
         log("✓ Data integrity verified")
         log(f"✓ Total test time: {time.time() - test_start_time:.2f}s")
