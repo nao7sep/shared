@@ -169,7 +169,6 @@ def test_run_loop_aliases_are_mapped_to_full_verbs(monkeypatch: pytest.MonkeyPat
     ])
 
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
-    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
 
     def fake_parse(verb: str, args: list[str]) -> HelpCommand:
         seen_verbs.append(verb)
@@ -192,7 +191,6 @@ def test_run_loop_quit_is_recognized(
 ) -> None:
     inputs = iter(["quit"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
-    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
     repl_module._run_loop(Database(), lambda _gids, _removed: None)
     out = capsys.readouterr().out
     assert "Goodbye." in out
@@ -203,7 +201,6 @@ def test_run_loop_eof_exits_cleanly(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr("builtins.input", lambda _prompt="": (_ for _ in ()).throw(EOFError()))
-    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
     repl_module._run_loop(Database(), lambda _gids, _removed: None)
     out = capsys.readouterr().out
     assert "Goodbye." in out
@@ -215,7 +212,6 @@ def test_run_loop_unknown_command_shows_helpful_error(
 ) -> None:
     inputs = iter(["wat", "exit"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
-    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
     repl_module._run_loop(Database(), lambda _gids, _removed: None)
     out = capsys.readouterr().out
     assert "Unknown command: 'wat'. Type 'help' for available commands." in out
@@ -227,7 +223,6 @@ def test_run_loop_view_no_pending_shows_expected_message(
 ) -> None:
     inputs = iter(["view", "exit"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(inputs))
-    monkeypatch.setattr(repl_module, "_record_command_history", lambda _line: None)
     repl_module._run_loop(Database(), lambda _gids, _removed: None)
     out = capsys.readouterr().out
     assert "Vibe is good. No pending assignments." in out

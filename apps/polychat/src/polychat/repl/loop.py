@@ -8,13 +8,12 @@ from pathlib import Path
 from typing import Optional
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.history import FileHistory
+from prompt_toolkit.history import DummyHistory
 from prompt_toolkit.key_binding import KeyBindings
 
 from .. import __version__
 from .. import chat
 from ..commands import CommandHandler
-from ..constants import REPL_HISTORY_FILE
 from ..formatting.constants import BORDERLINE_CHAR, BORDERLINE_WIDTH
 from ..logging import log_event, summarize_command_args
 from ..orchestrator import ChatOrchestrator
@@ -24,7 +23,6 @@ from ..orchestration.types import (
     PrintAction,
     SendAction,
 )
-from ..path_utils import map_path
 from ..session.state import has_pending_error, pending_error_guidance
 from ..session_manager import SessionManager
 from ..domain.chat import ChatDocument
@@ -69,18 +67,12 @@ def build_key_bindings(manager: SessionManager) -> KeyBindings:
     return key_bindings
 
 
-def ensure_history_file() -> Path:
-    """Ensure the REPL history file path exists and return it."""
-    history_file = Path(map_path(REPL_HISTORY_FILE))
-    history_file.parent.mkdir(parents=True, exist_ok=True)
-    return history_file
-
-
 def create_prompt_session(manager: SessionManager) -> PromptSession:
     """Create prompt-toolkit session for REPL input."""
-    history_file = ensure_history_file()
     return PromptSession(
-        history=FileHistory(str(history_file)),
+        # DummyHistory: up-arrow retrieves nothing; no data written to disk.
+        # Chat messages are sensitive, so we keep them out of history entirely.
+        history=DummyHistory(),
         key_bindings=build_key_bindings(manager),
         multiline=True,
     )
@@ -193,6 +185,9 @@ async def repl_loop(
             print()
             print_mode_banner(manager, manager.chat)
 
+            # Empty prompt string is intentional: a visible prefix (e.g.
+            # "> ") would be re-printed on every line in compose/multiline
+            # mode, breaking the visual layout of longer messages.
             user_input = await prompt_session.prompt_async(
                 "",
                 multiline=True,
@@ -290,13 +285,18 @@ async def repl_loop(
                 )
                 continue
 
-        except (EOFError, KeyboardInterrupt):
+        except EOFError:
             log_event(
                 "session_stop",
                 level=logging.INFO,
-                reason="keyboard_interrupt_or_eof",
+                reason="eof",
                 chat_file=manager.chat_path,
                 message_count=len(manager.chat.messages),
             )
             print("Goodbye!")
             break
+
+        except KeyboardInterrupt:
+            # Ctrl+C at the prompt clears the current line and returns a
+            # fresh prompt.  It must never terminate the application.
+            continue

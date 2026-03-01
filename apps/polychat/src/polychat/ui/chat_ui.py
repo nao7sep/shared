@@ -2,6 +2,8 @@
 
 from typing import Optional, cast
 
+from prompt_toolkit import prompt as pt_prompt
+
 from ..chat.files import list_chats
 from ..domain.chat import ChatListEntry
 from ..formatting.chat_list import format_chat_list_item
@@ -56,7 +58,7 @@ def prompt_chat_selection(
     print()
 
     while True:
-        selection = input(prompt).strip()
+        selection = pt_prompt(prompt).strip()
 
         if not selection:
             if allow_cancel:

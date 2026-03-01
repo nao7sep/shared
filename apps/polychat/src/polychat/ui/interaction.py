@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import Optional, Protocol
 
+from prompt_toolkit import prompt as pt_prompt
+
 from .chat_ui import prompt_chat_selection
 
 
@@ -31,7 +33,7 @@ class ThreadedConsoleInteraction:
     """Console adapter that runs blocking prompts in worker threads."""
 
     async def prompt_text(self, prompt: str) -> str:
-        return await asyncio.to_thread(input, prompt)
+        return await asyncio.to_thread(pt_prompt, prompt)
 
     async def notify(self, message: str) -> None:
         await asyncio.to_thread(print, message)

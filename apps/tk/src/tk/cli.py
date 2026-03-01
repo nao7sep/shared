@@ -5,8 +5,12 @@ import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+if sys.platform != "win32":
+    import readline  # noqa: F401  # enables line-editing and arrow keys in input()
+    readline.set_auto_history(False)
+
 from tk import data, markdown, profile
-from tk.errors import TkError
+from tk.errors import AppError
 from tk.models import Profile, TaskStore
 from tk.repl import repl
 from tk.session import Session
@@ -81,7 +85,7 @@ Examples:
             print()
             print(f"Start the app with: tk --profile {args.profile}")
 
-        except TkError as e:
+        except AppError as e:
             print(f"\nERROR: {e}")
             sys.exit(1)
         except Exception as e:
@@ -108,7 +112,7 @@ Examples:
             print(f"Create it with: tk init --profile {args.profile}")
             sys.exit(1)
 
-        except TkError as e:
+        except AppError as e:
             print(f"\nERROR: {e}")
             sys.exit(1)
         except Exception as e:

@@ -106,7 +106,7 @@ def main() -> None:
 
 def _resolve_path(raw: str, arg_name: str) -> Path:
     try:
-        return map_path(raw, app_root_abs=Path(__file__).parent)
+        return map_path(raw, app_root_abs=Path(__file__).resolve().parent)
     except StartupValidationError:
         raise
     except Exception as exc:

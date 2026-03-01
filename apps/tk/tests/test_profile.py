@@ -65,7 +65,7 @@ class TestMapPath:
         """Test mapping relative path."""
         profile_dir = str(temp_dir)
         result = map_path("relative/path", profile_dir)
-        expected = str(temp_dir / "relative/path")
+        expected = str((temp_dir / "relative/path").resolve())
         assert result == expected
 
     def test_map_path_normalizes_nfc(self):
@@ -88,7 +88,7 @@ class TestMapPath:
     def test_map_path_resolves_dot_segments(self):
         """Test dot-segment resolution after mapping."""
         result = map_path("../config", "/var/app/data")
-        assert result == "/var/app/config"
+        assert result == str(Path("/var/app/config").resolve())
 
     def test_map_path_shortcut_repeated_separators(self):
         """Test that repeated separators remain anchored for shortcut prefixes."""

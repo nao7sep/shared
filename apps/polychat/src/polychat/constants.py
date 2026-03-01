@@ -23,9 +23,6 @@ LOG_FILE_EXTENSION = ".log"
 # User data directory (created in home directory)
 USER_DATA_DIR = f"~/.{APP_NAME}"
 
-# REPL command history file
-REPL_HISTORY_FILE = f"{USER_DATA_DIR}/history"
-
 # Default directories for profile template
 DEFAULT_CHATS_DIR = f"{USER_DATA_DIR}/chats"
 DEFAULT_LOGS_DIR = f"{USER_DATA_DIR}/logs"

@@ -114,9 +114,8 @@ def map_path(path: str) -> str:
         app_root = get_app_root()
         suffix = path[2:]  # Everything after @/ or @\
         resolved = (app_root / suffix).resolve()
-        app_root_resolved = app_root.resolve()
         try:
-            resolved.relative_to(app_root_resolved)
+            resolved.relative_to(app_root)
         except ValueError:
             raise ValueError(f"Path escapes app directory: {path}")
         return str(resolved)

@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
+from prompt_toolkit import prompt as pt_prompt
+
 from .constants import (
     BUILTIN_PROMPT_SYSTEM_DEFAULT,
     BUILTIN_PROMPT_TITLE,
@@ -66,7 +68,7 @@ def run_setup_wizard() -> Optional[str]:
     api_keys: dict[str, str] = {}
     for provider_id, display_name, _ in PROVIDER_INFO:
         try:
-            key = input(f"  {display_name} API key: ").strip()
+            key = pt_prompt(f"  {display_name} API key: ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             print("Setup cancelled.")
@@ -95,7 +97,7 @@ def run_setup_wizard() -> Optional[str]:
 
     # Ask for confirmation
     try:
-        confirm = input("Save and start PolyChat? (y/N): ").strip().lower()
+        confirm = pt_prompt("Save and start PolyChat? (y/N): ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
         print("Setup cancelled.")

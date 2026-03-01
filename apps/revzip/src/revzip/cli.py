@@ -16,7 +16,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    app_root_abs = Path(__file__).resolve().parents[2]
+    app_root_abs = Path(__file__).resolve().parent
 
     try:
         resolved_paths = resolve_startup_paths(
@@ -30,10 +30,6 @@ def main(argv: list[str] | None = None) -> int:
             resolved_paths=resolved_paths,
             ignore_rule_set=ignore_rule_set,
         )
-    except KeyboardInterrupt:
-        print()
-        print("Interrupted.")
-        return 130
     except RevzipError as exc:
         print(render_error(str(exc)))
         return 1

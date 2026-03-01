@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import sys
+
+if sys.platform != "win32":
+    import readline  # noqa: F401  # enables line-editing and arrow keys in input()
+    readline.set_auto_history(False)
+
 from .archive_service import create_snapshot
 from .errors import RevzipError
 from .extract_service import restore_snapshot
@@ -31,7 +37,11 @@ def run_repl(*, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet) -
     while True:
         print()
         print(render_main_menu())
-        choice_raw = _read_line("Select option: ")
+        try:
+            choice_raw = _read_line("Select option: ")
+        except KeyboardInterrupt:
+            print()
+            continue
         if choice_raw is None:
             print("Exiting.")
             return 0
@@ -61,7 +71,12 @@ def _run_archive_action(
     progress = ConsoleProgressReporter()
 
     print()
-    comment_raw_value = _read_line("Archive comment: ")
+    try:
+        comment_raw_value = _read_line("Archive comment: ")
+    except KeyboardInterrupt:
+        print()
+        print("Cancelled.")
+        return
     if comment_raw_value is None:
         print(render_error("Comment is required."))
         return
@@ -75,6 +90,11 @@ def _run_archive_action(
             on_scan_progress=progress.report_scanned,
             on_archive_progress=progress.report_archived,
         )
+    except KeyboardInterrupt:
+        progress.close_open_lines()
+        print()
+        print("[Operation Cancelled]")
+        return
     except RevzipError as exc:
         progress.close_open_lines()
         print()
@@ -115,12 +135,22 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
         print(row)
 
     print()
-    selected_record = _prompt_snapshot_selection(snapshot_records)
+    try:
+        selected_record = _prompt_snapshot_selection(snapshot_records)
+    except KeyboardInterrupt:
+        print()
+        print("Cancelled.")
+        return
     if selected_record is None:
         return
 
     print()
-    confirmation_raw = _read_line("Type yes to restore the selected snapshot: ")
+    try:
+        confirmation_raw = _read_line("Type yes to restore the selected snapshot: ")
+    except KeyboardInterrupt:
+        print()
+        print("Restore canceled.")
+        return
     if confirmation_raw is None:
         print("Restore canceled.")
         return
@@ -134,6 +164,10 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
             source_dir_abs=resolved_paths.source_dir_abs,
             snapshot_record=selected_record,
         )
+    except KeyboardInterrupt:
+        print()
+        print("[Operation Cancelled]")
+        return
     except RevzipError as exc:
         print(render_error(str(exc)))
         return

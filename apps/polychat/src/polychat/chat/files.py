@@ -10,12 +10,7 @@ from typing import Callable, Optional
 
 from ..constants import APP_NAME, CHAT_FILE_EXTENSION, DATETIME_FORMAT_FILENAME
 from ..domain.chat import ChatListEntry
-from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
-
-
-def _is_windows_absolute_path(path: str) -> bool:
-    """Return True for Windows absolute paths on any platform."""
-    return PureWindowsPath(path).is_absolute()
+from ..path_utils import has_app_path_prefix, has_home_path_prefix, is_windows_absolute_path, map_path
 
 
 def _is_windows_drive_relative_path(path: str) -> bool:
@@ -118,7 +113,7 @@ def _rename_chat(
     chats_dir_resolved = Path(chats_dir).resolve()
 
     is_native_absolute = Path(new_name).is_absolute()
-    is_windows_absolute = _is_windows_absolute_path(new_name)
+    is_windows_absolute = is_windows_absolute_path(new_name)
     is_absolute = is_native_absolute or is_windows_absolute
     is_mapped_path = has_home_path_prefix(new_name) or has_app_path_prefix(new_name)
     is_path_like = "/" in new_name or "\\" in new_name or is_mapped_path or is_absolute

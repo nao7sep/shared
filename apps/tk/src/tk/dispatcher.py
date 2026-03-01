@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from tk import commands, formatters
-from tk.errors import TkUsageError
+from tk.errors import UsageError
 from tk.models import CommandDocEntry, HistoryListPayload, PendingListPayload
 from tk.session import Session
 
@@ -72,13 +72,13 @@ def _apply_last_list_mapping_from_payload(
 
 def _exec_add(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) != 1:
-        raise TkUsageError("Usage: add <text...>")
+        raise UsageError("Usage: add <text...>")
     return commands.cmd_add(session, args[0])
 
 
 def _exec_list(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if args or kwargs:
-        raise TkUsageError("Usage: list")
+        raise UsageError("Usage: list")
     payload = commands.list_pending_data(session)
     _apply_last_list_mapping_from_payload(session, payload)
     return formatters.format_pending_list(payload)
@@ -86,7 +86,10 @@ def _exec_list(args: list[Any], kwargs: dict[str, Any], session: Session) -> str
 
 def _exec_history(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if args:
-        raise TkUsageError("Usage: history [--days N] [--working-days N]")
+        raise UsageError("Usage: history [--days N] [--working-days N]")
+    unknown = kwargs.keys() - {"days", "working_days"}
+    if unknown:
+        raise UsageError(f"Unknown flags: {', '.join('--' + k.replace('_', '-') for k in sorted(unknown))}")
     payload = commands.list_history_data(
         session,
         days=kwargs.get("days"),
@@ -98,35 +101,38 @@ def _exec_history(args: list[Any], kwargs: dict[str, Any], session: Session) -> 
 
 def _exec_done(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) != 1 or not isinstance(args[0], int):
-        raise TkUsageError("Usage: done <num>")
+        raise UsageError("Usage: done <num>")
     array_index = session.resolve_array_index(args[0])
-    return commands.cmd_done(session, array_index, kwargs.get("note"), kwargs.get("date"))
+    return commands.cmd_done(session, array_index)
 
 
 def _exec_cancel(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) != 1 or not isinstance(args[0], int):
-        raise TkUsageError("Usage: cancel <num>")
+        raise UsageError("Usage: cancel <num>")
     array_index = session.resolve_array_index(args[0])
-    return commands.cmd_cancel(session, array_index, kwargs.get("note"), kwargs.get("date"))
+    return commands.cmd_cancel(session, array_index)
 
 
 def _exec_edit(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) < 2:
-        raise TkUsageError("Usage: edit <num> <text>")
+        raise UsageError("Usage: edit <num> <text>")
     array_index = session.resolve_array_index(args[0])
     return commands.cmd_edit(session, array_index, " ".join(str(a) for a in args[1:]))
 
 
 def _exec_delete(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) != 1:
-        raise TkUsageError("Usage: delete <num>")
+        raise UsageError("Usage: delete <num>")
+    unknown = kwargs.keys() - {"confirm"}
+    if unknown:
+        raise UsageError(f"Unknown flags: {', '.join('--' + k.replace('_', '-') for k in sorted(unknown))}")
     array_index = session.resolve_array_index(args[0])
     return commands.cmd_delete(session, array_index, confirm=bool(kwargs.get("confirm", False)))
 
 
 def _exec_note(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) < 1:
-        raise TkUsageError("Usage: note <num> [<text>]")
+        raise UsageError("Usage: note <num> [<text>]")
     array_index = session.resolve_array_index(args[0])
     note_text = " ".join(str(a) for a in args[1:]) if len(args) > 1 else None
     return commands.cmd_note(session, array_index, note_text)
@@ -134,20 +140,22 @@ def _exec_note(args: list[Any], kwargs: dict[str, Any], session: Session) -> str
 
 def _exec_date(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if len(args) != 2:
-        raise TkUsageError("Usage: date <num> <YYYY-MM-DD>")
+        raise UsageError("Usage: date <num> <YYYY-MM-DD>")
+    if kwargs:
+        raise UsageError(f"Unknown flags: {', '.join('--' + k.replace('_', '-') for k in sorted(kwargs))}")
     array_index = session.resolve_array_index(args[0])
     return commands.cmd_date(session, array_index, args[1])
 
 
 def _exec_sync(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if args or kwargs:
-        raise TkUsageError("Usage: sync")
+        raise UsageError("Usage: sync")
     return commands.cmd_sync(session)
 
 
 def _exec_today(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if args or kwargs:
-        raise TkUsageError("Usage: today")
+        raise UsageError("Usage: today")
     payload = commands.cmd_today_data(session)
     _apply_last_list_mapping_from_payload(session, payload)
     return formatters.format_history_list(payload)
@@ -155,7 +163,7 @@ def _exec_today(args: list[Any], kwargs: dict[str, Any], session: Session) -> st
 
 def _exec_yesterday(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if args or kwargs:
-        raise TkUsageError("Usage: yesterday")
+        raise UsageError("Usage: yesterday")
     payload = commands.cmd_yesterday_data(session)
     _apply_last_list_mapping_from_payload(session, payload)
     return formatters.format_history_list(payload)
@@ -163,7 +171,7 @@ def _exec_yesterday(args: list[Any], kwargs: dict[str, Any], session: Session) -
 
 def _exec_recent(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if args or kwargs:
-        raise TkUsageError("Usage: recent")
+        raise UsageError("Usage: recent")
     payload = commands.cmd_recent_data(session)
     _apply_last_list_mapping_from_payload(session, payload)
     return formatters.format_history_list(payload)
@@ -171,7 +179,7 @@ def _exec_recent(args: list[Any], kwargs: dict[str, Any], session: Session) -> s
 
 def _exec_help(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:
     if args or kwargs:
-        raise TkUsageError("Usage: help")
+        raise UsageError("Usage: help")
     return render_help_text()
 
 
@@ -282,7 +290,7 @@ def execute_command(cmd: str, args: list[Any], kwargs: dict[str, Any], session: 
     # Look up command in registry
     handler = COMMAND_REGISTRY.get(cmd)
     if not handler:
-        raise TkUsageError(f"Unknown command: {cmd}")
+        raise UsageError(f"Unknown command: {cmd}")
 
     # Execute command
     result = handler.executor(args, kwargs, session)

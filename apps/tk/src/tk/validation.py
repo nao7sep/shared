@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from tk.errors import TkValidationError
+from tk.errors import ValidationError
 
 
 def validate_date_format(date_str: str) -> None:
@@ -17,6 +17,6 @@ def validate_date_format(date_str: str) -> None:
     try:
         date.fromisoformat(date_str)
     except ValueError:
-        raise TkValidationError(
+        raise ValidationError(
             f"Invalid date: {date_str}. Expected valid YYYY-MM-DD format"
         )

@@ -5,7 +5,7 @@ import traceback
 from typing import Any
 
 from tk import commands, dispatcher, markdown, prompts
-from tk.errors import TkError
+from tk.errors import AppError
 from tk.models import TaskStatus
 from tk.session import Session
 
@@ -111,15 +111,18 @@ def _prepare_interactive_command(
 
             if result == "CANCELLED":
                 session.clear_last_list()
-                return "Cancelled."
+                return "[Operation Cancelled]"
 
-            kwargs["note"] = result.note
-            kwargs["date"] = result.date
+            array_index = session.resolve_array_index(num)
+            cmd_fn = commands.cmd_done if normalized == "done" else commands.cmd_cancel
+            outcome = cmd_fn(session, array_index, result.note, result.date)
+            session.clear_last_list()
+            return outcome
 
         except KeyboardInterrupt:
             print()
             session.clear_last_list()
-            return "Cancelled."
+            return "[Operation Cancelled]"
 
     elif normalized == "delete":
         num = _try_parse_first_num_arg(args)
@@ -134,11 +137,6 @@ def _prepare_interactive_command(
 
 def repl(session: Session) -> None:
     """Run the REPL loop."""
-    try:
-        import readline  # noqa: F401 — side-effect import for line editing
-    except ImportError:
-        pass
-
     print()
     print("Type 'exit' or 'quit' to exit, or Ctrl-D")
 
@@ -176,7 +174,7 @@ def repl(session: Session) -> None:
             print()
             continue
 
-        except TkError as e:
+        except AppError as e:
             # Expected business logic errors (user errors, validation failures)
             print(f"ERROR: {e}")
 

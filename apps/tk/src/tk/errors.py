@@ -1,21 +1,21 @@
 """Custom exception hierarchy for tk."""
 
 
-class TkError(Exception):
-    """Base exception for tk-specific failures."""
+class AppError(Exception):
+    """Base exception for app-specific failures."""
 
 
-class TkUsageError(ValueError, TkError):
+class UsageError(ValueError, AppError):
     """Command usage or user-input errors."""
 
 
-class TkValidationError(ValueError, TkError):
+class ValidationError(ValueError, AppError):
     """Domain validation errors."""
 
 
-class TkConfigError(ValueError, TkError):
+class ConfigError(ValueError, AppError):
     """Profile/configuration validation errors."""
 
 
-class TkStorageError(TkError):
+class StorageError(AppError):
     """Storage load/save failures."""

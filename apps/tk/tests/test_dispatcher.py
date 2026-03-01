@@ -155,6 +155,23 @@ class TestExecuteCommand:
         with pytest.raises(ValueError, match="Usage: done <num>"):
             dispatcher.execute_command("done", ["abc"], {}, sample_session)
 
+    def test_history_rejects_unknown_flag(self, sample_session):
+        """Test that history rejects unrecognised flags."""
+        with pytest.raises(ValueError, match="Unknown flags: --bad-flag"):
+            dispatcher.execute_command("history", [], {"bad_flag": 1}, sample_session)
+
+    def test_delete_rejects_unknown_flag(self, sample_session):
+        """Test that delete rejects unrecognised flags."""
+        sample_session.set_last_list([(1, 0)])
+        with pytest.raises(ValueError, match="Unknown flags: --unknown"):
+            dispatcher.execute_command("delete", [1], {"unknown": True}, sample_session)
+
+    def test_date_rejects_unknown_flag(self, sample_session):
+        """Test that date rejects any flags."""
+        sample_session.set_last_list([(1, 0)])
+        with pytest.raises(ValueError, match="Unknown flags: --force"):
+            dispatcher.execute_command("date", [1, "2026-03-01"], {"force": True}, sample_session)
+
     def test_execute_command_unknown(self, sample_session):
         """Test that unknown command raises ValueError."""
         with pytest.raises(ValueError, match="Unknown command"):
