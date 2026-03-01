@@ -116,9 +116,10 @@ Assignments are only generated for `active` projects at task creation time. No b
 
 When `--check ~/viber/check.html` is given, viber writes one file per group after each mutation:
 
-- `check-backend.html`, `check-frontend.html`, …
+- `check-backend-g1.html`, `check-frontend-g2.html`, …
 - Rows = tasks (newest first), columns = non-deprecated projects.
 - ✅ ok · ❌ nah · blank cell pending · gray cell = lifecycle gap (no assignment).
+- Group ids are included in filenames so check pages remain stable across slug collisions.
 
 ## Path Syntax
 
@@ -127,5 +128,8 @@ Both `--data` and `--check` accept:
 - Absolute paths: `/home/user/viber/data.json`
 - Home-relative: `~/viber/data.json`
 - App-root-relative: `@/data.json`
+
+Here, "app root" means the viber package directory used by the app itself. In this repo,
+`@/...` resolves under `src/viber/`, matching the same convention used by `autopage`.
 
 Pure relative paths (no prefix) are rejected.

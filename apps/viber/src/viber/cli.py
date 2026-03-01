@@ -88,7 +88,11 @@ def main() -> None:
 
     removed_tasks = prune_orphan_tasks(db)
     if removed_tasks:
-        save_database(db, app_args.data_path)
+        try:
+            save_database(db, app_args.data_path)
+        except Exception as exc:  # noqa: BLE001
+            print(f"ERROR: Could not save pruned data file: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     # If --check is configured and we have data, generate initial HTML.
     if app_args.check_path is not None and db.groups:

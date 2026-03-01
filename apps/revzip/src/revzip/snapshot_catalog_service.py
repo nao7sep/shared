@@ -30,6 +30,19 @@ def discover_snapshots(
             continue
 
         expected_zip_path = metadata_path.with_suffix(".zip")
+        if snapshot_metadata.zip_filename != expected_zip_path.name:
+            warnings.append(
+                SnapshotWarning(
+                    metadata_path=metadata_path,
+                    message=(
+                        "Metadata zip filename mismatch "
+                        f"({metadata_path.name}: expected {expected_zip_path.name}, "
+                        f"found {snapshot_metadata.zip_filename})"
+                    ),
+                )
+            )
+            continue
+
         if not expected_zip_path.exists() or not expected_zip_path.is_file():
             warnings.append(
                 SnapshotWarning(

@@ -59,7 +59,9 @@ from .service import (
     update_task_description,
 )
 
-MutationHook = Callable[[set[int] | None, set[str] | None], None]
+RemovedCheckPage = tuple[int, str]
+
+MutationHook = Callable[[set[int] | None, set[RemovedCheckPage] | None], None]
 
 _HELP_TEXT = """\
 create group <name>                                c g <name>
@@ -152,8 +154,8 @@ def execute_command(
     if isinstance(command, UpdateGroupNameCommand):
         old_name = get_group(db, command.group_id).name
         group = update_group_name(db, command.group_id, command.new_name)
-        removed_names = {old_name} if old_name != group.name else None
-        after_mutation({group.id}, removed_names)
+        removed_pages = {(group.id, old_name)} if old_name != group.name else None
+        after_mutation({group.id}, removed_pages)
         if old_name == group.name:
             print(f"Group name unchanged: {group.name} (g{group.id})")
         else:
@@ -310,7 +312,7 @@ def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: Mut
         if not _confirm_action([format_group(group)]):
             return
         group = delete_group(db, command.entity_id)
-        after_mutation(None, {group.name})
+        after_mutation(None, {(group.id, group.name)})
         print(f"Deleted group: {group.name} (g{group.id})")
         return
 

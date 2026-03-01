@@ -69,3 +69,36 @@ def test_discover_snapshots_warns_and_keeps_valid_entries(tmp_path: Path) -> Non
     assert "orphan.json" in warning_text
     assert "invalid-created-at.json" in warning_text
     assert "Invalid created_at timestamp in metadata" in warning_text
+
+
+def test_discover_snapshots_skips_metadata_zip_filename_mismatch(tmp_path: Path) -> None:
+    created_utc_dt = datetime(2026, 2, 25, 9, 10, 11, 123456, tzinfo=timezone.utc)
+
+    expected_zip = tmp_path / "snapshot.zip"
+    with zipfile.ZipFile(expected_zip, mode="w") as zf:
+        zf.writestr("expected.txt", "hello")
+
+    declared_zip = tmp_path / "other.zip"
+    with zipfile.ZipFile(declared_zip, mode="w") as zf:
+        zf.writestr("other.txt", "hello")
+
+    write_snapshot_metadata(
+        metadata_path_abs=tmp_path / "snapshot.json",
+        snapshot_metadata=SnapshotMetadata(
+            created_utc=format_created_utc(created_utc_dt),
+            created_at=format_created_at(created_utc_dt),
+            comment="mismatch",
+            comment_filename_segment="mismatch",
+            zip_filename=declared_zip.name,
+            archived_files=["other.txt"],
+            empty_directories=[],
+        ),
+    )
+
+    records, warnings = discover_snapshots(dest_dir_abs=tmp_path)
+
+    assert records == []
+    assert len(warnings) == 1
+    assert "Metadata zip filename mismatch" in warnings[0].message
+    assert "snapshot.zip" in warnings[0].message
+    assert "other.zip" in warnings[0].message

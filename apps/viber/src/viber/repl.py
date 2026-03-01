@@ -46,14 +46,14 @@ def run_repl(
 
     def after_mutation(
         affected_group_ids: set[int] | None,
-        removed_group_names: set[str] | None,
+        removed_check_pages: set[tuple[int, str]] | None,
     ) -> None:
         save_database(db, data_path)
         if check_path is None:
             return
-        if removed_group_names:
-            for group_name in sorted(removed_group_names):
-                remove_check_page(check_path, group_name)
+        if removed_check_pages:
+            for group_id, group_name in sorted(removed_check_pages):
+                remove_check_page(check_path, group_id, group_name)
         if affected_group_ids is None:
             render_check_pages(db, check_path)
             return
@@ -111,5 +111,4 @@ def _run_loop(db: Database, after_mutation: MutationHook) -> None:
             print(f"ERROR: {exc}")
         except Exception as exc:  # noqa: BLE001
             print(f"ERROR: Unexpected: {exc}")
-
 

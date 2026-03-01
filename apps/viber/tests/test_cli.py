@@ -124,6 +124,31 @@ def test_main_saves_pruned_database_before_starting_repl(
     assert events == ["save", "repl"]
 
 
+def test_main_exits_when_save_after_pruning_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    db = Database()
+
+    monkeypatch.setattr(
+        cli_module, "parse_args", lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=None)
+    )
+    monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
+    monkeypatch.setattr(cli_module, "prune_orphan_tasks", lambda _db: [1])
+
+    def fake_save_database(_db: Database, _path: Path) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(cli_module, "save_database", fake_save_database)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.main()
+
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "ERROR: Could not save pruned data file: disk full" in err
+
+
 def test_main_warns_on_check_render_failure_but_still_starts_repl(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

@@ -31,7 +31,7 @@ def test_render_creates_files(tmp_path: Path) -> None:
     render_check_pages(db, check_base)
     files = list(tmp_path.glob("check-*.html"))
     assert len(files) == 1
-    assert files[0].name == "check-backend.html"
+    assert files[0].name == "check-backend-g1.html"
 
 
 def test_render_excludes_deprecated_projects(tmp_path: Path) -> None:
@@ -44,7 +44,7 @@ def test_render_excludes_deprecated_projects(tmp_path: Path) -> None:
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
-    content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    content = (tmp_path / "check-backend-g1.html").read_text(encoding="utf-8")
     assert "api" in content
     assert "deprecated-service" not in content
 
@@ -58,7 +58,7 @@ def test_render_shows_suspended_project_with_label(tmp_path: Path) -> None:
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
-    content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    content = (tmp_path / "check-backend-g1.html").read_text(encoding="utf-8")
     assert "sleepy-service" in content
     assert "suspended" in content
 
@@ -74,7 +74,7 @@ def test_render_gray_cell_for_lifecycle_gap(tmp_path: Path) -> None:
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
-    content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    content = (tmp_path / "check-backend-g1.html").read_text(encoding="utf-8")
     assert 'class="gap"' in content
 
 
@@ -91,7 +91,7 @@ def test_render_status_symbols(tmp_path: Path) -> None:
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
-    content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    content = (tmp_path / "check-backend-g1.html").read_text(encoding="utf-8")
     assert "✅" in content
     assert "❌" in content
     assert "&nbsp;" in content
@@ -106,7 +106,7 @@ def test_render_tasks_newest_first(tmp_path: Path) -> None:
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
-    content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    content = (tmp_path / "check-backend-g1.html").read_text(encoding="utf-8")
     # Second task (newer) should appear before first task
     pos_first = content.find("First task")
     pos_second = content.find("Second task")
@@ -124,8 +124,8 @@ def test_render_multiple_groups(tmp_path: Path) -> None:
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
     files = sorted(f.name for f in tmp_path.glob("check-*.html"))
-    assert "check-backend.html" in files
-    assert "check-frontend.html" in files
+    assert "check-backend-g1.html" in files
+    assert "check-frontend-g2.html" in files
 
 
 def test_render_selected_groups_only(tmp_path: Path) -> None:
@@ -138,7 +138,7 @@ def test_render_selected_groups_only(tmp_path: Path) -> None:
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
-    frontend_path = tmp_path / "check-frontend.html"
+    frontend_path = tmp_path / "check-frontend-g2.html"
     before_stat = frontend_path.stat().st_mtime_ns
 
     create_project(db, "billing", g1.id)
@@ -156,11 +156,39 @@ def test_remove_check_page(tmp_path: Path) -> None:
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
-    page = tmp_path / "check-backend.html"
+    page = tmp_path / "check-backend-g1.html"
     assert page.exists()
 
-    remove_check_page(check_base, "Backend")
+    remove_check_page(check_base, g.id, "Backend")
     assert not page.exists()
+
+
+def test_render_slug_collisions_still_produce_distinct_files(tmp_path: Path) -> None:
+    db = Database()
+    g1 = create_group(db, "Backend Team")
+    g2 = create_group(db, "Backend-Team")
+    create_project(db, "api", g1.id)
+    create_project(db, "worker", g2.id)
+    create_task(db, "Task", None)
+
+    check_base = tmp_path / "check.html"
+    files = sorted(path.name for path in render_check_pages(db, check_base))
+
+    assert files == ["check-backend-team-g1.html", "check-backend-team-g2.html"]
+
+
+def test_render_group_name_with_empty_slug_uses_fallback_filename(tmp_path: Path) -> None:
+    db = Database()
+    g = create_group(db, "!!!")
+    create_project(db, "api", g.id)
+    create_task(db, "Task", None)
+
+    check_base = tmp_path / "check.html"
+    written = render_check_pages(db, check_base)
+
+    assert [path.name for path in written] == ["check-group-g1.html"]
+    content = written[0].read_text(encoding="utf-8")
+    assert "<h1>!!! | viber</h1>" in content
 
 
 def test_render_escapes_all_user_supplied_text(tmp_path: Path) -> None:

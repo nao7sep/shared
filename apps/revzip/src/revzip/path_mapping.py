@@ -85,7 +85,12 @@ def map_path_argument(
 
 def _map_special_prefixes(path_text: str, app_root_abs: Path) -> Path:
     if path_text.startswith("~"):
-        return Path(path_text).expanduser()
+        try:
+            return Path(path_text).expanduser()
+        except RuntimeError as exc:
+            raise PathMappingError(
+                f"Failed to expand user home in path: {path_text}"
+            ) from exc
     if path_text.startswith("@"):
         return _map_app_root_path(path_text, app_root_abs)
     return Path(path_text)

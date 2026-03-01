@@ -7,6 +7,8 @@ import os
 import shutil
 import stat
 from pathlib import Path
+import tempfile
+from uuid import uuid4
 
 from .errors import ArchiveError, ExtractError
 from .ignore_rules import is_default_ignored_name, matches_ignore_rules
@@ -144,6 +146,75 @@ def clear_and_recreate_directory(directory_abs: Path) -> None:
         directory_abs.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         raise ExtractError(f"Failed to recreate directory: {directory_abs}") from exc
+
+
+def create_restore_staging_directory(target_dir_abs: Path) -> Path:
+    parent_dir_abs = target_dir_abs.parent
+    try:
+        parent_dir_abs.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ExtractError(
+            f"Failed to prepare restore parent directory: {parent_dir_abs}"
+        ) from exc
+
+    prefix = f".{target_dir_abs.name or 'revzip'}-restore-"
+    try:
+        return Path(tempfile.mkdtemp(prefix=prefix, dir=parent_dir_abs))
+    except OSError as exc:
+        raise ExtractError(
+            f"Failed to create restore staging directory near: {target_dir_abs}"
+        ) from exc
+
+
+def _build_restore_temp_path(*, target_dir_abs: Path, purpose: str) -> Path:
+    base_name = target_dir_abs.name or "revzip"
+    return target_dir_abs.parent / f".{base_name}-{purpose}-{uuid4().hex}"
+
+
+def replace_directory_with_staging(*, target_dir_abs: Path, staging_dir_abs: Path) -> None:
+    if not staging_dir_abs.exists() or not staging_dir_abs.is_dir():
+        raise ExtractError(f"Restore staging directory is not ready: {staging_dir_abs}")
+    if target_dir_abs.exists() and not target_dir_abs.is_dir():
+        raise ExtractError(f"Restore target is not a directory: {target_dir_abs}")
+
+    backup_dir_abs: Path | None = None
+    try:
+        if target_dir_abs.exists():
+            backup_dir_abs = _build_restore_temp_path(
+                target_dir_abs=target_dir_abs,
+                purpose="backup",
+            )
+            target_dir_abs.rename(backup_dir_abs)
+        staging_dir_abs.rename(target_dir_abs)
+    except OSError as exc:
+        if backup_dir_abs is not None and not target_dir_abs.exists():
+            try:
+                backup_dir_abs.rename(target_dir_abs)
+            except OSError:
+                pass
+        raise ExtractError(
+            f"Failed to replace restore target directory: {target_dir_abs}"
+        ) from exc
+
+    if backup_dir_abs is not None and backup_dir_abs.exists():
+        try:
+            shutil.rmtree(backup_dir_abs, onerror=_force_remove_readonly)
+        except OSError as exc:
+            raise ExtractError(
+                f"Restore completed but failed to remove backup directory: {backup_dir_abs}"
+            ) from exc
+
+
+def remove_directory_tree(directory_abs: Path) -> None:
+    if not directory_abs.exists():
+        return
+    if not directory_abs.is_dir():
+        raise ExtractError(f"Restore cleanup target is not a directory: {directory_abs}")
+
+    try:
+        shutil.rmtree(directory_abs, onerror=_force_remove_readonly)
+    except OSError as exc:
+        raise ExtractError(f"Failed to remove directory tree: {directory_abs}") from exc
 
 
 def count_regular_files_and_empty_directories(root_dir_abs: Path) -> tuple[int, int]:

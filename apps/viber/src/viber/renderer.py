@@ -1,7 +1,7 @@
 """HTML check-page renderer.
 
 Generates one file per group from the --check base path.
-File naming: {stem}-{slugify(group_name)}{suffix}
+File naming: {stem}-{safe-slug}-g{group_id}{suffix}
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ import html
 from collections.abc import Sequence
 from pathlib import Path
 
+from .errors import FilenameSanitizationError
 from .formatter import format_local_time
 from .models import (
     Assignment,
@@ -32,13 +33,13 @@ def render_check_pages(
     """Generate one HTML file per group.
 
     Each file is written to check_base.parent with the name pattern:
-    {check_base.stem}-{slugify(group.name)}{check_base.suffix}
+    {check_base.stem}-{safe-slug}-g{group.id}{check_base.suffix}
     """
     groups = _select_groups(db, group_ids)
     written_paths: list[Path] = []
 
     for group in groups:
-        out_path = check_page_path(check_base, group.name)
+        out_path = check_page_path(check_base, group.id, group.name)
         content = _render_group_page(db, group.id, group.name)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         if out_path.exists():
@@ -51,22 +52,29 @@ def render_check_pages(
     return written_paths
 
 
-def remove_check_page(check_base: Path, group_name: str) -> None:
+def remove_check_page(check_base: Path, group_id: int, group_name: str) -> None:
     """Delete a check page for a group name if the file exists."""
-    path = check_page_path(check_base, group_name)
+    path = check_page_path(check_base, group_id, group_name)
     try:
         path.unlink()
     except FileNotFoundError:
         return
 
 
-def check_page_path(check_base: Path, group_name: str) -> Path:
+def check_page_path(check_base: Path, group_id: int, group_name: str) -> Path:
     """Return the check-page path for one group name."""
     out_dir = check_base.parent
     stem = check_base.stem
     suffix = check_base.suffix or ".html"
-    slug = slugify(group_name)
-    return out_dir / f"{stem}-{slug}{suffix}"
+    slug = _safe_group_slug(group_name)
+    return out_dir / f"{stem}-{slug}-g{group_id}{suffix}"
+
+
+def _safe_group_slug(group_name: str) -> str:
+    try:
+        return slugify(group_name)
+    except FilenameSanitizationError:
+        return "group"
 
 
 def _render_group_page(db: Database, group_id: int, group_name: str) -> str:
