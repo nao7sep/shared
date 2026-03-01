@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 
+from tk.errors import UsageError
 from tk.models import Profile, Task, TaskStore
 
 
@@ -17,13 +18,13 @@ class Session:
     def require_profile(self) -> Profile:
         """Return loaded profile or raise if missing."""
         if self.profile is None:
-            raise ValueError("No profile loaded")
+            raise UsageError("No profile loaded")
         return self.profile
 
     def require_tasks(self) -> TaskStore:
         """Return loaded task data or raise if missing."""
         if self.tasks is None:
-            raise ValueError("No tasks loaded")
+            raise UsageError("No tasks loaded")
         return self.tasks
 
     def set_last_list(self, mapping: list[tuple[int, int]]) -> None:
@@ -37,18 +38,18 @@ class Session:
     def resolve_array_index(self, display_num: int) -> int:
         """Resolve a list/history display number to task array index."""
         if not self.last_list:
-            raise ValueError("Run 'list' or 'history' first")
+            raise UsageError("Run 'list' or 'history' first")
 
         for current_num, idx in self.last_list:
             if current_num == display_num:
                 return idx
 
-        raise ValueError("Invalid task number")
+        raise UsageError("Invalid task number")
 
     def get_task_by_display_number(self, display_num: int) -> Task:
         """Get a task via the current list/history display number mapping."""
         array_index = self.resolve_array_index(display_num)
         task = self.require_tasks().get_task_by_index(array_index)
         if not task:
-            raise ValueError("Task not found")
+            raise UsageError("Task not found")
         return task

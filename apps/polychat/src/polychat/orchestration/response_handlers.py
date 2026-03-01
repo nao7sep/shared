@@ -195,18 +195,20 @@ class ResponseHandlersMixin:
             chat_data=chat_data,
             assistant_hex_id=assistant_hex_id,
         )
+        sanitized_error = sanitize_error_message(str(error))
 
         if mode == "normal":
             if not can_mutate_normal_chat(transition):
-                return PrintAction(message=f"Error: {error}")
+                return PrintAction(message=f"Error: {sanitized_error}")
             assert chat_path is not None
             assert chat_data is not None
             if assistant_hex_id and should_release_for_error(transition):
                 self.manager.release_hex_id(assistant_hex_id)
+            if chat_data is not self.manager.chat:
+                return PrintAction(message=f"Error: {sanitized_error}")
             if has_trailing_user_message(chat_data):
                 self.manager.pop_message(-1, chat_data)
 
-            sanitized_error = sanitize_error_message(str(error))
             add_error_message(
                 chat_data,
                 sanitized_error,
@@ -221,7 +223,7 @@ class ResponseHandlersMixin:
         elif assistant_hex_id and should_release_for_error(transition):
             self.manager.release_hex_id(assistant_hex_id)
 
-        return PrintAction(message=f"Error: {error}")
+        return PrintAction(message=f"Error: {sanitized_error}")
 
     async def handle_user_cancel(
         self,

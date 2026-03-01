@@ -2,6 +2,7 @@
 
 import pytest
 from tk import dispatcher
+from tk.repl import parse_command
 
 
 class TestCommandAliases:
@@ -207,6 +208,35 @@ class TestExecuteCommand:
 
         # Mapping should be set (not cleared)
         assert len(sample_session.last_list) > 0
+
+    def test_parse_and_execute_add_preserves_full_task_text(self, sample_session):
+        """Test add command keeps the full post-command text, including literal --tokens."""
+        cmd, args, kwargs = parse_command('add "task with spaces" and --literal tail')
+
+        result = dispatcher.execute_command(cmd, args, kwargs, sample_session)
+
+        assert result == "Task added."
+        assert sample_session.tasks.tasks[-1].text == "task with spaces and --literal tail"
+
+    def test_parse_and_execute_edit_preserves_full_text(self, sample_session):
+        """Test edit command keeps the full replacement text from the rest of the line."""
+        sample_session.set_last_list([(1, 0)])
+        cmd, args, kwargs = parse_command('edit 1 "new text" with --literal tail')
+
+        result = dispatcher.execute_command(cmd, args, kwargs, sample_session)
+
+        assert result == "Task updated."
+        assert sample_session.tasks.tasks[0].text == "new text with --literal tail"
+
+    def test_parse_and_execute_note_preserves_full_text(self, sample_session):
+        """Test note command keeps the full note text from the rest of the line."""
+        sample_session.set_last_list([(2, 1)])
+        cmd, args, kwargs = parse_command('note 2 "kept note" with --literal tail')
+
+        result = dispatcher.execute_command(cmd, args, kwargs, sample_session)
+
+        assert result == "Note updated."
+        assert sample_session.tasks.tasks[1].note == "kept note with --literal tail"
 
 
 class TestHelpRendering:

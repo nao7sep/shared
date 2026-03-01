@@ -582,6 +582,37 @@ class TestRetryModeMessages:
         assert action.messages[2].role == "user"
         assert action.messages[2].content == ["what did i just say?"]
 
+    @pytest.mark.asyncio
+    async def test_retry_mode_inconsistent_state_clears_retry_and_does_not_send(
+        self,
+        orchestrator,
+    ):
+        chat_data = ChatDocument.from_raw({
+            "metadata": {},
+            "messages": [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "hello!"},
+            ],
+        })
+        orchestrator.manager.switch_chat("/test/chat.json", chat_data)
+        orchestrator.manager.retry.enter(
+            [ChatMessage.new_user("hello")],
+            target_index=1,
+        )
+
+        with patch.object(
+            orchestrator.manager.retry,
+            "get_context",
+            side_effect=ValueError("Not in retry mode"),
+        ):
+            action = await orchestrator.handle_user_message("what did i just say?")
+
+        assert isinstance(action, PrintAction)
+        assert "Retry mode state was inconsistent" in action.message
+        assert orchestrator.manager.retry.active is False
+        assert orchestrator.manager.retry.base_messages == []
+        assert orchestrator.manager.retry.target_index is None
+
 
 class TestSessionManagerIntegration:
     """Test integration with SessionManager."""
@@ -655,6 +686,76 @@ class TestCancelHandling:
 
             assert isinstance(action, PrintAction)
             mock_save.assert_not_called()
+
+
+class TestErrorHandling:
+    @pytest.mark.asyncio
+    async def test_handle_ai_error_sanitizes_user_facing_and_persisted_error(
+        self,
+        orchestrator,
+    ):
+        chat_data = ChatDocument.from_raw({
+            "metadata": {},
+            "messages": [{"role": "user", "content": "pending"}],
+        })
+        orchestrator.manager.switch_chat("/test/chat.json", chat_data)
+
+        with patch.object(
+            orchestrator.manager,
+            "save_current_chat",
+            new_callable=AsyncMock,
+        ) as mock_save:
+            action = await orchestrator.handle_ai_error(
+                Exception("boom sk-1234567890abcdefghijk"),
+                "/test/chat.json",
+                chat_data,
+                "normal",
+            )
+
+        assert isinstance(action, PrintAction)
+        assert action.message == "Error: boom [REDACTED_API_KEY]"
+        assert chat_data.messages[-1].role == "error"
+        assert chat_data.messages[-1].content == ["boom [REDACTED_API_KEY]"]
+        mock_save.assert_awaited_once_with(
+            chat_path="/test/chat.json",
+            chat_data=chat_data,
+        )
+
+    @pytest.mark.asyncio
+    async def test_handle_ai_error_skips_mutation_for_non_current_chat_object(
+        self,
+        orchestrator,
+    ):
+        current_chat = ChatDocument.from_raw({
+            "metadata": {},
+            "messages": [{"role": "assistant", "content": "current"}],
+        })
+        foreign_chat = ChatDocument.from_raw({
+            "metadata": {},
+            "messages": [{"role": "user", "content": "pending"}],
+        })
+        orchestrator.manager.switch_chat("/test/chat.json", current_chat)
+        reserved_hex_id = orchestrator.manager.reserve_hex_id()
+
+        with patch.object(
+            orchestrator.manager,
+            "save_current_chat",
+            new_callable=AsyncMock,
+        ) as mock_save:
+            action = await orchestrator.handle_ai_error(
+                Exception("boom sk-1234567890abcdefghijk"),
+                "/test/chat.json",
+                foreign_chat,
+                "normal",
+                assistant_hex_id=reserved_hex_id,
+            )
+
+        assert isinstance(action, PrintAction)
+        assert action.message == "Error: boom [REDACTED_API_KEY]"
+        assert foreign_chat.messages[0].role == "user"
+        assert foreign_chat.messages[0].content == ["pending"]
+        assert reserved_hex_id not in orchestrator.manager.hex_id_set
+        mock_save.assert_not_awaited()
 
 
 class TestPreSendValidationRollback:

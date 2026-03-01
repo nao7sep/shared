@@ -95,6 +95,39 @@ def test_provider_retry_order_matches_schema_prefix() -> None:
     assert keys[len(expected_prefix) :] == sorted(keys[len(expected_prefix) :])
 
 
+def test_ai_response_postprocess_warning_order_matches_schema_prefix() -> None:
+    formatter = StructuredTextFormatter()
+    payload = {
+        "event": "ai_response_postprocess_warning",
+        "ts_utc": "2026-03-01T00:00:00+00:00",
+        "level": "WARNING",
+        "stage": "citation_processing",
+        "mode": "normal",
+        "provider": "openai",
+        "model": "gpt-5-mini",
+        "chat_file": "/tmp/chat.json",
+        "error_type": "RuntimeError",
+        "error": "citation failed",
+        "zzz_extra": "z",
+    }
+    record = logging.LogRecord(
+        name="polychat.repl",
+        level=logging.WARNING,
+        pathname=__file__,
+        lineno=1,
+        msg=json.dumps(payload),
+        args=(),
+        exc_info=None,
+    )
+
+    output = formatter.format(record)
+    keys = _formatted_keys(output)
+    expected_prefix = EVENT_KEY_ORDER["ai_response_postprocess_warning"]
+
+    assert keys[: len(expected_prefix)] == expected_prefix
+    assert keys[len(expected_prefix) :] == sorted(keys[len(expected_prefix) :])
+
+
 def test_log_event_resolves_backward_compatible_path_key() -> None:
     with (
         patch("polychat.logging.events._resolve_log_path") as mock_resolve,
@@ -121,3 +154,4 @@ def test_schema_keeps_compatibility_fields() -> None:
     assert "system_prompt_path" in LOG_PATH_FIELDS
     assert "cached_tokens" in EVENT_KEY_ORDER["ai_response"]
     assert "cache_write_tokens" in EVENT_KEY_ORDER["ai_response"]
+    assert "ai_response_postprocess_warning" in EVENT_KEY_ORDER

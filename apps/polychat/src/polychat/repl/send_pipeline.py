@@ -12,7 +12,7 @@ from ..ai.citations import normalize_citations, resolve_vertex_citation_urls
 from ..ai.runtime import send_message_to_ai, validate_and_get_provider
 from ..formatting.costs import format_cost_line, format_cost_usd
 from ..formatting.citations import format_citation_list
-from ..logging import log_event
+from ..logging import log_event, sanitize_error_message
 from ..orchestrator import ChatOrchestrator
 from ..orchestration.types import PrintAction, SendAction
 from ..session_manager import SessionManager
@@ -89,6 +89,43 @@ def _log_response_metrics(
     )
 
 
+def _warn_nonfatal_post_stream_failure(
+    *,
+    stage: str,
+    error: Exception,
+    manager: SessionManager,
+    effective_path: Optional[str],
+    mode: str,
+    print_user_warning: bool,
+) -> None:
+    """Record a non-fatal failure after the response text has already streamed."""
+    sanitized_error = sanitize_error_message(str(error))
+    try:
+        log_event(
+            "ai_response_postprocess_warning",
+            level=logging.WARNING,
+            stage=stage,
+            provider=manager.current_ai,
+            model=manager.current_model,
+            chat_file=effective_path,
+            mode=mode,
+            error_type=type(error).__name__,
+            error=sanitized_error,
+        )
+    except Exception:
+        pass
+
+    logging.warning(
+        "Non-fatal AI response post-processing failure (%s): %s",
+        stage,
+        sanitized_error,
+    )
+
+    if print_user_warning:
+        print()
+        print(f"[Warning: {stage.replace('_', ' ')} failed: {sanitized_error}]")
+
+
 async def execute_send_action(
     action: SendAction,
     *,
@@ -109,7 +146,18 @@ async def execute_send_action(
         chat_path=effective_path,
         search=use_search,
     )
-    if validation_error:
+    provider_resolution_error = validation_error
+    if provider_instance is None and provider_resolution_error is None:
+        provider_resolution_error = "Provider resolution failed unexpectedly"
+        logging.error(
+            "Provider resolution returned neither instance nor validation error "
+            "(provider=%s, mode=%s, chat=%s)",
+            manager.current_ai,
+            action.mode,
+            effective_path,
+        )
+
+    if provider_resolution_error:
         await orchestrator.rollback_pre_send_failure(
             chat_path=effective_path,
             chat_data=effective_data,
@@ -117,11 +165,7 @@ async def execute_send_action(
             assistant_hex_id=action.assistant_hex_id,
         )
         print()
-        print(f"Error: {validation_error}")
-        return
-    if provider_instance is None:
-        print()
-        print("Error: provider is unavailable")
+        print(f"Error: {provider_resolution_error}")
         return
 
     if action.mode == "retry" and action.assistant_hex_id:
@@ -150,31 +194,6 @@ async def execute_send_action(
             prefix="",
         )
 
-        await _process_citations(metadata)
-
-        _log_response_metrics(
-            metadata=metadata,
-            response_text=response_text,
-            first_token_time=first_token_time,
-            effective_request_mode=effective_request_mode,
-            manager=manager,
-            effective_path=effective_path,
-        )
-
-        result = await orchestrator.handle_ai_response(
-            response_text,
-            effective_path,
-            effective_data,
-            action.mode,
-            user_input=action.retry_user_input,
-            assistant_hex_id=action.assistant_hex_id,
-            citations=normalize_citations(metadata.get("citations")),
-        )
-
-        if isinstance(result, PrintAction):
-            print()
-            print(result.message)
-
     except KeyboardInterrupt:
         cancel_result = await orchestrator.handle_user_cancel(
             effective_data,
@@ -197,3 +216,49 @@ async def execute_send_action(
         print()
         print(error_result.message)
         return
+
+    citations = normalize_citations(metadata.get("citations"))
+    try:
+        citations = await _process_citations(metadata)
+    except Exception as exc:
+        _warn_nonfatal_post_stream_failure(
+            stage="citation_processing",
+            error=exc,
+            manager=manager,
+            effective_path=effective_path,
+            mode=effective_request_mode,
+            print_user_warning=True,
+        )
+
+    try:
+        _log_response_metrics(
+            metadata=metadata,
+            response_text=response_text,
+            first_token_time=first_token_time,
+            effective_request_mode=effective_request_mode,
+            manager=manager,
+            effective_path=effective_path,
+        )
+    except Exception as exc:
+        _warn_nonfatal_post_stream_failure(
+            stage="response_metrics_logging",
+            error=exc,
+            manager=manager,
+            effective_path=effective_path,
+            mode=effective_request_mode,
+            print_user_warning=False,
+        )
+
+    result = await orchestrator.handle_ai_response(
+        response_text,
+        effective_path,
+        effective_data,
+        action.mode,
+        user_input=action.retry_user_input,
+        assistant_hex_id=action.assistant_hex_id,
+        citations=citations,
+    )
+
+    if isinstance(result, PrintAction):
+        print()
+        print(result.message)

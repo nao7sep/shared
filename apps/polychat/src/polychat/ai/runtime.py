@@ -12,6 +12,7 @@ from ..logging import (
     extract_http_error_context,
     estimate_message_chars,
     log_event,
+    sanitize_error_message,
 )
 
 from .openai_provider import OpenAIProvider
@@ -242,6 +243,7 @@ async def send_message_to_ai(
         # Provider will populate metadata["usage"] after streaming completes
         return response_stream, metadata
     except Exception as e:
+        sanitized_error = sanitize_error_message(str(e))
         http_context = extract_http_error_context(e)
         log_event(
             "ai_error",
@@ -252,7 +254,7 @@ async def send_message_to_ai(
             chat_file=chat_path,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
-            error=str(e),
+            error=sanitized_error,
             **http_context,
         )
         logging.error(
@@ -260,8 +262,7 @@ async def send_message_to_ai(
             provider_label,
             model,
             mode,
-            e,
-            exc_info=True,
+            sanitized_error,
         )
         raise
 
@@ -292,6 +293,7 @@ def validate_and_get_provider(
     try:
         api_key = load_api_key(provider_name, key_config)
     except Exception as e:
+        sanitized_error = sanitize_error_message(str(e))
         http_context = extract_http_error_context(e)
         log_event(
             "provider_validation_error",
@@ -301,11 +303,11 @@ def validate_and_get_provider(
             phase="key_load_failed",
             chat_file=chat_path,
             error_type=type(e).__name__,
-            error=str(e),
+            error=sanitized_error,
             **http_context,
         )
-        logging.error("API key loading error: %s", e, exc_info=True)
-        return None, f"Error loading API key: {e}"
+        logging.error("API key loading error: %s", sanitized_error)
+        return None, f"Error loading API key: {sanitized_error}"
 
     if not validate_api_key(api_key, provider_name):
         log_event(
@@ -333,6 +335,7 @@ def validate_and_get_provider(
             timeout_sec=effective_timeout,
         )
     except Exception as e:
+        sanitized_error = sanitize_error_message(str(e))
         http_context = extract_http_error_context(e)
         log_event(
             "provider_validation_error",
@@ -342,10 +345,10 @@ def validate_and_get_provider(
             phase="provider_init_failed",
             chat_file=chat_path,
             error_type=type(e).__name__,
-            error=str(e),
+            error=sanitized_error,
             **http_context,
         )
-        logging.error("Provider initialization error: %s", e, exc_info=True)
-        return None, f"Error initializing provider: {e}"
+        logging.error("Provider initialization error: %s", sanitized_error)
+        return None, f"Error initializing provider: {sanitized_error}"
 
     return provider_instance, None

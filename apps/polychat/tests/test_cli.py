@@ -1,10 +1,14 @@
 """CLI behavior tests."""
 
 import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from polychat.cli import main
+from polychat.session_manager import SessionManager
+from test_helpers import make_profile
 
 
 def _run_cli(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture, argv: list[str]):
@@ -69,3 +73,55 @@ def test_unknown_command_returns_error(monkeypatch, capsys):
     assert code == 1
     assert "Error: unknown command 'unknown'" in out
     assert "Supported commands: init" in out
+
+
+def test_setup_command_runs_wizard_then_starts_repl(monkeypatch):
+    """Successful setup should hand the new profile path into normal startup."""
+    profile_path = "/tmp/polychat-profile.json"
+    profile_data = make_profile(
+        chats_dir="/tmp/chats",
+        logs_dir="/tmp/logs",
+    )
+    monkeypatch.setattr(sys, "argv", ["polychat", "setup"])
+
+    with (
+        patch("polychat.cli.setup_wizard.run_setup_wizard", return_value=profile_path) as mock_wizard,
+        patch("polychat.cli.profile.load_profile", return_value=profile_data) as mock_load_profile,
+        patch.object(
+            SessionManager,
+            "load_system_prompt",
+            return_value=("system prompt", "@/prompts/system/default.txt", None),
+        ) as mock_load_prompt,
+        patch("polychat.cli.build_run_log_path", return_value="/tmp/polychat.log"),
+        patch("polychat.cli.setup_logging"),
+        patch("polychat.cli.log_event"),
+        patch("polychat.cli.repl_loop", new_callable=AsyncMock) as mock_repl_loop,
+    ):
+        main()
+
+    mock_wizard.assert_called_once_with()
+    mock_load_profile.assert_called_once()
+    assert Path(mock_load_profile.call_args.args[0]).resolve() == Path(profile_path).resolve()
+    mock_load_prompt.assert_called_once()
+    assert mock_load_prompt.call_args.args[0] == profile_data
+    assert Path(mock_load_prompt.call_args.args[1]).resolve() == Path(profile_path).resolve()
+    mock_repl_loop.assert_awaited_once()
+    assert mock_repl_loop.await_args.args[0] == profile_data
+    assert mock_repl_loop.await_args.args[4] == "@/prompts/system/default.txt"
+    assert Path(mock_repl_loop.await_args.args[5]).resolve() == Path(profile_path).resolve()
+
+
+def test_setup_command_exits_when_wizard_is_cancelled(monkeypatch):
+    """Cancelled setup should stop before profile load or REPL startup."""
+    monkeypatch.setattr(sys, "argv", ["polychat", "setup"])
+
+    with (
+        patch("polychat.cli.setup_wizard.run_setup_wizard", return_value=None) as mock_wizard,
+        patch("polychat.cli.repl_loop", new_callable=AsyncMock) as mock_repl_loop,
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        main()
+
+    assert exc_info.value.code == 1
+    mock_wizard.assert_called_once_with()
+    mock_repl_loop.assert_not_called()

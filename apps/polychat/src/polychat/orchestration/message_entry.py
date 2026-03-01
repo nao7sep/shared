@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Optional
 from ..chat import (
     add_user_message,
     get_messages_for_ai,
-    get_retry_context_for_last_interaction,
 )
 from ..domain.chat import ChatMessage
 from ..session.state import has_pending_error, pending_error_guidance
@@ -94,17 +93,16 @@ class MessageEntryHandlersMixin:
         user_input: str,
     ) -> OrchestratorAction:
         """Handle one message while retry mode is enabled."""
-        chat_data = self.manager.chat
         try:
             retry_context = self.manager.retry.get_context()
         except ValueError:
-            retry_context = get_retry_context_for_last_interaction(chat_data)
-            target_index = len(chat_data.messages) - 1
-            self.manager.retry.enter(
-                retry_context,
-                target_index=target_index if target_index >= 0 else None,
+            self.manager.retry.clear()
+            return PrintAction(
+                message=(
+                    "Retry mode state was inconsistent and has been cleared.\n"
+                    "Run /retry again to start a new retry attempt."
+                )
             )
-            retry_context = self.manager.retry.get_context()
 
         temp_messages = retry_context + [ChatMessage.new_user(user_input)]
 

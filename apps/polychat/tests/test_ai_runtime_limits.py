@@ -1,4 +1,4 @@
-"""Tests for AI runtime limit propagation."""
+"""Tests for AI runtime limit propagation and runtime error handling."""
 
 from unittest.mock import MagicMock, patch
 
@@ -187,3 +187,87 @@ def test_validate_and_get_provider_keeps_zero_timeout_without_multiplier():
     assert provider is not None
     assert error is None
     assert captured["timeout"] == 0
+
+
+@pytest.mark.asyncio
+async def test_send_message_to_ai_sanitizes_error_in_logs():
+    provider = MagicMock()
+    provider.send_message = MagicMock(
+        side_effect=RuntimeError("request failed sk-1234567890abcdefghijk")
+    )
+
+    with (
+        patch("polychat.ai.runtime.log_event") as mock_log_event,
+        patch("polychat.ai.runtime.logging.error") as mock_logging_error,
+        pytest.raises(RuntimeError, match="request failed sk-1234567890abcdefghijk"),
+    ):
+        await send_message_to_ai(
+            provider_instance=provider,
+            messages=[ChatMessage.new_user("hi")],
+            model="gpt-5-mini",
+            provider_name="openai",
+            profile=make_profile(),
+            search=False,
+        )
+
+    ai_error_call = mock_log_event.call_args_list[-1]
+    assert ai_error_call.args[0] == "ai_error"
+    assert ai_error_call.kwargs["error"] == "request failed [REDACTED_API_KEY]"
+    assert mock_logging_error.call_args.args == (
+        "Error sending message to AI (provider=%s, model=%s, mode=%s): %s",
+        "openai",
+        "gpt-5-mini",
+        "normal",
+        "request failed [REDACTED_API_KEY]",
+    )
+    assert mock_logging_error.call_args.kwargs == {}
+
+
+def test_validate_and_get_provider_sanitizes_key_load_failure_logs_and_error():
+    session = _build_session()
+
+    with (
+        patch(
+            "polychat.ai.runtime.load_api_key",
+            side_effect=RuntimeError("bad key sk-1234567890abcdefghijk"),
+        ),
+        patch("polychat.ai.runtime.log_event") as mock_log_event,
+        patch("polychat.ai.runtime.logging.error") as mock_logging_error,
+    ):
+        provider, error = validate_and_get_provider(session)
+
+    assert provider is None
+    assert error == "Error loading API key: bad key [REDACTED_API_KEY]"
+    assert mock_log_event.call_args.kwargs["phase"] == "key_load_failed"
+    assert mock_log_event.call_args.kwargs["error"] == "bad key [REDACTED_API_KEY]"
+    assert mock_logging_error.call_args.args == (
+        "API key loading error: %s",
+        "bad key [REDACTED_API_KEY]",
+    )
+    assert mock_logging_error.call_args.kwargs == {}
+
+
+def test_validate_and_get_provider_sanitizes_provider_init_failure_logs_and_error():
+    session = _build_session()
+
+    with (
+        patch("polychat.ai.runtime.load_api_key", return_value="test-key"),
+        patch("polychat.ai.runtime.validate_api_key", return_value=True),
+        patch(
+            "polychat.ai.runtime.get_provider_instance",
+            side_effect=RuntimeError("init failed sk-1234567890abcdefghijk"),
+        ),
+        patch("polychat.ai.runtime.log_event") as mock_log_event,
+        patch("polychat.ai.runtime.logging.error") as mock_logging_error,
+    ):
+        provider, error = validate_and_get_provider(session)
+
+    assert provider is None
+    assert error == "Error initializing provider: init failed [REDACTED_API_KEY]"
+    assert mock_log_event.call_args.kwargs["phase"] == "provider_init_failed"
+    assert mock_log_event.call_args.kwargs["error"] == "init failed [REDACTED_API_KEY]"
+    assert mock_logging_error.call_args.args == (
+        "Provider initialization error: %s",
+        "init failed [REDACTED_API_KEY]",
+    )
+    assert mock_logging_error.call_args.kwargs == {}

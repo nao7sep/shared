@@ -1,5 +1,7 @@
 """Tests for command parsing and arity validation."""
 
+from pathlib import Path
+
 import pytest
 
 import viber.repl as repl_module
@@ -559,3 +561,116 @@ def test_undo_entity_no_resolved_shows_message(
 # ---------------------------------------------------------------------------
 # Alias mapping (covered by updated test_run_loop_aliases_are_mapped_to_full_verbs above)
 # ---------------------------------------------------------------------------
+
+
+def test_run_repl_without_check_path_only_saves_after_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = Database()
+    data_path = Path("/tmp/viber-data.json")
+    events: list[str] = []
+
+    def fake_run_loop(_db: Database, after_mutation: repl_module.MutationHook) -> None:
+        after_mutation({1}, None)
+
+    def fake_save_database(saved_db: Database, saved_path: Path) -> None:
+        assert saved_db is db
+        assert saved_path == data_path
+        events.append("save")
+
+    monkeypatch.setattr(repl_module, "_run_loop", fake_run_loop)
+    monkeypatch.setattr(repl_module, "save_database", fake_save_database)
+    monkeypatch.setattr(
+        repl_module,
+        "render_check_pages",
+        lambda *_args, **_kwargs: events.append("render"),
+    )
+    monkeypatch.setattr(
+        repl_module,
+        "remove_check_page",
+        lambda *_args, **_kwargs: events.append("remove"),
+    )
+
+    repl_module.run_repl(db, data_path, None)
+
+    assert events == ["save"]
+
+
+def test_run_repl_removes_deleted_group_pages_before_full_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = Database()
+    data_path = Path("/tmp/viber-data.json")
+    check_path = Path("/tmp/viber-check.html")
+    events: list[str] = []
+
+    def fake_run_loop(_db: Database, after_mutation: repl_module.MutationHook) -> None:
+        after_mutation(None, {"Frontend", "Backend"})
+
+    def fake_save_database(saved_db: Database, saved_path: Path) -> None:
+        assert saved_db is db
+        assert saved_path == data_path
+        events.append("save")
+
+    def fake_remove_check_page(removed_path: Path, group_name: str) -> None:
+        assert removed_path == check_path
+        events.append(f"remove:{group_name}")
+
+    def fake_render_check_pages(
+        rendered_db: Database,
+        rendered_path: Path,
+        affected_group_ids: set[int] | None = None,
+    ) -> None:
+        assert rendered_db is db
+        assert rendered_path == check_path
+        assert affected_group_ids is None
+        events.append("render:all")
+
+    monkeypatch.setattr(repl_module, "_run_loop", fake_run_loop)
+    monkeypatch.setattr(repl_module, "save_database", fake_save_database)
+    monkeypatch.setattr(repl_module, "remove_check_page", fake_remove_check_page)
+    monkeypatch.setattr(repl_module, "render_check_pages", fake_render_check_pages)
+
+    repl_module.run_repl(db, data_path, check_path)
+
+    assert events == ["save", "remove:Backend", "remove:Frontend", "render:all"]
+
+
+def test_run_repl_renders_only_affected_groups_after_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = Database()
+    data_path = Path("/tmp/viber-data.json")
+    check_path = Path("/tmp/viber-check.html")
+    events: list[str] = []
+
+    def fake_run_loop(_db: Database, after_mutation: repl_module.MutationHook) -> None:
+        after_mutation({3, 1}, None)
+
+    def fake_save_database(saved_db: Database, saved_path: Path) -> None:
+        assert saved_db is db
+        assert saved_path == data_path
+        events.append("save")
+
+    def fake_render_check_pages(
+        rendered_db: Database,
+        rendered_path: Path,
+        affected_group_ids: set[int] | None = None,
+    ) -> None:
+        assert rendered_db is db
+        assert rendered_path == check_path
+        assert affected_group_ids == {1, 3}
+        events.append("render:affected")
+
+    monkeypatch.setattr(repl_module, "_run_loop", fake_run_loop)
+    monkeypatch.setattr(repl_module, "save_database", fake_save_database)
+    monkeypatch.setattr(
+        repl_module,
+        "remove_check_page",
+        lambda *_args, **_kwargs: events.append("remove"),
+    )
+    monkeypatch.setattr(repl_module, "render_check_pages", fake_render_check_pages)
+
+    repl_module.run_repl(db, data_path, check_path)
+
+    assert events == ["save", "render:affected"]

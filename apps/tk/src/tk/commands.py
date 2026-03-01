@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from tk import data, markdown, subjective_date
+from tk.errors import UsageError, ValidationError
 from tk.models import (
     HistoryFilters,
     HistoryGroup,
@@ -21,6 +22,14 @@ _PENDING_STATUS = TaskStatus.PENDING.value
 _DONE_STATUS = TaskStatus.DONE.value
 _CANCELLED_STATUS = TaskStatus.CANCELLED.value
 _HANDLED_STATUSES = (_DONE_STATUS, _CANCELLED_STATUS)
+
+
+def _validate_positive_int(name: str, value: int | None) -> None:
+    """Validate optional integer filters that must be positive."""
+    if value is None:
+        return
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValidationError(f"{name} must be a positive integer")
 
 
 def _sync_if_auto(session: Session) -> None:
@@ -72,11 +81,14 @@ def list_history_data(
     specific_date: str | None = None,
 ) -> HistoryListPayload:
     """Return structured handled task data for presentation layers."""
+    _validate_positive_int("days", days)
+    _validate_positive_int("working_days", working_days)
+
     filters_specified = sum(
         [days is not None, working_days is not None, specific_date is not None]
     )
     if filters_specified > 1:
-        raise ValueError("Cannot specify multiple filters (--days, --working-days, or specific_date)")
+        raise UsageError("Cannot specify multiple filters (--days, --working-days, or specific_date)")
 
     tasks_data = session.require_tasks()
     handled_with_indices = [
@@ -164,7 +176,7 @@ def extract_last_list_mapping(
 def cmd_add(session: Session, text: str) -> str:
     """Add a new pending task."""
     if not text.strip():
-        raise ValueError("Task text cannot be empty")
+        raise ValidationError("Task text cannot be empty")
 
     tasks_data = session.require_tasks()
     prof = session.require_profile()
@@ -199,7 +211,7 @@ def _handle_task(
         note=note,
     )
     if not updated:
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
@@ -230,13 +242,13 @@ def cmd_cancel(
 def cmd_edit(session: Session, array_index: int, text: str) -> str:
     """Edit task text."""
     if not text.strip():
-        raise ValueError("Task text cannot be empty")
+        raise ValidationError("Task text cannot be empty")
 
     tasks_data = session.require_tasks()
     prof = session.require_profile()
 
     if not tasks_data.update_task(array_index, text=text):
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
@@ -250,13 +262,13 @@ def cmd_delete(session: Session, array_index: int, confirm: bool = False) -> str
     prof = session.require_profile()
 
     if not tasks_data.get_task_by_index(array_index):
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
 
     if not confirm:
         return "Deletion cancelled."
 
     if not tasks_data.delete_task(array_index):
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
@@ -271,12 +283,12 @@ def cmd_note(session: Session, array_index: int, note: str | None = None) -> str
 
     task = tasks_data.get_task_by_index(array_index)
     if not task:
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
     if task.status == _PENDING_STATUS:
-        raise ValueError("Cannot set note on pending task. Mark it done or cancelled first.")
+        raise ValidationError("Cannot set note on pending task. Mark it done or cancelled first.")
 
     if not tasks_data.update_task(array_index, note=note):
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)
@@ -293,12 +305,12 @@ def cmd_date(session: Session, array_index: int, date_str: str) -> str:
 
     task = tasks_data.get_task_by_index(array_index)
     if not task:
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
     if task.status == _PENDING_STATUS:
-        raise ValueError("Cannot set date on pending task. Mark it done or cancelled first.")
+        raise ValidationError("Cannot set date on pending task. Mark it done or cancelled first.")
 
     if not tasks_data.update_task(array_index, subjective_date=date_str):
-        raise ValueError("Task not found")
+        raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
     _sync_if_auto(session)

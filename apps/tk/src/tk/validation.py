@@ -12,7 +12,7 @@ def validate_date_format(date_str: str) -> None:
         date_str: Date string to validate
 
     Raises:
-        ValueError: If date is not in YYYY-MM-DD format or is semantically invalid
+        ValidationError: If date is not in YYYY-MM-DD format or is semantically invalid
     """
     try:
         date.fromisoformat(date_str)

@@ -4,7 +4,9 @@ Interactive wizard that configures PolyChat with API keys and creates
 profile and key files in ~/.polychat/.
 """
 
+import os
 import json
+import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
@@ -43,6 +45,93 @@ def _mask_key(key: str) -> str:
     if len(key) > 12:
         return key[:4] + "..." + key[-4:]
     return "***"
+
+
+def _atomic_write_json(path: Path, payload: Any) -> None:
+    """Write JSON via a temp file and atomically replace the destination."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            json.dump(payload, temp_file, indent=2, ensure_ascii=False)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+            temp_path = Path(temp_file.name)
+
+        os.replace(temp_path, path)
+    except Exception:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+        raise
+
+
+def _write_json_transaction(entries: list[tuple[Path, Any]]) -> None:
+    """Write multiple JSON files with rollback so setup is all-or-nothing."""
+    temp_paths: dict[Path, Path] = {}
+    backup_paths: dict[Path, Path] = {}
+    had_original: dict[Path, bool] = {}
+    replaced_targets: list[Path] = []
+
+    try:
+        for path, payload in entries:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=path.parent,
+                prefix=f".{path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temp_file:
+                json.dump(payload, temp_file, indent=2, ensure_ascii=False)
+                temp_file.flush()
+                os.fsync(temp_file.fileno())
+                temp_paths[path] = Path(temp_file.name)
+
+        for path, _payload in entries:
+            had_original[path] = path.exists()
+            if path.exists():
+                backup_path = Path(
+                    tempfile.mkstemp(
+                        dir=path.parent,
+                        prefix=f".{path.name}.",
+                        suffix=".bak",
+                    )[1]
+                )
+                backup_path.unlink()
+                os.replace(path, backup_path)
+                backup_paths[path] = backup_path
+
+        for path, _payload in entries:
+            os.replace(temp_paths[path], path)
+            replaced_targets.append(path)
+
+    except Exception:
+        for path in reversed(replaced_targets):
+            if not had_original.get(path, False) and path.exists():
+                path.unlink(missing_ok=True)
+
+        for path, backup_path in backup_paths.items():
+            os.replace(backup_path, path)
+
+        for path, temp_path in temp_paths.items():
+            if temp_path.exists():
+                temp_path.unlink(missing_ok=True)
+
+        for backup_path in backup_paths.values():
+            backup_path.unlink(missing_ok=True)
+        raise
+
+    for backup_path in backup_paths.values():
+        backup_path.unlink(missing_ok=True)
 
 
 def run_setup_wizard() -> Optional[str]:
@@ -113,19 +202,15 @@ def run_setup_wizard() -> Optional[str]:
     # Write files
     from .path_utils import map_path
 
-    data_dir = Path(map_path(USER_DATA_DIR))
-    data_dir.mkdir(parents=True, exist_ok=True)
-
     api_keys_path = Path(map_path(SETUP_API_KEYS_PATH))
     profile_path = Path(map_path(SETUP_PROFILE_PATH))
 
-    # Write api-keys.json
-    with open(api_keys_path, "w", encoding="utf-8") as f:
-        json.dump(api_keys, f, indent=2, ensure_ascii=False)
-
-    # Write profile.json
-    with open(profile_path, "w", encoding="utf-8") as f:
-        json.dump(profile, f, indent=2, ensure_ascii=False)
+    _write_json_transaction(
+        [
+            (api_keys_path, api_keys),
+            (profile_path, profile),
+        ]
+    )
 
     print()
     print(f"Profile:  {profile_path}")

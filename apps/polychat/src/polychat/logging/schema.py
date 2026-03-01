@@ -147,6 +147,17 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "error_type",
         "error",
     ],
+    "ai_response_postprocess_warning": [
+        "ts_utc",
+        "level",
+        "stage",
+        "mode",
+        "provider",
+        "model",
+        "chat_file",
+        "error_type",
+        "error",
+    ],
     # Helper AI events
     "helper_ai_request": [
         "ts_utc",

@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Optional
 
 from .. import hex_id
+from ..logging import sanitize_error_message
 from ..domain.chat import ChatMessage
 from ..domain.profile import RuntimeProfile
 from ..prompts.templates import (
@@ -102,14 +103,14 @@ class MetadataGenerationCommandHandlers:
             return f"Title generated: {title}"
 
         except Exception as error:
+            sanitized_error = sanitize_error_message(str(error))
             logging.error(
                 "Helper AI title generation failed (provider=%s, model=%s): %s",
                 self._deps.manager.helper_ai,
                 self._deps.manager.helper_model,
-                error,
-                exc_info=True,
+                sanitized_error,
             )
-            return f"Error generating title: {error}"
+            return f"Error generating title: {sanitized_error}"
 
     async def set_summary(self, args: str) -> str:
         """Set chat summary."""
@@ -161,14 +162,14 @@ class MetadataGenerationCommandHandlers:
             return f"Summary generated:\n{summary}"
 
         except Exception as error:
+            sanitized_error = sanitize_error_message(str(error))
             logging.error(
                 "Helper AI summary generation failed (provider=%s, model=%s): %s",
                 self._deps.manager.helper_ai,
                 self._deps.manager.helper_model,
-                error,
-                exc_info=True,
+                sanitized_error,
             )
-            return f"Error generating summary: {error}"
+            return f"Error generating summary: {sanitized_error}"
 
     async def check_safety(self, args: str) -> str:
         """Check chat for unsafe content."""
@@ -221,14 +222,13 @@ class MetadataGenerationCommandHandlers:
             return "\n".join(output)
 
         except Exception as error:
+            sanitized_error = sanitize_error_message(str(error))
             logging.error(
                 "Helper AI safety check failed (provider=%s, model=%s, scope=%s): %s",
                 self._deps.manager.helper_ai,
                 self._deps.manager.helper_model,
                 scope,
-                error,
-                exc_info=True,
+                sanitized_error,
             )
-            return f"Error performing safety check: {error}"
-
+            return f"Error performing safety check: {sanitized_error}"
 

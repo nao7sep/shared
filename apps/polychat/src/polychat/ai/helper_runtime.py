@@ -53,6 +53,7 @@ async def invoke_helper_ai(
         extract_http_error_context,
         log_event,
         estimate_message_chars,
+        sanitize_error_message,
     )
 
     # Get API key for helper AI
@@ -78,6 +79,7 @@ async def invoke_helper_ai(
     try:
         api_key = load_api_key(helper_ai, key_config)
     except Exception as e:
+        sanitized_error = sanitize_error_message(str(e))
         log_event(
             "helper_ai_error",
             level=logging.ERROR,
@@ -86,16 +88,15 @@ async def invoke_helper_ai(
             model=helper_model,
             latency_ms=0.0,
             error_type=type(e).__name__,
-            error=str(e),
+            error=sanitized_error,
         )
         logging.error(
             "Helper AI API key loading failed (provider=%s, model=%s): %s",
             helper_ai,
             helper_model,
-            e,
-            exc_info=True,
+            sanitized_error,
         )
-        raise ValueError(f"Error loading helper AI API key: {e}")
+        raise ValueError(f"Error loading helper AI API key: {sanitized_error}")
 
     # Get provider instance (cached when a session manager/state is provided)
     provider_instance = get_provider_instance(helper_ai, api_key, session=session)
@@ -155,6 +156,7 @@ async def invoke_helper_ai(
         return response_text.strip()
 
     except Exception as e:
+        sanitized_error = sanitize_error_message(str(e))
         http_context = extract_http_error_context(e)
         log_event(
             "helper_ai_error",
@@ -164,14 +166,13 @@ async def invoke_helper_ai(
             model=helper_model,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
-            error=str(e),
+            error=sanitized_error,
             **http_context,
         )
         logging.error(
             "Error invoking helper AI (provider=%s, model=%s): %s",
             helper_ai,
             helper_model,
-            e,
-            exc_info=True,
+            sanitized_error,
         )
-        raise
+        raise ValueError(f"Error invoking helper AI: {sanitized_error}")

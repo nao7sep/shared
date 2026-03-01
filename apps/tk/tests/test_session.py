@@ -1,6 +1,7 @@
 """Tests for session module."""
 
 import pytest
+from tk.errors import UsageError
 from tk.session import Session
 
 
@@ -36,7 +37,7 @@ class TestSessionRequireMethods:
 
     def test_require_profile_without_profile(self, empty_session):
         """Test that require_profile raises ValueError when not set."""
-        with pytest.raises(ValueError, match="No profile loaded"):
+        with pytest.raises(UsageError, match="No profile loaded"):
             empty_session.require_profile()
 
     def test_require_tasks_with_tasks(self, sample_session):
@@ -48,7 +49,7 @@ class TestSessionRequireMethods:
 
     def test_require_tasks_without_tasks(self, empty_session):
         """Test that require_tasks raises ValueError when not set."""
-        with pytest.raises(ValueError, match="No tasks loaded"):
+        with pytest.raises(UsageError, match="No tasks loaded"):
             empty_session.require_tasks()
 
 
@@ -79,14 +80,14 @@ class TestSessionListMapping:
 
     def test_resolve_array_index_no_list(self, empty_session):
         """Test that resolving without list raises ValueError."""
-        with pytest.raises(ValueError, match="Run 'list' or 'history' first"):
+        with pytest.raises(UsageError, match="Run 'list' or 'history' first"):
             empty_session.resolve_array_index(1)
 
     def test_resolve_array_index_invalid_num(self, empty_session):
         """Test that invalid display_num raises ValueError."""
         empty_session.set_last_list([(1, 0), (2, 1)])
 
-        with pytest.raises(ValueError, match="Invalid task number"):
+        with pytest.raises(UsageError, match="Invalid task number"):
             empty_session.resolve_array_index(99)
 
 
@@ -106,10 +107,10 @@ class TestSessionTaskRetrieval:
         """Test that invalid display number raises ValueError."""
         sample_session.set_last_list([(1, 0)])
 
-        with pytest.raises(ValueError, match="Invalid task number"):
+        with pytest.raises(UsageError, match="Invalid task number"):
             sample_session.get_task_by_display_number(99)
 
     def test_get_task_by_display_number_no_list(self, sample_session):
         """Test that getting task without list raises ValueError."""
-        with pytest.raises(ValueError, match="Run 'list' or 'history' first"):
+        with pytest.raises(UsageError, match="Run 'list' or 'history' first"):
             sample_session.get_task_by_display_number(1)

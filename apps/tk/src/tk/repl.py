@@ -1,11 +1,12 @@
 """REPL parsing and loop orchestration for tk."""
 
 import os
+import shlex
 import traceback
 from typing import Any
 
 from tk import commands, dispatcher, markdown, prompts
-from tk.errors import AppError
+from tk.errors import AppError, UsageError
 from tk.models import TaskStatus
 from tk.session import Session
 
@@ -31,7 +32,14 @@ _HANDLED_COMMAND_TO_STATUS = {
 
 def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
     """Parse command line into (command, args, kwargs)."""
-    parts = line.split()
+    try:
+        lexer = shlex.shlex(line, posix=True)
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        lexer.quotes = '"'
+        parts = list(lexer)
+    except ValueError as e:
+        raise UsageError(f"Invalid command syntax: {e}") from e
 
     if not parts:
         return "", [], {}
@@ -125,6 +133,9 @@ def _prepare_interactive_command(
             return "[Operation Cancelled]"
 
     elif normalized == "delete":
+        if kwargs or len(args) != 1:
+            return cmd, args, kwargs
+
         num = _try_parse_first_num_arg(args)
         if num is None:
             return cmd, args, kwargs
@@ -176,10 +187,6 @@ def repl(session: Session) -> None:
 
         except AppError as e:
             # Expected business logic errors (user errors, validation failures)
-            print(f"ERROR: {e}")
-
-        except ValueError as e:
-            # Backward-compatible catch for any remaining ValueError paths.
             print(f"ERROR: {e}")
 
         except Exception as e:

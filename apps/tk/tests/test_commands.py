@@ -4,7 +4,8 @@ import pytest
 from freezegun import freeze_time
 
 from tk import commands
-from tk.models import Task, TaskStore
+from tk.errors import UsageError, ValidationError
+from tk.models import HistoryListPayload, Task, TaskStore
 
 
 class TestListPendingData:
@@ -101,8 +102,41 @@ class TestListHistoryData:
 
     def test_list_history_data_multiple_filters_error(self, sample_session):
         """Test that multiple filters raise ValueError."""
-        with pytest.raises(ValueError, match="Cannot specify multiple filters"):
+        with pytest.raises(UsageError, match="Cannot specify multiple filters"):
             commands.list_history_data(sample_session, days=7, working_days=3)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "expected_message"),
+        [
+            ({"days": 0}, "days must be a positive integer"),
+            ({"days": -1}, "days must be a positive integer"),
+            ({"days": "7"}, "days must be a positive integer"),
+            ({"working_days": 0}, "working_days must be a positive integer"),
+            ({"working_days": True}, "working_days must be a positive integer"),
+        ],
+    )
+    def test_list_history_data_rejects_non_positive_filters(self, sample_session, kwargs, expected_message):
+        """Test that history filters must be positive integers."""
+        with pytest.raises(ValidationError, match=expected_message):
+            commands.list_history_data(sample_session, **kwargs)
+
+    def test_list_history_data_flattens_display_numbers_across_groups(self, sample_session):
+        """Test display numbering and array-index mapping across date groups."""
+        sample_session.tasks.tasks.append(Task(
+            text="Task four",
+            status="done",
+            created_utc="2026-02-03T09:00:00+00:00",
+            handled_utc="2026-02-03T10:00:00+00:00",
+            subjective_date="2026-02-03",
+            note="Earlier same day",
+        ))
+
+        result = commands.list_history_data(sample_session)
+
+        assert [group.date for group in result.groups] == ["2026-02-03", "2026-02-02"]
+        assert [item.task.text for item in result.groups[0].items] == ["Task four", "Task three"]
+        assert [item.display_num for group in result.groups for item in group.items] == [1, 2, 3]
+        assert commands.extract_last_list_mapping(result) == [(1, 3), (2, 2), (3, 1)]
 
 
 class TestCmdAdd:
@@ -117,10 +151,10 @@ class TestCmdAdd:
 
     def test_cmd_add_empty_text_error(self, sample_session):
         """Test that empty text raises ValueError."""
-        with pytest.raises(ValueError, match="Task text cannot be empty"):
+        with pytest.raises(ValidationError, match="Task text cannot be empty"):
             commands.cmd_add(sample_session, "")
 
-        with pytest.raises(ValueError, match="Task text cannot be empty"):
+        with pytest.raises(ValidationError, match="Task text cannot be empty"):
             commands.cmd_add(sample_session, "   ")
 
     def test_cmd_add_syncs_if_auto(self, sample_session, temp_dir):
@@ -179,7 +213,7 @@ class TestCmdDone:
 
     def test_cmd_done_invalid_index_error(self, sample_session):
         """Test that invalid index raises ValueError."""
-        with pytest.raises(ValueError, match="Task not found"):
+        with pytest.raises(UsageError, match="Task not found"):
             commands.cmd_done(sample_session, 999)
 
 
@@ -213,12 +247,12 @@ class TestCmdEdit:
 
     def test_cmd_edit_empty_text_error(self, sample_session):
         """Test that empty text raises ValueError."""
-        with pytest.raises(ValueError, match="Task text cannot be empty"):
+        with pytest.raises(ValidationError, match="Task text cannot be empty"):
             commands.cmd_edit(sample_session, 0, "")
 
     def test_cmd_edit_invalid_index_error(self, sample_session):
         """Test that invalid index raises ValueError."""
-        with pytest.raises(ValueError, match="Task not found"):
+        with pytest.raises(UsageError, match="Task not found"):
             commands.cmd_edit(sample_session, 999, "New text")
 
 
@@ -241,7 +275,7 @@ class TestCmdDelete:
 
     def test_cmd_delete_invalid_index_error(self, sample_session):
         """Test that invalid index raises ValueError."""
-        with pytest.raises(ValueError, match="Task not found"):
+        with pytest.raises(UsageError, match="Task not found"):
             commands.cmd_delete(sample_session, 999, confirm=True)
 
 
@@ -270,13 +304,13 @@ class TestCmdNote:
 
     def test_cmd_note_invalid_index_error(self, sample_session):
         """Test that invalid index raises ValueError."""
-        with pytest.raises(ValueError, match="Task not found"):
+        with pytest.raises(UsageError, match="Task not found"):
             commands.cmd_note(sample_session, 999, "Note")
 
     def test_cmd_note_pending_task_error(self, sample_session):
         """Test that setting note on pending task raises ValueError."""
         # Task at index 0 is pending
-        with pytest.raises(ValueError, match="Cannot set note on pending task"):
+        with pytest.raises(ValidationError, match="Cannot set note on pending task"):
             commands.cmd_note(sample_session, 0, "Note")
 
 
@@ -293,13 +327,13 @@ class TestCmdDate:
 
     def test_cmd_date_invalid_format_error(self, sample_session):
         """Test that invalid date format raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid date"):
+        with pytest.raises(ValidationError, match="Invalid date"):
             commands.cmd_date(sample_session, 1, "02-05-2026")
 
     def test_cmd_date_pending_task_error(self, sample_session):
         """Test that changing date on pending task raises ValueError."""
         # Task at index 0 is pending
-        with pytest.raises(ValueError, match="Cannot set date on pending task"):
+        with pytest.raises(ValidationError, match="Cannot set date on pending task"):
             commands.cmd_date(sample_session, 0, "2026-02-05")
 
 
@@ -314,3 +348,59 @@ class TestCmdSync:
         # Check that file was created
         import os
         assert os.path.exists(sample_session.profile.output_path)
+
+
+class TestHistoryShortcutCommands:
+    """Test history convenience commands."""
+
+    def test_cmd_today_data_uses_current_subjective_date(self, sample_session, monkeypatch):
+        """Test that today delegates to history with today's subjective date."""
+        payload = HistoryListPayload()
+        captured: dict[str, object] = {}
+
+        monkeypatch.setattr(commands, "get_default_subjective_date", lambda session: "2026-02-09")
+
+        def fake_list_history_data(session, days=None, working_days=None, specific_date=None):
+            captured["call"] = (session, days, working_days, specific_date)
+            return payload
+
+        monkeypatch.setattr(commands, "list_history_data", fake_list_history_data)
+
+        result = commands.cmd_today_data(sample_session)
+
+        assert result is payload
+        assert captured["call"] == (sample_session, None, None, "2026-02-09")
+
+    def test_cmd_yesterday_data_uses_previous_subjective_date(self, sample_session, monkeypatch):
+        """Test that yesterday delegates to history with the previous date."""
+        payload = HistoryListPayload()
+        captured: dict[str, object] = {}
+
+        monkeypatch.setattr(commands, "get_default_subjective_date", lambda session: "2026-02-09")
+
+        def fake_list_history_data(session, days=None, working_days=None, specific_date=None):
+            captured["call"] = (session, days, working_days, specific_date)
+            return payload
+
+        monkeypatch.setattr(commands, "list_history_data", fake_list_history_data)
+
+        result = commands.cmd_yesterday_data(sample_session)
+
+        assert result is payload
+        assert captured["call"] == (sample_session, None, None, "2026-02-08")
+
+    def test_cmd_recent_data_uses_three_working_days(self, sample_session, monkeypatch):
+        """Test that recent delegates to history with the fixed 3-day window."""
+        payload = HistoryListPayload()
+        captured: dict[str, object] = {}
+
+        def fake_list_history_data(session, days=None, working_days=None, specific_date=None):
+            captured["call"] = (session, days, working_days, specific_date)
+            return payload
+
+        monkeypatch.setattr(commands, "list_history_data", fake_list_history_data)
+
+        result = commands.cmd_recent_data(sample_session)
+
+        assert result is payload
+        assert captured["call"] == (sample_session, None, 3, None)

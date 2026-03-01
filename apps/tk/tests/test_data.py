@@ -5,6 +5,7 @@ import pytest
 from datetime import datetime
 
 from tk import data
+from tk.errors import StorageError, ValidationError
 from tk.models import Task, TaskStore
 
 
@@ -45,7 +46,7 @@ class TestLoadTasks:
         path = temp_dir / "invalid.json"
         path.write_text("{ invalid json }")
 
-        with pytest.raises(ValueError, match="Invalid JSON"):
+        with pytest.raises(StorageError, match="Invalid JSON"):
             data.load_tasks(str(path))
 
     def test_load_tasks_missing_tasks_key(self, temp_dir):
@@ -54,7 +55,7 @@ class TestLoadTasks:
         with open(path, "w", encoding="utf-8") as f:
             json.dump({"other": []}, f)
 
-        with pytest.raises(ValueError, match="missing 'tasks' key"):
+        with pytest.raises(StorageError, match="missing 'tasks' key"):
             data.load_tasks(str(path))
 
 
@@ -83,40 +84,40 @@ class TestValidateTasksStructure:
 
     def test_validate_missing_tasks_key(self):
         """Test that missing 'tasks' key raises ValueError."""
-        with pytest.raises(ValueError, match="missing 'tasks' key"):
+        with pytest.raises(ValidationError, match="missing 'tasks' key"):
             data.validate_tasks_structure({"other": []})
 
     def test_validate_tasks_not_array(self):
         """Test that 'tasks' must be an array."""
-        with pytest.raises(ValueError, match="'tasks' must be an array"):
+        with pytest.raises(ValidationError, match="'tasks' must be an array"):
             data.validate_tasks_structure({"tasks": "not an array"})
 
-        with pytest.raises(ValueError, match="'tasks' must be an array"):
+        with pytest.raises(ValidationError, match="'tasks' must be an array"):
             data.validate_tasks_structure({"tasks": {}})
 
     def test_validate_missing_required_fields(self):
         """Test that missing required fields raises ValueError."""
         # Missing 'text'
-        with pytest.raises(ValueError, match="missing required fields"):
+        with pytest.raises(ValidationError, match="missing required fields"):
             data.validate_tasks_structure({
                 "tasks": [{"status": "pending", "created_utc": "2026-02-09T10:00:00+00:00"}]
             })
 
         # Missing 'status'
-        with pytest.raises(ValueError, match="missing required fields"):
+        with pytest.raises(ValidationError, match="missing required fields"):
             data.validate_tasks_structure({
                 "tasks": [{"text": "Test", "created_utc": "2026-02-09T10:00:00+00:00"}]
             })
 
         # Missing 'created_utc'
-        with pytest.raises(ValueError, match="missing required fields"):
+        with pytest.raises(ValidationError, match="missing required fields"):
             data.validate_tasks_structure({
                 "tasks": [{"text": "Test", "status": "pending"}]
             })
 
     def test_validate_invalid_status(self):
         """Test that invalid status raises ValueError."""
-        with pytest.raises(ValueError, match="invalid status"):
+        with pytest.raises(ValidationError, match="invalid status"):
             data.validate_tasks_structure({
                 "tasks": [{
                     "text": "Test",
@@ -127,11 +128,23 @@ class TestValidateTasksStructure:
 
     def test_validate_task_not_dict(self):
         """Test that non-dict tasks raise ValueError."""
-        with pytest.raises(ValueError, match="not a valid object"):
+        with pytest.raises(ValidationError, match="not a valid object"):
             data.validate_tasks_structure({"tasks": ["not a dict"]})
 
-        with pytest.raises(ValueError, match="not a valid object"):
+        with pytest.raises(ValidationError, match="not a valid object"):
             data.validate_tasks_structure({"tasks": [123]})
+
+    def test_save_tasks_wraps_os_errors(self, tmp_path, monkeypatch):
+        """Test that save failures are surfaced as StorageError."""
+        path = tmp_path / "tasks.json"
+
+        def fail_open(*args, **kwargs):
+            raise OSError("disk full")
+
+        monkeypatch.setattr("builtins.open", fail_open)
+
+        with pytest.raises(StorageError, match="Failed to save tasks file"):
+            data.save_tasks(str(path), TaskStore())
 
 
 class TestSaveTasks:
