@@ -131,10 +131,7 @@ class TestChatSwitchingOrchestration:
         # Simulate closing chat
         session.chat = ChatDocument.empty()
         session.hex_id_set.clear()
-        session.retry.active = False
-        session.retry.base_messages.clear()
-        session.retry.target_index = None
-        session.retry.attempts.clear()
+        session.retry.clear()
         session.secret.active = False
         session.secret.base_messages.clear()
 
@@ -158,10 +155,7 @@ class TestChatSwitchingOrchestration:
         session.secret.active = True
 
         # Simulate chat switch
-        session.retry.active = False
-        session.retry.base_messages.clear()
-        session.retry.target_index = None
-        session.retry.attempts.clear()
+        session.retry.clear()
         session.secret.active = False
         session.secret.base_messages.clear()
 
@@ -252,22 +246,15 @@ class TestRetryModeOrchestration:
             profile=make_profile(),
             chat=ChatDocument.empty(),
         )
-        session.retry.active = True
-        session.retry.base_messages = [ChatMessage.new_user("base")]
-        session.retry.target_index = 1
-        session.retry.attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
-        session_dict = {"retry_mode": True}
+        session.retry.enter([ChatMessage.new_user("base")])
+        session.retry.add_attempt("u", "a")
 
         # Cancel retry
-        session.retry.active = False
-        session.retry.base_messages.clear()
-        session.retry.target_index = None
-        session.retry.attempts.clear()
-        session_dict["retry_mode"] = False
+        session.retry.clear()
 
         assert session.retry.active is False
         assert session.retry.base_messages == []
-        assert session.retry.target_index is None
+        assert session.retry.target_span is None
         assert session.retry.attempts == {}
 
 

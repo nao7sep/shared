@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from polychat.chat import LastInteractionSpan
 from polychat.commands.types import CommandSignal
 from polychat.domain.chat import ChatDocument, ChatMessage
 from polychat.orchestrator import ChatOrchestrator
@@ -46,7 +47,7 @@ def _chat_with_pending_error() -> ChatDocument:
 async def test_pending_error_allows_retry_mode_send(orchestrator: ChatOrchestrator) -> None:
     chat_data = _chat_with_pending_error()
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
-    orchestrator.manager.retry.enter([ChatMessage.new_user("hello")], target_index=1)
+    orchestrator.manager.retry.enter([ChatMessage.new_user("hello")])
 
     action = await orchestrator.handle_user_message(
         "retry question",
@@ -54,7 +55,7 @@ async def test_pending_error_allows_retry_mode_send(orchestrator: ChatOrchestrat
 
     assert isinstance(action, SendAction)
     assert action.mode == "retry"
-    assert action.retry_user_input == "retry question"
+    assert action.user_input == "retry question"
 
 
 @pytest.mark.asyncio
@@ -83,7 +84,12 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
     orchestrator.manager.switch_chat("/test/chat.json", chat_data)
     orchestrator.manager.retry.enter(
         [ChatMessage.new_user("hello")],
-        target_index=99,
+        target_span=LastInteractionSpan(
+            kind="user_assistant",
+            replace_start=98,
+            replace_end=99,
+            context_end_exclusive=98,
+        ),
     )
     retry_hex_id = orchestrator.manager.retry.add_attempt("retry q", "retry a")
 
@@ -100,7 +106,7 @@ async def test_apply_retry_invalid_target_keeps_retry_mode(orchestrator: ChatOrc
 
 @pytest.mark.asyncio
 async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -> None:
-    orchestrator.manager.retry.enter([ChatMessage.new_user("base")], target_index=0)
+    orchestrator.manager.retry.enter([ChatMessage.new_user("base")])
     orchestrator.manager.retry.add_attempt("retry q", "retry a")
 
     action = await orchestrator.handle_command_response(

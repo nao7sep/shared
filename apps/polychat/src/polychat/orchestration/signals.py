@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Awaitable, Callable, Optional
 
+from ..chat import LastInteractionSpan
 from ..commands.types import CommandSignal
 from ..domain.chat import ChatMessage, RetryAttempt
 from ..formatting.text import text_to_lines
@@ -42,40 +43,41 @@ def _utc_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def resolve_replace_start(messages: list[ChatMessage], target_index: int) -> int:
-    """Resolve where replacement should start for retry apply."""
-    if target_index > 0 and messages[target_index - 1].role == "user":
-        return target_index - 1
-    return target_index
-
-
 def build_retry_replacement_plan(
     messages: list[ChatMessage],
-    target_index: int,
+    target_span: LastInteractionSpan,
     retry_attempt: RetryAttempt,
     current_model: str,
     *,
+    generated_user_hex_id: str | None = None,
     timestamp_factory: Optional[TimestampFactory] = None,
 ) -> RetryReplacementPlan:
     """Build a deterministic replacement plan for one retry attempt."""
-    if target_index < 0 or target_index >= len(messages):
+    if (
+        target_span.replace_start < 0
+        or target_span.replace_end < target_span.replace_start
+        or target_span.replace_end >= len(messages)
+    ):
         raise ValueError("Retry target is no longer valid")
 
     make_timestamp = timestamp_factory or _utc_timestamp
-    replace_start = resolve_replace_start(messages, target_index)
+    existing_user_hex_id = None
+    if target_span.kind != "standalone_error":
+        existing_user_hex_id = messages[target_span.replace_start].hex_id
+    existing_assistant_hex_id = messages[target_span.replace_end].hex_id
 
-    existing_user_hex_id = (
-        messages[replace_start].hex_id
-        if replace_start != target_index
-        else None
-    )
-    existing_assistant_hex_id = messages[target_index].hex_id
+    if target_span.kind == "standalone_error" and generated_user_hex_id is None:
+        raise ValueError("Standalone error retries require a generated user hex ID")
 
     user_msg = ChatMessage(
         timestamp_utc=make_timestamp(),
         role="user",
         content=text_to_lines(retry_attempt.user_msg),
-        hex_id=existing_user_hex_id if isinstance(existing_user_hex_id, str) else None,
+        hex_id=(
+            generated_user_hex_id
+            if target_span.kind == "standalone_error"
+            else existing_user_hex_id if isinstance(existing_user_hex_id, str) else None
+        ),
     )
 
     assistant_msg = ChatMessage(
@@ -88,8 +90,8 @@ def build_retry_replacement_plan(
     )
 
     return RetryReplacementPlan(
-        replace_start=replace_start,
-        replace_end=target_index,
+        replace_start=target_span.replace_start,
+        replace_end=target_span.replace_end,
         replacement_messages=[user_msg, assistant_msg],
     )
 
@@ -218,16 +220,26 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
             return PrintAction(message=f"Retry ID not found: {retry_hex_id}")
 
         messages = current_chat_data.messages
-        target_index = self.manager.retry.target_index
-        if target_index is None or target_index < 0 or target_index >= len(messages):
+        target_span = self.manager.retry.target_span
+        if target_span is None or target_span.replace_end >= len(messages):
             return PrintAction(message="Retry target is no longer valid")
 
-        replacement_plan = build_retry_replacement_plan(
-            messages,
-            target_index,
-            retry_attempt,
-            self.manager.current_model,
-        )
+        generated_user_hex_id = None
+        if target_span.kind == "standalone_error":
+            generated_user_hex_id = self.manager.reserve_hex_id()
+
+        try:
+            replacement_plan = build_retry_replacement_plan(
+                messages,
+                target_span,
+                retry_attempt,
+                self.manager.current_model,
+                generated_user_hex_id=generated_user_hex_id,
+            )
+        except Exception:
+            if generated_user_hex_id is not None:
+                self.manager.release_hex_id(generated_user_hex_id)
+            raise
         messages[replacement_plan.replace_start : replacement_plan.replace_end + 1] = (
             replacement_plan.replacement_messages
         )

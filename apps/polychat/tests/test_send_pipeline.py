@@ -82,7 +82,8 @@ async def test_execute_send_action_rolls_back_pre_send_validation_failure(
             orchestrator=orchestrator,
         )
 
-    assert [message.role for message in chat_data.messages] == ["assistant"]
+    assert [message.role for message in chat_data.messages] == ["assistant", "error"]
+    assert chat_data.messages[-1].content == ["No API key configured for claude"]
     mock_send.assert_not_awaited()
     mock_save.assert_awaited_once_with(
         chat_path="/test/chat.json",
@@ -117,7 +118,8 @@ async def test_execute_send_action_rolls_back_internal_provider_resolution_failu
             orchestrator=orchestrator,
         )
 
-    assert [message.role for message in chat_data.messages] == ["assistant"]
+    assert [message.role for message in chat_data.messages] == ["assistant", "error"]
+    assert chat_data.messages[-1].content == ["Provider resolution failed unexpectedly"]
     mock_send.assert_not_awaited()
     mock_save.assert_awaited_once_with(
         chat_path="/test/chat.json",
@@ -207,6 +209,7 @@ async def test_execute_send_action_routes_runtime_error_to_error_handler(
         "/test/chat.json",
         chat_data,
         "normal",
+        user_input=None,
         assistant_hex_id=None,
     )
     assert "Error: network down" in capsys.readouterr().out

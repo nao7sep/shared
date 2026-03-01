@@ -83,6 +83,14 @@ def should_rollback_pre_send(
     return can_mutate_normal_chat(state) and has_trailing_user_message(chat_data)
 
 
+def build_provider_error_details(manager: SessionManager) -> dict[str, str]:
+    """Build the standard provider/model error payload."""
+    return {
+        "provider": manager.current_ai,
+        "model": manager.current_model,
+    }
+
+
 class ResponseHandlersMixin:
     """Mixin implementing post-send success/error/cancel chat mutations."""
 
@@ -110,6 +118,13 @@ class ResponseHandlersMixin:
             return ContinueAction()
 
         if mode == "secret":
+            if user_input:
+                self.manager.secret.append_success(
+                    user_input,
+                    response_text,
+                    model=self.manager.current_model,
+                    citations=citations,
+                )
             if assistant_hex_id:
                 self.manager.release_hex_id(assistant_hex_id)
             return ContinueAction()
@@ -151,29 +166,44 @@ class ResponseHandlersMixin:
         chat_path: Optional[str],
         chat_data: Optional[ChatDocument],
         mode: ActionMode,
+        error_message: str,
         assistant_hex_id: Optional[str] = None,
     ) -> bool:
-        """Rollback pre-send normal-mode state when provider validation fails."""
+        """Handle failures that happen before the provider request starts."""
         transition = build_transition_state(
             mode,
             chat_path=chat_path,
             chat_data=chat_data,
             assistant_hex_id=assistant_hex_id,
         )
+        sanitized_error = sanitize_error_message(error_message)
 
         if assistant_hex_id and should_release_for_rollback(transition):
             self.manager.release_hex_id(assistant_hex_id)
 
-        if not should_rollback_pre_send(
-            transition,
-            chat_data,
-        ):
+        if mode == "secret":
+            self.manager.secret.append_error(
+                sanitized_error,
+                details=build_provider_error_details(self.manager),
+            )
+            return False
+
+        if not should_rollback_pre_send(transition, chat_data):
             return False
 
         assert chat_path is not None
         assert chat_data is not None
+        if chat_data is not self.manager.chat:
+            return False
 
         self.manager.pop_message(-1, chat_data)
+        add_error_message(
+            chat_data,
+            sanitized_error,
+            build_provider_error_details(self.manager),
+        )
+        new_msg_index = len(chat_data.messages) - 1
+        self.manager.assign_message_hex_id(new_msg_index)
         await self.manager.save_current_chat(
             chat_path=chat_path,
             chat_data=chat_data,
@@ -186,6 +216,7 @@ class ResponseHandlersMixin:
         chat_path: str | None,
         chat_data: ChatDocument | None,
         mode: ActionMode,
+        user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
     ) -> PrintAction:
         """Handle AI error and return a user-facing action."""
@@ -206,13 +237,11 @@ class ResponseHandlersMixin:
                 self.manager.release_hex_id(assistant_hex_id)
             if chat_data is not self.manager.chat:
                 return PrintAction(message=f"Error: {sanitized_error}")
-            if has_trailing_user_message(chat_data):
-                self.manager.pop_message(-1, chat_data)
 
             add_error_message(
                 chat_data,
                 sanitized_error,
-                {"provider": self.manager.current_ai, "model": self.manager.current_model},
+                build_provider_error_details(self.manager),
             )
             new_msg_index = len(chat_data.messages) - 1
             self.manager.assign_message_hex_id(new_msg_index)
@@ -220,6 +249,14 @@ class ResponseHandlersMixin:
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
+        elif mode == "secret":
+            self.manager.secret.append_error(
+                sanitized_error,
+                user_msg=user_input,
+                details=build_provider_error_details(self.manager),
+            )
+            if assistant_hex_id and should_release_for_error(transition):
+                self.manager.release_hex_id(assistant_hex_id)
         elif assistant_hex_id and should_release_for_error(transition):
             self.manager.release_hex_id(assistant_hex_id)
 

@@ -2,7 +2,7 @@
 
 Date: 2026-03-01
 
-Status: Intended product behavior clarified on 2026-03-01. This document is the architecture reference for `/retry` and `/secret`.
+Status: Implemented and verified on 2026-03-01. This document is the architecture reference for `/retry` and `/secret`.
 
 ## Purpose
 
@@ -563,33 +563,27 @@ Good wording:
 
 Avoid wording that implies secret mode is only a one-turn unsaved send.
 
-## Current Implementation Fit
+## Verified Implementation Status
 
-As of 2026-03-01, the current code roughly fits retry mode better than secret mode.
+As of 2026-03-01, the implementation matches this document.
 
-### Retry
+Verified behavior includes:
 
-The existing retry flow already behaves like a replacement branch in key places:
+- retry target classification for trailing `user + assistant`, `user + error`, and standalone `error`
+- retry context excluding the interaction being replaced
+- retry apply preserving the committed prefix and replacing only the target interaction
+- multi-turn secret branching where secret turn 2 includes secret turn 1 in AI context
+- secret successes and secret errors remaining runtime-only
+- exiting secret mode discarding the secret branch before the next normal persisted turn
 
-- it freezes a retry context before the target interaction
-- it stores multiple candidate attempts
-- it applies a chosen candidate by replacing the target interaction
+The test suite explicitly covers these semantics in:
 
-However, product wording and some older assumptions may still describe retry as rerunning the same message, which is not the intended contract described here.
-
-### Secret
-
-The existing secret flow does not yet fully match this document.
-
-The current implementation behaves closer to:
-
-- "send one off-the-record message against committed history"
-
-than to:
-
-- "maintain a growing off-the-record continuation branch"
-
-To match this architecture, secret mode must preserve an in-memory secret transcript and include it in subsequent secret turns.
+- `tests/test_last_interaction.py`
+- `tests/test_orchestration_retry_transitions.py`
+- `tests/test_orchestrator.py`
+- `tests/test_secret_mode_branching.py`
+- `tests/test_send_pipeline.py`
+- `tests/test_session_state.py`
 
 ## Required Tests
 

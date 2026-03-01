@@ -162,6 +162,7 @@ async def execute_send_action(
             chat_path=effective_path,
             chat_data=effective_data,
             mode=action.mode,
+            error_message=provider_resolution_error,
             assistant_hex_id=action.assistant_hex_id,
         )
         print()
@@ -211,6 +212,7 @@ async def execute_send_action(
             effective_path,
             effective_data,
             action.mode,
+            user_input=action.user_input,
             assistant_hex_id=action.assistant_hex_id,
         )
         print()
@@ -254,7 +256,7 @@ async def execute_send_action(
         effective_path,
         effective_data,
         action.mode,
-        user_input=action.retry_user_input,
+        user_input=action.user_input,
         assistant_hex_id=action.assistant_hex_id,
         citations=citations,
     )

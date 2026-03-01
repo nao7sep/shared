@@ -45,7 +45,7 @@ class SendAction:
     mode: ActionMode
     messages: list[ChatMessage]
     search_enabled: bool | None = None
-    retry_user_input: str | None = None
+    user_input: str | None = None
     assistant_hex_id: str | None = None
     kind: Literal["send"] = "send"
 

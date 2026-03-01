@@ -267,9 +267,9 @@ COMMAND_DOC_SECTIONS: tuple[CommandDocSection, ...] = (
             CommandDocEntry(
                 ("retry",),
                 "/retry",
-                "Retry last interaction and generate candidate responses",
+                "Replace last interaction by generating candidate pairs",
                 "/retry",
-                "Retry the last interaction and generate candidate responses",
+                "Replace the last interaction by generating candidate pairs",
             ),
             CommandDocEntry(
                 ("apply",),
@@ -295,23 +295,23 @@ COMMAND_DOC_SECTIONS: tuple[CommandDocSection, ...] = (
             CommandDocEntry(
                 ("cancel",),
                 "/cancel",
-                "Abort retry and keep original response",
+                "Abort retry and keep committed history unchanged",
                 "/cancel",
-                "Abort retry and keep original response",
+                "Abort retry and keep committed history unchanged",
             ),
             CommandDocEntry(
                 ("secret",),
                 "/secret",
-                "Show current secret mode state",
+                "Show current off-record branch state",
                 "/secret",
-                "Show current secret mode state",
+                "Show current off-record branch state",
             ),
             CommandDocEntry(
                 ("secret",),
                 "/secret on/off",
-                "Explicitly enable/disable secret mode",
+                "Enable/disable temporary off-record continuation branch",
                 "/secret on/off",
-                "Explicitly enable/disable secret mode",
+                "Enable or disable the temporary off-record continuation branch",
             ),
             CommandDocEntry(
                 ("search",),
@@ -466,7 +466,7 @@ README_LAST_INTERACTION_BLOCK = "\n".join(
         "2. A trailing `user + error` pair",
         "3. A standalone trailing `error`",
         "",
-        "`/retry` retries the last interaction. `/rewind` and `/rewind last` delete the last interaction.",
+        "`/retry` branches from before the last interaction and may replace it via `/apply`. `/rewind` and `/rewind last` delete the last interaction.",
     ]
 )
 

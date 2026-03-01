@@ -11,6 +11,7 @@ from typing import Callable
 
 from .. import hex_id as hex_id_mod
 from ..ai.types import Citation
+from ..chat import LastInteractionSpan
 from ..domain.chat import ChatMessage, RetryAttempt
 
 
@@ -23,7 +24,7 @@ class RetryController:
 
     active: bool = False
     base_messages: list[ChatMessage] = field(default_factory=list)
-    target_index: int | None = None
+    target_span: LastInteractionSpan | None = None
     attempts: dict[str, RetryAttempt] = field(default_factory=dict)
 
     # ------------------------------------------------------------------
@@ -33,7 +34,8 @@ class RetryController:
     def enter(
         self,
         base_messages: list[ChatMessage],
-        target_index: int | None = None,
+        *,
+        target_span: LastInteractionSpan | None = None,
     ) -> None:
         """Enter retry mode with a frozen message context."""
         if self._conflict_check():
@@ -41,7 +43,7 @@ class RetryController:
 
         self.active = True
         self.base_messages = base_messages.copy()
-        self.target_index = target_index
+        self.target_span = target_span
         self._discard_attempt_hex_ids()
         self.attempts.clear()
 
@@ -49,7 +51,7 @@ class RetryController:
         """Exit retry mode and discard all retry state."""
         self.active = False
         self.base_messages.clear()
-        self.target_index = None
+        self.target_span = None
         self._discard_attempt_hex_ids()
         self.attempts.clear()
 

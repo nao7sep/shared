@@ -181,16 +181,16 @@ PolyChat defines the last interaction as one of:
 2. A trailing `user + error` pair
 3. A standalone trailing `error`
 
-`/retry` retries the last interaction. `/rewind` and `/rewind last` delete the last interaction.
+`/retry` branches from before the last interaction and may replace it via `/apply`. `/rewind` and `/rewind last` delete the last interaction.
 
 **Chat Control:**
-- `/retry` - Retry the last interaction and generate candidate responses
+- `/retry` - Replace the last interaction by generating candidate pairs
 - `/apply` - Apply latest retry candidate and exit retry mode
 - `/apply last` - Apply latest retry candidate and exit retry mode
 - `/apply <hex_id>` - Apply one retry candidate by ID and exit retry mode
-- `/cancel` - Abort retry and keep original response
-- `/secret` - Show current secret mode state
-- `/secret on/off` - Explicitly enable/disable secret mode
+- `/cancel` - Abort retry and keep committed history unchanged
+- `/secret` - Show current off-record branch state
+- `/secret on/off` - Enable or disable the temporary off-record continuation branch
 - `/search` - Show current search mode state and supported providers
 - `/search on/off` - Enable/disable web search with inline citations
 - `/rewind` - Delete last full interaction (user+assistant/user+error), or trailing error

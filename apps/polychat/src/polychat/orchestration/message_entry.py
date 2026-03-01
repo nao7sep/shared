@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional
 
 from ..chat import (
     add_user_message,
+    filter_messages_for_ai,
     get_messages_for_ai,
 )
 from ..domain.chat import ChatMessage
@@ -32,7 +33,7 @@ class MessageEntryHandlersMixin:
         messages: list[ChatMessage],
         mode: ActionMode,
         search_enabled: Optional[bool] = None,
-        retry_user_input: Optional[str] = None,
+        user_input: Optional[str] = None,
         assistant_hex_id: Optional[str] = None,
     ) -> OrchestratorAction:
         """Build a send action with optional execution metadata."""
@@ -40,7 +41,7 @@ class MessageEntryHandlersMixin:
             messages=messages,
             mode=mode,
             search_enabled=search_enabled,
-            retry_user_input=retry_user_input,
+            user_input=user_input,
             assistant_hex_id=assistant_hex_id,
         )
 
@@ -79,13 +80,21 @@ class MessageEntryHandlersMixin:
         user_input: str,
     ) -> OrchestratorAction:
         """Handle one message while secret mode is enabled."""
-        chat_data = self.manager.chat
-        secret_context = get_messages_for_ai(chat_data)
+        if self.manager.secret.has_pending_error():
+            return PrintAction(
+                message=(
+                    "Secret mode cannot continue: last secret interaction failed.\n"
+                    "Use /secret off to discard the secret branch."
+                )
+            )
+
+        secret_context = filter_messages_for_ai(self.manager.secret.get_context())
         temp_messages = secret_context + [ChatMessage.new_user(user_input)]
 
         return self._build_send_action(
             messages=temp_messages,
             mode="secret",
+            user_input=user_input,
         )
 
     async def _handle_retry_message(
@@ -109,7 +118,7 @@ class MessageEntryHandlersMixin:
         return self._build_send_action(
             messages=temp_messages,
             mode="retry",
-            retry_user_input=user_input,
+            user_input=user_input,
             assistant_hex_id=self.manager.reserve_hex_id(),
         )
 

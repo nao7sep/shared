@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from .. import chat, hex_id, profile
 from ..ai.capabilities import SEARCH_SUPPORTED_PROVIDERS, provider_supports_search
-from ..chat import update_metadata
+from ..chat import resolve_last_interaction_span, update_metadata
 from .types import CommandResult, CommandSignal
 
 if TYPE_CHECKING:
@@ -149,7 +149,7 @@ class RuntimeModeCommandHandlers:
             raise
 
     async def retry_mode(self, args: str) -> str:
-        """Enter retry mode (ask again without saving previous attempt)."""
+        """Enter retry mode to replace the last interaction from prior context."""
         chat_data = self._deps.manager.chat
 
         if not chat_data.messages and not self._deps.manager.chat_path:
@@ -160,14 +160,14 @@ class RuntimeModeCommandHandlers:
         if not messages:
             return "No messages to retry"
 
-        last_msg = messages[-1]
-        if last_msg.role not in ("assistant", "error"):
+        interaction_span = resolve_last_interaction_span(messages)
+        if interaction_span is None:
             return "Last message is not an assistant response or error. Nothing to retry."
 
         retry_context = chat.get_retry_context_for_last_interaction(chat_data)
         self._deps.manager.retry.enter(
             retry_context,
-            target_index=len(messages) - 1,
+            target_span=interaction_span,
         )
         return "Retry mode enabled"
 
@@ -197,7 +197,7 @@ class RuntimeModeCommandHandlers:
         return CommandSignal(kind="cancel_retry")
 
     async def secret_mode_command(self, args: str) -> str:
-        """Show or set secret mode (messages not saved to history)."""
+        """Show or set secret mode (temporary off-record continuation branch)."""
         chat_data = self._deps.manager.chat
 
         if not chat_data.messages and not self._deps.manager.chat_path:
@@ -259,5 +259,3 @@ class RuntimeModeCommandHandlers:
             return "Use /search on or /search off"
 
         raise ValueError("Invalid argument. Use /search on or /search off")
-
-

@@ -6,6 +6,7 @@ from polychat.session.state import (
     initialize_message_hex_ids,
     assign_new_message_hex_id,
     has_pending_error,
+    pending_error_guidance,
 )
 from test_helpers import make_profile
 
@@ -47,7 +48,7 @@ class TestSessionStateCreation:
         assert session.input_mode == "quick"
         assert session.retry.active is False
         assert session.retry.base_messages == []
-        assert session.retry.target_index is None
+        assert session.retry.target_span is None
         assert session.retry.attempts == {}
         assert session.secret.active is False
         assert session.secret.base_messages == []
@@ -271,19 +272,14 @@ class TestChatScopedState:
             profile=make_profile(),
             chat=ChatDocument.empty(),
         )
-        session.retry.active = True
-        session.retry.base_messages = [ChatMessage.new_user("old")]
-        session.retry.target_index = 3
-        session.retry.attempts = {"abc": {"user_msg": "u", "assistant_msg": "a"}}
+        session.retry.enter([ChatMessage.new_user("old")])
+        session.retry.add_attempt("u", "a")
 
-        session.retry.active = False
-        session.retry.base_messages.clear()
-        session.retry.target_index = None
-        session.retry.attempts.clear()
+        session.retry.clear()
 
         assert session.retry.active is False
         assert session.retry.base_messages == []
-        assert session.retry.target_index is None
+        assert session.retry.target_span is None
         assert session.retry.attempts == {}
 
     def test_reset_clears_secret_state(self):
@@ -382,6 +378,13 @@ class TestErrorDetection:
         """Test that chat without messages key has no pending error."""
         chat_data = ChatDocument.empty()
         assert has_pending_error(chat_data) is False
+
+    def test_pending_error_guidance_describes_replacement_flow(self):
+        """Test pending-error guidance matches retry replacement semantics."""
+        guidance = pending_error_guidance()
+
+        assert "replacement interaction" in guidance
+        assert "rerun the same message" not in guidance
 
 
 class TestStateTransitions:

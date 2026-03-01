@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING
 
 from .. import hex_id
-from ..chat import delete_message_and_following
+from ..chat import delete_message_and_following, resolve_last_interaction_span
 
 if TYPE_CHECKING:
     from .contracts import CommandDependencies as _CommandDependencies
@@ -35,23 +35,12 @@ class RuntimeMutationCommandHandlers:
             target = "last"
 
         if target == "last":
-            tail = messages[-1]
-            tail_role = tail.role
-
-            if tail_role == "error":
-                if len(messages) >= 2 and messages[-2].role == "user":
-                    index = len(messages) - 2
-                else:
-                    index = len(messages) - 1
-            else:
-                if len(messages) < 2:
-                    raise ValueError("No complete turn to delete")
-                prev = messages[-2]
-                if tail_role != "assistant" or prev.role != "user":
-                    raise ValueError(
-                        "Last interaction is not a complete user+assistant or user+error turn"
-                    )
-                index = len(messages) - 2
+            interaction_span = resolve_last_interaction_span(messages)
+            if interaction_span is None:
+                raise ValueError(
+                    "Last interaction is not a complete user+assistant or user+error turn"
+                )
+            index = interaction_span.replace_start
         elif hex_id.is_hex_id(target):
             found_index = hex_id.get_message_index(target, messages)
             if found_index is None:
@@ -125,5 +114,4 @@ class RuntimeMutationCommandHandlers:
 
         deleted_ids = ", ".join(f"[{hid}]" for _, hid in sorted(indices_to_delete))
         return f"Purged {deleted_count} message(s): {deleted_ids}"
-
 
