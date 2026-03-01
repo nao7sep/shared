@@ -263,3 +263,21 @@ class TestReplLoop:
             sample_session.tasks.tasks,
             sample_session.profile.output_path,
         )
+
+    def test_repl_reports_sync_on_exit_failure(self, sample_session, monkeypatch, capsys):
+        """Test that exit-sync errors are shown instead of escaping."""
+        sample_session.profile.sync_on_exit = True
+        inputs = iter(["exit"])
+
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+        monkeypatch.setattr(
+            repl_module.markdown,
+            "generate_todo",
+            lambda tasks, output_path: (_ for _ in ()).throw(OSError("disk full")),
+        )
+
+        repl_module.repl(sample_session)
+
+        output = capsys.readouterr().out
+        assert "Exiting." in output
+        assert "ERROR: disk full" in output

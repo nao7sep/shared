@@ -33,6 +33,26 @@ def _runtime_app_root() -> Path:
     return Path(__file__).resolve().parent
 
 
+def _require_string_field(
+    profile: dict[str, Any],
+    field_name: str,
+    *,
+    non_empty: bool = False,
+) -> str:
+    value = profile.get(field_name)
+    if not isinstance(value, str):
+        suffix = " non-empty" if non_empty else ""
+        raise ConfigError(f"{field_name} must be a{suffix} string")
+    if non_empty and not value:
+        raise ConfigError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _validate_optional_bool_field(profile: dict[str, Any], field_name: str) -> None:
+    if field_name in profile and not isinstance(profile[field_name], bool):
+        raise ConfigError(f"{field_name} must be a boolean")
+
+
 def map_path(path: str, profile_dir: str | None = None) -> str:
     """Resolve a path string to an absolute path string.
 
@@ -115,25 +135,37 @@ def validate_profile(profile: dict[str, Any]) -> None:
     Raises:
         ConfigError: If profile is invalid
     """
+    if not isinstance(profile, dict):
+        raise ConfigError("Profile must be a JSON object")
+
     required_fields = ["data_path", "output_path", "timezone", "subjective_day_start"]
     missing = [f for f in required_fields if f not in profile]
 
     if missing:
         raise ConfigError(f"Profile missing required fields: {', '.join(missing)}")
 
+    _require_string_field(profile, "data_path", non_empty=True)
+    _require_string_field(profile, "output_path", non_empty=True)
+    timezone_str = _require_string_field(profile, "timezone", non_empty=True)
+    subjective_day_start = _require_string_field(
+        profile,
+        "subjective_day_start",
+        non_empty=True,
+    )
+    _validate_optional_bool_field(profile, "auto_sync")
+    _validate_optional_bool_field(profile, "sync_on_exit")
+
     # Validate time format
     try:
-        parse_time(profile["subjective_day_start"])
+        parse_time(subjective_day_start)
     except ConfigError as e:
         raise ConfigError(f"Invalid subjective_day_start: {e}")
 
     # Validate timezone.
-    if not isinstance(profile["timezone"], str) or not profile["timezone"]:
-        raise ConfigError("timezone must be a non-empty string")
     try:
-        ZoneInfo(profile["timezone"])
+        ZoneInfo(timezone_str)
     except ZoneInfoNotFoundError as e:
-        raise ConfigError(f"Invalid timezone: {profile['timezone']}") from e
+        raise ConfigError(f"Invalid timezone: {timezone_str}") from e
 
 
 def load_profile(path: str) -> Profile:
@@ -195,6 +227,8 @@ def create_profile(path: str) -> Profile:
         - sync_on_exit: false (sync on app exit - redundant if auto_sync is true)
     """
     profile_path = Path(map_path(path))
+    if profile_path.exists():
+        raise ConfigError(f"Profile already exists: {profile_path}")
 
     # Create directory if it doesn't exist
     profile_path.parent.mkdir(parents=True, exist_ok=True)

@@ -162,13 +162,15 @@ class Profile:
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "Profile":
         """Create profile model from dict payload."""
+        auto_sync = payload.get("auto_sync", True)
+        sync_on_exit = payload.get("sync_on_exit", False)
         return cls(
             timezone=str(payload["timezone"]),
             subjective_day_start=str(payload["subjective_day_start"]),
             data_path=str(payload["data_path"]),
             output_path=str(payload["output_path"]),
-            auto_sync=bool(payload.get("auto_sync", True)),
-            sync_on_exit=bool(payload.get("sync_on_exit", False)),
+            auto_sync=auto_sync,
+            sync_on_exit=sync_on_exit,
         )
 
     def to_dict(self) -> dict[str, Any]:

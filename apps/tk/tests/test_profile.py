@@ -214,6 +214,36 @@ class TestValidateProfile:
                 "subjective_day_start": "04:00:00",
             })
 
+    @pytest.mark.parametrize("field_name", ["data_path", "output_path", "subjective_day_start"])
+    def test_validate_profile_rejects_non_string_fields(self, field_name):
+        """Test that path/time fields must be strings."""
+        profile = {
+            "data_path": "~/tasks.json",
+            "output_path": "~/TODO.md",
+            "timezone": "Asia/Tokyo",
+            "subjective_day_start": "04:00:00",
+        }
+        profile[field_name] = 123
+
+        with pytest.raises(ValueError, match=rf"{field_name} must be a"):
+            validate_profile(profile)
+
+    @pytest.mark.parametrize("field_name", ["auto_sync", "sync_on_exit"])
+    def test_validate_profile_rejects_non_boolean_sync_flags(self, field_name):
+        """Test that sync flags must be booleans when provided."""
+        profile = {
+            "data_path": "~/tasks.json",
+            "output_path": "~/TODO.md",
+            "timezone": "Asia/Tokyo",
+            "subjective_day_start": "04:00:00",
+            "auto_sync": True,
+            "sync_on_exit": False,
+        }
+        profile[field_name] = "false"
+
+        with pytest.raises(ValueError, match=rf"{field_name} must be a boolean"):
+            validate_profile(profile)
+
 
 class TestLoadProfile:
     """Test load_profile function."""
@@ -297,6 +327,24 @@ class TestLoadProfile:
         assert profile.auto_sync is True
         assert profile.sync_on_exit is False
 
+    def test_load_profile_rejects_non_boolean_sync_flag(self, temp_dir):
+        """Test that wrong sync flag types are rejected before coercion."""
+        profile_path = temp_dir / "profile.json"
+
+        profile_data = {
+            "timezone": "Asia/Tokyo",
+            "subjective_day_start": "04:00:00",
+            "data_path": "./tasks.json",
+            "output_path": "./TODO.md",
+            "auto_sync": "false",
+        }
+
+        with open(profile_path, "w", encoding="utf-8") as f:
+            json.dump(profile_data, f)
+
+        with pytest.raises(ValueError, match="auto_sync must be a boolean"):
+            load_profile(str(profile_path))
+
 
 class TestCreateProfile:
     """Test create_profile function."""
@@ -364,3 +412,13 @@ class TestCreateProfile:
             profile = json.load(f)
 
         assert profile["timezone"] == "UTC"
+
+    def test_create_profile_rejects_existing_file(self, temp_dir):
+        """Test that create_profile refuses to overwrite an existing profile."""
+        profile_path = temp_dir / "profile.json"
+        profile_path.write_text('{"existing": true}', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="Profile already exists"):
+            create_profile(str(profile_path))
+
+        assert profile_path.read_text(encoding="utf-8") == '{"existing": true}'

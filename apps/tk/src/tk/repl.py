@@ -30,6 +30,29 @@ _HANDLED_COMMAND_TO_STATUS = {
 }
 
 
+def _report_unexpected_error(error: Exception) -> None:
+    """Print an unexpected exception with optional debug traceback."""
+    print(f"ERROR: {error}")
+    if os.getenv("TK_DEBUG"):
+        print("Debug traceback:")
+        traceback.print_exc()
+
+
+def _sync_on_exit(session: Session) -> None:
+    """Run exit-time markdown sync behind the REPL error boundary."""
+    profile_data = session.profile
+    tasks_data = session.tasks
+    if not profile_data or not tasks_data or not profile_data.sync_on_exit:
+        return
+
+    try:
+        markdown.generate_todo(tasks_data.tasks, profile_data.output_path)
+    except AppError as e:
+        print(f"ERROR: {e}")
+    except Exception as e:
+        _report_unexpected_error(e)
+
+
 def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
     """Parse command line into (command, args, kwargs)."""
     try:
@@ -191,12 +214,6 @@ def repl(session: Session) -> None:
 
         except Exception as e:
             # Unexpected errors - provide more detail in debug mode
-            print(f"ERROR: {e}")
-            if os.getenv("TK_DEBUG"):
-                print("Debug traceback:")
-                traceback.print_exc()
+            _report_unexpected_error(e)
 
-    profile_data = session.profile
-    tasks_data = session.tasks
-    if profile_data and tasks_data and profile_data.sync_on_exit:
-        markdown.generate_todo(tasks_data.tasks, profile_data.output_path)
+    _sync_on_exit(session)
