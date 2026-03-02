@@ -161,8 +161,8 @@ class CommandHandlerBaseMixin:
 
         notices = self._reconcile_provider_modes(provider)
         if notices:
-            return f"Switched to {provider} ({model})\n" + "\n".join(notices)
-        return f"Switched to {provider} ({model})"
+            return f"Switched to {provider} | {model}\n" + "\n".join(notices)
+        return f"Switched to {provider} | {model}"
 
     def _reconcile_provider_modes(self, provider: Optional[str] = None) -> list[str]:
         """Disable incompatible mode flags for the active provider."""

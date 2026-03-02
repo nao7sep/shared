@@ -71,11 +71,10 @@ The app goes straight to the REPL and shows configured AI providers.
 Messages are multiline:
 - Default input mode is **quick**:
   - **Enter** sends
-  - **Option+Enter** (Alt+Enter) inserts a new line
+  - **Option+Enter** (Alt+Enter) or **Ctrl+J** inserts a new line
 - In **compose** mode:
   - **Enter** inserts a new line
-  - **Option+Enter** (Alt+Enter) sends
-- `Ctrl+Enter` may work in some terminals if it is sent as `Ctrl+J` (send in both modes)
+  - **Option+Enter** (Alt+Enter) or **Ctrl+J** sends
 
 Use `/input quick` or `/input compose` to switch behavior.
 
@@ -146,8 +145,8 @@ Logs are written in a structured plaintext block format and include contextual e
 
 **Configuration:**
 - `/input` - Show current input mode
-- `/input quick` - Enter sends, Option/Alt+Enter inserts newline
-- `/input compose` - Enter inserts newline, Option/Alt+Enter sends
+- `/input quick` - Enter sends, Option/Alt+Enter or Ctrl+J inserts newline
+- `/input compose` - Enter inserts newline, Option/Alt+Enter or Ctrl+J sends
 - `/input default` - Restore profile default input mode
 - `/timeout` - Show current timeout setting
 - `/timeout default` - Restore profile default timeout

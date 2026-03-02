@@ -14,7 +14,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from .. import __version__
 from .. import chat
 from ..commands import CommandHandler
-from ..formatting.constants import BORDERLINE_CHAR, BORDERLINE_WIDTH
+from ..formatting.constants import BORDERLINE_CHAR, BORDERLINE_WIDTH, DISPLAY_NONE, DISPLAY_UNKNOWN
 from ..logging import log_event, summarize_command_args
 from ..orchestrator import ChatOrchestrator
 from ..orchestration.types import (
@@ -62,7 +62,11 @@ def build_key_bindings(manager: SessionManager) -> KeyBindings:
 
     @key_bindings.add("c-j", eager=True)
     def _handle_ctrl_j(event) -> None:
-        event.current_buffer.validate_and_handle()
+        mode = manager.input_mode
+        if mode == "quick":
+            event.current_buffer.insert_text("\n")
+        else:
+            event.current_buffer.validate_and_handle()
 
     return key_bindings
 
@@ -87,27 +91,49 @@ def print_startup_banner(
     configured_ais = []
     for provider, model in profile_data.models.items():
         if provider in profile_data.api_keys:
-            configured_ais.append(f"{provider} ({model})")
+            configured_ais.append(f"{provider} | {model}")
 
     borderline = BORDERLINE_CHAR * BORDERLINE_WIDTH
 
     print(borderline)
     print(f"PolyChat {__version__} - Multi-AI CLI Chat Tool")
     print(borderline)
-    print(f"Current Provider: {manager.current_ai}")
-    print(f"Current Model:    {manager.current_model}")
-    print(f"Configured AIs:   {', '.join(configured_ais)}")
-    if chat_path:
-        print(f"Chat:             {Path(chat_path).name}")
-    else:
-        print("Chat:             None (use /new or /open)")
+
+    # All banner key-value lines aligned globally.
+    # Longest key is "Configured AIs:" (15 chars) → values at column 17.
+    key_width = 17
+    profile_path = manager.profile_path or DISPLAY_UNKNOWN
+    log_file = manager.log_file or DISPLAY_NONE
+    chat_display = Path(chat_path).name if chat_path else "None (use /new or /open)"
+    print(f"{'Chats:':<{key_width}}{profile_data.chats_dir}")
+    print(f"{'Logs:':<{key_width}}{profile_data.logs_dir}")
+    print(f"{'Profile:':<{key_width}}{profile_path}")
+    print(f"{'Chat:':<{key_width}}{chat_display}")
+    print(f"{'Log:':<{key_width}}{log_file}")
+
+    # Configured AIs — one per line with trailing comma except last.
+    print()
+    for i, entry in enumerate(configured_ais):
+        comma = "," if i < len(configured_ais) - 1 else ""
+        if i == 0:
+            print(f"{'Configured AIs:':<{key_width}}{entry}{comma}")
+        else:
+            print(f"{' ' * key_width}{entry}{comma}")
+    if not configured_ais:
+        print(f"{'Configured AIs:':<{key_width}}(none)")
+
+    # Active selection.
+    print()
+    print(f"{'Assistant:':<{key_width}}{manager.current_ai} | {manager.current_model}")
+    print(f"{'Helper:':<{key_width}}{manager.helper_ai} | {manager.helper_model}")
+
+    # Input mode and usage hint.
     print()
     if manager.input_mode == "quick":
-        print("Input Mode:       quick (Enter sends | Option/Alt+Enter inserts new line)")
+        print(f"{'Input Mode:':<{key_width}}quick (Enter sends · Opt/Alt+Enter or Ctrl+J inserts new line)")
     else:
-        print("Input Mode:       compose (Enter inserts new line | Option/Alt+Enter sends)")
-    print("Ctrl+J also sends in both modes")
-    print("Type /help for commands • /exit or Ctrl-D to quit")
+        print(f"{'Input Mode:':<{key_width}}compose (Enter inserts new line · Opt/Alt+Enter or Ctrl+J sends)")
+    print(f"{' ' * key_width}Type /help for commands • /exit or Ctrl-D to quit")
     print(borderline)
 
 

@@ -87,6 +87,8 @@ class MetadataGenerationCommandHandlers:
             )
         ]
 
+        print("Generating title...", flush=True)
+
         try:
             title = await self._invoke_helper_ai(
                 self._deps.manager.helper_ai,
@@ -148,6 +150,8 @@ class MetadataGenerationCommandHandlers:
             )
         ]
 
+        print("Generating summary...", flush=True)
+
         try:
             summary = await self._invoke_helper_ai(
                 self._deps.manager.helper_ai,
@@ -201,6 +205,8 @@ class MetadataGenerationCommandHandlers:
                 )
             )
         ]
+
+        print(f"Checking {scope}...", flush=True)
 
         try:
             result = await self._invoke_helper_ai(

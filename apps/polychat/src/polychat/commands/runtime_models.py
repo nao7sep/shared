@@ -93,10 +93,10 @@ class RuntimeModelCommandHandlers:
             notices = self._deps._reconcile_provider_modes(default_ai)
             if notices:
                 return (
-                    f"Reverted to profile default: {default_ai} ({default_model})\n"
+                    f"Reverted to profile default: {default_ai} | {default_model}\n"
                     + "\n".join(notices)
                 )
-            return f"Reverted to profile default: {default_ai} ({default_model})"
+            return f"Reverted to profile default: {default_ai} | {default_model}"
 
         query = args.strip()
         selected_model, resolution_error = await self._resolve_model_selection(query)
@@ -112,7 +112,7 @@ class RuntimeModelCommandHandlers:
 
         self._deps.manager.switch_provider(model_provider, selected_model)
 
-        base_message = f"Switched to {model_provider} ({selected_model})"
+        base_message = f"Switched to {model_provider} | {selected_model}"
         if selected_model != query:
             base_message += f" [matched from '{query}']"
         notices = self._deps._reconcile_provider_modes(model_provider)
@@ -132,7 +132,7 @@ class RuntimeModelCommandHandlers:
         if not args:
             helper_ai = self._deps.manager.helper_ai
             helper_model = self._deps.manager.helper_model
-            return f"Current helper AI: {helper_ai} ({helper_model})"
+            return f"Current helper AI: {helper_ai} | {helper_model}"
 
         if args == "default":
             profile_data = self._deps.manager.profile
@@ -141,7 +141,7 @@ class RuntimeModelCommandHandlers:
 
             self._deps.manager.switch_helper(helper_ai_name, helper_model_name)
 
-            return f"Helper AI restored to profile default: {helper_ai_name} ({helper_model_name})"
+            return f"Helper AI restored to profile default: {helper_ai_name} | {helper_model_name}"
 
         query = args.strip()
         lowered = query.lower()
@@ -152,14 +152,14 @@ class RuntimeModelCommandHandlers:
             if not provider_model:
                 return f"No model configured for {provider_shortcut} in profile"
             self._deps.manager.switch_helper(provider_shortcut, provider_model)
-            return f"Helper AI set to {provider_shortcut} ({provider_model})"
+            return f"Helper AI set to {provider_shortcut} | {provider_model}"
 
         if lowered in get_all_providers():
             provider_model = self._deps.manager.profile.models.get(lowered)
             if not provider_model:
                 return f"No model configured for {lowered} in profile"
             self._deps.manager.switch_helper(lowered, provider_model)
-            return f"Helper AI set to {lowered} ({provider_model})"
+            return f"Helper AI set to {lowered} | {provider_model}"
 
         selected_model, resolution_error = await self._resolve_model_selection(query)
         if resolution_error:
@@ -173,7 +173,7 @@ class RuntimeModelCommandHandlers:
 
         self._deps.manager.switch_helper(provider, selected_model)
 
-        message = f"Helper AI set to {provider} ({selected_model})"
+        message = f"Helper AI set to {provider} | {selected_model}"
         if selected_model != query:
             message += f" [matched from '{query}']"
         return message

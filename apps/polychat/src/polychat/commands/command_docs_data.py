@@ -101,16 +101,16 @@ COMMAND_DOC_SECTIONS: tuple[CommandDocSection, ...] = (
             CommandDocEntry(
                 ("input",),
                 "/input quick",
-                "Enter sends, Option/Alt+Enter inserts newline",
+                "Enter sends, Option/Alt+Enter or Ctrl+J inserts newline",
                 "/input quick",
-                "Enter sends, Option/Alt+Enter inserts newline",
+                "Enter sends, Option/Alt+Enter or Ctrl+J inserts newline",
             ),
             CommandDocEntry(
                 ("input",),
                 "/input compose",
-                "Enter inserts newline, Option/Alt+Enter sends",
+                "Enter inserts newline, Option/Alt+Enter or Ctrl+J sends",
                 "/input compose",
-                "Enter inserts newline, Option/Alt+Enter sends",
+                "Enter inserts newline, Option/Alt+Enter or Ctrl+J sends",
             ),
             CommandDocEntry(
                 ("input",),

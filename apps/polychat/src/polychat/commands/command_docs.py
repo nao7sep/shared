@@ -32,9 +32,8 @@ def documented_command_names() -> set[str]:
     return names
 
 
-def _render_help_section(section: CommandDocSection) -> list[str]:
+def _render_help_section(section: CommandDocSection, width: int) -> list[str]:
     lines: list[str] = [f"{section.title}:"]
-    width = max(len(entry.help_signature) for entry in section.entries)
     continuation_prefix = " " * (2 + width + 2)
 
     for entry in section.entries:
@@ -46,10 +45,15 @@ def _render_help_section(section: CommandDocSection) -> list[str]:
 
 def render_help_text() -> str:
     """Render in-chat `/help` output from metadata."""
-    lines: list[str] = ["PolyChat Commands:", ""]
+    lines: list[str] = []
+    width = max(
+        len(entry.help_signature)
+        for section in COMMAND_DOC_SECTIONS
+        for entry in section.entries
+    )
 
     for section in COMMAND_DOC_SECTIONS:
-        lines.extend(_render_help_section(section))
+        lines.extend(_render_help_section(section, width))
         lines.append("")
 
     return "\n".join(lines).rstrip()
