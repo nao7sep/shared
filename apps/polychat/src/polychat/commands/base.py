@@ -1,6 +1,5 @@
 """Base command handler mixin for shared session/path helpers."""
 
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
@@ -11,6 +10,7 @@ from ..domain.chat import ChatDocument
 from ..formatting.constants import DISPLAY_UNKNOWN
 from ..path_utils import has_app_path_prefix, has_home_path_prefix, map_path
 from ..chat import update_metadata
+from ..time_utils import parse_utc_to_local
 from ..ui.interaction import ThreadedConsoleInteraction, UserInteractionPort
 from .context import CommandContext, HelperAIInvoker
 
@@ -100,13 +100,7 @@ class CommandHandlerBaseMixin:
     @staticmethod
     def _to_local_time(timestamp: str, format_str: str) -> str:
         """Convert stored UTC-ish timestamp string to local display time."""
-        try:
-            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone().strftime(format_str)
-        except (ValueError, TypeError, AttributeError):
-            return DISPLAY_UNKNOWN
+        return parse_utc_to_local(timestamp, format_str) or DISPLAY_UNKNOWN
 
     @staticmethod
     def _message_content_to_text(content: Any) -> str:

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Any
 
 from ..ai.types import Citation
+from ..time_utils import utc_now_iso as _utc_now_roundtrip
 
 REQUIRED_METADATA_KEYS = (
     "title",
@@ -15,13 +15,6 @@ REQUIRED_METADATA_KEYS = (
     "created_utc",
     "updated_utc",
 )
-
-
-def _utc_now_roundtrip() -> str:
-    """Return a high-precision UTC timestamp with explicit UTC marker."""
-    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace(
-        "+00:00", "Z"
-    )
 
 
 def _text_to_lines(text: str) -> list[str]:

@@ -9,18 +9,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from ..constants import APP_NAME, DATETIME_FORMAT_FILENAME, LOG_FILE_EXTENSION
+from ..time_utils import utc_now_iso as _utc_now_roundtrip
 from .formatter import StructuredTextFormatter
 from .schema import LOG_PATH_FIELDS
 
 if TYPE_CHECKING:
     from ..domain.chat import ChatMessage
-
-
-def _utc_now_roundtrip() -> str:
-    """Return a high-precision UTC timestamp with explicit UTC marker."""
-    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace(
-        "+00:00", "Z"
-    )
 
 
 def _to_log_safe(value: Any) -> Any:

@@ -4,17 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
+from ..time_utils import utc_now_iso as _utc_now_roundtrip
 from .schema import DEFAULT_EVENT_KEY_ORDER, EVENT_KEY_ORDER
-
-
-def _utc_now_roundtrip() -> str:
-    """Return a high-precision UTC timestamp with explicit UTC marker."""
-    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace(
-        "+00:00", "Z"
-    )
 
 
 class StructuredTextFormatter(logging.Formatter):
