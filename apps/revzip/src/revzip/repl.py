@@ -70,12 +70,11 @@ def _run_archive_action(
 ) -> None:
     progress = ConsoleProgressReporter()
 
-    print()
     try:
         comment_raw_value = _read_line("Archive comment: ")
     except KeyboardInterrupt:
         print()
-        print("Cancelled.")
+        print("Canceled.")
         return
     if comment_raw_value is None:
         print(render_error("Comment is required."))
@@ -93,12 +92,17 @@ def _run_archive_action(
     except KeyboardInterrupt:
         progress.close_open_lines()
         print()
-        print("[Operation Cancelled]")
+        print("[Operation Canceled]")
         return
     except RevzipError as exc:
         progress.close_open_lines()
         print()
         print(render_error(str(exc)))
+        return
+    except Exception as exc:
+        progress.close_open_lines()
+        print()
+        print(render_error(f"Unexpected error: {exc}"))
         return
 
     if archive_result.skipped_symlinks_rel:
@@ -116,9 +120,15 @@ def _run_archive_action(
 
 
 def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
-    snapshot_records, snapshot_warnings = discover_snapshots(
-        dest_dir_abs=resolved_paths.dest_dir_abs
-    )
+    try:
+        snapshot_records, snapshot_warnings = discover_snapshots(
+            dest_dir_abs=resolved_paths.dest_dir_abs
+        )
+    except Exception as exc:
+        print()
+        print(render_error(f"Unexpected error discovering snapshots: {exc}"))
+        return
+
     if snapshot_warnings:
         print()
         for warning_line in render_snapshot_warning_lines(snapshot_warnings):
@@ -139,12 +149,11 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
         selected_record = _prompt_snapshot_selection(snapshot_records)
     except KeyboardInterrupt:
         print()
-        print("Cancelled.")
+        print("Canceled.")
         return
     if selected_record is None:
         return
 
-    print()
     try:
         confirmation_raw = _read_line("Type yes to restore the selected snapshot: ")
     except KeyboardInterrupt:
@@ -166,10 +175,13 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
         )
     except KeyboardInterrupt:
         print()
-        print("[Operation Cancelled]")
+        print("[Operation Canceled]")
         return
     except RevzipError as exc:
         print(render_error(str(exc)))
+        return
+    except Exception as exc:
+        print(render_error(f"Unexpected error: {exc}"))
         return
 
     print(

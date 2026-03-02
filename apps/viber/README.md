@@ -16,6 +16,7 @@ uv sync
 ```sh
 uv run viber --data ~/viber/data.json
 uv run viber --data ~/viber/data.json --check ~/viber/check.html
+uv run viber --help  # or -h
 ```
 
 `--data` is required. `--check` enables per-group HTML output (regenerated after each mutation).
@@ -78,11 +79,11 @@ exit | quit
 - `update p<ID> t<ID>` with no comment clears the assignment comment.
 - Deletes are cascading: deleting a group also deletes its projects and group-scoped tasks; deleting a project/task deletes related assignments.
 - Tasks with no assignments are auto-pruned during startup and delete cascades.
-- All `delete` commands require typing exact `yes`; Enter or any other input cancels.
+- All `delete` commands require `y` or `yes`; Enter or any other input cancels.
 - Project data rows use `project | group | state | local-created-time`.
 - Task data rows use `task | group-or-all | local-created-time`.
 - `view` shows `project | group | task`; `view p<ID>` and `view t<ID>` show header row + matching rows (no timestamps).
-- `work` shows all pending items, then prompts for item number (or `q` to quit), then action `[o]k / [n]ah / [c]ancel`.
+- `work` shows all pending items, then prompts for item number (or `q` to quit), then action `[o]k / [n]ah / [c]ancel`, then optional comment (Enter to skip).
 - In `work`, pressing `Ctrl+C` at any prompt cancels the current step safely.
 - `exit` and `quit` are full-word only (no single-letter aliases).
 
@@ -116,10 +117,9 @@ Assignments are only generated for `active` projects at task creation time. No b
 
 When `--check ~/viber/check.html` is given, viber writes one file per group after each mutation:
 
-- `check-backend-g1.html`, `check-frontend-g2.html`, …
+- `check-backend.html`, `check-frontend.html`, …
 - Rows = tasks (newest first), columns = non-deprecated projects.
 - ✅ ok · ❌ nah · blank cell pending · gray cell = lifecycle gap (no assignment).
-- Group ids are included in filenames so check pages remain stable across slug collisions.
 
 ## Path Syntax
 

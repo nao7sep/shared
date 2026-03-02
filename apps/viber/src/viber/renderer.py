@@ -1,7 +1,7 @@
 """HTML check-page renderer.
 
 Generates one file per group from the --check base path.
-File naming: {stem}-{safe-slug}-g{group_id}{suffix}
+File naming: {stem}-{safe-slug}{suffix}
 """
 
 from __future__ import annotations
@@ -33,13 +33,13 @@ def render_check_pages(
     """Generate one HTML file per group.
 
     Each file is written to check_base.parent with the name pattern:
-    {check_base.stem}-{safe-slug}-g{group.id}{check_base.suffix}
+    {check_base.stem}-{safe-slug}{check_base.suffix}
     """
     groups = _select_groups(db, group_ids)
     written_paths: list[Path] = []
 
     for group in groups:
-        out_path = check_page_path(check_base, group.id, group.name)
+        out_path = check_page_path(check_base, group.name)
         content = _render_group_page(db, group.id, group.name)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         if out_path.exists():
@@ -52,22 +52,27 @@ def render_check_pages(
     return written_paths
 
 
-def remove_check_page(check_base: Path, group_id: int, group_name: str) -> None:
+def remove_check_page(check_base: Path, group_name: str) -> None:
     """Delete a check page for a group name if the file exists."""
-    path = check_page_path(check_base, group_id, group_name)
+    path = check_page_path(check_base, group_name)
     try:
         path.unlink()
     except FileNotFoundError:
         return
 
 
-def check_page_path(check_base: Path, group_id: int, group_name: str) -> Path:
-    """Return the check-page path for one group name."""
+def check_page_path(check_base: Path, group_name: str) -> Path:
+    """Return the check-page path for one group name.
+
+    Group names that produce the same slug (e.g. "Backend Team" and "Backend-Team"
+    both become "backend-team") map to the same file. The last group written wins.
+    In practice this is avoided by keeping group names meaningfully distinct.
+    """
     out_dir = check_base.parent
     stem = check_base.stem
     suffix = check_base.suffix or ".html"
     slug = _safe_group_slug(group_name)
-    return out_dir / f"{stem}-{slug}-g{group_id}{suffix}"
+    return out_dir / f"{stem}-{slug}{suffix}"
 
 
 def _safe_group_slug(group_name: str) -> str:

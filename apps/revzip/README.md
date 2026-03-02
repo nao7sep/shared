@@ -92,12 +92,14 @@ Then it shows only this REPL menu:
 - Zip entry names are source-relative and never include the source directory name.
 - If nothing matches (no files and no empty directories), no snapshot is created.
 - During scan, one in-place line is updated after each scanned directory:
-  - `Scanned: X dirs | Y files`
+  - `Scanned: 1,234 dirs | 5,678 files` (counts use thousands separators)
 - During archive, one in-place line is updated after each archived file:
-  - `Archived: X / Y files`
+  - `Archived: 1,234 / 5,678 files` (counts use thousands separators)
 - Ignored paths are not counted in those progress counters.
-- Created archive output line uses:
-  - `Created ZIP: ...`
+- After archive completes, three output lines are printed:
+  - `Archived X file(s) and Y empty directory(s).`
+  - `Created ZIP: <filename>.zip`
+  - `Created metadata: <filename>.json`
 
 ## Ignore File Semantics
 
@@ -117,7 +119,7 @@ Then it shows only this REPL menu:
 - Invalid metadata JSON or missing corresponding zip are warned loudly and skipped.
 - Valid snapshots are sorted by `created_utc` descending.
 - Snapshot list rows show index, timestamp, and comment using `|` separators.
-- Snapshot list block is visually isolated with one empty line above and below rows.
+- Snapshot list block (header and rows) is visually isolated with one empty line above and below.
 - Restore requires:
   - numeric selection
   - exact `yes` confirmation

@@ -22,7 +22,7 @@ Options:
                    Accepts absolute paths, ~ (home), or @ (app root).
   --check <path>   Optional path for HTML check output files.
                    HTML is regenerated after each mutation.
-  --help           Show this help message and exit.
+  --help, -h       Show this help message and exit.
 
 Path examples:
   viber --data ~/viber/data.json
@@ -103,8 +103,14 @@ def main() -> None:
 
     try:
         run_repl(db, app_args.data_path, app_args.check_path)
+    except KeyboardInterrupt:
+        print()
+        print("Interrupted.")
     except ViberError as exc:
         print(f"ERROR: Fatal: {exc}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: Unexpected: {exc}", file=sys.stderr)
         sys.exit(1)
 
 

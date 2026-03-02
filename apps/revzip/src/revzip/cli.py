@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from .errors import RevzipError
@@ -30,8 +31,15 @@ def main(argv: list[str] | None = None) -> int:
             resolved_paths=resolved_paths,
             ignore_rule_set=ignore_rule_set,
         )
+    except KeyboardInterrupt:
+        print()
+        print("Canceled.")
+        return 0
     except RevzipError as exc:
         print(render_error(str(exc)))
+        return 1
+    except Exception as exc:
+        print(render_error(str(exc)), file=sys.stderr)
         return 1
 
 

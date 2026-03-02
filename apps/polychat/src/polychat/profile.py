@@ -257,6 +257,7 @@ def create_profile(path: str) -> tuple[dict[str, Any], list[str]]:
     # Key order: default_ai, models, timeout, input_mode, prompts, directories, api_keys, ai_limits
     profile = {
         "default_ai": "claude",
+        "default_helper_ai": "claude",
         "models": {
             "openai": "gpt-5-mini",
             "claude": "claude-haiku-4-5",

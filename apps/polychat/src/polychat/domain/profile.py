@@ -135,17 +135,19 @@ class RuntimeProfile:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize runtime profile for JSON persistence."""
-        profile: dict[str, Any] = {
-            "default_ai": self.default_ai,
-            "models": dict(self.models),
-            "timeout": self.timeout,
-            "input_mode": self.input_mode,
-            "chats_dir": self.chats_dir,
-            "logs_dir": self.logs_dir,
-            "api_keys": dict(self.api_keys),
-        }
+        profile: dict[str, Any] = {"default_ai": self.default_ai}
         if self.default_helper_ai is not None:
             profile["default_helper_ai"] = self.default_helper_ai
+        profile.update(
+            {
+                "models": dict(self.models),
+                "timeout": self.timeout,
+                "input_mode": self.input_mode,
+                "chats_dir": self.chats_dir,
+                "logs_dir": self.logs_dir,
+                "api_keys": dict(self.api_keys),
+            }
+        )
         if self.system_prompt is not None:
             profile["system_prompt"] = self.system_prompt
         if self.title_prompt is not None:

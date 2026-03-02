@@ -46,14 +46,14 @@ def run_repl(
 
     def after_mutation(
         affected_group_ids: set[int] | None,
-        removed_check_pages: set[tuple[int, str]] | None,
+        removed_check_pages: set[str] | None,
     ) -> None:
         save_database(db, data_path)
         if check_path is None:
             return
         if removed_check_pages:
-            for group_id, group_name in sorted(removed_check_pages):
-                remove_check_page(check_path, group_id, group_name)
+            for group_name in sorted(removed_check_pages):
+                remove_check_page(check_path, group_name)
         if affected_group_ids is None:
             render_check_pages(db, check_path)
             return

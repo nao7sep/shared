@@ -300,3 +300,14 @@ async def repl_loop(
             # Ctrl+C at the prompt clears the current line and returns a
             # fresh prompt.  It must never terminate the application.
             continue
+
+        except Exception as error:
+            log_event(
+                "repl_error",
+                level=logging.ERROR,
+                error_type=type(error).__name__,
+                error=str(error),
+                chat_file=manager.chat_path,
+            )
+            logging.error("Unexpected REPL error: %s", error, exc_info=True)
+            print(f"Error: {error}")

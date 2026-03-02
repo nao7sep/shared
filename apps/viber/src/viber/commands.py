@@ -59,7 +59,7 @@ from .service import (
     update_task_description,
 )
 
-RemovedCheckPage = tuple[int, str]
+RemovedCheckPage = str
 
 MutationHook = Callable[[set[int] | None, set[RemovedCheckPage] | None], None]
 
@@ -154,7 +154,7 @@ def execute_command(
     if isinstance(command, UpdateGroupNameCommand):
         old_name = get_group(db, command.group_id).name
         group = update_group_name(db, command.group_id, command.new_name)
-        removed_pages = {(group.id, old_name)} if old_name != group.name else None
+        removed_pages = {old_name} if old_name != group.name else None
         after_mutation({group.id}, removed_pages)
         if old_name == group.name:
             print(f"Group name unchanged: {group.name} (g{group.id})")
@@ -213,10 +213,10 @@ def execute_command(
             new_desc = input("New description: ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
-            print("Update cancelled.")
+            print("Update canceled.")
             return
         if not new_desc:
-            print("Task description cannot be empty. Update cancelled.")
+            print("Task description cannot be empty. Update canceled.")
             return
         task = update_task_description(db, command.task_id, new_desc)
         after_mutation(_task_affected_group_ids(db, task.group_id), None)
@@ -312,7 +312,7 @@ def _exec_delete(command: DeleteEntityCommand, db: Database, after_mutation: Mut
         if not _confirm_action([format_group(group)]):
             return
         group = delete_group(db, command.entity_id)
-        after_mutation(None, {(group.id, group.name)})
+        after_mutation(None, {group.name})
         print(f"Deleted group: {group.name} (g{group.id})")
         return
 
@@ -386,7 +386,7 @@ def _exec_resolve(
         comment_raw = input("Comment (optional, Enter to skip): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
-        print("Cancelled.")
+        print("Canceled.")
         return
 
     comment = comment_raw if comment_raw else None
@@ -445,12 +445,12 @@ def _work_by_project(
         task = results[selected - 1][0]
         status = _prompt_work_resolution_status()
         if status is None:
-            print("Cancelled.")
+            print("Canceled.")
             continue
 
-        cancelled, comment = _prompt_optional_comment()
-        if cancelled:
-            print("Cancelled.")
+        canceled, comment = _prompt_optional_comment()
+        if canceled:
+            print("Canceled.")
             continue
 
         resolve_assignment(db, project.id, task.id, status, comment)
@@ -500,12 +500,12 @@ def _work_by_task(
         project = results[selected - 1][0]
         status = _prompt_work_resolution_status()
         if status is None:
-            print("Cancelled.")
+            print("Canceled.")
             continue
 
-        cancelled, comment = _prompt_optional_comment()
-        if cancelled:
-            print("Cancelled.")
+        canceled, comment = _prompt_optional_comment()
+        if canceled:
+            print("Canceled.")
             continue
 
         resolve_assignment(db, project.id, task.id, status, comment)
@@ -553,9 +553,9 @@ def _prompt_work_resolution_status() -> AssignmentStatus | None:
 
 
 def _prompt_optional_comment() -> tuple[bool, str | None]:
-    """Prompt for optional comment. Returns (cancelled, comment)."""
+    """Prompt for optional comment. Returns (canceled, comment)."""
     try:
-        comment_raw = input("Comment (optional, Enter for none): ").strip()
+        comment_raw = input("Comment (optional, Enter to skip): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
         return True, None
@@ -566,13 +566,13 @@ def _confirm_action(lines: list[str]) -> bool:
     for line in lines:
         print(line)
     try:
-        confirm = input("Type 'yes' to confirm delete [N]: ").strip().lower()
+        confirm = input("Confirm delete? [y/N]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
-        print("Cancelled.")
+        print("Canceled.")
         return False
-    if confirm != "yes":
-        print("Cancelled.")
+    if confirm not in ("y", "yes"):
+        print("Canceled.")
         return False
     return True
 
@@ -677,10 +677,10 @@ def _confirm_undo(lines: list[str]) -> bool:
         confirm = input("Confirm? [y/N]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
-        print("Cancelled.")
+        print("Canceled.")
         return False
     if confirm not in ("y", "yes"):
-        print("Cancelled.")
+        print("Canceled.")
         return False
     return True
 

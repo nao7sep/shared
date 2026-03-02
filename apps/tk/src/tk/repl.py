@@ -177,7 +177,7 @@ def repl(session: Session) -> None:
     while True:
         print()
         try:
-            line = input("tk> ")
+            line = input("> ")
 
             if not line.strip():
                 continue

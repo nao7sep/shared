@@ -39,29 +39,30 @@ uv run tk -p ~/work/my-profile.json
 
 You'll see:
 ```
+tk 0.1.0
+
 Profile Information:
   Timezone: America/New_York
   DST: No
   Current time: 2026-02-08 22:48:10
   Subjective day starts at: 04:00:00
 
-tk task manager
 Type 'exit' or 'quit' to exit, or Ctrl-D
 
-tk> 
+>
 ```
 
 Type `help` to see available commands.
 
 ### 4. Use it
 ```
-tk> a implement user login
+> a implement user login
 Task added.
 
-tk> l
+> l
 1. implement user login
 
-tk> d 1
+> d 1
 Task: implement user login
 Will be marked as: done
 Subjective date: 2026-02-06
@@ -81,11 +82,11 @@ Example: Mark a task done at 3 AM on Feb 6th → recorded as completed on Feb 5t
 ### Number-Based Workflow
 After running `list` or `history`, you reference tasks by their displayed number:
 ```
-tk> l
+> l
 1. task one
 2. task two
 
-tk> d 1    # completes "task one"
+> d 1    # completes "task one"
 ```
 
 Numbers are only valid until you run another command that changes the list.
@@ -95,7 +96,7 @@ Numbers are only valid until you run another command that changes the list.
 When marking tasks as done or cancelled, tk prompts for details:
 
 ```
-tk> d 1
+> d 1
 Task: implement user login
 Will be marked as: done
 Subjective date: 2026-02-06
@@ -112,7 +113,7 @@ Task marked as done.
 
 **Delete confirmation:**
 ```
-tk> delete 1
+> delete 1
 Task: old task
 Status: pending
 
@@ -124,7 +125,7 @@ Task deleted.
 
 **Path shortcuts** in data_path/output_path:
 - `~/dir/file` → your home directory
-- `@/dir/file` → runtime app root (`TK_APP_ROOT` if set, otherwise packaged app dir / source package dir)
+- `@/dir/file` → source package directory
 - `~\dir\file` and `@\dir\file` are also accepted (normalized to path separators)
 - `./dir/file` or `file` → relative to profile directory
 - `/abs/path` → absolute path used as-is
@@ -147,25 +148,25 @@ All commands support shortcuts shown in parentheses.
 
 **add (a)** `<text>` - Add a task
 ```
-tk> a implement authentication
-tk> add fix navigation bug
+> a implement authentication
+> add fix navigation bug
 ```
 
 **list (l)** - Show pending tasks
 ```
-tk> l
+> l
 ```
 
 **help** - Show available commands
 ```
-tk> help
+> help
 ```
 
 **history (h)** `[--days N] [--working-days N]` - Show completed/cancelled tasks
 ```
-tk> h                      # all history
-tk> h --days 7            # last 7 calendar days
-tk> h --working-days 5    # last 5 days with tasks
+> h                      # all history
+> h --days 7            # last 7 calendar days
+> h --working-days 5    # last 5 days with tasks
 ```
 
 **today (t)** - Show today's handled tasks
@@ -176,35 +177,35 @@ tk> h --working-days 5    # last 5 days with tasks
 
 **done (d)** `<num>` - Mark as done (with interactive prompts)
 ```
-tk> d 1
+> d 1
 ```
 
-**cancel (c)** `<num>` - Mark as cancelled
+**cancel (c)** `<num>` - Mark as cancelled (with interactive prompts)
 ```
-tk> c 2
+> c 2
 ```
 
 ### Editing
 
 **edit (e)** `<num> <text>` - Change task text
 ```
-tk> e 1 new task description
+> e 1 new task description
 ```
 
-**note (n)** `<num> [<text>]` - Add/update/remove note
+**note (n)** `<num> [<text>]` - Add/update/remove note (handled tasks only)
 ```
-tk> n 1 additional context
-tk> n 1                    # removes note
+> n 1 additional context
+> n 1                    # removes note
 ```
 
 **date** `<num> <YYYY-MM-DD>` - Change subjective date (handled tasks only)
 ```
-tk> date 1 2026-02-05
+> date 1 2026-02-05
 ```
 
 **delete** `<num>` - Permanently delete task (requires confirmation)
 ```
-tk> delete 1
+> delete 1
 ```
 
 ### Other
@@ -300,7 +301,7 @@ These are current project assumptions, documented for future packaging work:
 
 - Windows `.exe` one-file packaging is not an active goal right now.
 - Timezone behavior on Windows is expected to depend on runtime packaging details (for example bundled timezone data); verify during actual packaging/testing.
-- `@/` paths map to runtime app root (`TK_APP_ROOT` override supported), so they work in both source and packaged modes when that root is configured as intended.
+- `@/` paths resolve to the source package directory.
 
 ## License
 

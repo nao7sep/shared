@@ -283,6 +283,7 @@ When the provider reports cached input tokens, those are shown and factored in a
 ```json
 {
   "default_ai": "claude",
+  "default_helper_ai": "claude",
   "models": {
     "openai": "gpt-5-mini",
     "claude": "claude-haiku-4-5",
@@ -330,6 +331,8 @@ When the provider reports cached input tokens, those are shown and factored in a
   }
 }
 ```
+
+**`default_helper_ai`** (optional) — The provider to use for helper requests (`/title`, `/summary`, `/safe`). Defaults to `default_ai` when omitted. Must be a key present in `models`. Use `/helper default` to restore this setting during a session.
 
 ### Required Directories
 

@@ -605,16 +605,16 @@ def test_run_repl_removes_deleted_group_pages_before_full_refresh(
     events: list[str] = []
 
     def fake_run_loop(_db: Database, after_mutation: repl_module.MutationHook) -> None:
-        after_mutation(None, {(2, "Frontend"), (1, "Backend")})
+        after_mutation(None, {"Frontend", "Backend"})
 
     def fake_save_database(saved_db: Database, saved_path: Path) -> None:
         assert saved_db is db
         assert saved_path == data_path
         events.append("save")
 
-    def fake_remove_check_page(removed_path: Path, group_id: int, group_name: str) -> None:
+    def fake_remove_check_page(removed_path: Path, group_name: str) -> None:
         assert removed_path == check_path
-        events.append(f"remove:g{group_id}:{group_name}")
+        events.append(f"remove:{group_name}")
 
     def fake_render_check_pages(
         rendered_db: Database,
@@ -633,7 +633,7 @@ def test_run_repl_removes_deleted_group_pages_before_full_refresh(
 
     repl_module.run_repl(db, data_path, check_path)
 
-    assert events == ["save", "remove:g1:Backend", "remove:g2:Frontend", "render:all"]
+    assert events == ["save", "remove:Backend", "remove:Frontend", "render:all"]
 
 
 def test_run_repl_renders_only_affected_groups_after_mutation(
