@@ -71,15 +71,14 @@ def _run_archive_action(
     progress = ConsoleProgressReporter()
 
     try:
-        comment_raw_value = _read_line("Archive comment: ")
+        comment_raw = _read_line("Archive comment: ")
     except KeyboardInterrupt:
         print()
         print("Canceled.")
         return
-    if comment_raw_value is None:
+    if comment_raw is None:
         print(render_error("Comment is required."))
         return
-    comment_raw = comment_raw_value
 
     try:
         archive_result = create_snapshot(
@@ -195,11 +194,11 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
 def _prompt_snapshot_selection(
     snapshot_records: list[SnapshotRecord],
 ) -> SnapshotRecord | None:
-    raw_selection_value = _read_line("Select snapshot number: ")
-    if raw_selection_value is None:
+    raw_selection = _read_line("Select snapshot number: ")
+    if raw_selection is None:
         print(render_error("Selection is required."))
         return None
-    raw_selection = raw_selection_value.strip()
+    raw_selection = raw_selection.strip()
     if raw_selection == "":
         print(render_error("Selection is required."))
         return None

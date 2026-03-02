@@ -35,7 +35,7 @@ from .formatter import (
     format_task,
     format_task_ref,
 )
-from .models import Assignment, AssignmentStatus, Database, assignment_key
+from .models import Assignment, AssignmentStatus, Database, Project, Task, assignment_key
 from .queries import pending_all, pending_by_project, pending_by_task
 from .service import (
     create_group,
@@ -409,12 +409,8 @@ def _exec_work(command: WorkEntityCommand, db: Database, after_mutation: Mutatio
 
 
 def _work_by_project(
-    db: Database, project: object, after_mutation: MutationHook
+    db: Database, project: Project, after_mutation: MutationHook
 ) -> None:
-    from .models import Project  # local import for type
-
-    if not isinstance(project, Project):
-        return
 
     initial_results = pending_by_project(db, project.id)
     if not initial_results:
@@ -464,12 +460,8 @@ def _work_by_project(
 
 
 def _work_by_task(
-    db: Database, task: object, after_mutation: MutationHook
+    db: Database, task: Task, after_mutation: MutationHook
 ) -> None:
-    from .models import Task  # local import for type
-
-    if not isinstance(task, Task):
-        return
 
     initial_results = pending_by_task(db, task.id)
     if not initial_results:

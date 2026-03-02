@@ -46,9 +46,7 @@ def create_snapshot(
             True,
         )
 
-    archived_file_count = len(archive_inventory.archived_files_rel)
-    empty_directory_count = len(archive_inventory.empty_directories_rel)
-    if archived_file_count == 0 and empty_directory_count == 0:
+    if archive_inventory.archived_file_count == 0 and archive_inventory.empty_directory_count == 0:
         raise ArchiveEmptyError("No files or empty directories matched for archiving.")
 
     effective_now_utc_dt = now_utc_dt if now_utc_dt is not None else utc_now()
@@ -94,7 +92,7 @@ def create_snapshot(
             ),
         )
         if on_archive_progress is not None:
-            on_archive_progress(archived_files_written, archived_file_count, True)
+            on_archive_progress(archived_files_written, archive_inventory.archived_file_count, True)
         write_snapshot_metadata(
             metadata_path_abs=metadata_path,
             snapshot_metadata=snapshot_metadata,
@@ -107,8 +105,8 @@ def create_snapshot(
     return ArchiveResult(
         zip_path=zip_path,
         metadata_path=metadata_path,
-        archived_file_count=archived_file_count,
-        empty_directory_count=empty_directory_count,
+        archived_file_count=archive_inventory.archived_file_count,
+        empty_directory_count=archive_inventory.empty_directory_count,
         created_utc=created_utc,
         skipped_symlinks_rel=archive_inventory.skipped_symlinks_rel,
     )

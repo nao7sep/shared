@@ -32,6 +32,14 @@ class ArchiveInventory:
     scanned_directories_count: int
     scanned_files_count: int
 
+    @property
+    def archived_file_count(self) -> int:
+        return len(self.archived_files_rel)
+
+    @property
+    def empty_directory_count(self) -> int:
+        return len(self.empty_directories_rel)
+
 
 @dataclass(frozen=True)
 class SnapshotMetadata:

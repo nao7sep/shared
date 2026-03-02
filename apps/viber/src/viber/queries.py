@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .errors import ProjectNotFoundError, TaskNotFoundError
 from .models import (
     Assignment,
     AssignmentStatus,
@@ -15,6 +14,7 @@ from .models import (
     Task,
     assignment_key,
 )
+from .service import get_project, get_task
 
 
 @dataclass
@@ -62,9 +62,7 @@ def pending_by_project(db: Database, project_id: int) -> list[tuple[Task, Assign
     Raises ProjectNotFoundError if project not found.
     Returns empty list if project is SUSPENDED or DEPRECATED (view excludes them).
     """
-    project = _find_project(db, project_id)
-    if project is None:
-        raise ProjectNotFoundError(project_id)
+    project = get_project(db, project_id)
     if project.state != ProjectState.ACTIVE:
         return []
 
@@ -88,9 +86,7 @@ def pending_by_task(
     Ordered by group name asc, project name asc.
     Raises TaskNotFoundError if task not found.
     """
-    task = _find_task(db, task_id)
-    if task is None:
-        raise TaskNotFoundError(task_id)
+    task = get_task(db, task_id)
 
     group_map = {g.id: g for g in db.groups}
     results: list[tuple[Project, Group, Assignment]] = []
@@ -109,17 +105,3 @@ def pending_by_task(
 
     results.sort(key=lambda x: (x[1].name.lower(), x[0].name.lower()))
     return results
-
-
-def _find_project(db: Database, project_id: int) -> Project | None:
-    for p in db.projects:
-        if p.id == project_id:
-            return p
-    return None
-
-
-def _find_task(db: Database, task_id: int) -> Task | None:
-    for t in db.tasks:
-        if t.id == task_id:
-            return t
-    return None

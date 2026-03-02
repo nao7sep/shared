@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from .models import Assignment, AssignmentStatus, Database, Group, Project, ProjectState, Task
+from .models import Database, Group, Project, Task
 
 _LOCAL_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -51,25 +51,6 @@ def format_task(task: Task, db: Database) -> str:
     return f"{format_task_ref(task)} | {group_label} | {created}"
 
 
-def format_assignment(
-    assignment: Assignment, project: Project, task: Task
-) -> str:
-    status = assignment.status.value
-    handled = (
-        format_local_time(assignment.handled_utc)
-        if assignment.handled_utc is not None
-        else "-"
-    )
-    comment = assignment.comment if assignment.comment else "-"
-    return (
-        f"{format_project_ref(project)}"
-        f" | {format_task_ref(task)}"
-        f" | {status}"
-        f" | {handled}"
-        f" | {comment}"
-    )
-
-
 def format_local_time(utc_iso: str) -> str:
     """Parse UTC ISO string, convert to local time, format as 'YYYY-MM-DD HH:MM:SS'."""
     # Handle both '+00:00' and 'Z' suffixes
@@ -78,21 +59,8 @@ def format_local_time(utc_iso: str) -> str:
     return dt_utc.strftime(_LOCAL_TIME_FORMAT)
 
 
-def format_status_mark(status: AssignmentStatus) -> str:
-    """Return a text mark for CLI display (not HTML)."""
-    if status == AssignmentStatus.OK:
-        return "ok"
-    if status == AssignmentStatus.NAH:
-        return "nah"
-    return AssignmentStatus.PENDING.value
-
-
 def _resolve_group_label(db: Database, group_id: int) -> str:
     for g in db.groups:
         if g.id == group_id:
             return format_group_ref(g)
     return f"g{group_id} (not found)"
-
-
-def describe_project_state(state: ProjectState) -> str:
-    return state.value
