@@ -57,7 +57,7 @@ class ChatFileCommandHandlers:
                 await save_chat(new_path, load_chat(new_path))
                 return f"Created new chat (not opened): {new_path}"
             if not self._is_yes_choice(answer):
-                return "Cancelled"
+                return "Canceled"
 
         # Signal to REPL to switch to new chat.
         return CommandSignal(kind="new_chat", chat_path=new_path)
@@ -89,7 +89,7 @@ class ChatFileCommandHandlers:
             )
 
         if not selected_path:
-            return "Chat open cancelled"
+            return "Chat open canceled"
 
         # Verify file exists and is valid
         try:
@@ -148,11 +148,11 @@ class ChatFileCommandHandlers:
             )
 
             if not selected_path:
-                return "Rename cancelled"
+                return "Rename canceled"
 
             new_name = (await self._deps._prompt_text("Enter new name: ")).strip()
             if not new_name:
-                return "Rename cancelled"
+                return "Rename canceled"
 
             # Perform rename
             try:
@@ -217,7 +217,7 @@ class ChatFileCommandHandlers:
             )
 
             if not selected_path:
-                return "Delete cancelled"
+                return "Delete canceled"
         else:
             # Parse argument
             name = args.strip()
@@ -242,7 +242,7 @@ class ChatFileCommandHandlers:
         # Confirm deletion
         await self._deps._notify(f"WARNING: This will permanently delete: {Path(selected_path).name}")
         if not await self._deps._confirm_yes("Type 'yes' to confirm deletion: "):
-            return "Deletion cancelled"
+            return "Deletion canceled"
 
         # Perform deletion
         try:

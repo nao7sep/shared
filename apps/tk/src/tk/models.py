@@ -11,7 +11,7 @@ class TaskStatus(str, Enum):
 
     PENDING = "pending"
     DONE = "done"
-    CANCELLED = "cancelled"
+    CANCELED = "canceled"
 
 
 _VALID_TASK_STATUSES = {status.value for status in TaskStatus}
@@ -239,7 +239,7 @@ class GroupedTaskDisplay:
 
     pending: list[Task] = field(default_factory=list)
     done: list[tuple[str, list[Task]]] = field(default_factory=list)
-    cancelled: list[tuple[str, list[Task]]] = field(default_factory=list)
+    canceled: list[tuple[str, list[Task]]] = field(default_factory=list)
 
 
 @dataclass

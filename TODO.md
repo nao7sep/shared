@@ -13,7 +13,7 @@
 - system to save done-on-mac files on windows persistently
 - tool to help organize personal videos/photos
 - tool to scan/translate/share paper documents
-- catalogue of tools and work reports
+- catalog of tools and work reports
 - regenerate polychat's publish.py. uv-migration-related changes are messy
 - it might be fun to have a mini photo-stream-ish journal where i can add screenshots. is that called x?
 - generalize publish.py as a any-python-app tool
@@ -21,9 +21,11 @@
 - extract tasks and ideas from voice recordings
 - play with x api. now we can pay as we go
 - polychat: lime for user messages?
-- check all apps for dict usage. polychat in serious state :'(
 
 ## History
+
+### 2026-03-03
+- ✅ check all apps for dict usage. polychat in serious state :'( => refactored 20000 times
 
 ### 2026-02-28
 - ✅ revzip: extraction should restore timestamps => checked. no timezone support due to zip limitations, but everything else is ok

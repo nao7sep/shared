@@ -19,7 +19,9 @@ Developer profile and engineering principles for AI-assisted development.
 ## Background
 
 - Strong background in C, C++, and C#/.NET on Windows. Transitioning to Python and TypeScript on Mac.
-- English for all code, comments, commits, and documentation.
+- English for all code, comments, commits, documentation, specs, prompts, tests, and user-facing text.
+- Use American English spelling by default.
+- If existing text uses British English, treat it as a typo and normalize it to American English unless I explicitly ask for British English or the exact spelling is externally fixed.
 
 ## Collaboration
 

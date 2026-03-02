@@ -44,10 +44,10 @@ class TestListPendingData:
         assert items[2].task.text == "Third"
 
     def test_list_pending_data_filters_handled(self, sample_session):
-        """Test that done/cancelled tasks are excluded."""
+        """Test that done/canceled tasks are excluded."""
         result = commands.list_pending_data(sample_session)
 
-        # sample_session has 1 pending, 1 done, 1 cancelled
+        # sample_session has 1 pending, 1 done, 1 canceled
         items = result.items
         assert len(items) == 1
         assert all(item.task.status == "pending" for item in items)
@@ -220,11 +220,11 @@ class TestCmdCancel:
     """Test cmd_cancel function."""
 
     def test_cmd_cancel_marks_task(self, sample_session):
-        """Test that cmd_cancel sets status to 'cancelled'."""
+        """Test that cmd_cancel sets status to 'canceled'."""
         commands.cmd_cancel(sample_session, 0)
 
         task = sample_session.tasks.tasks[0]
-        assert task.status == "cancelled"
+        assert task.status == "canceled"
 
     def test_cmd_cancel_with_note(self, sample_session):
         """Test that cmd_cancel saves note."""
@@ -259,10 +259,10 @@ class TestCmdDelete:
     """Test cmd_delete function."""
 
     def test_cmd_delete_without_confirm(self, sample_session):
-        """Test that deletion without confirm is cancelled."""
+        """Test that deletion without confirm is canceled."""
         result = commands.cmd_delete(sample_session, 0, confirm=False)
 
-        assert result == "Deletion cancelled."
+        assert result == "Deletion canceled."
         assert len(sample_session.tasks.tasks) == 3
 
     def test_cmd_delete_with_confirm(self, sample_session):

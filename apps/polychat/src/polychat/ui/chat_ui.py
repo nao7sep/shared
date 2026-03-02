@@ -31,7 +31,7 @@ def prompt_chat_selection(
         allow_cancel: Whether to allow cancellation
 
     Returns:
-        Absolute path to selected chat, or None if cancelled
+        Absolute path to selected chat, or None if canceled
     """
     chats = list_chats(chats_dir)
 

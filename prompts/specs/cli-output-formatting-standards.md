@@ -73,6 +73,28 @@ Multiple warnings or errors about the same operation are a single segment. Do no
 - MUST print explicit empty-state feedback when there is nothing to show.
 - MUST only show follow-up selection prompts when there is something selectable.
 
+### Key-Value Alignment
+
+When a block of output contains multiple `key: value` lines:
+
+- MUST pad every key (including its colon) to the same width so that all values start at the same column.
+- The column is: `len(longest key with colon) + 2`.
+- The rule applies globally across the entire block — not per sub-section within it.
+
+Correct:
+```text
+Directory:  /path/to/dir
+App:        Preview
+Nav key:    Right
+```
+
+Incorrect — values start at different columns:
+```text
+Directory: /path/to/dir
+App: Preview
+Nav key: Right
+```
+
 ### Borders and Dividers
 
 - SHOULD avoid heavy border usage when spacing and headings are sufficient.

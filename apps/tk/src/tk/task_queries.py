@@ -15,9 +15,9 @@ def group_tasks_for_display(tasks: list[Task]) -> GroupedTaskDisplay:
     pending.sort(key=lambda t: t.created_utc)
 
     done_groups: list[tuple[str, list[Task]]] = []
-    cancelled_groups: list[tuple[str, list[Task]]] = []
+    canceled_groups: list[tuple[str, list[Task]]] = []
 
-    for status, target in ((TaskStatus.DONE, done_groups), (TaskStatus.CANCELLED, cancelled_groups)):
+    for status, target in ((TaskStatus.DONE, done_groups), (TaskStatus.CANCELED, canceled_groups)):
         handled_with_indices = [
             (i, task)
             for i, task in enumerate(tasks)
@@ -28,7 +28,7 @@ def group_tasks_for_display(tasks: list[Task]) -> GroupedTaskDisplay:
             (group.date, [item.task for item in group.items]) for group in grouped
         )
 
-    return GroupedTaskDisplay(pending=pending, done=done_groups, cancelled=cancelled_groups)
+    return GroupedTaskDisplay(pending=pending, done=done_groups, canceled=canceled_groups)
 
 
 def group_handled_tasks(

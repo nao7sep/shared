@@ -280,7 +280,7 @@ The current test that secret mode should follow later committed chat mutations a
 No committed mutation should occur for:
 
 - failed retry attempts
-- cancelled retry attempts
+- canceled retry attempts
 
 Existing attempts should remain available unless the retry state is explicitly cleared or invalidated.
 
@@ -290,7 +290,7 @@ No committed mutation should occur for:
 
 - successful secret turns
 - failed secret turns
-- cancelled secret turns
+- canceled secret turns
 
 Recommended cancel behavior:
 

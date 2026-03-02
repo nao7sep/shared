@@ -30,12 +30,13 @@ def render_loaded_parameters(
         if resolved_paths.ignore_file_abs is not None
         else "(none)"
     )
+    # Longest key is "Ignore patterns:" (16 chars) → values at column 18.
     return [
         "Loaded parameters:",
-        f"Source: {resolved_paths.source_dir_abs}",
-        f"Destination: {resolved_paths.dest_dir_abs}",
-        f"Ignore file: {ignore_file}",
-        f"Ignore patterns: {len(ignore_rule_set.patterns_raw)}",
+        f"{'Source:':<18}{resolved_paths.source_dir_abs}",
+        f"{'Destination:':<18}{resolved_paths.dest_dir_abs}",
+        f"{'Ignore file:':<18}{ignore_file}",
+        f"{'Ignore patterns:':<18}{len(ignore_rule_set.patterns_raw)}",
     ]
 
 

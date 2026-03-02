@@ -114,7 +114,7 @@ async def test_cancel_retry_clears_retry_state(orchestrator: ChatOrchestrator) -
     )
 
     assert isinstance(action, PrintAction)
-    assert action.message == "Cancelled retry mode"
+    assert action.message == "Canceled retry mode"
     assert orchestrator.manager.retry.active is False
     assert orchestrator.manager.retry.latest_attempt_id() is None
     with pytest.raises(ValueError, match="Not in retry mode"):

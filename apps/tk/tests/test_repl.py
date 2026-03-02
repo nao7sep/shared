@@ -170,20 +170,20 @@ class TestPrepareInteractiveCommand:
         assert captured["call"] == (sample_session, 0, "Finished", "2026-02-08")
         assert sample_session.last_list == []
 
-    def test_cancelled_prompt_result_clears_mapping(self, sample_session, monkeypatch):
-        """Test that cancelled interactive flow clears mapping and returns marker text."""
+    def test_canceled_prompt_result_clears_mapping(self, sample_session, monkeypatch):
+        """Test that canceled interactive flow clears mapping and returns marker text."""
         sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
 
         monkeypatch.setattr(repl_module.commands, "get_default_subjective_date", lambda session: "2026-02-09")
         monkeypatch.setattr(
             repl_module.prompts,
             "collect_done_cancel_prompts",
-            lambda **kwargs: "CANCELLED",
+            lambda **kwargs: "CANCELED",
         )
 
         result = repl_module._prepare_interactive_command("done", ["1"], {}, sample_session)
 
-        assert result == "[Operation Cancelled]"
+        assert result == "[Operation Canceled]"
         assert sample_session.last_list == []
 
     def test_delete_prompt_is_skipped_for_invalid_usage(self, sample_session, monkeypatch):

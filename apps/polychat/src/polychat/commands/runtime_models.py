@@ -39,7 +39,7 @@ class RuntimeModelCommandHandlers:
 
         answer = (await self._deps._prompt_text("\n".join(prompt_lines) + "\nSelection: ")).strip()
         if not answer:
-            return None, "Model selection cancelled."
+            return None, "Model selection canceled."
         if not answer.isdigit():
             return None, "Invalid selection. Enter a number from the list."
 
@@ -64,7 +64,7 @@ class RuntimeModelCommandHandlers:
         if selection_error:
             return None, selection_error
         if selected_model is None:
-            return None, "Model selection cancelled."
+            return None, "Model selection canceled."
         return selected_model, ""
 
     async def set_model(self, args: str) -> str:
@@ -103,7 +103,7 @@ class RuntimeModelCommandHandlers:
         if resolution_error:
             return resolution_error
         if selected_model is None:
-            return "Model selection cancelled."
+            return "Model selection canceled."
         assert selected_model is not None
 
         model_provider = get_provider_for_model(selected_model)
@@ -165,7 +165,7 @@ class RuntimeModelCommandHandlers:
         if resolution_error:
             return resolution_error
         if selected_model is None:
-            return "Helper model selection cancelled."
+            return "Helper model selection canceled."
 
         provider = get_provider_for_model(selected_model)
         if provider is None:

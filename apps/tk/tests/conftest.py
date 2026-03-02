@@ -57,7 +57,7 @@ def sample_tasks_data():
         ),
         Task(
             text="Task three",
-            status="cancelled",
+            status="canceled",
             created_utc="2026-02-03T10:00:00+00:00",
             handled_utc="2026-02-03T12:00:00+00:00",
             subjective_date="2026-02-03",

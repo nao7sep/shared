@@ -111,8 +111,8 @@ def test_setup_command_runs_wizard_then_starts_repl(monkeypatch):
     assert Path(mock_repl_loop.await_args.args[5]).resolve() == Path(profile_path).resolve()
 
 
-def test_setup_command_exits_when_wizard_is_cancelled(monkeypatch):
-    """Cancelled setup should stop before profile load or REPL startup."""
+def test_setup_command_exits_when_wizard_is_canceled(monkeypatch):
+    """Canceled setup should stop before profile load or REPL startup."""
     monkeypatch.setattr(sys, "argv", ["polychat", "setup"])
 
     with (

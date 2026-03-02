@@ -274,13 +274,13 @@ async def test_model_ambiguous_match_prompts_for_selection(mock_session_manager)
 
 
 @pytest.mark.asyncio
-async def test_model_ambiguous_match_cancelled(mock_session_manager):
+async def test_model_ambiguous_match_canceled(mock_session_manager):
     interaction = _InteractionStub(prompt_text_result="")
     command_handler = CommandHandler(mock_session_manager, interaction=interaction)
 
     result = await command_handler.set_model("g5")
 
-    assert result == "Model selection cancelled."
+    assert result == "Model selection canceled."
 
 
 @pytest.mark.asyncio

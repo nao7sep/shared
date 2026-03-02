@@ -392,7 +392,7 @@ class TestRetryModeSignals:
 
     @pytest.mark.asyncio
     async def test_cancel_retry_signal(self, orchestrator):
-        """Test cancelling retry mode."""
+        """Test canceling retry mode."""
         # Enter retry mode first
         orchestrator.manager.retry.enter([ChatMessage.new_user("Test")])
 
@@ -401,12 +401,12 @@ class TestRetryModeSignals:
         )
 
         assert isinstance(action, PrintAction)
-        assert "Cancelled retry mode" in action.message
+        assert "Canceled retry mode" in action.message
         assert orchestrator.manager.retry.active is False
 
     @pytest.mark.asyncio
     async def test_cancel_retry_when_not_in_retry_mode(self, orchestrator):
-        """Test cancelling retry when not in retry mode."""
+        """Test canceling retry when not in retry mode."""
         action = await orchestrator.handle_command_response(
             CommandSignal(kind="cancel_retry"),
         )

@@ -283,7 +283,7 @@ class ResponseHandlersMixin:
 
         if mode == "normal":
             if not state.has_chat_context:
-                return PrintAction(message="[Message cancelled]")
+                return PrintAction(message="[Message canceled]")
             assert chat_path is not None
             assert chat_data is not None
             if should_release_for_cancel(state):
@@ -298,4 +298,4 @@ class ResponseHandlersMixin:
         if mode in ("retry", "secret") and state.has_assistant_hex_id:
             self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
 
-        return PrintAction(message="[Message cancelled]")
+        return PrintAction(message="[Message canceled]")

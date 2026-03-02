@@ -466,7 +466,7 @@ def test_undo_entity_project_with_confirmation(monkeypatch: pytest.MonkeyPatch) 
     assert db.assignments[assignment_key(p.id, t2.id)].comment is None
 
 
-def test_undo_entity_project_cancelled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_undo_entity_project_canceled(monkeypatch: pytest.MonkeyPatch) -> None:
     from viber.command_parser import UndoEntityCommand
     from viber.service import resolve_assignment
 

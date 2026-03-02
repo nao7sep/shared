@@ -19,7 +19,7 @@ from tk.models import (
 from tk.session import Session
 from tk.validation import validate_date_format
 
-_HANDLED_STATUSES = (TaskStatus.DONE, TaskStatus.CANCELLED)
+_HANDLED_STATUSES = (TaskStatus.DONE, TaskStatus.CANCELED)
 
 
 def _validate_positive_int(name: str, value: int | None) -> None:
@@ -207,8 +207,8 @@ def cmd_cancel(
     note: str | None = None,
     date_str: str | None = None,
 ) -> str:
-    """Mark a task as cancelled."""
-    return _handle_task(session, array_index, TaskStatus.CANCELLED, note, date_str)
+    """Mark a task as canceled."""
+    return _handle_task(session, array_index, TaskStatus.CANCELED, note, date_str)
 
 
 def cmd_edit(session: Session, array_index: int, text: str) -> str:
@@ -237,7 +237,7 @@ def cmd_delete(session: Session, array_index: int, confirm: bool = False) -> str
         raise UsageError("Task not found")
 
     if not confirm:
-        return "Deletion cancelled."
+        return "Deletion canceled."
 
     if not tasks_data.delete_task(array_index):
         raise UsageError("Task not found")
@@ -257,7 +257,7 @@ def cmd_note(session: Session, array_index: int, note: str | None = None) -> str
     if not task:
         raise UsageError("Task not found")
     if task.status == TaskStatus.PENDING:
-        raise ValidationError("Cannot set note on pending task. Mark it done or cancelled first.")
+        raise ValidationError("Cannot set note on pending task. Mark it done or canceled first.")
 
     if not tasks_data.update_task(array_index, note=note):
         raise UsageError("Task not found")
@@ -279,7 +279,7 @@ def cmd_date(session: Session, array_index: int, date_str: str) -> str:
     if not task:
         raise UsageError("Task not found")
     if task.status == TaskStatus.PENDING:
-        raise ValidationError("Cannot set date on pending task. Mark it done or cancelled first.")
+        raise ValidationError("Cannot set date on pending task. Mark it done or canceled first.")
 
     if not tasks_data.update_task(array_index, subjective_date=date_str):
         raise UsageError("Task not found")

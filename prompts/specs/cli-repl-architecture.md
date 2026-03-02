@@ -207,7 +207,7 @@ When Compose mode is active, the prompt prefix must explicitly display the submi
 |---------|---------|
 | At the main prompt (text being typed) | Clears the current line buffer; returns a fresh prompt |
 | Inside a wizard or sub-prompt | Cancels the flow; returns the user to the main REPL prompt |
-| During a blocking or async operation | Safely aborts the operation (rolling back if necessary); prints `[Operation Cancelled]`; returns to main prompt |
+| During a blocking or async operation | Safely aborts the operation (rolling back if necessary); prints `[Operation Canceled]`; returns to main prompt |
 
 All three cases must be handled via explicit interrupt catching in the execution layer. An unhandled `Ctrl+C` that propagates to the process level is a defect.
 

@@ -114,8 +114,9 @@ def _run_archive_action(
         f"{archive_result.archived_file_count} file(s) and "
         f"{archive_result.empty_directory_count} empty directory(s)."
     )
-    print(f"Created ZIP: {archive_result.zip_path.name}")
-    print(f"Created metadata: {archive_result.metadata_path.name}")
+    # Longest key is "Created metadata:" (17 chars) → values at column 19.
+    print(f"{'Created ZIP:':<19}{archive_result.zip_path.name}")
+    print(f"{'Created metadata:':<19}{archive_result.metadata_path.name}")
 
 
 def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:

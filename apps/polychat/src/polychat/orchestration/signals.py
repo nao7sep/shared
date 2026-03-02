@@ -261,7 +261,7 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
 
         self.manager.retry.exit()
 
-        return PrintAction(message="Cancelled retry mode")
+        return PrintAction(message="Canceled retry mode")
 
     def _handle_clear_secret_context(self) -> OrchestratorAction:
         """Handle clear-secret-context signal."""

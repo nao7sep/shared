@@ -128,7 +128,7 @@ class TestGenerateTodo:
         tasks = [
             Task(text="Done task", status="done", created_utc="2026-02-09T10:00:00+00:00",
                  handled_utc="2026-02-09T15:00:00+00:00", subjective_date="2026-02-09"),
-            Task(text="Cancelled task", status="cancelled", created_utc="2026-02-09T10:00:00+00:00",
+            Task(text="Canceled task", status="canceled", created_utc="2026-02-09T10:00:00+00:00",
                  handled_utc="2026-02-09T16:00:00+00:00", subjective_date="2026-02-09"),
         ]
 
@@ -136,15 +136,15 @@ class TestGenerateTodo:
 
         content = output_path.read_text()
         assert "✅ Done task" in content
-        assert "❌ Cancelled task" in content
+        assert "❌ Canceled task" in content
 
     def test_generate_todo_mixed_statuses(self, temp_dir):
-        """Test that done and cancelled tasks are merged by date."""
+        """Test that done and canceled tasks are merged by date."""
         output_path = temp_dir / "TODO.md"
         tasks = [
             Task(text="Done task", status="done", created_utc="2026-02-09T10:00:00+00:00",
                  handled_utc="2026-02-09T15:00:00+00:00", subjective_date="2026-02-09"),
-            Task(text="Cancelled task", status="cancelled", created_utc="2026-02-09T11:00:00+00:00",
+            Task(text="Canceled task", status="canceled", created_utc="2026-02-09T11:00:00+00:00",
                  handled_utc="2026-02-09T16:00:00+00:00", subjective_date="2026-02-09"),
         ]
 
@@ -154,4 +154,4 @@ class TestGenerateTodo:
         # Both should be under the same date heading
         assert content.count("### 2026-02-09") == 1
         assert "✅ Done task" in content
-        assert "❌ Cancelled task" in content
+        assert "❌ Canceled task" in content

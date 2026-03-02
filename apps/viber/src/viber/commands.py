@@ -378,9 +378,10 @@ def _exec_resolve(
     verb_label = "ok" if command.status == AssignmentStatus.OK else "nah"
 
     print(f"Resolving as '{verb_label}':")
-    print(f"  Project: {format_project_ref(project)}")
-    print(f"  Task:    {format_task_ref(task)}")
-    print(f"  Current: {assignment.status.value}")
+    # Longest key is "Project:" or "Current:" (8 chars) → values at column 10 after indent.
+    print(f"  {'Project:':<10}{format_project_ref(project)}")
+    print(f"  {'Task:':<10}{format_task_ref(task)}")
+    print(f"  {'Current:':<10}{assignment.status.value}")
 
     try:
         comment_raw = input("Comment (optional, Enter to skip): ").strip()

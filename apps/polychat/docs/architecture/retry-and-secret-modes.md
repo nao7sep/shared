@@ -268,9 +268,9 @@ After `/apply`:
 u1, a1, u2, a2, u3, a3
 ```
 
-### Cancelling Retry
+### Canceling Retry
 
-Cancelling retry means:
+Canceling retry means:
 
 - discard all retry attempts
 - exit retry mode
@@ -596,7 +596,7 @@ The test suite should explicitly cover the clarified contract.
 3. Multiple retry attempts can be created before apply.
 4. Applying a candidate replaces the last committed interaction atomically.
 5. Retrying trailing `e3` replaces it with `u3, a3`.
-6. Cancelling retry leaves committed history unchanged.
+6. Canceling retry leaves committed history unchanged.
 
 ### Secret Tests
 

@@ -26,7 +26,7 @@ case $choice in
         uv run pytest tests/test_models_integration.py::test_default_models_work -v -s -m integration
         ;;
     3)
-        echo "Cancelled."
+        echo "Canceled."
         ;;
     *)
         echo "ERROR: Invalid choice."

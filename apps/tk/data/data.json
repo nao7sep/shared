@@ -2,7 +2,7 @@
   "tasks": [
     {
       "text": "branch management best practices",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:06:57.681830+00:00",
       "handled_utc": "2026-02-01T22:16:20.423052+00:00",
       "subjective_date": "2026-02-02",
@@ -10,7 +10,7 @@
     },
     {
       "text": "check all existing tasks to draw a bigger picture. currently work is in bits",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:07:20.062514+00:00",
       "handled_utc": "2026-02-12T03:25:30.973898+00:00",
       "subjective_date": "2026-02-12",
@@ -18,7 +18,7 @@
     },
     {
       "text": "tool to compress/extract entire code directory, while gitignoring things",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:07:32.168027+00:00",
       "handled_utc": "2026-02-01T23:39:40.285114+00:00",
       "subjective_date": "2026-02-02",
@@ -82,7 +82,7 @@
     },
     {
       "text": "hello world python gui apps using different packages",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:09:21.520636+00:00",
       "handled_utc": "2026-02-12T03:37:17.427304+00:00",
       "subjective_date": "2026-02-12",
@@ -114,7 +114,7 @@
     },
     {
       "text": "update HOW.md of tk",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:09:54.733185+00:00",
       "handled_utc": "2026-02-01T09:36:41.371382+00:00",
       "subjective_date": "2026-02-01",
@@ -210,7 +210,7 @@
     },
     {
       "text": "generate doc on commonly used metadata",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:16:52.672163+00:00",
       "handled_utc": "2026-02-01T09:20:04.553097+00:00",
       "subjective_date": "2026-01-30",
@@ -218,7 +218,7 @@
     },
     {
       "text": "tool to view conv logs",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:17:05.465250+00:00",
       "handled_utc": "2026-02-01T09:20:08.846864+00:00",
       "subjective_date": "2026-01-30",
@@ -226,7 +226,7 @@
     },
     {
       "text": "relearn markdown syntax AND make or find cheat sheet",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T09:17:11.360348+00:00",
       "handled_utc": "2026-02-01T09:20:11.917885+00:00",
       "subjective_date": "2026-01-30",
@@ -234,7 +234,7 @@
     },
     {
       "text": "try mail/sms apis",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T10:43:29.292143+00:00",
       "handled_utc": "2026-02-12T03:37:44.082534+00:00",
       "subjective_date": "2026-02-12",
@@ -250,7 +250,7 @@
     },
     {
       "text": "learn different ways to split text into chunks for embedding",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T10:48:23.803997+00:00",
       "handled_utc": "2026-02-12T03:38:03.823083+00:00",
       "subjective_date": "2026-02-12",
@@ -258,7 +258,7 @@
     },
     {
       "text": "try deepl/google translation apis",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T10:49:20.259796+00:00",
       "handled_utc": "2026-02-12T03:38:09.472127+00:00",
       "subjective_date": "2026-02-12",
@@ -266,7 +266,7 @@
     },
     {
       "text": "try openai/google transcription apis",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-01T10:49:41.950698+00:00",
       "handled_utc": "2026-02-12T03:38:14.262445+00:00",
       "subjective_date": "2026-02-12",
@@ -298,7 +298,7 @@
     },
     {
       "text": "docs on config-related python packages",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-02T00:40:47.439179+00:00",
       "handled_utc": "2026-02-05T04:25:40.776376+00:00",
       "subjective_date": "2026-02-05",
@@ -314,7 +314,7 @@
     },
     {
       "text": "tk: smoother workflow. must be something my windows user wife could use",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-04T00:24:16.676655+00:00",
       "handled_utc": "2026-02-05T04:27:05.887652+00:00",
       "subjective_date": "2026-02-05",
@@ -322,7 +322,7 @@
     },
     {
       "text": "tk: task addition without \"add\"?",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-04T00:25:17.366382+00:00",
       "handled_utc": "2026-02-05T04:27:27.411717+00:00",
       "subjective_date": "2026-02-05",
@@ -330,7 +330,7 @@
     },
     {
       "text": "add prefix _ to what.md and how.md",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-04T00:31:45.416106+00:00",
       "handled_utc": "2026-02-05T00:19:39.364483+00:00",
       "subjective_date": "2026-02-05",
@@ -354,7 +354,7 @@
     },
     {
       "text": "introduce tk, my first python app that nobody else will use :)",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-08T07:18:50.180050+00:00",
       "handled_utc": "2026-02-26T00:49:08.961474+00:00",
       "subjective_date": "2026-02-26",
@@ -466,7 +466,7 @@
     },
     {
       "text": "zip/rar archiver that works just like i want it to",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-19T00:18:32.153155+00:00",
       "handled_utc": "2026-02-25T03:09:31.172558+00:00",
       "subjective_date": "2026-02-25",
@@ -505,7 +505,7 @@
       "note": "refined"
     },
     {
-      "text": "catalogue of tools and work reports",
+      "text": "catalog of tools and work reports",
       "status": "pending",
       "created_utc": "2026-02-19T00:31:07.790626+00:00",
       "handled_utc": null,
@@ -514,7 +514,7 @@
     },
     {
       "text": "report on migration, tk, polychat",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-19T00:32:39.744052+00:00",
       "handled_utc": "2026-02-23T06:16:52.422649+00:00",
       "subjective_date": "2026-02-23",
@@ -554,7 +554,7 @@
     },
     {
       "text": "regenerate everything in shared/docs. uv related updates everywhere",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-19T04:58:26.878636+00:00",
       "handled_utc": "2026-02-23T06:18:24.419430+00:00",
       "subjective_date": "2026-02-23",
@@ -578,7 +578,7 @@
     },
     {
       "text": "maybe, new mechanism to periodically review documents and source files. random checks to fully utilize weekly limits of coding agents",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-19T05:09:13.437044+00:00",
       "handled_utc": "2026-02-23T06:20:06.601944+00:00",
       "subjective_date": "2026-02-23",
@@ -586,7 +586,7 @@
     },
     {
       "text": "maybe, separate repo for one-shot docs?",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-19T05:10:38.623656+00:00",
       "handled_utc": "2026-02-23T06:22:08.029772+00:00",
       "subjective_date": "2026-02-23",
@@ -618,7 +618,7 @@
     },
     {
       "text": "polychat: notifications?",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-21T21:45:41.392105+00:00",
       "handled_utc": "2026-02-25T03:16:09.746422+00:00",
       "subjective_date": "2026-02-25",
@@ -626,7 +626,7 @@
     },
     {
       "text": "polychat: copy command to copy selected message to clipboard?",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-21T21:46:07.777124+00:00",
       "handled_utc": "2026-02-25T03:16:55.061278+00:00",
       "subjective_date": "2026-02-25",
@@ -634,7 +634,7 @@
     },
     {
       "text": "polychat: adjustable ttl values?",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-21T21:46:32.109727+00:00",
       "handled_utc": "2026-02-23T06:23:40.552752+00:00",
       "subjective_date": "2026-02-23",
@@ -658,7 +658,7 @@
     },
     {
       "text": "ensure windows compatibility of polychat",
-      "status": "cancelled",
+      "status": "canceled",
       "created_utc": "2026-02-25T03:20:03.610689+00:00",
       "handled_utc": "2026-02-27T02:15:28.266348+00:00",
       "subjective_date": "2026-02-27",
@@ -722,11 +722,11 @@
     },
     {
       "text": "check all apps for dict usage. polychat in serious state :'(",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-02-28T00:01:09.099850+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
-      "note": null
+      "handled_utc": "2026-03-02T23:37:01.050884+00:00",
+      "subjective_date": "2026-03-03",
+      "note": "refactored 20000 times"
     }
   ]
 }

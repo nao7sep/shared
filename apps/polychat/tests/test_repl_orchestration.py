@@ -237,7 +237,7 @@ class TestRetryModeOrchestration:
         assert chat_data.messages[1].content == ["Better answer"]
 
     def test_cancel_retry_clears_state(self):
-        """Test cancelling retry clears retry state."""
+        """Test canceling retry clears retry state."""
         session = SessionState(
             current_ai="claude",
             current_model="claude-haiku-4-5",

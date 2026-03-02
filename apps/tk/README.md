@@ -93,7 +93,7 @@ Numbers are only valid until you run another command that changes the list.
 
 ### Interactive Prompts
 
-When marking tasks as done or cancelled, tk prompts for details:
+When marking tasks as done or canceled, tk prompts for details:
 
 ```
 > d 1
@@ -162,7 +162,7 @@ All commands support shortcuts shown in parentheses.
 > help
 ```
 
-**history (h)** `[--days N] [--working-days N]` - Show completed/cancelled tasks
+**history (h)** `[--days N] [--working-days N]` - Show completed/canceled tasks
 ```
 > h                      # all history
 > h --days 7            # last 7 calendar days
@@ -180,7 +180,7 @@ All commands support shortcuts shown in parentheses.
 > d 1
 ```
 
-**cancel (c)** `<num>` - Mark as cancelled (with interactive prompts)
+**cancel (c)** `<num>` - Mark as canceled (with interactive prompts)
 ```
 > c 2
 ```
@@ -227,7 +227,7 @@ Generated automatically after each change (if `auto_sync: true`):
 
 ### 2026-02-06
 - ✅ completed task => note here
-- ❌ cancelled task
+- ❌ canceled task
 
 ### 2026-02-05
 - ✅ another done task
@@ -238,7 +238,7 @@ Generated automatically after each change (if `auto_sync: true`):
 - **Use help command:** Type `help` in REPL to see available commands
 - **Numbers reset:** After any command that changes state, run `list` or `history` again to get fresh numbers
 - **Use shortcuts:** `a`, `l`, `d`, `c`, `e` for speed
-- **Ctrl+C cancels:** Interactive prompts (done/cancel/delete) can be cancelled anytime
+- **Ctrl+C cancels:** Interactive prompts (done/cancel/delete) can be canceled anytime
 - **Update after handling:** Use `note <num> [<text>]` and `date <num> <YYYY-MM-DD>` on handled tasks
 - **Unknown handled date:** If a handled task has no subjective date (from manual JSON edits), it appears under `unknown` in both `history` output and `TODO.md`
 - **No duplicate checking:** Intentional design choice - just cancel or delete if needed

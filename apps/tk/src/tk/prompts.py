@@ -13,10 +13,10 @@ def collect_done_cancel_prompts(
 
     Args:
         task: Task being handled
-        status: "done" or "cancelled"
+        status: "done" or "canceled"
         default_date: Default subjective date to use
     Returns:
-        DoneCancelResult with note and date, or "CANCELLED" string if user cancels
+        DoneCancelResult with note and date, or "CANCELED" string if user cancels
 
     Raises:
         KeyboardInterrupt: If user presses Ctrl+C (caller should handle)
@@ -41,7 +41,7 @@ def collect_done_cancel_prompts(
 
     except KeyboardInterrupt:
         print()
-        return "CANCELLED"
+        return "CANCELED"
 
 
 def collect_delete_confirmation(task: Task) -> bool:

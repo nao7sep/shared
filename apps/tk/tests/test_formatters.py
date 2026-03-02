@@ -65,7 +65,7 @@ class TestFormatHistoryList:
                     date="2026-02-09",
                     items=[
                         TaskListItem(display_num=1, array_index=0, task=_task("Shipped", "done")),
-                        TaskListItem(display_num=2, array_index=1, task=_task("Deferred", "cancelled", note="Blocked")),
+                        TaskListItem(display_num=2, array_index=1, task=_task("Deferred", "canceled", note="Blocked")),
                     ],
                 ),
                 HistoryGroup(

@@ -165,12 +165,12 @@ class TestExecuteCommand:
             dispatcher.execute_command("done", ["abc"], {}, sample_session)
 
     def test_history_rejects_unknown_flag(self, sample_session):
-        """Test that history rejects unrecognised flags."""
+        """Test that history rejects unrecognized flags."""
         with pytest.raises(ValueError, match="Unknown flags: --bad-flag"):
             dispatcher.execute_command("history", [], {"bad_flag": 1}, sample_session)
 
     def test_delete_rejects_unknown_flag(self, sample_session):
-        """Test that delete rejects unrecognised flags."""
+        """Test that delete rejects unrecognized flags."""
         sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
         with pytest.raises(ValueError, match="Unknown flags: --unknown"):
             dispatcher.execute_command("delete", [1], {"unknown": True}, sample_session)

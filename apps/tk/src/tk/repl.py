@@ -26,7 +26,7 @@ _NO_FLAG_COMMANDS = frozenset(
 )
 _HANDLED_COMMAND_TO_STATUS = {
     "done": TaskStatus.DONE,
-    "cancel": TaskStatus.CANCELLED,
+    "cancel": TaskStatus.CANCELED,
 }
 
 
@@ -140,9 +140,9 @@ def _prepare_interactive_command(
                 default_date=default_date,
             )
 
-            if result == "CANCELLED":
+            if result == "CANCELED":
                 session.clear_last_list()
-                return "[Operation Cancelled]"
+                return "[Operation Canceled]"
 
             array_index = session.resolve_array_index(num)
             cmd_fn = commands.cmd_done if normalized == "done" else commands.cmd_cancel
@@ -153,7 +153,7 @@ def _prepare_interactive_command(
         except KeyboardInterrupt:
             print()
             session.clear_last_list()
-            return "[Operation Cancelled]"
+            return "[Operation Canceled]"
 
     elif normalized == "delete":
         if kwargs or len(args) != 1:

@@ -155,7 +155,7 @@ async def test_execute_send_action_routes_keyboard_interrupt_to_cancel_handler(
             orchestrator,
             "handle_user_cancel",
             new_callable=AsyncMock,
-            return_value=PrintAction(message="[Message cancelled]"),
+            return_value=PrintAction(message="[Message canceled]"),
         ) as mock_cancel,
     ):
         await execute_send_action(
@@ -170,7 +170,7 @@ async def test_execute_send_action_routes_keyboard_interrupt_to_cancel_handler(
         chat_path="/test/chat.json",
         assistant_hex_id=None,
     )
-    assert "[Message cancelled]" in capsys.readouterr().out
+    assert "[Message canceled]" in capsys.readouterr().out
 
 
 @pytest.mark.asyncio

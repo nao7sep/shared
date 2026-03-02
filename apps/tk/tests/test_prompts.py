@@ -59,7 +59,7 @@ class TestCollectDonePrompts:
 
         assert result.date == "2026-02-09"
 
-    def test_collect_done_prompts_cancelled(self, monkeypatch):
+    def test_collect_done_prompts_canceled(self, monkeypatch):
         """Test handling Ctrl+C cancellation."""
         task = Task(text="Test task", status="pending", created_utc="2026-02-09T10:00:00+00:00")
 
@@ -72,7 +72,7 @@ class TestCollectDonePrompts:
             task, TaskStatus.DONE, "2026-02-09"
         )
 
-        assert result == "CANCELLED"
+        assert result == "CANCELED"
 
     def test_collect_done_prompts_invalid_date(self, monkeypatch):
         """Test that invalid date raises ValueError."""

@@ -30,7 +30,7 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
 
         ### YYYY-MM-DD (descending dates)
         - ✅ done task (note if present)
-        - ❌ cancelled task (note if present)
+        - ❌ canceled task (note if present)
 
     Formatting:
     - Empty line after "# TODO"
@@ -50,7 +50,7 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
         lines.append("No pending tasks.")
 
     # Check if there are any handled tasks
-    has_handled = bool(grouped.done) or bool(grouped.cancelled)
+    has_handled = bool(grouped.done) or bool(grouped.canceled)
 
     if not has_handled:
         # No history to show, just end with empty line
@@ -58,12 +58,12 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
         _write_todo(lines, output_path)
         return
 
-    # History section (merge done and cancelled)
+    # History section (merge done and canceled)
     lines.append("")
     lines.append("## History")
     lines.append("")
 
-    # Merge done and cancelled by date
+    # Merge done and canceled by date
     all_dates: dict[str, list[Task]] = {}
 
     for date, date_tasks in grouped.done:
@@ -71,7 +71,7 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
             all_dates[date] = []
         all_dates[date].extend(date_tasks)
 
-    for date, date_tasks in grouped.cancelled:
+    for date, date_tasks in grouped.canceled:
         if date not in all_dates:
             all_dates[date] = []
         all_dates[date].extend(date_tasks)

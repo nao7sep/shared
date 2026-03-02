@@ -45,7 +45,7 @@ async def display_streaming_response(
         print()
 
     except KeyboardInterrupt:
-        # User cancelled streaming
+        # User canceled streaming
         print()
         raise
 

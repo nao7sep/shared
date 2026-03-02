@@ -60,7 +60,7 @@ class RuntimeMutationCommandHandlers:
 
             await self._deps._notify(f"WARNING: Rewind will delete from {target_label} onwards")
             if not await self._deps._confirm_yes("Type 'yes' to confirm rewind: "):
-                return "Rewind cancelled"
+                return "Rewind canceled"
 
             messages = chat_data.messages
             for index_to_remove in range(len(messages) - 1, index - 1, -1):
@@ -104,7 +104,7 @@ class RuntimeMutationCommandHandlers:
             f"WARNING: Purging message(s) breaks conversation context: {ids_for_prompt}"
         )
         if not await self._deps._confirm_yes("Type 'yes' to confirm purge: "):
-            return "Purge cancelled"
+            return "Purge canceled"
 
         deleted_count = 0
         for msg_index, _hid in indices_to_delete:
