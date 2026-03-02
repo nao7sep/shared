@@ -39,7 +39,7 @@ from .provider_logging import (
     unexpected_error_message,
 )
 from .provider_utils import format_chat_messages
-from .types import AIResponseMetadata
+from .types import AIResponseMetadata, TokenUsage
 
 
 if TYPE_CHECKING:
@@ -163,11 +163,11 @@ class MistralProvider:
             async for chunk in response:
                 # Extract usage from any chunk (may arrive with or without choices)
                 if hasattr(chunk, "usage") and chunk.usage and metadata is not None:
-                    metadata["usage"] = {
-                        "prompt_tokens": chunk.usage.prompt_tokens,
-                        "completion_tokens": chunk.usage.completion_tokens,
-                        "total_tokens": chunk.usage.total_tokens,
-                    }
+                    metadata["usage"] = TokenUsage(
+                        prompt_tokens=chunk.usage.prompt_tokens,
+                        completion_tokens=chunk.usage.completion_tokens,
+                        total_tokens=chunk.usage.total_tokens,
+                    )
                     log_event(
                         "provider_log",
                         level=logging.INFO,
@@ -243,7 +243,7 @@ class MistralProvider:
         system_prompt: str | None = None,
         search: bool = False,
         max_output_tokens: int | None = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, AIResponseMetadata]:
         """Get full response from Mistral."""
         try:
             formatted_messages = self.format_messages(messages)
@@ -282,17 +282,16 @@ class MistralProvider:
                 content = "[Response was filtered due to content policy]"
 
             # Extract metadata
-            metadata = {
-                "model": response.model,
-                "finish_reason": finish_reason,
-                "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                    "completion_tokens": (
+            metadata: AIResponseMetadata = AIResponseMetadata(
+                model=response.model,
+                usage=TokenUsage(
+                    prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
+                    completion_tokens=(
                         response.usage.completion_tokens if response.usage else 0
                     ),
-                    "total_tokens": response.usage.total_tokens if response.usage else 0,
-                },
-            }
+                    total_tokens=response.usage.total_tokens if response.usage else 0,
+                ),
+            )
 
             log_event(
                 "provider_log",

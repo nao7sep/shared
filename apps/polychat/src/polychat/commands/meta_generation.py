@@ -42,8 +42,7 @@ class MetadataGenerationCommandHandlers:
     ) -> str:
         """Invoke helper AI through explicitly wired command context dependency."""
         return await self._deps.context.invoke_helper_ai(
-            endpoint.provider,
-            endpoint.model,
+            endpoint,
             profile_data,
             messages,
             system_prompt,

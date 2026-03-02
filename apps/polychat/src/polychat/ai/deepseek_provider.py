@@ -39,7 +39,7 @@ from .provider_logging import (
     unexpected_error_message,
 )
 from .provider_utils import format_chat_messages
-from .types import AIResponseMetadata
+from .types import AIResponseMetadata, TokenUsage
 
 
 if TYPE_CHECKING:
@@ -164,14 +164,15 @@ class DeepSeekProvider:
             async for chunk in response:
                 # Extract usage from any chunk (may arrive with or without choices)
                 if chunk.usage and metadata is not None:
-                    metadata["usage"] = {
-                        "prompt_tokens": chunk.usage.prompt_tokens,
-                        "completion_tokens": chunk.usage.completion_tokens,
-                        "total_tokens": chunk.usage.total_tokens,
-                    }
+                    token_usage: TokenUsage = TokenUsage(
+                        prompt_tokens=chunk.usage.prompt_tokens,
+                        completion_tokens=chunk.usage.completion_tokens,
+                        total_tokens=chunk.usage.total_tokens,
+                    )
                     cache_hit = getattr(chunk.usage, "prompt_cache_hit_tokens", None)
                     if cache_hit:
-                        metadata["usage"]["cached_tokens"] = cache_hit
+                        token_usage["cached_tokens"] = cache_hit
+                    metadata["usage"] = token_usage
                     log_event(
                         "provider_log",
                         level=logging.INFO,
@@ -281,7 +282,7 @@ class DeepSeekProvider:
         system_prompt: str | None = None,
         search: bool = False,
         max_output_tokens: int | None = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, AIResponseMetadata]:
         """Get full response from DeepSeek."""
         try:
             formatted_messages = self.format_messages(messages)
@@ -320,22 +321,22 @@ class DeepSeekProvider:
                 content = "[Response was filtered due to content policy]"
 
             # Extract metadata
-            metadata = {
-                "model": response.model,
-                "finish_reason": finish_reason,
-                "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                    "completion_tokens": (
-                        response.usage.completion_tokens if response.usage else 0
-                    ),
-                    "total_tokens": response.usage.total_tokens if response.usage else 0,
-                },
-            }
+            usage_data = TokenUsage(
+                prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
+                completion_tokens=(
+                    response.usage.completion_tokens if response.usage else 0
+                ),
+                total_tokens=response.usage.total_tokens if response.usage else 0,
+            )
+            metadata: AIResponseMetadata = AIResponseMetadata(
+                model=response.model,
+                usage=usage_data,
+            )
 
             # Add reasoning tokens if available (for cost tracking)
             if response.usage and hasattr(response.usage, "completion_tokens_details"):
                 if hasattr(response.usage.completion_tokens_details, "reasoning_tokens"):
-                    metadata["usage"]["reasoning_tokens"] = (
+                    usage_data["reasoning_tokens"] = (
                         response.usage.completion_tokens_details.reasoning_tokens
                     )
                     log_event(
@@ -343,7 +344,7 @@ class DeepSeekProvider:
                         level=logging.INFO,
                         provider="deepseek",
                         message=(
-                            f"Reasoning tokens used: {metadata['usage']['reasoning_tokens']}"
+                            f"Reasoning tokens used: {usage_data['reasoning_tokens']}"
                         ),
                     )
 

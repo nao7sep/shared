@@ -40,7 +40,7 @@ from .provider_logging import (
 )
 from .provider_utils import format_chat_messages
 from .tools import grok_web_search_tools
-from .types import AIResponseMetadata, Citation
+from .types import AIResponseMetadata, Citation, TokenUsage
 
 
 if TYPE_CHECKING:
@@ -117,14 +117,12 @@ class GrokProvider:
         raw_citations = getattr(payload, "citations", None) or []
         for c in raw_citations:
             if isinstance(c, dict):
-                citations.append({"url": c.get("url"), "title": c.get("title")})
+                citations.append(Citation(url=c.get("url"), title=c.get("title")))
             else:
-                citations.append(
-                    {
-                        "url": getattr(c, "url", None),
-                        "title": getattr(c, "title", None),
-                    }
-                )
+                citations.append(Citation(
+                    url=getattr(c, "url", None),
+                    title=getattr(c, "title", None),
+                ))
         output_items = getattr(payload, "output", None)
         if not citations and isinstance(output_items, list):
             for item in output_items:
@@ -132,12 +130,10 @@ class GrokProvider:
                     for content in getattr(item, "content", []):
                         for annotation in getattr(content, "annotations", []):
                             if getattr(annotation, "type", None) == "url_citation":
-                                citations.append(
-                                    {
-                                        "url": getattr(annotation, "url", None),
-                                        "title": getattr(annotation, "title", None),
-                                    }
-                                )
+                                citations.append(Citation(
+                                    url=getattr(annotation, "url", None),
+                                    title=getattr(annotation, "title", None),
+                                ))
         citations = [c for c in citations if c.get("url")]
         return citations, raw_citations
 
@@ -189,19 +185,20 @@ class GrokProvider:
                 elif event_type == "response.completed":
                     if event.response and event.response.usage and metadata is not None:
                         usage = event.response.usage
-                        metadata["usage"] = {
-                            "prompt_tokens": usage.input_tokens,
-                            "completion_tokens": usage.output_tokens,
-                            "total_tokens": usage.total_tokens,
-                        }
+                        token_usage: TokenUsage = TokenUsage(
+                            prompt_tokens=usage.input_tokens,
+                            completion_tokens=usage.output_tokens,
+                            total_tokens=usage.total_tokens,
+                        )
                         if hasattr(usage, "input_tokens_details"):
                             in_details = usage.input_tokens_details
                             if in_details and hasattr(in_details, "cached_tokens") and in_details.cached_tokens:
-                                metadata["usage"]["cached_tokens"] = in_details.cached_tokens
+                                token_usage["cached_tokens"] = in_details.cached_tokens
                         if hasattr(usage, "output_tokens_details"):
                             details = usage.output_tokens_details
                             if hasattr(details, "reasoning_tokens"):
-                                metadata["usage"]["reasoning_tokens"] = details.reasoning_tokens
+                                token_usage["reasoning_tokens"] = details.reasoning_tokens
+                        metadata["usage"] = token_usage
 
                     if event.response and metadata is not None:
                         citations, _ = self._extract_citations_from_response(event.response)
@@ -237,7 +234,7 @@ class GrokProvider:
         system_prompt: str | None = None,
         search: bool = False,
         max_output_tokens: int | None = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, AIResponseMetadata]:
         """Get full response from Grok."""
         try:
             formatted_messages = self.format_messages(messages)
@@ -276,25 +273,24 @@ class GrokProvider:
                         finish_status = "failed"
 
             usage = getattr(response, "usage", None)
-            usage_summary = {
-                "prompt_tokens": usage.input_tokens if usage else 0,
-                "completion_tokens": usage.output_tokens if usage else 0,
-                "total_tokens": usage.total_tokens if usage else 0,
-            }
-            metadata: dict[str, Any] = {
-                "model": getattr(response, "model", model),
-                "finish_status": finish_status,
-                "usage": usage_summary,
-            }
+            usage_summary = TokenUsage(
+                prompt_tokens=usage.input_tokens if usage else 0,
+                completion_tokens=usage.output_tokens if usage else 0,
+                total_tokens=usage.total_tokens if usage else 0,
+            )
+            metadata: AIResponseMetadata = AIResponseMetadata(
+                model=getattr(response, "model", model),
+                usage=usage_summary,
+            )
 
             if usage and hasattr(usage, "input_tokens_details"):
                 details = usage.input_tokens_details
                 if hasattr(details, "cached_tokens"):
-                    metadata["usage"]["cached_tokens"] = details.cached_tokens
+                    usage_summary["cached_tokens"] = details.cached_tokens
             if usage and hasattr(usage, "output_tokens_details"):
                 details = usage.output_tokens_details
                 if hasattr(details, "reasoning_tokens"):
-                    metadata["usage"]["reasoning_tokens"] = details.reasoning_tokens
+                    usage_summary["reasoning_tokens"] = details.reasoning_tokens
 
             citations, _ = self._extract_citations_from_response(response)
             if citations:

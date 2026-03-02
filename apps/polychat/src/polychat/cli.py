@@ -152,7 +152,7 @@ def main() -> None:
             chat_path = mapped_chat_path
             chat_data = chat.load_chat(chat_path)
 
-        system_prompt, system_prompt_path, system_prompt_warning = SessionManager.load_system_prompt(
+        system_prompt_config, system_prompt_warning = SessionManager.load_system_prompt(
             profile_data,
             mapped_profile_path,
         )
@@ -177,7 +177,7 @@ def main() -> None:
             ),
             input_mode=profile_data.input_mode or "quick",
             timeout=resolve_profile_timeout(profile_data),
-            system_prompt=system_prompt_path,
+            system_prompt=system_prompt_config.path,
         )
 
         asyncio.run(
@@ -185,8 +185,8 @@ def main() -> None:
                 profile_data,
                 chat_data,
                 chat_path,
-                system_prompt,
-                system_prompt_path,
+                system_prompt_config.content,
+                system_prompt_config.path,
                 mapped_profile_path,
                 effective_log_path,
             )

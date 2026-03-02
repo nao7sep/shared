@@ -258,7 +258,7 @@ class SessionManager:
         profile_data: RuntimeProfile,
         profile_path: Optional[str] = None,
         strict: bool = False,
-    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    ) -> tuple[SystemPromptConfig, Optional[str]]:
         """Resolve and load system prompt content from profile data.
 
         Args:
@@ -267,7 +267,7 @@ class SessionManager:
             strict: If True, raise ValueError when path-based prompt loading fails
 
         Returns:
-            Tuple of (system_prompt_text, system_prompt_path, warning_message)
+            Tuple of (SystemPromptConfig, warning_message)
         """
         return resolve_system_prompt(
             profile_data,
@@ -398,7 +398,7 @@ class SessionManager:
             provider_name: Name of the provider
             model_name: Name of the model
         """
-        session_ops.switch_provider(self._state, provider_name, model_name)
+        session_ops.switch_provider(self._state, AIEndpoint(provider=provider_name, model=model_name))
 
     def switch_helper(self, provider_name: str, model_name: str) -> None:
         """Switch to a different helper AI provider and model.
@@ -407,7 +407,7 @@ class SessionManager:
             provider_name: Name of the provider
             model_name: Name of the model
         """
-        session_ops.switch_helper(self._state, provider_name, model_name)
+        session_ops.switch_helper(self._state, AIEndpoint(provider=provider_name, model=model_name))
 
     def set_system_prompt_config(
         self,
@@ -418,7 +418,7 @@ class SessionManager:
         Args:
             config: System prompt configuration DTO
         """
-        session_ops.set_system_prompt(self._state, config.content, config.path)
+        session_ops.set_system_prompt(self._state, config)
 
     def toggle_input_mode(self) -> str:
         """Toggle input mode between quick and compose.

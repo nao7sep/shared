@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Protocol
 
+from ..domain.config import AIEndpoint
 from ..domain.profile import RuntimeProfile
 from ..ui.interaction import UserInteractionPort
 
@@ -18,8 +19,7 @@ class HelperAIInvoker(Protocol):
 
     async def __call__(
         self,
-        helper_ai: str,
-        helper_model: str,
+        endpoint: AIEndpoint,
         profile: RuntimeProfile,
         messages: list[ChatMessage],
         system_prompt: Optional[str] = None,

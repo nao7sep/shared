@@ -87,11 +87,7 @@ class RuntimeModeCommandHandlers:
             if not self._deps.manager.profile.system_prompt:
                 return "No default system prompt configured in profile"
 
-            (
-                system_prompt_content,
-                system_prompt_path,
-                warning,
-            ) = self._deps.manager.load_system_prompt(
+            prompt_config, warning = self._deps.manager.load_system_prompt(
                 self._deps.manager.profile,
                 self._deps.manager.profile_path,
                 strict=True,
@@ -99,13 +95,11 @@ class RuntimeModeCommandHandlers:
             if warning:
                 raise ValueError(warning)
 
-            update_metadata(chat_data, system_prompt=system_prompt_path)
+            update_metadata(chat_data, system_prompt=prompt_config.path)
 
-            self._deps.manager.set_system_prompt_config(
-                SystemPromptConfig(content=system_prompt_content, path=system_prompt_path)
-            )
+            self._deps.manager.set_system_prompt_config(prompt_config)
 
-            if system_prompt_path is None and system_prompt_content:
+            if prompt_config.path is None and prompt_config.content:
                 return "System prompt restored to inline profile default (content hidden)"
             return "System prompt restored to profile default"
 

@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 async def invoke_helper_ai(
-    helper_ai: str,
-    helper_model: str,
+    endpoint: AIEndpoint,
     profile: RuntimeProfile,
     messages: list[ChatMessage],
     system_prompt: Optional[str] = None,
@@ -31,8 +30,7 @@ async def invoke_helper_ai(
     """Invoke helper AI for background tasks (non-streaming).
 
     Args:
-        helper_ai: Helper AI provider name
-        helper_model: Helper AI model name
+        endpoint: Helper AI provider+model endpoint
         profile: Runtime profile with API keys
         messages: Messages to send (typically a single prompt)
         system_prompt: Optional system prompt
@@ -43,8 +41,7 @@ async def invoke_helper_ai(
     Raises:
         Exception: If helper AI invocation fails
     """
-    helper = AIEndpoint(provider=helper_ai, model=helper_model)
-    return await _invoke_helper(helper, profile, messages, system_prompt, task, session)
+    return await _invoke_helper(endpoint, profile, messages, system_prompt, task, session)
 
 
 async def _invoke_helper(

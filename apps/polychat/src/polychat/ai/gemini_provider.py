@@ -24,7 +24,7 @@ from ..timeouts import (
 from .provider_logging import log_provider_error, unexpected_error_message
 from .provider_utils import format_chat_messages
 from .tools import gemini_web_search_tools
-from .types import AIResponseMetadata, Citation
+from .types import AIResponseMetadata, Citation, TokenUsage
 
 
 if TYPE_CHECKING:
@@ -172,14 +172,15 @@ class GeminiProvider:
             if metadata is not None and final_chunk and hasattr(final_chunk, "usage_metadata"):
                 usage_meta = final_chunk.usage_metadata
                 if usage_meta is not None:
-                    metadata["usage"] = {
-                        "prompt_tokens": getattr(usage_meta, "prompt_token_count", 0),
-                        "completion_tokens": getattr(usage_meta, "candidates_token_count", 0),
-                        "total_tokens": getattr(usage_meta, "total_token_count", 0),
-                    }
+                    usage: TokenUsage = TokenUsage(
+                        prompt_tokens=getattr(usage_meta, "prompt_token_count", 0),
+                        completion_tokens=getattr(usage_meta, "candidates_token_count", 0),
+                        total_tokens=getattr(usage_meta, "total_token_count", 0),
+                    )
                     cached = getattr(usage_meta, "cached_content_token_count", None)
                     if cached:
-                        metadata["usage"]["cached_tokens"] = cached
+                        usage["cached_tokens"] = cached
+                    metadata["usage"] = usage
 
             # Extract citations from grounding_metadata if search was enabled
             if search and metadata is not None and final_chunk and final_chunk.candidates:
@@ -188,7 +189,7 @@ class GeminiProvider:
                     grounding = candidate.grounding_metadata
                     chunks = getattr(grounding, "grounding_chunks", None) or []
                     citations: list[Citation] = [
-                        {"url": chunk.web.uri, "title": chunk.web.title}
+                        Citation(url=chunk.web.uri, title=chunk.web.title)
                         for chunk in chunks if hasattr(chunk, "web")
                     ]
                     if citations:
@@ -222,7 +223,7 @@ class GeminiProvider:
         system_prompt: str | None = None,
         search: bool = False,
         max_output_tokens: int | None = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, AIResponseMetadata]:
         """Get full response from Gemini.
 
         Args:
@@ -240,7 +241,7 @@ class GeminiProvider:
 
             # Handle empty messages case
             if not formatted_messages:
-                return "", {"model": model, "usage": {}}
+                return "", AIResponseMetadata(model=model, usage=TokenUsage())
 
             # Build config with system instruction and tools if provided
             tools = gemini_web_search_tools(types) if search else None
@@ -296,21 +297,20 @@ class GeminiProvider:
 
             # Extract metadata
             usage_meta = response.usage_metadata if hasattr(response, "usage_metadata") else None
-            metadata: dict[str, Any] = {
-                "model": model,
-                "finish_reason": finish_reason,
-                "usage": {
-                    "prompt_tokens": (
+            metadata: AIResponseMetadata = AIResponseMetadata(
+                model=model,
+                usage=TokenUsage(
+                    prompt_tokens=(
                         usage_meta.prompt_token_count if usage_meta is not None else 0
                     ),
-                    "completion_tokens": (
+                    completion_tokens=(
                         usage_meta.candidates_token_count if usage_meta is not None else 0
                     ),
-                    "total_tokens": (
+                    total_tokens=(
                         usage_meta.total_token_count if usage_meta is not None else 0
                     ),
-                },
-            }
+                ),
+            )
 
             # Extract citations from grounding_metadata if search was enabled
             if search and response.candidates:
@@ -319,7 +319,7 @@ class GeminiProvider:
                     grounding = candidate.grounding_metadata
                     chunks = getattr(grounding, "grounding_chunks", None) or []
                     citations: list[Citation] = [
-                        {"url": chunk.web.uri, "title": chunk.web.title}
+                        Citation(url=chunk.web.uri, title=chunk.web.title)
                         for chunk in chunks if hasattr(chunk, "web")
                     ]
                     if citations:

@@ -40,7 +40,7 @@ from .provider_logging import (
 )
 from .provider_utils import format_chat_messages
 from .tools import claude_web_search_tools
-from .types import AIResponseMetadata, Citation
+from .types import AIResponseMetadata, Citation, TokenUsage
 
 
 if TYPE_CHECKING:
@@ -223,15 +223,16 @@ class ClaudeProvider:
                     cache_read = getattr(final_message.usage, "cache_read_input_tokens", None) or 0
                     cache_write = getattr(final_message.usage, "cache_creation_input_tokens", None) or 0
                     total_input = final_message.usage.input_tokens + cache_read + cache_write
-                    metadata["usage"] = {
-                        "prompt_tokens": total_input,
-                        "completion_tokens": final_message.usage.output_tokens,
-                        "total_tokens": total_input + final_message.usage.output_tokens,
-                    }
+                    usage: TokenUsage = TokenUsage(
+                        prompt_tokens=total_input,
+                        completion_tokens=final_message.usage.output_tokens,
+                        total_tokens=total_input + final_message.usage.output_tokens,
+                    )
                     if cache_read:
-                        metadata["usage"]["cached_tokens"] = cache_read
+                        usage["cached_tokens"] = cache_read
                     if cache_write:
-                        metadata["usage"]["cache_write_tokens"] = cache_write
+                        usage["cache_write_tokens"] = cache_write
+                    metadata["usage"] = usage
 
                 # Extract citations from final_message if search was enabled
                 if search and metadata is not None:
@@ -239,10 +240,10 @@ class ClaudeProvider:
                     for block in final_message.content:
                         if hasattr(block, "citations"):
                             for citation in (block.citations or []):
-                                citations.append({
-                                    "url": citation.url,
-                                    "title": getattr(citation, "title", None)
-                                })
+                                citations.append(Citation(
+                                    url=citation.url,
+                                    title=getattr(citation, "title", None),
+                                ))
                     if citations:
                         metadata["citations"] = citations
 
@@ -302,7 +303,7 @@ class ClaudeProvider:
         system_prompt: str | None = None,
         search: bool = False,
         max_output_tokens: int | None = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, AIResponseMetadata]:
         """Get full response from Claude.
 
         Args:
@@ -379,19 +380,19 @@ class ClaudeProvider:
             cache_read = getattr(response.usage, "cache_read_input_tokens", None) or 0
             cache_write = getattr(response.usage, "cache_creation_input_tokens", None) or 0
             total_input = response.usage.input_tokens + cache_read + cache_write
-            metadata = {
-                "model": response.model,
-                "stop_reason": stop_reason,
-                "usage": {
-                    "prompt_tokens": total_input,
-                    "completion_tokens": response.usage.output_tokens,
-                    "total_tokens": total_input + response.usage.output_tokens,
-                },
-            }
+            usage: TokenUsage = TokenUsage(
+                prompt_tokens=total_input,
+                completion_tokens=response.usage.output_tokens,
+                total_tokens=total_input + response.usage.output_tokens,
+            )
             if cache_read:
-                metadata["usage"]["cached_tokens"] = cache_read
+                usage["cached_tokens"] = cache_read
             if cache_write:
-                metadata["usage"]["cache_write_tokens"] = cache_write
+                usage["cache_write_tokens"] = cache_write
+            metadata: AIResponseMetadata = AIResponseMetadata(
+                model=response.model,
+                usage=usage,
+            )
 
             # Extract citations if search was enabled
             if search:
@@ -399,10 +400,10 @@ class ClaudeProvider:
                 for block in response.content:
                     if hasattr(block, "citations"):
                         for citation in (block.citations or []):
-                            citations.append({
-                                "url": citation.url,
-                                "title": getattr(citation, "title", None)
-                            })
+                            citations.append(Citation(
+                                url=citation.url,
+                                title=getattr(citation, "title", None),
+                            ))
                 if citations:
                     metadata["citations"] = citations
 

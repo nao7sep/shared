@@ -38,7 +38,7 @@ from .provider_logging import (
     unexpected_error_message,
 )
 from .provider_utils import format_chat_messages
-from .types import AIResponseMetadata, Citation
+from .types import AIResponseMetadata, Citation, TokenUsage
 
 
 if TYPE_CHECKING:
@@ -129,7 +129,7 @@ class PerplexityProvider:
                 url = getattr(item, "url", None)
                 title = getattr(item, "title", None)
             if url:
-                normalized.append({"url": url, "title": title})
+                normalized.append(Citation(url=url, title=title))
         return normalized
 
     @classmethod
@@ -138,7 +138,7 @@ class PerplexityProvider:
         # Prefer search_results, which include titles in current Perplexity API.
         search_results = cls._extract_search_results(payload)
         if search_results:
-            return [{"url": r.get("url"), "title": r.get("title")} for r in search_results if r.get("url")]
+            return [Citation(url=r.get("url"), title=r.get("title")) for r in search_results if r.get("url")]
 
         # Fallback to legacy citations field.
         citations = getattr(payload, "citations", None) or []
@@ -151,7 +151,7 @@ class PerplexityProvider:
                 url = c
                 title = None
             if url:
-                normalized.append({"url": url, "title": title})
+                normalized.append(Citation(url=url, title=title))
         return normalized
 
     @retry(
@@ -244,11 +244,11 @@ class PerplexityProvider:
                 # keep the last value.  Final totals are logged by the
                 # caller via the ai_response event.
                 if chunk.usage and metadata is not None:
-                    metadata["usage"] = {
-                        "prompt_tokens": chunk.usage.prompt_tokens,
-                        "completion_tokens": chunk.usage.completion_tokens,
-                        "total_tokens": chunk.usage.total_tokens,
-                    }
+                    metadata["usage"] = TokenUsage(
+                        prompt_tokens=chunk.usage.prompt_tokens,
+                        completion_tokens=chunk.usage.completion_tokens,
+                        total_tokens=chunk.usage.total_tokens,
+                    )
 
                 # Skip chunks with no choices (usage-only or citation-only)
                 if not chunk.choices:
@@ -324,7 +324,7 @@ class PerplexityProvider:
         system_prompt: str | None = None,
         search: bool = False,
         max_output_tokens: int | None = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, AIResponseMetadata]:
         """Get full response from Perplexity."""
         try:
             formatted_messages = self.format_messages(messages)
@@ -365,17 +365,16 @@ class PerplexityProvider:
             citations = self._extract_citations(response)
 
             # Extract metadata
-            metadata = {
-                "model": response.model,
-                "finish_reason": finish_reason,
-                "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                    "completion_tokens": (
+            metadata: AIResponseMetadata = AIResponseMetadata(
+                model=response.model,
+                usage=TokenUsage(
+                    prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
+                    completion_tokens=(
                         response.usage.completion_tokens if response.usage else 0
                     ),
-                    "total_tokens": response.usage.total_tokens if response.usage else 0,
-                },
-            }
+                    total_tokens=response.usage.total_tokens if response.usage else 0,
+                ),
+            )
 
             # Add citations if available.
             if citations:

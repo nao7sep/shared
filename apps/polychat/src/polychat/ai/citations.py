@@ -141,11 +141,11 @@ def _dedupe_and_number(citations: list[Citation]) -> list[Citation]:
             continue
         seen.add(key)
         deduped.append(
-            {
-                "number": len(deduped) + 1,
-                "title": title,
-                "url": url,
-            }
+            Citation(
+                number=len(deduped) + 1,
+                title=title,
+                url=url,
+            )
         )
 
     return deduped
@@ -165,17 +165,17 @@ def normalize_citations(citations: object) -> list[Citation]:
             raw_url = item.get("url", item.get("uri"))
             raw_title = item.get("title")
             normalized.append(
-                {
-                    "title": _clean_title(raw_title),
-                    "url": _clean_url(raw_url),
-                }
+                Citation(
+                    title=_clean_title(raw_title),
+                    url=_clean_url(raw_url),
+                )
             )
         elif isinstance(item, str):
             normalized.append(
-                {
-                    "title": None,
-                    "url": _clean_url(item),
-                }
+                Citation(
+                    title=None,
+                    url=_clean_url(item),
+                )
             )
 
     return _dedupe_and_number(normalized)
@@ -222,7 +222,7 @@ async def resolve_vertex_citation_urls(
 
     updated: list[Citation] = []
     for c in citations:
-        copied: Citation = {"title": c.get("title"), "url": c.get("url")}
+        copied: Citation = Citation(title=c.get("title"), url=c.get("url"))
         number = c.get("number")
         if isinstance(number, int):
             copied["number"] = number

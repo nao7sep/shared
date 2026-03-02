@@ -166,7 +166,7 @@ async def test_rewind_turn_keyword_removed(rewind_handler):
 
 @pytest.mark.asyncio
 async def test_rewind_cancelled_on_non_yes(rewind_handler, rewind_manager):
-    rewind_handler.interaction = FakeInteraction(["no"])
+    rewind_handler.context.interaction = FakeInteraction(["no"])
     rewind_manager.chat.messages = [
         ChatMessage.from_raw({"role": "user", "content": ["Q1"], "hex_id": "a3f"}),
         ChatMessage.from_raw({"role": "assistant", "content": ["A1"], "model": "claude-haiku-4-5", "hex_id": "b2c"}),

@@ -41,7 +41,7 @@ from .provider_logging import (
 )
 from .provider_utils import format_chat_messages
 from .tools import openai_web_search_tools
-from .types import AIResponseMetadata, Citation
+from .types import AIResponseMetadata, Citation, TokenUsage
 
 
 if TYPE_CHECKING:
@@ -177,11 +177,11 @@ class OpenAIProvider:
                         # Populate metadata with usage info if provided
                         # Note: Responses API uses input_tokens/output_tokens
                         if metadata is not None:
-                            metadata["usage"] = {
-                                "prompt_tokens": usage.input_tokens,
-                                "completion_tokens": usage.output_tokens,
-                                "total_tokens": usage.total_tokens,
-                            }
+                            metadata["usage"] = TokenUsage(
+                                prompt_tokens=usage.input_tokens,
+                                completion_tokens=usage.output_tokens,
+                                total_tokens=usage.total_tokens,
+                            )
                             # Extract cached tokens if available
                             if hasattr(usage, "input_tokens_details"):
                                 details = usage.input_tokens_details
@@ -206,10 +206,10 @@ class OpenAIProvider:
                                 for content in item.content:
                                     for annotation in getattr(content, "annotations", []):
                                         if annotation.type == "url_citation":
-                                            citations.append({
-                                                "url": annotation.url,
-                                                "title": getattr(annotation, "title", None)
-                                            })
+                                            citations.append(Citation(
+                                                url=annotation.url,
+                                                title=getattr(annotation, "title", None),
+                                            ))
                         if citations:
                             metadata["citations"] = citations
 
@@ -261,7 +261,7 @@ class OpenAIProvider:
         system_prompt: str | None = None,
         search: bool = False,
         max_output_tokens: int | None = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, AIResponseMetadata]:
         """Get full response from OpenAI.
 
         Args:
@@ -318,28 +318,27 @@ class OpenAIProvider:
 
             # Extract metadata
             # Note: Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
-            usage_summary = {
-                "prompt_tokens": response.usage.input_tokens if response.usage else 0,
-                "completion_tokens": response.usage.output_tokens if response.usage else 0,
-                "total_tokens": response.usage.total_tokens if response.usage else 0,
-            }
-            metadata: dict[str, Any] = {
-                "model": response.model if hasattr(response, 'model') else model,
-                "finish_status": finish_status,
-                "usage": usage_summary,
-            }
+            usage_summary = TokenUsage(
+                prompt_tokens=response.usage.input_tokens if response.usage else 0,
+                completion_tokens=response.usage.output_tokens if response.usage else 0,
+                total_tokens=response.usage.total_tokens if response.usage else 0,
+            )
+            metadata: AIResponseMetadata = AIResponseMetadata(
+                model=response.model if hasattr(response, 'model') else model,
+                usage=usage_summary,
+            )
 
             # Add cached tokens if available
             if response.usage and hasattr(response.usage, "input_tokens_details"):
                 if hasattr(response.usage.input_tokens_details, "cached_tokens"):
-                    metadata["usage"]["cached_tokens"] = (
+                    usage_summary["cached_tokens"] = (
                         response.usage.input_tokens_details.cached_tokens
                     )
 
             # Add reasoning tokens if available (for o3/GPT-5 models)
             if response.usage and hasattr(response.usage, "output_tokens_details"):
                 if hasattr(response.usage.output_tokens_details, "reasoning_tokens"):
-                    metadata["usage"]["reasoning_tokens"] = (
+                    usage_summary["reasoning_tokens"] = (
                         response.usage.output_tokens_details.reasoning_tokens
                     )
 
@@ -351,10 +350,10 @@ class OpenAIProvider:
                         for content in item.content:
                             for annotation in getattr(content, "annotations", []):
                                 if annotation.type == "url_citation":
-                                    citations.append({
-                                        "url": annotation.url,
-                                        "title": getattr(annotation, "title", None)
-                                    })
+                                    citations.append(Citation(
+                                        url=annotation.url,
+                                        title=getattr(annotation, "title", None),
+                                    ))
                 if citations:
                     metadata["citations"] = citations
 

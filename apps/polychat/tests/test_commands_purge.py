@@ -212,7 +212,7 @@ async def test_purge_multiple_messages_order_independent(command_handler_purge, 
 @pytest.mark.asyncio
 async def test_purge_cancelled_on_non_yes(command_handler_purge, mock_session_manager_purge):
     """Test purge cancellation when confirmation is not 'yes'."""
-    command_handler_purge.interaction = FakeInteraction(["no"])
+    command_handler_purge.context.interaction = FakeInteraction(["no"])
 
     result = await command_handler_purge.purge_messages("a3f")
 

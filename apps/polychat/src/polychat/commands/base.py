@@ -40,9 +40,16 @@ class CommandHandlerBaseMixin:
             interaction=resolved_interaction,
             invoke_helper_ai=helper_ai_invoker,
         )
-        # Backward-compatible aliases for existing command mixins/tests.
-        self.manager = self.context.manager
-        self.interaction = self.context.interaction
+
+    @property
+    def manager(self) -> "SessionManager":
+        """Delegate to context for single source of truth."""
+        return self.context.manager
+
+    @property
+    def interaction(self) -> UserInteractionPort:
+        """Delegate to context for single source of truth."""
+        return self.context.interaction
 
     def _require_open_chat(
         self, *, need_messages: bool = False, need_metadata: bool = False
