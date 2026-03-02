@@ -136,7 +136,6 @@ class TestListHistoryData:
         assert [group.date for group in result.groups] == ["2026-02-03", "2026-02-02"]
         assert [item.task.text for item in result.groups[0].items] == ["Task four", "Task three"]
         assert [item.display_num for group in result.groups for item in group.items] == [1, 2, 3]
-        assert commands.extract_last_list_mapping(result) == [(1, 3), (2, 2), (3, 1)]
 
 
 class TestCmdAdd:

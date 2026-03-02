@@ -10,7 +10,6 @@ import logging
 import time
 from typing import TYPE_CHECKING, Optional, Any
 
-from ..domain.config import AIEndpoint
 from ..domain.profile import RuntimeProfile
 
 if TYPE_CHECKING:
@@ -20,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 async def invoke_helper_ai(
-    endpoint: AIEndpoint,
+    provider_name: str,
+    model: str,
     profile: RuntimeProfile,
     messages: list[ChatMessage],
     system_prompt: Optional[str] = None,
@@ -30,7 +30,8 @@ async def invoke_helper_ai(
     """Invoke helper AI for background tasks (non-streaming).
 
     Args:
-        endpoint: Helper AI provider+model endpoint
+        provider_name: Helper AI provider name
+        model: Helper AI model name
         profile: Runtime profile with API keys
         messages: Messages to send (typically a single prompt)
         system_prompt: Optional system prompt
@@ -41,11 +42,12 @@ async def invoke_helper_ai(
     Raises:
         Exception: If helper AI invocation fails
     """
-    return await _invoke_helper(endpoint, profile, messages, system_prompt, task, session)
+    return await _invoke_helper(provider_name, model, profile, messages, system_prompt, task, session)
 
 
 async def _invoke_helper(
-    helper: AIEndpoint,
+    provider_name: str,
+    model: str,
     profile: RuntimeProfile,
     messages: list[ChatMessage],
     system_prompt: Optional[str],
@@ -66,53 +68,53 @@ async def _invoke_helper(
         sanitize_error_message,
     )
 
-    key_config = profile.api_keys.get(helper.provider)
+    key_config = profile.api_keys.get(provider_name)
     if not key_config:
         log_event(
             "helper_ai_error",
             level=logging.ERROR,
             task=task,
-            provider=helper.provider,
-            model=helper.model,
+            provider=provider_name,
+            model=model,
             latency_ms=0.0,
             error_type="ValueError",
-            error=f"No API key configured for helper AI: {helper.provider}",
+            error=f"No API key configured for helper AI: {provider_name}",
         )
         logging.error(
             "Helper AI invocation failed: no API key configured (provider=%s, model=%s)",
-            helper.provider,
-            helper.model,
+            provider_name,
+            model,
         )
-        raise ValueError(f"No API key configured for helper AI: {helper.provider}")
+        raise ValueError(f"No API key configured for helper AI: {provider_name}")
 
     try:
-        api_key = load_api_key(helper.provider, key_config)
+        api_key = load_api_key(provider_name, key_config)
     except Exception as e:
         sanitized_error = sanitize_error_message(str(e))
         log_event(
             "helper_ai_error",
             level=logging.ERROR,
             task=task,
-            provider=helper.provider,
-            model=helper.model,
+            provider=provider_name,
+            model=model,
             latency_ms=0.0,
             error_type=type(e).__name__,
             error=sanitized_error,
         )
         logging.error(
             "Helper AI API key loading failed (provider=%s, model=%s): %s",
-            helper.provider,
-            helper.model,
+            provider_name,
+            model,
             sanitized_error,
         )
         raise ValueError(f"Error loading helper AI API key: {sanitized_error}")
 
-    provider_instance = get_provider_instance(helper.provider, api_key, session=session)
+    provider_instance = get_provider_instance(provider_name, api_key, session=session)
 
     started = time.perf_counter()
     resolved_limits = resolve_request_limits(
         profile,
-        helper.provider,
+        provider_name,
         helper=True,
         search=False,
     )
@@ -121,8 +123,8 @@ async def _invoke_helper(
         "helper_ai_request",
         level=logging.INFO,
         task=task,
-        provider=helper.provider,
-        model=helper.model,
+        provider=provider_name,
+        model=model,
         message_count=len(messages),
         input_chars=estimate_message_chars(messages),
         has_system_prompt=bool(system_prompt),
@@ -131,7 +133,7 @@ async def _invoke_helper(
     try:
         request_kwargs: dict[str, Any] = {
             "messages": messages,
-            "model": helper.model,
+            "model": model,
             "system_prompt": system_prompt,
         }
         if max_output_tokens is not None:
@@ -142,13 +144,13 @@ async def _invoke_helper(
         latency_ms = round((time.perf_counter() - started) * 1000, 1)
         usage = metadata.get("usage", {}) if isinstance(metadata, dict) else {}
 
-        cost_est = estimate_cost(helper.model, usage)
+        cost_est = estimate_cost(model, usage)
         log_event(
             "helper_ai_response",
             level=logging.INFO,
             task=task,
-            provider=helper.provider,
-            model=helper.model,
+            provider=provider_name,
+            model=model,
             latency_ms=latency_ms,
             output_chars=len(response_text),
             input_tokens=usage.get("prompt_tokens"),
@@ -168,8 +170,8 @@ async def _invoke_helper(
             "helper_ai_error",
             level=logging.ERROR,
             task=task,
-            provider=helper.provider,
-            model=helper.model,
+            provider=provider_name,
+            model=model,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
             error_type=type(e).__name__,
             error=sanitized_error,
@@ -177,8 +179,8 @@ async def _invoke_helper(
         )
         logging.error(
             "Error invoking helper AI (provider=%s, model=%s): %s",
-            helper.provider,
-            helper.model,
+            provider_name,
+            model,
             sanitized_error,
         )
         raise ValueError(f"Error invoking helper AI: {sanitized_error}")

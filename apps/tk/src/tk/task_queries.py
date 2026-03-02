@@ -1,6 +1,12 @@
 """Task grouping and read-model helpers for presentation layers."""
 
-from tk.models import GroupedTaskDisplay, Task, TaskStatus
+from tk.models import (
+    GroupedTaskDisplay,
+    HistoryGroup,
+    Task,
+    TaskListItem,
+    TaskStatus,
+)
 
 
 def group_tasks_for_display(tasks: list[Task]) -> GroupedTaskDisplay:
@@ -18,7 +24,9 @@ def group_tasks_for_display(tasks: list[Task]) -> GroupedTaskDisplay:
             if task.status == status
         ]
         grouped = group_handled_tasks(handled_with_indices, include_unknown=True)
-        target.extend((date, [task for _, task in date_tasks]) for date, date_tasks in grouped)
+        target.extend(
+            (group.date, [item.task for item in group.items]) for group in grouped
+        )
 
     return GroupedTaskDisplay(pending=pending, done=done_groups, cancelled=cancelled_groups)
 
@@ -27,9 +35,9 @@ def group_handled_tasks(
     handled_with_indices: list[tuple[int, Task]],
     *,
     include_unknown: bool,
-) -> list[tuple[str, list[tuple[int, Task]]]]:
+) -> list[HistoryGroup]:
     """Group handled tasks by subjective date with deterministic ordering."""
-    grouped: dict[str, list[tuple[int, Task]]] = {}
+    grouped: dict[str, list[TaskListItem]] = {}
 
     for array_index, task in handled_with_indices:
         date = task.subjective_date
@@ -40,16 +48,20 @@ def group_handled_tasks(
 
         if date not in grouped:
             grouped[date] = []
-        grouped[date].append((array_index, task))
+        grouped[date].append(TaskListItem(array_index=array_index, task=task))
 
     for date in grouped:
-        grouped[date].sort(key=lambda x: x[1].handled_utc or "")
+        grouped[date].sort(key=lambda item: item.task.handled_utc or "")
 
     known = sorted(
-        [(date, items) for date, items in grouped.items() if date != "unknown"],
-        key=lambda x: x[0],
+        [
+            HistoryGroup(date=date, items=items)
+            for date, items in grouped.items()
+            if date != "unknown"
+        ],
+        key=lambda g: g.date,
         reverse=True,
     )
     if "unknown" in grouped:
-        known.append(("unknown", grouped["unknown"]))
+        known.append(HistoryGroup(date="unknown", items=grouped["unknown"]))
     return known

@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from tk import commands, formatters
 from tk.errors import UsageError
-from tk.models import CommandDocEntry, HistoryListPayload, PendingListPayload
+from tk.models import CommandDocEntry, HistoryListPayload, PendingListPayload, TaskListItem
 from tk.session import Session
 
 COMMAND_ALIASES = {
@@ -67,7 +67,13 @@ def _apply_last_list_mapping_from_payload(
     payload: PendingListPayload | HistoryListPayload,
 ) -> None:
     """Update session mapping based on payload rows shown to user."""
-    session.set_last_list(commands.extract_last_list_mapping(payload))
+    if isinstance(payload, PendingListPayload):
+        session.set_last_list(list(payload.items))
+    else:
+        items: list[TaskListItem] = []
+        for group in payload.groups:
+            items.extend(group.items)
+        session.set_last_list(items)
 
 
 def _exec_add(args: list[Any], kwargs: dict[str, Any], session: Session) -> str:

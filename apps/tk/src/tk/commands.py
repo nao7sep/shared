@@ -8,12 +8,13 @@ from tk import data, markdown, subjective_date
 from tk.errors import UsageError, ValidationError
 from tk.models import (
     HistoryFilters,
-    HistoryGroup,
     HistoryListPayload,
     PendingListPayload,
+    Profile,
     Task,
     TaskListItem,
     TaskStatus,
+    TaskStore,
 )
 from tk.session import Session
 from tk.validation import validate_date_format
@@ -29,11 +30,8 @@ def _validate_positive_int(name: str, value: int | None) -> None:
         raise ValidationError(f"{name} must be a positive integer")
 
 
-def _sync_if_auto(session: Session) -> None:
+def _sync_if_auto(prof: Profile, tasks_data: TaskStore) -> None:
     """Regenerate TODO.md if auto_sync is enabled."""
-    prof = session.require_profile()
-    tasks_data = session.require_tasks()
-
     if prof.auto_sync:
         markdown.generate_todo(tasks_data.tasks, prof.output_path)
 
@@ -130,22 +128,12 @@ def list_history_data(
             if t.subjective_date == specific_date
         ]
 
-    groups: list[HistoryGroup] = []
+    groups = data.group_handled_tasks(handled_with_indices, include_unknown=True)
     display_num = 1
-    grouped = data.group_handled_tasks(handled_with_indices, include_unknown=True)
-    for date_str, date_items in grouped:
-        items: list[TaskListItem] = []
-        for array_index, task in date_items:
-            items.append(
-                TaskListItem(
-                    display_num=display_num,
-                    array_index=array_index,
-                    task=task,
-                )
-            )
+    for group in groups:
+        for item in group.items:
+            item.display_num = display_num
             display_num += 1
-
-        groups.append(HistoryGroup(date=date_str, items=items))
 
     return HistoryListPayload(
         groups=groups,
@@ -155,19 +143,6 @@ def list_history_data(
             specific_date=specific_date,
         ),
     )
-
-
-def extract_last_list_mapping(
-    payload: PendingListPayload | HistoryListPayload,
-) -> list[tuple[int, int]]:
-    """Build (display_num, array_index) mapping from list/history payloads."""
-    if isinstance(payload, PendingListPayload):
-        return [(item.display_num, item.array_index) for item in payload.items]
-
-    mapping: list[tuple[int, int]] = []
-    for group in payload.groups:
-        mapping.extend((item.display_num, item.array_index) for item in group.items)
-    return mapping
 
 
 def cmd_add(session: Session, text: str) -> str:
@@ -180,7 +155,7 @@ def cmd_add(session: Session, text: str) -> str:
 
     tasks_data.add_task(text)
     data.save_tasks(prof.data_path, tasks_data)
-    _sync_if_auto(session)
+    _sync_if_auto(prof, tasks_data)
 
     return "Task added."
 
@@ -211,7 +186,7 @@ def _handle_task(
         raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
-    _sync_if_auto(session)
+    _sync_if_auto(prof, tasks_data)
 
     return f"Task marked as {status.value}."
 
@@ -248,7 +223,7 @@ def cmd_edit(session: Session, array_index: int, text: str) -> str:
         raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
-    _sync_if_auto(session)
+    _sync_if_auto(prof, tasks_data)
 
     return "Task updated."
 
@@ -268,7 +243,7 @@ def cmd_delete(session: Session, array_index: int, confirm: bool = False) -> str
         raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
-    _sync_if_auto(session)
+    _sync_if_auto(prof, tasks_data)
 
     return "Task deleted."
 
@@ -288,7 +263,7 @@ def cmd_note(session: Session, array_index: int, note: str | None = None) -> str
         raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
-    _sync_if_auto(session)
+    _sync_if_auto(prof, tasks_data)
 
     return "Note updated." if note else "Note removed."
 
@@ -310,7 +285,7 @@ def cmd_date(session: Session, array_index: int, date_str: str) -> str:
         raise UsageError("Task not found")
 
     data.save_tasks(prof.data_path, tasks_data)
-    _sync_if_auto(session)
+    _sync_if_auto(prof, tasks_data)
 
     return f"Subjective date updated to {date_str}."
 
@@ -320,10 +295,9 @@ def cmd_sync(session: Session) -> str:
     prof = session.require_profile()
     tasks_data = session.require_tasks()
 
-    output_path = prof.output_path
-    markdown.generate_todo(tasks_data.tasks, output_path)
+    markdown.generate_todo(tasks_data.tasks, prof.output_path)
 
-    filename = Path(output_path).name
+    filename = Path(prof.output_path).name
     return f"{filename} regenerated."
 
 

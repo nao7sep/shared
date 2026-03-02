@@ -3,9 +3,16 @@
 import pytest
 
 from tk.errors import AppError, UsageError
-from tk.models import DoneCancelResult
+from tk.models import DoneCancelResult, Task, TaskListItem
 from tk.repl import parse_command, _try_parse_first_num_arg
 import tk.repl as repl_module
+
+
+def _make_item(display_num: int, array_index: int, task: Task | None = None) -> TaskListItem:
+    """Helper to create a TaskListItem for tests."""
+    if task is None:
+        task = Task(text="dummy", status="pending", created_utc="2026-01-01T00:00:00+00:00")
+    return TaskListItem(array_index=array_index, task=task, display_num=display_num)
 
 
 class TestParseCommand:
@@ -141,7 +148,7 @@ class TestPrepareInteractiveCommand:
 
     def test_done_command_executes_prompted_action(self, sample_session, monkeypatch):
         """Test that done uses prompt results and clears the list mapping."""
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
         captured: dict[str, object] = {}
 
         monkeypatch.setattr(repl_module.commands, "get_default_subjective_date", lambda session: "2026-02-09")
@@ -165,7 +172,7 @@ class TestPrepareInteractiveCommand:
 
     def test_cancelled_prompt_result_clears_mapping(self, sample_session, monkeypatch):
         """Test that cancelled interactive flow clears mapping and returns marker text."""
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
 
         monkeypatch.setattr(repl_module.commands, "get_default_subjective_date", lambda session: "2026-02-09")
         monkeypatch.setattr(
@@ -181,7 +188,7 @@ class TestPrepareInteractiveCommand:
 
     def test_delete_prompt_is_skipped_for_invalid_usage(self, sample_session, monkeypatch):
         """Test that invalid delete syntax does not trigger a confirmation prompt."""
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
 
         def fail_if_called(task):
             raise AssertionError("delete confirmation should not run for invalid usage")
@@ -194,7 +201,7 @@ class TestPrepareInteractiveCommand:
 
     def test_delete_prompt_sets_confirm_flag(self, sample_session, monkeypatch):
         """Test that valid delete syntax collects confirmation."""
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
 
         monkeypatch.setattr(
             repl_module.prompts,

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ..domain.chat import ChatDocument, ChatMessage
-from ..domain.config import AIEndpoint, SystemPromptConfig
 from .state import SessionState, initialize_message_hex_ids
 
 
@@ -158,25 +157,26 @@ def clear_provider_cache(state: SessionState) -> None:
 # ===================================================================
 
 
-def switch_provider(state: SessionState, endpoint: AIEndpoint) -> None:
+def switch_provider(state: SessionState, provider_name: str, model_name: str) -> None:
     """Switch active provider/model pair."""
-    state.current_ai = endpoint.provider
-    state.current_model = endpoint.model
+    state.current_ai = provider_name
+    state.current_model = model_name
 
 
-def switch_helper(state: SessionState, endpoint: AIEndpoint) -> None:
+def switch_helper(state: SessionState, provider_name: str, model_name: str) -> None:
     """Switch helper provider/model pair."""
-    state.helper_ai = endpoint.provider
-    state.helper_model = endpoint.model
+    state.helper_ai = provider_name
+    state.helper_model = model_name
 
 
 def set_system_prompt(
     state: SessionState,
-    config: SystemPromptConfig,
+    content: str | None,
+    path: str | None,
 ) -> None:
     """Set system prompt content and path atomically."""
-    state.system_prompt = config.content
-    state.system_prompt_path = config.path
+    state.system_prompt = content
+    state.system_prompt_path = path
 
 
 def toggle_input_mode(state: SessionState) -> str:

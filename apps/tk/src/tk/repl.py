@@ -40,13 +40,13 @@ def _report_unexpected_error(error: Exception) -> None:
 
 def _sync_on_exit(session: Session) -> None:
     """Run exit-time markdown sync behind the REPL error boundary."""
-    profile_data = session.profile
+    prof = session.profile
     tasks_data = session.tasks
-    if not profile_data or not tasks_data or not profile_data.sync_on_exit:
+    if not prof or not tasks_data or not prof.sync_on_exit:
         return
 
     try:
-        markdown.generate_todo(tasks_data.tasks, profile_data.output_path)
+        markdown.generate_todo(tasks_data.tasks, prof.output_path)
     except AppError as e:
         print(f"ERROR: {e}")
     except Exception as e:

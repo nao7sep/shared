@@ -90,14 +90,12 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
         date_tasks = sorted(all_dates[date], key=lambda t: t.handled_utc or "")
 
         for task in date_tasks:
-            text = task.text
-            note = task.note
             status_emoji = "✅" if task.status == TaskStatus.DONE else "❌"
 
-            if note:
-                lines.append(f"- {status_emoji} {text} => {note}")
+            if task.note:
+                lines.append(f"- {status_emoji} {task.text} => {task.note}")
             else:
-                lines.append(f"- {status_emoji} {text}")
+                lines.append(f"- {status_emoji} {task.text}")
 
     # End with empty line
     lines.append("")

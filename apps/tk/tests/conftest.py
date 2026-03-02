@@ -5,7 +5,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from tk.models import Profile, Task, TaskStore
+from tk.models import Profile, Task, TaskListItem, TaskStore
 from tk.session import Session
 
 

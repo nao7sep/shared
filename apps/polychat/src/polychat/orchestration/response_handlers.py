@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Optional
 
 from ..chat import add_assistant_message, add_error_message
 from ..domain.chat import ChatDocument
-from ..domain.config import AIEndpoint
 from ..logging import sanitize_error_message
 from .types import ActionMode, ContinueAction, OrchestratorAction, PrintAction
 from ..ai.types import Citation
@@ -20,11 +19,11 @@ def _has_chat_context(chat_path: str | None, chat_data: ChatDocument | None) -> 
     return bool(chat_path) and chat_data is not None
 
 
-def build_provider_error_details(endpoint: AIEndpoint) -> dict[str, str]:
+def build_provider_error_details(provider_name: str, model_name: str) -> dict[str, str]:
     """Build the standard provider/model error payload."""
     return {
-        "provider": endpoint.provider,
-        "model": endpoint.model,
+        "provider": provider_name,
+        "model": model_name,
     }
 
 
@@ -182,7 +181,7 @@ class ResponseHandlersMixin:
             assistant_hex_id=assistant_hex_id,
         )
         sanitized_error = sanitize_error_message(error_message)
-        error_details = build_provider_error_details(self.manager.assistant)
+        error_details = build_provider_error_details(self.manager.current_ai, self.manager.current_model)
 
         if should_release_for_rollback(state):
             self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
@@ -232,7 +231,7 @@ class ResponseHandlersMixin:
             assistant_hex_id=assistant_hex_id,
         )
         sanitized_error = sanitize_error_message(str(error))
-        error_details = build_provider_error_details(self.manager.assistant)
+        error_details = build_provider_error_details(self.manager.current_ai, self.manager.current_model)
 
         if mode == "normal":
             if not state.has_chat_context:

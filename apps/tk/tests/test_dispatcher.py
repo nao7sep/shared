@@ -2,7 +2,15 @@
 
 import pytest
 from tk import dispatcher
+from tk.models import Task, TaskListItem
 from tk.repl import parse_command
+
+
+def _make_item(display_num: int, array_index: int, task: Task | None = None) -> TaskListItem:
+    """Helper to create a TaskListItem for tests."""
+    if task is None:
+        task = Task(text="dummy", status="pending", created_utc="2026-01-01T00:00:00+00:00")
+    return TaskListItem(array_index=array_index, task=task, display_num=display_num)
 
 
 class TestCommandAliases:
@@ -145,7 +153,7 @@ class TestExecuteCommand:
     def test_execute_command_done(self, sample_session):
         """Test executing done command."""
         # Set up mapping first
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
 
         result = dispatcher.execute_command("done", [1], {}, sample_session)
 
@@ -163,13 +171,13 @@ class TestExecuteCommand:
 
     def test_delete_rejects_unknown_flag(self, sample_session):
         """Test that delete rejects unrecognised flags."""
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
         with pytest.raises(ValueError, match="Unknown flags: --unknown"):
             dispatcher.execute_command("delete", [1], {"unknown": True}, sample_session)
 
     def test_date_rejects_unknown_flag(self, sample_session):
         """Test that date rejects any flags."""
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
         with pytest.raises(ValueError, match="Unknown flags: --force"):
             dispatcher.execute_command("date", [1, "2026-03-01"], {"force": True}, sample_session)
 
@@ -193,7 +201,7 @@ class TestExecuteCommand:
     def test_execute_command_clears_list(self, sample_session):
         """Test that commands clear list mapping after mutation."""
         # Set up mapping
-        sample_session.set_last_list([(1, 0), (2, 1)])
+        sample_session.set_last_list([_make_item(1, 0), _make_item(2, 1)])
 
         # Execute mutation command
         dispatcher.execute_command("add", ["New task"], {}, sample_session)
@@ -220,7 +228,7 @@ class TestExecuteCommand:
 
     def test_parse_and_execute_edit_preserves_full_text(self, sample_session):
         """Test edit command keeps the full replacement text from the rest of the line."""
-        sample_session.set_last_list([(1, 0)])
+        sample_session.set_last_list([_make_item(1, 0, sample_session.tasks.tasks[0])])
         cmd, args, kwargs = parse_command('edit 1 "new text" with --literal tail')
 
         result = dispatcher.execute_command(cmd, args, kwargs, sample_session)
@@ -230,7 +238,7 @@ class TestExecuteCommand:
 
     def test_parse_and_execute_note_preserves_full_text(self, sample_session):
         """Test note command keeps the full note text from the rest of the line."""
-        sample_session.set_last_list([(2, 1)])
+        sample_session.set_last_list([_make_item(2, 1, sample_session.tasks.tasks[1])])
         cmd, args, kwargs = parse_command('note 2 "kept note" with --literal tail')
 
         result = dispatcher.execute_command(cmd, args, kwargs, sample_session)

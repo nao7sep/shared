@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from .. import chat, hex_id, profile
 from ..ai.capabilities import SEARCH_SUPPORTED_PROVIDERS, provider_supports_search
 from ..chat import resolve_last_interaction_span, update_metadata
-from ..domain.config import SystemPromptConfig
 from .types import CommandResult, CommandSignal
 
 if TYPE_CHECKING:
@@ -79,7 +78,7 @@ class RuntimeModeCommandHandlers:
 
         if args == "--":
             update_metadata(chat_data, system_prompt=None)
-            self._deps.manager.set_system_prompt_config(SystemPromptConfig())
+            self._deps.manager.set_system_prompt_config(None, None)
 
             return "System prompt removed from chat"
 
@@ -87,7 +86,7 @@ class RuntimeModeCommandHandlers:
             if not self._deps.manager.profile.system_prompt:
                 return "No default system prompt configured in profile"
 
-            prompt_config, warning = self._deps.manager.load_system_prompt(
+            (prompt_content, prompt_path), warning = self._deps.manager.load_system_prompt(
                 self._deps.manager.profile,
                 self._deps.manager.profile_path,
                 strict=True,
@@ -95,11 +94,11 @@ class RuntimeModeCommandHandlers:
             if warning:
                 raise ValueError(warning)
 
-            update_metadata(chat_data, system_prompt=prompt_config.path)
+            update_metadata(chat_data, system_prompt=prompt_path)
 
-            self._deps.manager.set_system_prompt_config(prompt_config)
+            self._deps.manager.set_system_prompt_config(prompt_content, prompt_path)
 
-            if prompt_config.path is None and prompt_config.content:
+            if prompt_path is None and prompt_content:
                 return "System prompt restored to inline profile default (content hidden)"
             return "System prompt restored to profile default"
 
@@ -114,7 +113,7 @@ class RuntimeModeCommandHandlers:
 
                 update_metadata(chat_data, system_prompt=persona_path)
                 self._deps.manager.set_system_prompt_config(
-                    SystemPromptConfig(content=system_prompt_content, path=persona_path)
+                    system_prompt_content, persona_path
                 )
 
                 return f"System prompt set to: {args} persona"
@@ -137,7 +136,7 @@ class RuntimeModeCommandHandlers:
             update_metadata(chat_data, system_prompt=args)
 
             self._deps.manager.set_system_prompt_config(
-                SystemPromptConfig(content=system_prompt_content, path=args)
+                system_prompt_content, args
             )
 
             return f"System prompt set to: {args}"

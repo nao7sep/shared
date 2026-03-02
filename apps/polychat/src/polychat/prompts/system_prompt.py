@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from ..domain.config import SystemPromptConfig
 from ..domain.profile import RuntimeProfile
 from .. import profile
 
@@ -14,11 +13,11 @@ def load_system_prompt(
     profile_data: RuntimeProfile,
     profile_path: Optional[str] = None,
     strict: bool = False,
-) -> tuple[SystemPromptConfig, Optional[str]]:
+) -> tuple[tuple[Optional[str], Optional[str]], Optional[str]]:
     """Resolve and load system prompt content from profile data.
 
     Returns:
-        Tuple of (SystemPromptConfig, warning_message)
+        Tuple of ((content, path), warning_message)
     """
     system_prompt = None
     system_prompt_path = None
@@ -50,5 +49,5 @@ def load_system_prompt(
                 raise ValueError(f"Could not load system prompt: {e}") from e
             warning = f"Could not load system prompt: {e}"
 
-    return SystemPromptConfig(content=system_prompt, path=system_prompt_path), warning
+    return (system_prompt, system_prompt_path), warning
 

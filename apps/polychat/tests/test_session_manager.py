@@ -96,19 +96,19 @@ class TestSystemPromptLoading:
         prompt_file.write_text("Prompt from file\n", encoding="utf-8")
         profile_data = self._profile_with_system_prompt(str(prompt_file))
 
-        config, warning = SessionManager.load_system_prompt(profile_data)
+        (content, path), warning = SessionManager.load_system_prompt(profile_data)
 
-        assert config.content == "Prompt from file"
-        assert config.path == str(prompt_file)
+        assert content == "Prompt from file"
+        assert path == str(prompt_file)
         assert warning is None
 
     def test_load_system_prompt_returns_warning_on_missing_file(self):
         profile_data = self._profile_with_system_prompt("/tmp/nonexistent-prompt-file.txt")
 
-        config, warning = SessionManager.load_system_prompt(profile_data)
+        (content, path), warning = SessionManager.load_system_prompt(profile_data)
 
-        assert config.content is None
-        assert config.path == "/tmp/nonexistent-prompt-file.txt"
+        assert content is None
+        assert path == "/tmp/nonexistent-prompt-file.txt"
         assert warning is not None
 
     def test_load_system_prompt_strict_raises_on_missing_file(self):
@@ -127,13 +127,13 @@ class TestSystemPromptLoading:
         # Simulate load_profile-mapped value while preserving a raw profile source.
         profile_data = self._profile_with_system_prompt(str(prompt_file.resolve()))
 
-        config, warning = SessionManager.load_system_prompt(
+        (content, path), warning = SessionManager.load_system_prompt(
             profile_data,
             str(profile_file),
         )
 
-        assert config.content == "Raw profile path prompt"
-        assert config.path == str(prompt_file)
+        assert content == "Raw profile path prompt"
+        assert path == str(prompt_file)
         assert warning is None
 
 

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Optional
 from .. import hex_id
 from ..logging import sanitize_error_message
 from ..domain.chat import ChatMessage
-from ..domain.config import AIEndpoint
 from ..domain.profile import RuntimeProfile
 from ..prompts.templates import (
     build_safety_check_prompt,
@@ -34,7 +33,8 @@ class MetadataGenerationCommandHandlers:
 
     async def _invoke_helper_ai(
         self,
-        endpoint: AIEndpoint,
+        provider_name: str,
+        model: str,
         profile_data: RuntimeProfile,
         messages: list[ChatMessage],
         system_prompt: Optional[str],
@@ -42,7 +42,8 @@ class MetadataGenerationCommandHandlers:
     ) -> str:
         """Invoke helper AI through explicitly wired command context dependency."""
         return await self._deps.context.invoke_helper_ai(
-            endpoint,
+            provider_name,
+            model,
             profile_data,
             messages,
             system_prompt,
@@ -88,7 +89,8 @@ class MetadataGenerationCommandHandlers:
 
         try:
             title = await self._invoke_helper_ai(
-                self._deps.manager.helper,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 self._deps.manager.profile,
                 prompt_messages,
                 None,
@@ -104,8 +106,8 @@ class MetadataGenerationCommandHandlers:
             sanitized_error = sanitize_error_message(str(error))
             logging.error(
                 "Helper AI title generation failed (provider=%s, model=%s): %s",
-                self._deps.manager.helper.provider,
-                self._deps.manager.helper.model,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 sanitized_error,
             )
             return f"Error generating title: {sanitized_error}"
@@ -148,7 +150,8 @@ class MetadataGenerationCommandHandlers:
 
         try:
             summary = await self._invoke_helper_ai(
-                self._deps.manager.helper,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 self._deps.manager.profile,
                 prompt_messages,
                 None,
@@ -162,8 +165,8 @@ class MetadataGenerationCommandHandlers:
             sanitized_error = sanitize_error_message(str(error))
             logging.error(
                 "Helper AI summary generation failed (provider=%s, model=%s): %s",
-                self._deps.manager.helper.provider,
-                self._deps.manager.helper.model,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 sanitized_error,
             )
             return f"Error generating summary: {sanitized_error}"
@@ -201,7 +204,8 @@ class MetadataGenerationCommandHandlers:
 
         try:
             result = await self._invoke_helper_ai(
-                self._deps.manager.helper,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 self._deps.manager.profile,
                 prompt_messages,
                 None,
@@ -221,8 +225,8 @@ class MetadataGenerationCommandHandlers:
             sanitized_error = sanitize_error_message(str(error))
             logging.error(
                 "Helper AI safety check failed (provider=%s, model=%s, scope=%s): %s",
-                self._deps.manager.helper.provider,
-                self._deps.manager.helper.model,
+                self._deps.manager.helper_ai,
+                self._deps.manager.helper_model,
                 scope,
                 sanitized_error,
             )

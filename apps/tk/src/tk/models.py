@@ -196,9 +196,9 @@ class Profile:
 class TaskListItem:
     """Display mapping for list/history output rows."""
 
-    display_num: int
     array_index: int
     task: Task
+    display_num: int = 0
 
 
 @dataclass

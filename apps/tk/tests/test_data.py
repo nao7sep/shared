@@ -351,7 +351,7 @@ class TestGroupHandledTasks:
         result = data.group_handled_tasks(tasks, include_unknown=True)
 
         assert len(result) == 2
-        dates = [date for date, _ in result]
+        dates = [group.date for group in result]
         assert "2026-02-09" in dates
         assert "2026-02-08" in dates
 
@@ -364,7 +364,7 @@ class TestGroupHandledTasks:
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
 
-        dates = [date for date, _ in result]
+        dates = [group.date for group in result]
         assert "2026-02-09" in dates
         assert "unknown" in dates
 
@@ -378,7 +378,7 @@ class TestGroupHandledTasks:
 
         result = data.group_handled_tasks(tasks, include_unknown=True)
 
-        dates = [date for date, _ in result]
+        dates = [group.date for group in result]
         assert dates == ["2026-02-09", "2026-02-08", "2026-02-07"]
 
     def test_group_handled_tasks_sort_within_date(self):
@@ -392,9 +392,9 @@ class TestGroupHandledTasks:
         result = data.group_handled_tasks(tasks, include_unknown=True)
 
         # Get the tasks for 2026-02-09
-        for date, date_tasks in result:
-            if date == "2026-02-09":
-                handled_times = [t.handled_utc for _, t in date_tasks]
+        for group in result:
+            if group.date == "2026-02-09":
+                handled_times = [item.task.handled_utc for item in group.items]
                 assert handled_times == [
                     "2026-02-09T10:00:00+00:00",
                     "2026-02-09T11:00:00+00:00",

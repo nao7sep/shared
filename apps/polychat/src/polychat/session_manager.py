@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .domain.chat import ChatDocument
-from .domain.config import AIEndpoint, SystemPromptConfig
 from .domain.profile import RuntimeProfile
 from .session.retry_controller import RetryController
 from .session.secret_controller import SecretController
@@ -138,28 +137,6 @@ class SessionManager:
         return hex_id.build_hex_map(self._state.chat.messages)
 
     # ===================================================================
-    # Composite accessors (domain DTOs)
-    # ===================================================================
-
-    @property
-    def assistant(self) -> AIEndpoint:
-        """Current assistant provider+model as a single DTO."""
-        return AIEndpoint(provider=self._state.current_ai, model=self._state.current_model)
-
-    @property
-    def helper(self) -> AIEndpoint:
-        """Current helper provider+model as a single DTO."""
-        return AIEndpoint(provider=self._state.helper_ai, model=self._state.helper_model)
-
-    @property
-    def system_prompt_config(self) -> SystemPromptConfig:
-        """Current system prompt content and path as a single DTO."""
-        return SystemPromptConfig(
-            content=self._state.system_prompt,
-            path=self._state.system_prompt_path,
-        )
-
-    # ===================================================================
     # Serialization
     # ===================================================================
 
@@ -258,7 +235,7 @@ class SessionManager:
         profile_data: RuntimeProfile,
         profile_path: Optional[str] = None,
         strict: bool = False,
-    ) -> tuple[SystemPromptConfig, Optional[str]]:
+    ) -> tuple[tuple[Optional[str], Optional[str]], Optional[str]]:
         """Resolve and load system prompt content from profile data.
 
         Args:
@@ -267,7 +244,7 @@ class SessionManager:
             strict: If True, raise ValueError when path-based prompt loading fails
 
         Returns:
-            Tuple of (SystemPromptConfig, warning_message)
+            Tuple of ((content, path), warning_message)
         """
         return resolve_system_prompt(
             profile_data,
@@ -398,7 +375,7 @@ class SessionManager:
             provider_name: Name of the provider
             model_name: Name of the model
         """
-        session_ops.switch_provider(self._state, AIEndpoint(provider=provider_name, model=model_name))
+        session_ops.switch_provider(self._state, provider_name, model_name)
 
     def switch_helper(self, provider_name: str, model_name: str) -> None:
         """Switch to a different helper AI provider and model.
@@ -407,18 +384,20 @@ class SessionManager:
             provider_name: Name of the provider
             model_name: Name of the model
         """
-        session_ops.switch_helper(self._state, AIEndpoint(provider=provider_name, model=model_name))
+        session_ops.switch_helper(self._state, provider_name, model_name)
 
     def set_system_prompt_config(
         self,
-        config: SystemPromptConfig,
+        content: Optional[str],
+        path: Optional[str],
     ) -> None:
         """Set system prompt content and path atomically.
 
         Args:
-            config: System prompt configuration DTO
+            content: System prompt content text (or None to clear)
+            path: System prompt source path (or None to clear)
         """
-        session_ops.set_system_prompt(self._state, config)
+        session_ops.set_system_prompt(self._state, content, path)
 
     def toggle_input_mode(self) -> str:
         """Toggle input mode between quick and compose.

@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from polychat.cli import main
-from polychat.domain.config import SystemPromptConfig
 from polychat.session_manager import SessionManager
 from test_helpers import make_profile
 
@@ -91,7 +90,7 @@ def test_setup_command_runs_wizard_then_starts_repl(monkeypatch):
         patch.object(
             SessionManager,
             "load_system_prompt",
-            return_value=(SystemPromptConfig(content="system prompt", path="@/prompts/system/default.txt"), None),
+            return_value=(("system prompt", "@/prompts/system/default.txt"), None),
         ) as mock_load_prompt,
         patch("polychat.cli.build_run_log_path", return_value="/tmp/polychat.log"),
         patch("polychat.cli.setup_logging"),

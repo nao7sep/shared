@@ -6,7 +6,6 @@ import pytest
 
 from polychat.ai.helper_runtime import invoke_helper_ai
 from polychat.domain.chat import ChatMessage
-from polychat.domain.config import AIEndpoint
 from polychat.domain.profile import RuntimeProfile
 
 
@@ -31,7 +30,7 @@ async def test_invoke_helper_ai_uses_get_full_response_and_session_cache():
         with patch("polychat.ai.runtime.get_provider_instance", return_value=provider) as mock_get_provider:
             with patch("polychat.logging.log_event") as mock_log_event:
                 response = await invoke_helper_ai(
-                    endpoint=AIEndpoint(provider="claude", model="claude-haiku-4-5"),
+                    provider_name="claude", model="claude-haiku-4-5",
                     profile=profile,
                     messages=[ChatMessage.new_user("Generate title")],
                     system_prompt="Do task",
@@ -69,7 +68,7 @@ async def test_invoke_helper_ai_missing_api_key_raises_value_error():
     with patch("polychat.logging.log_event"):
         with pytest.raises(ValueError, match="No API key configured for helper AI: claude"):
             await invoke_helper_ai(
-                endpoint=AIEndpoint(provider="claude", model="claude-haiku-4-5"),
+                provider_name="claude", model="claude-haiku-4-5",
                 profile=profile,
                 messages=[ChatMessage.new_user("test")],
             )
@@ -97,7 +96,7 @@ async def test_invoke_helper_ai_applies_helper_limits_when_configured():
         with patch("polychat.ai.runtime.get_provider_instance", return_value=provider):
             with patch("polychat.logging.log_event"):
                 await invoke_helper_ai(
-                    endpoint=AIEndpoint(provider="claude", model="claude-haiku-4-5"),
+                    provider_name="claude", model="claude-haiku-4-5",
                     profile=profile,
                     messages=[ChatMessage.new_user("Generate title")],
                 )
@@ -135,7 +134,7 @@ async def test_invoke_helper_ai_sanitizes_key_load_failure():
         ),
     ):
         await invoke_helper_ai(
-            endpoint=AIEndpoint(provider="claude", model="claude-haiku-4-5"),
+            provider_name="claude", model="claude-haiku-4-5",
             profile=profile,
             messages=[ChatMessage.new_user("test")],
         )
@@ -176,7 +175,7 @@ async def test_invoke_helper_ai_sanitizes_provider_failure():
         ),
     ):
         await invoke_helper_ai(
-            endpoint=AIEndpoint(provider="claude", model="claude-haiku-4-5"),
+            provider_name="claude", model="claude-haiku-4-5",
             profile=profile,
             messages=[ChatMessage.new_user("Generate title")],
         )

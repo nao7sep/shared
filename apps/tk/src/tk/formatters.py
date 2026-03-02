@@ -26,16 +26,12 @@ def format_history_list(payload: HistoryListPayload) -> str:
     filters = payload.filters
 
     if not groups:
-        days = filters.days
-        working_days = filters.working_days
-        specific_date = filters.specific_date
-
-        if days is not None:
-            return f"No handled tasks in last {days} days."
-        if working_days is not None:
-            return f"No handled tasks in last {working_days} working days."
-        if specific_date is not None:
-            return f"No handled tasks on {specific_date}."
+        if filters.days is not None:
+            return f"No handled tasks in last {filters.days} days."
+        if filters.working_days is not None:
+            return f"No handled tasks in last {filters.working_days} working days."
+        if filters.specific_date is not None:
+            return f"No handled tasks on {filters.specific_date}."
         return "No handled tasks."
 
     total_count = sum(len(group.items) for group in groups)
@@ -49,10 +45,9 @@ def format_history_list(payload: HistoryListPayload) -> str:
             task = item.task
             status_emoji = "✅" if task.status == TaskStatus.DONE.value else "❌"
             padded_num = str(item.display_num).rjust(num_width)
-            note = task.note
 
-            if note:
-                lines.append(f"  {padded_num}. {status_emoji} {task.text} => {note}")
+            if task.note:
+                lines.append(f"  {padded_num}. {status_emoji} {task.text} => {task.note}")
             else:
                 lines.append(f"  {padded_num}. {status_emoji} {task.text}")
 

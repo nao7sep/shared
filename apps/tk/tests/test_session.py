@@ -2,6 +2,7 @@
 
 import pytest
 from tk.errors import UsageError
+from tk.models import Task, TaskListItem
 from tk.session import Session
 
 
@@ -53,26 +54,32 @@ class TestSessionRequireMethods:
             empty_session.require_tasks()
 
 
+def _make_item(display_num: int, array_index: int) -> TaskListItem:
+    """Helper to create a TaskListItem for tests."""
+    dummy = Task(text="dummy", status="pending", created_utc="2026-01-01T00:00:00+00:00")
+    return TaskListItem(array_index=array_index, task=dummy, display_num=display_num)
+
+
 class TestSessionListMapping:
     """Test list mapping functionality."""
 
     def test_set_last_list(self, empty_session):
         """Test setting list mapping."""
-        mapping = [(1, 0), (2, 1), (3, 2)]
-        empty_session.set_last_list(mapping)
+        items = [_make_item(1, 0), _make_item(2, 1), _make_item(3, 2)]
+        empty_session.set_last_list(items)
 
-        assert empty_session.last_list == mapping
+        assert len(empty_session.last_list) == 3
 
     def test_clear_last_list(self, empty_session):
         """Test clearing list mapping."""
-        empty_session.set_last_list([(1, 0), (2, 1)])
+        empty_session.set_last_list([_make_item(1, 0), _make_item(2, 1)])
         empty_session.clear_last_list()
 
         assert empty_session.last_list == []
 
     def test_resolve_array_index(self, empty_session):
         """Test resolving display_num to array index."""
-        empty_session.set_last_list([(1, 0), (2, 5), (3, 10)])
+        empty_session.set_last_list([_make_item(1, 0), _make_item(2, 5), _make_item(3, 10)])
 
         assert empty_session.resolve_array_index(1) == 0
         assert empty_session.resolve_array_index(2) == 5
@@ -85,7 +92,7 @@ class TestSessionListMapping:
 
     def test_resolve_array_index_invalid_num(self, empty_session):
         """Test that invalid display_num raises ValueError."""
-        empty_session.set_last_list([(1, 0), (2, 1)])
+        empty_session.set_last_list([_make_item(1, 0), _make_item(2, 1)])
 
         with pytest.raises(UsageError, match="Invalid task number"):
             empty_session.resolve_array_index(99)
@@ -96,7 +103,12 @@ class TestSessionTaskRetrieval:
 
     def test_get_task_by_display_number(self, sample_session):
         """Test getting task by display number."""
-        sample_session.set_last_list([(1, 0), (2, 1)])
+        task_0 = sample_session.tasks.tasks[0]
+        task_1 = sample_session.tasks.tasks[1]
+        sample_session.set_last_list([
+            TaskListItem(array_index=0, task=task_0, display_num=1),
+            TaskListItem(array_index=1, task=task_1, display_num=2),
+        ])
 
         task = sample_session.get_task_by_display_number(1)
 
@@ -105,7 +117,10 @@ class TestSessionTaskRetrieval:
 
     def test_get_task_by_display_number_invalid(self, sample_session):
         """Test that invalid display number raises ValueError."""
-        sample_session.set_last_list([(1, 0)])
+        task_0 = sample_session.tasks.tasks[0]
+        sample_session.set_last_list([
+            TaskListItem(array_index=0, task=task_0, display_num=1),
+        ])
 
         with pytest.raises(UsageError, match="Invalid task number"):
             sample_session.get_task_by_display_number(99)
