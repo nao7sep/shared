@@ -5,7 +5,7 @@ import pytest
 from datetime import datetime
 
 from tk import data
-from tk.errors import StorageError, ValidationError
+from tk.errors import StorageError
 from tk.models import Task, TaskStore
 
 
@@ -59,12 +59,12 @@ class TestLoadTasks:
             data.load_tasks(str(path))
 
 
-class TestValidateTasksStructure:
-    """Test validate_tasks_structure function."""
+class TestTaskStoreValidation:
+    """Test TaskStore.from_dict validation (formerly validate_tasks_structure)."""
 
     def test_validate_empty_tasks(self):
         """Test that empty tasks array is valid."""
-        data.validate_tasks_structure({"tasks": []})  # Should not raise
+        TaskStore.from_dict({"tasks": []})  # Should not raise
 
     def test_validate_valid_tasks(self):
         """Test that well-formed tasks are valid."""
@@ -80,45 +80,45 @@ class TestValidateTasksStructure:
                 }
             ]
         }
-        data.validate_tasks_structure(valid_data)  # Should not raise
+        TaskStore.from_dict(valid_data)  # Should not raise
 
     def test_validate_missing_tasks_key(self):
         """Test that missing 'tasks' key raises ValueError."""
-        with pytest.raises(ValidationError, match="missing 'tasks' key"):
-            data.validate_tasks_structure({"other": []})
+        with pytest.raises(ValueError, match="missing 'tasks' key"):
+            TaskStore.from_dict({"other": []})
 
     def test_validate_tasks_not_array(self):
         """Test that 'tasks' must be an array."""
-        with pytest.raises(ValidationError, match="'tasks' must be an array"):
-            data.validate_tasks_structure({"tasks": "not an array"})
+        with pytest.raises(ValueError, match="'tasks' must be an array"):
+            TaskStore.from_dict({"tasks": "not an array"})
 
-        with pytest.raises(ValidationError, match="'tasks' must be an array"):
-            data.validate_tasks_structure({"tasks": {}})
+        with pytest.raises(ValueError, match="'tasks' must be an array"):
+            TaskStore.from_dict({"tasks": {}})
 
     def test_validate_missing_required_fields(self):
         """Test that missing required fields raises ValueError."""
         # Missing 'text'
-        with pytest.raises(ValidationError, match="missing required fields"):
-            data.validate_tasks_structure({
+        with pytest.raises(ValueError, match="missing required fields"):
+            TaskStore.from_dict({
                 "tasks": [{"status": "pending", "created_utc": "2026-02-09T10:00:00+00:00"}]
             })
 
         # Missing 'status'
-        with pytest.raises(ValidationError, match="missing required fields"):
-            data.validate_tasks_structure({
+        with pytest.raises(ValueError, match="missing required fields"):
+            TaskStore.from_dict({
                 "tasks": [{"text": "Test", "created_utc": "2026-02-09T10:00:00+00:00"}]
             })
 
         # Missing 'created_utc'
-        with pytest.raises(ValidationError, match="missing required fields"):
-            data.validate_tasks_structure({
+        with pytest.raises(ValueError, match="missing required fields"):
+            TaskStore.from_dict({
                 "tasks": [{"text": "Test", "status": "pending"}]
             })
 
     def test_validate_invalid_status(self):
         """Test that invalid status raises ValueError."""
-        with pytest.raises(ValidationError, match="invalid status"):
-            data.validate_tasks_structure({
+        with pytest.raises(ValueError, match="Invalid task status"):
+            TaskStore.from_dict({
                 "tasks": [{
                     "text": "Test",
                     "status": "invalid_status",
@@ -128,11 +128,11 @@ class TestValidateTasksStructure:
 
     def test_validate_task_not_dict(self):
         """Test that non-dict tasks raise ValueError."""
-        with pytest.raises(ValidationError, match="not a valid object"):
-            data.validate_tasks_structure({"tasks": ["not a dict"]})
+        with pytest.raises(ValueError, match="not a valid object"):
+            TaskStore.from_dict({"tasks": ["not a dict"]})
 
-        with pytest.raises(ValidationError, match="not a valid object"):
-            data.validate_tasks_structure({"tasks": [123]})
+        with pytest.raises(ValueError, match="not a valid object"):
+            TaskStore.from_dict({"tasks": [123]})
 
     def test_save_tasks_wraps_os_errors(self, tmp_path, monkeypatch):
         """Test that save failures are surfaced as StorageError."""
@@ -196,23 +196,23 @@ class TestSaveTasks:
 
 
 class TestAddTask:
-    """Test add_task function."""
+    """Test TaskStore.add_task method."""
 
     def test_add_task_returns_index(self):
         """Test that add_task returns correct index."""
         tasks_data = TaskStore()
 
-        index = data.add_task(tasks_data, "First task")
+        index = tasks_data.add_task("First task")
         assert index == 0
 
-        index = data.add_task(tasks_data, "Second task")
+        index = tasks_data.add_task("Second task")
         assert index == 1
 
     def test_add_task_structure(self):
         """Test that add_task creates correct task structure."""
         tasks_data = TaskStore()
 
-        data.add_task(tasks_data, "Test task")
+        tasks_data.add_task("Test task")
 
         task = tasks_data.tasks[0]
         assert task.text == "Test task"
@@ -226,7 +226,7 @@ class TestAddTask:
         """Test that new tasks have 'pending' status."""
         tasks_data = TaskStore()
 
-        data.add_task(tasks_data, "Test task")
+        tasks_data.add_task("Test task")
 
         assert tasks_data.tasks[0].status == "pending"
 
@@ -234,7 +234,7 @@ class TestAddTask:
         """Test that handled fields are null for new tasks."""
         tasks_data = TaskStore()
 
-        data.add_task(tasks_data, "Test task")
+        tasks_data.add_task("Test task")
 
         task = tasks_data.tasks[0]
         assert task.handled_utc is None
@@ -245,7 +245,7 @@ class TestAddTask:
         """Test that created_utc is UTC timestamp."""
         tasks_data = TaskStore()
 
-        data.add_task(tasks_data, "Test task")
+        tasks_data.add_task("Test task")
 
         created_utc = tasks_data.tasks[0].created_utc
         # Should be able to parse as ISO format
@@ -254,11 +254,11 @@ class TestAddTask:
 
 
 class TestUpdateTask:
-    """Test update_task function."""
+    """Test TaskStore.update_task method."""
 
     def test_update_task_valid_field(self, sample_tasks_data):
         """Test updating allowed field."""
-        result = data.update_task(sample_tasks_data, 0, text="Updated text")
+        result = sample_tasks_data.update_task(0, text="Updated text")
 
         assert result is True
         assert sample_tasks_data.tasks[0].text == "Updated text"
@@ -266,18 +266,17 @@ class TestUpdateTask:
     def test_update_task_invalid_field(self, sample_tasks_data):
         """Test that invalid field raises ValueError."""
         with pytest.raises(ValueError, match="Invalid task fields"):
-            data.update_task(sample_tasks_data, 0, invalid_field="bad")
+            sample_tasks_data.update_task(0, invalid_field="bad")
 
     def test_update_task_nonexistent_index(self, sample_tasks_data):
         """Test updating non-existent index returns False."""
-        result = data.update_task(sample_tasks_data, 999, text="Updated")
+        result = sample_tasks_data.update_task(999, text="Updated")
 
         assert result is False
 
     def test_update_task_multiple_fields(self, sample_tasks_data):
         """Test updating multiple fields at once."""
-        result = data.update_task(
-            sample_tasks_data,
+        result = sample_tasks_data.update_task(
             0,
             status="done",
             note="Completed",
@@ -293,8 +292,7 @@ class TestUpdateTask:
     def test_update_task_invalid_field_mixed(self, sample_tasks_data):
         """Test that mixed valid/invalid fields rejects all."""
         with pytest.raises(ValueError, match="Invalid task fields"):
-            data.update_task(
-                sample_tasks_data,
+            sample_tasks_data.update_task(
                 0,
                 text="Valid",
                 invalid="Bad",
@@ -305,20 +303,20 @@ class TestUpdateTask:
 
 
 class TestDeleteTask:
-    """Test delete_task function."""
+    """Test TaskStore.delete_task method."""
 
     def test_delete_task_valid_index(self, sample_tasks_data):
         """Test deleting task by valid index."""
         original_count = len(sample_tasks_data.tasks)
 
-        result = data.delete_task(sample_tasks_data, 1)
+        result = sample_tasks_data.delete_task(1)
 
         assert result is True
         assert len(sample_tasks_data.tasks) == original_count - 1
 
     def test_delete_task_invalid_index(self, sample_tasks_data):
         """Test that invalid index returns False."""
-        result = data.delete_task(sample_tasks_data, 999)
+        result = sample_tasks_data.delete_task(999)
 
         assert result is False
 
@@ -327,7 +325,7 @@ class TestDeleteTask:
         # Task at index 2 before deletion
         task_text = sample_tasks_data.tasks[2].text
 
-        data.delete_task(sample_tasks_data, 0)
+        sample_tasks_data.delete_task(0)
 
         # Now at index 1
         assert sample_tasks_data.tasks[1].text == task_text

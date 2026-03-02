@@ -25,8 +25,8 @@ _NO_FLAG_COMMANDS = frozenset(
     )
 )
 _HANDLED_COMMAND_TO_STATUS = {
-    "done": TaskStatus.DONE.value,
-    "cancel": TaskStatus.CANCELLED.value,
+    "done": TaskStatus.DONE,
+    "cancel": TaskStatus.CANCELLED,
 }
 
 

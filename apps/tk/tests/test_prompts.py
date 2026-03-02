@@ -2,7 +2,7 @@
 
 import pytest
 from tk import prompts
-from tk.models import Task
+from tk.models import Task, TaskStatus
 
 
 class TestCollectDonePrompts:
@@ -15,7 +15,7 @@ class TestCollectDonePrompts:
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         result = prompts.collect_done_cancel_prompts(
-            task, "done", "2026-02-09"
+            task, TaskStatus.DONE, "2026-02-09"
         )
 
         assert result.note == "My note"
@@ -28,7 +28,7 @@ class TestCollectDonePrompts:
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         result = prompts.collect_done_cancel_prompts(
-            task, "done", "2026-02-09"
+            task, TaskStatus.DONE, "2026-02-09"
         )
 
         assert result.note is None
@@ -41,7 +41,7 @@ class TestCollectDonePrompts:
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         result = prompts.collect_done_cancel_prompts(
-            task, "done", "2026-02-09"
+            task, TaskStatus.DONE, "2026-02-09"
         )
 
         assert result.note == "Note"
@@ -54,7 +54,7 @@ class TestCollectDonePrompts:
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         result = prompts.collect_done_cancel_prompts(
-            task, "done", "2026-02-09"
+            task, TaskStatus.DONE, "2026-02-09"
         )
 
         assert result.date == "2026-02-09"
@@ -69,7 +69,7 @@ class TestCollectDonePrompts:
         monkeypatch.setattr("builtins.input", mock_input)
 
         result = prompts.collect_done_cancel_prompts(
-            task, "done", "2026-02-09"
+            task, TaskStatus.DONE, "2026-02-09"
         )
 
         assert result == "CANCELLED"
@@ -82,7 +82,7 @@ class TestCollectDonePrompts:
 
         with pytest.raises(ValueError, match="Invalid date"):
             prompts.collect_done_cancel_prompts(
-                task, "done", "2026-02-09"
+                task, TaskStatus.DONE, "2026-02-09"
             )
 
 

@@ -22,15 +22,13 @@ class ChatSwitchingHandlersMixin:
         new_chat_path: str,
     ) -> OrchestratorAction:
         """Handle create-and-switch to new chat path."""
-        current_chat_path = self.manager.chat_path
-        current_chat_data = self.manager.chat
-
-        if current_chat_path and current_chat_data:
+        if self.manager.chat_path and self.manager.chat:
             await self.manager.save_current_chat(
-                chat_path=current_chat_path,
-                chat_data=current_chat_data,
+                chat_path=self.manager.chat_path,
+                chat_data=self.manager.chat,
             )
 
+        previous_path = self.manager.chat_path
         new_chat_data = load_chat(new_chat_path)
         self.manager.switch_chat(new_chat_path, new_chat_data)
 
@@ -43,7 +41,7 @@ class ChatSwitchingHandlersMixin:
             "chat_switch",
             chat_file=new_chat_path,
             trigger="new",
-            previous_chat_file=current_chat_path,
+            previous_chat_file=previous_path,
             message_count=len(new_chat_data.messages),
         )
 
@@ -56,15 +54,13 @@ class ChatSwitchingHandlersMixin:
         new_chat_path: str,
     ) -> OrchestratorAction:
         """Handle open-and-switch to selected chat path."""
-        current_chat_path = self.manager.chat_path
-        current_chat_data = self.manager.chat
-
-        if current_chat_path and current_chat_data:
+        if self.manager.chat_path and self.manager.chat:
             await self.manager.save_current_chat(
-                chat_path=current_chat_path,
-                chat_data=current_chat_data,
+                chat_path=self.manager.chat_path,
+                chat_data=self.manager.chat,
             )
 
+        previous_path = self.manager.chat_path
         new_chat_data = load_chat(new_chat_path)
         self.manager.switch_chat(new_chat_path, new_chat_data)
 
@@ -72,7 +68,7 @@ class ChatSwitchingHandlersMixin:
             "chat_switch",
             chat_file=new_chat_path,
             trigger="open",
-            previous_chat_file=current_chat_path,
+            previous_chat_file=previous_path,
             message_count=len(new_chat_data.messages),
         )
 
@@ -82,21 +78,22 @@ class ChatSwitchingHandlersMixin:
 
     async def _handle_close_chat(self) -> OrchestratorAction:
         """Handle close-chat signal."""
-        current_chat_path = self.manager.chat_path
-        current_chat_data = self.manager.chat
+        chat_path = self.manager.chat_path
+        chat_data = self.manager.chat
 
-        if current_chat_path and current_chat_data:
+        if chat_path and chat_data:
             await self.manager.save_current_chat(
-                chat_path=current_chat_path,
-                chat_data=current_chat_data,
+                chat_path=chat_path,
+                chat_data=chat_data,
             )
 
+        message_count = len(chat_data.messages) if chat_data else 0
         self.manager.close_chat()
 
         log_event(
             "chat_close",
-            chat_file=current_chat_path,
-            message_count=len(current_chat_data.messages) if current_chat_data else 0,
+            chat_file=chat_path,
+            message_count=message_count,
         )
 
         return ContinueAction(message="Chat closed")

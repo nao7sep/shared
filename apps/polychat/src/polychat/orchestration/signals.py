@@ -209,17 +209,17 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
         if not self.manager.retry.active:
             return PrintAction(message="Not in retry mode")
 
-        current_chat_data = self.manager.chat
-        current_chat_path = self.manager.chat_path
+        chat_data = self.manager.chat
+        chat_path = self.manager.chat_path
 
-        if not current_chat_data:
+        if not chat_data:
             return PrintAction(message="No chat open")
 
         retry_attempt = self.manager.retry.get_attempt(retry_hex_id)
         if not retry_attempt:
             return PrintAction(message=f"Retry ID not found: {retry_hex_id}")
 
-        messages = current_chat_data.messages
+        messages = chat_data.messages
         target_span = self.manager.retry.target_span
         if target_span is None or target_span.replace_end >= len(messages):
             return PrintAction(message="Retry target is no longer valid")
@@ -244,10 +244,10 @@ class CommandSignalHandlersMixin(ChatSwitchingHandlersMixin):
             replacement_plan.replacement_messages
         )
 
-        if current_chat_path:
+        if chat_path:
             await self.manager.save_current_chat(
-                chat_path=current_chat_path,
-                chat_data=current_chat_data,
+                chat_path=chat_path,
+                chat_data=chat_data,
             )
 
         self.manager.retry.exit()

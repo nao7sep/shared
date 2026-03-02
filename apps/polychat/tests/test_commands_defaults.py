@@ -77,7 +77,7 @@ async def test_timeout_default_command(command_handler_defaults, mock_session_ma
 @pytest.mark.asyncio
 async def test_timeout_default_with_zero(command_handler_defaults, mock_session_manager_defaults):
     """Test /timeout default when profile has zero timeout."""
-    mock_session_manager_defaults._default_timeout = 0
+    mock_session_manager_defaults._initial_timeout = 0
 
     result = await command_handler_defaults.set_timeout("default")
 

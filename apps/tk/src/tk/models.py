@@ -18,6 +18,8 @@ _VALID_TASK_STATUSES = {status.value for status in TaskStatus}
 
 
 def _coerce_task_status(value: str) -> str:
+    if isinstance(value, TaskStatus):
+        return value.value
     if value not in _VALID_TASK_STATUSES:
         raise ValueError(f"Invalid task status: {value}")
     return value
@@ -40,7 +42,12 @@ class Task:
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "Task":
         """Create task from a dict-like payload."""
-        created_utc = payload.get("created_utc")
+        required_fields = {"text", "status", "created_utc"}
+        missing = required_fields - set(payload.keys())
+        if missing:
+            raise ValueError(f"Task missing required fields: {', '.join(sorted(missing))}")
+
+        created_utc = payload["created_utc"]
         if created_utc is None:
             raise ValueError("Task missing required field: created_utc")
 
@@ -133,7 +140,7 @@ class TaskStore:
 
         for key, value in updates.items():
             if key == "status":
-                task.status = _coerce_task_status(str(value))
+                task.status = _coerce_task_status(value)
             elif key in ("handled_utc", "subjective_date", "note"):
                 setattr(task, key, None if value is None else str(value))
             else:

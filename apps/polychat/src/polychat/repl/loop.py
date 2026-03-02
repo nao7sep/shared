@@ -131,18 +131,19 @@ async def repl_loop(
     log_file: Optional[str] = None,
 ) -> None:
     """Run the REPL loop."""
-    helper_ai_name = profile_data.default_helper_ai or profile_data.default_ai
-    helper_model_name = profile_data.models[helper_ai_name]
+    default_ai = profile_data.default_ai
+    helper_ai = profile_data.default_helper_ai or default_ai
+
     input_mode = profile_data.input_mode or "quick"
     if input_mode not in ("quick", "compose"):
         input_mode = "quick"
 
     manager = SessionManager(
         profile=profile_data,
-        current_ai=profile_data.default_ai,
-        current_model=profile_data.models[profile_data.default_ai],
-        helper_ai=helper_ai_name,
-        helper_model=helper_model_name,
+        current_ai=default_ai,
+        current_model=profile_data.models[default_ai],
+        helper_ai=helper_ai,
+        helper_model=profile_data.models[helper_ai],
         chat=chat_data,
         chat_path=chat_path,
         profile_path=profile_path,
@@ -165,10 +166,10 @@ async def repl_loop(
         log_file=log_file,
         chats_dir=manager.profile.chats_dir,
         logs_dir=manager.profile.logs_dir,
-        assistant_provider=manager.current_ai,
-        assistant_model=manager.current_model,
-        helper_provider=manager.helper_ai,
-        helper_model=manager.helper_model,
+        assistant_provider=manager.assistant.provider,
+        assistant_model=manager.assistant.model,
+        helper_provider=manager.helper.provider,
+        helper_model=manager.helper.model,
         input_mode=manager.input_mode,
         timeout=resolve_profile_timeout(manager.profile),
         system_prompt=manager.system_prompt_path,

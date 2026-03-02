@@ -5,8 +5,6 @@ from pathlib import Path
 from tk import data
 from tk.models import Task, TaskStatus
 
-_DONE_STATUS = TaskStatus.DONE.value
-
 
 def _write_todo(lines: list[str], output_path: str) -> None:
     """Write generated TODO.md content to disk."""
@@ -94,7 +92,7 @@ def generate_todo(tasks: list[Task], output_path: str) -> None:
         for task in date_tasks:
             text = task.text
             note = task.note
-            status_emoji = "✅" if task.status == _DONE_STATUS else "❌"
+            status_emoji = "✅" if task.status == TaskStatus.DONE else "❌"
 
             if note:
                 lines.append(f"- {status_emoji} {text} => {note}")

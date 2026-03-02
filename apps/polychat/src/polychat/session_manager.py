@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .domain.chat import ChatDocument
+from .domain.config import AIEndpoint, SystemPromptConfig
 from .domain.profile import RuntimeProfile
 from .session.retry_controller import RetryController
 from .session.secret_controller import SecretController
@@ -94,9 +95,8 @@ class SessionManager:
         helper_ai = helper_ai or current_ai
         helper_model = helper_model or current_model
 
-        default_timeout = self._normalize_timeout(profile.timeout)
-        profile.timeout = default_timeout
-        self._default_timeout = default_timeout
+        profile.timeout = self._normalize_timeout(profile.timeout)
+        self._initial_timeout = profile.timeout
 
         chat_doc = chat if chat is not None else ChatDocument.empty()
 
@@ -136,6 +136,28 @@ class SessionManager:
     def message_hex_ids(self) -> dict[int, str]:
         """Message hex IDs (index → hex_id)."""
         return hex_id.build_hex_map(self._state.chat.messages)
+
+    # ===================================================================
+    # Composite accessors (domain DTOs)
+    # ===================================================================
+
+    @property
+    def assistant(self) -> AIEndpoint:
+        """Current assistant provider+model as a single DTO."""
+        return AIEndpoint(provider=self._state.current_ai, model=self._state.current_model)
+
+    @property
+    def helper(self) -> AIEndpoint:
+        """Current helper provider+model as a single DTO."""
+        return AIEndpoint(provider=self._state.helper_ai, model=self._state.helper_model)
+
+    @property
+    def system_prompt_config(self) -> SystemPromptConfig:
+        """Current system prompt content and path as a single DTO."""
+        return SystemPromptConfig(
+            content=self._state.system_prompt,
+            path=self._state.system_prompt_path,
+        )
 
     # ===================================================================
     # Serialization
@@ -193,7 +215,7 @@ class SessionManager:
     @property
     def default_timeout(self) -> int | float:
         """Initial timeout loaded from profile at session start."""
-        return self._default_timeout
+        return self._initial_timeout
 
     def set_timeout(self, timeout: Any) -> int | float:
         """Update active timeout and invalidate provider cache."""
@@ -204,7 +226,7 @@ class SessionManager:
 
     def reset_timeout_to_default(self) -> int | float:
         """Reset active timeout back to the session's profile default."""
-        return self.set_timeout(self._default_timeout)
+        return self.set_timeout(self._initial_timeout)
 
     def clear_provider_cache(self) -> None:
         """Clear all cached provider instances."""
@@ -377,6 +399,26 @@ class SessionManager:
             model_name: Name of the model
         """
         session_ops.switch_provider(self._state, provider_name, model_name)
+
+    def switch_helper(self, provider_name: str, model_name: str) -> None:
+        """Switch to a different helper AI provider and model.
+
+        Args:
+            provider_name: Name of the provider
+            model_name: Name of the model
+        """
+        session_ops.switch_helper(self._state, provider_name, model_name)
+
+    def set_system_prompt_config(
+        self,
+        config: SystemPromptConfig,
+    ) -> None:
+        """Set system prompt content and path atomically.
+
+        Args:
+            config: System prompt configuration DTO
+        """
+        session_ops.set_system_prompt(self._state, config.content, config.path)
 
     def toggle_input_mode(self) -> str:
         """Toggle input mode between quick and compose.

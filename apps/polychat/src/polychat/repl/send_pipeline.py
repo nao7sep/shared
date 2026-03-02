@@ -133,9 +133,6 @@ async def execute_send_action(
     orchestrator: ChatOrchestrator,
 ) -> None:
     """Execute one orchestrator SendAction and print response output."""
-    effective_path = manager.chat_path
-    effective_data = manager.chat
-
     use_search = (
         action.search_enabled
         if action.search_enabled is not None
@@ -143,7 +140,7 @@ async def execute_send_action(
     )
     provider_instance, validation_error = validate_and_get_provider(
         manager,
-        chat_path=effective_path,
+        chat_path=manager.chat_path,
         search=use_search,
     )
     provider_resolution_error = validation_error
@@ -154,13 +151,13 @@ async def execute_send_action(
             "(provider=%s, mode=%s, chat=%s)",
             manager.current_ai,
             action.mode,
-            effective_path,
+            manager.chat_path,
         )
 
     if provider_resolution_error:
         await orchestrator.rollback_pre_send_failure(
-            chat_path=effective_path,
-            chat_data=effective_data,
+            chat_path=manager.chat_path,
+            chat_data=manager.chat,
             mode=action.mode,
             error_message=provider_resolution_error,
             assistant_hex_id=action.assistant_hex_id,
@@ -187,7 +184,7 @@ async def execute_send_action(
             provider_name=manager.current_ai,
             profile=manager.profile,
             mode=effective_request_mode,
-            chat_path=effective_path,
+            chat_path=manager.chat_path,
             search=use_search,
         )
         response_text, first_token_time = await display_streaming_response(
@@ -197,9 +194,9 @@ async def execute_send_action(
 
     except KeyboardInterrupt:
         cancel_result = await orchestrator.handle_user_cancel(
-            effective_data,
+            manager.chat,
             action.mode,
-            chat_path=effective_path,
+            chat_path=manager.chat_path,
             assistant_hex_id=action.assistant_hex_id,
         )
         print()
@@ -209,8 +206,8 @@ async def execute_send_action(
     except Exception as exc:
         error_result = await orchestrator.handle_ai_error(
             exc,
-            effective_path,
-            effective_data,
+            manager.chat_path,
+            manager.chat,
             action.mode,
             user_input=action.user_input,
             assistant_hex_id=action.assistant_hex_id,
@@ -227,7 +224,7 @@ async def execute_send_action(
             stage="citation_processing",
             error=exc,
             manager=manager,
-            effective_path=effective_path,
+            effective_path=manager.chat_path,
             mode=effective_request_mode,
             print_user_warning=True,
         )
@@ -239,22 +236,22 @@ async def execute_send_action(
             first_token_time=first_token_time,
             effective_request_mode=effective_request_mode,
             manager=manager,
-            effective_path=effective_path,
+            effective_path=manager.chat_path,
         )
     except Exception as exc:
         _warn_nonfatal_post_stream_failure(
             stage="response_metrics_logging",
             error=exc,
             manager=manager,
-            effective_path=effective_path,
+            effective_path=manager.chat_path,
             mode=effective_request_mode,
             print_user_warning=False,
         )
 
     result = await orchestrator.handle_ai_response(
         response_text,
-        effective_path,
-        effective_data,
+        manager.chat_path,
+        manager.chat,
         action.mode,
         user_input=action.user_input,
         assistant_hex_id=action.assistant_hex_id,

@@ -1,12 +1,12 @@
 """Interactive prompt collection for tk REPL."""
 
-from tk.models import DoneCancelResult, Task
+from tk.models import DoneCancelResult, Task, TaskStatus
 from tk.validation import validate_date_format
 
 
 def collect_done_cancel_prompts(
     task: Task,
-    status: str,
+    status: TaskStatus,
     default_date: str,
 ) -> DoneCancelResult | str:
     """Collect interactive prompts for done/cancel commands.
@@ -22,7 +22,7 @@ def collect_done_cancel_prompts(
         KeyboardInterrupt: If user presses Ctrl+C (caller should handle)
     """
     print(f"Task: {task.text}")
-    print(f"Will be marked as: {status}")
+    print(f"Will be marked as: {status.value}")
     print(f"Subjective date: {default_date}")
     print("(Press Ctrl+C to cancel)")
 

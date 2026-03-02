@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 from ..chat import add_assistant_message, add_error_message
 from ..domain.chat import ChatDocument
+from ..domain.config import AIEndpoint
 from ..logging import sanitize_error_message
 from .types import ActionMode, ContinueAction, OrchestratorAction, PrintAction
 from ..ai.types import Citation
@@ -14,6 +15,22 @@ from ..ai.types import Citation
 if TYPE_CHECKING:
     from ..session_manager import SessionManager
 
+
+def _has_chat_context(chat_path: str | None, chat_data: ChatDocument | None) -> bool:
+    return bool(chat_path) and chat_data is not None
+
+
+def build_provider_error_details(endpoint: AIEndpoint) -> dict[str, str]:
+    """Build the standard provider/model error payload."""
+    return {
+        "provider": endpoint.provider,
+        "model": endpoint.model,
+    }
+
+
+# -------------------------------------------------------------------
+# Transition predicates (kept as module-level for testability)
+# -------------------------------------------------------------------
 
 @dataclass(slots=True, frozen=True)
 class ResponseTransitionState:
@@ -32,12 +49,10 @@ def build_transition_state(
     assistant_hex_id: str | None,
 ) -> ResponseTransitionState:
     """Build derived state for response-mode transition decisions."""
-    has_chat_context = bool(chat_path) and chat_data is not None
-    has_assistant_hex_id = bool(assistant_hex_id)
     return ResponseTransitionState(
         mode=mode,
-        has_chat_context=has_chat_context,
-        has_assistant_hex_id=has_assistant_hex_id,
+        has_chat_context=_has_chat_context(chat_path, chat_data),
+        has_assistant_hex_id=bool(assistant_hex_id),
     )
 
 
@@ -51,9 +66,7 @@ def has_trailing_user_message(chat_data: ChatDocument | None) -> bool:
     if chat_data is None:
         return False
     messages = chat_data.messages
-    if not messages:
-        return False
-    return messages[-1].role == "user"
+    return bool(messages) and messages[-1].role == "user"
 
 
 def should_release_for_rollback(state: ResponseTransitionState) -> bool:
@@ -81,14 +94,6 @@ def should_rollback_pre_send(
 ) -> bool:
     """Return True when pre-send rollback should mutate persisted chat state."""
     return can_mutate_normal_chat(state) and has_trailing_user_message(chat_data)
-
-
-def build_provider_error_details(manager: SessionManager) -> dict[str, str]:
-    """Build the standard provider/model error payload."""
-    return {
-        "provider": manager.current_ai,
-        "model": manager.current_model,
-    }
 
 
 class ResponseHandlersMixin:
@@ -130,13 +135,8 @@ class ResponseHandlersMixin:
             return ContinueAction()
 
         if mode == "normal":
-            transition = build_transition_state(
-                mode,
-                chat_path=chat_path,
-                chat_data=chat_data,
-                assistant_hex_id=assistant_hex_id,
-            )
-            if not can_mutate_normal_chat(transition):
+            has_context = _has_chat_context(chat_path, chat_data)
+            if not has_context:
                 return PrintAction(message="Error: chat context missing for normal-mode response.")
             assert chat_path is not None
             assert chat_data is not None
@@ -150,8 +150,7 @@ class ResponseHandlersMixin:
                 if assistant_hex_id:
                     chat_data.messages[-1].hex_id = assistant_hex_id
                 else:
-                    new_msg_index = len(chat_data.messages) - 1
-                    self.manager.assign_message_hex_id(new_msg_index)
+                    self.manager.assign_message_hex_id(len(chat_data.messages) - 1)
             await self.manager.save_current_chat(
                 chat_path=chat_path,
                 chat_data=chat_data,
@@ -170,25 +169,28 @@ class ResponseHandlersMixin:
         assistant_hex_id: Optional[str] = None,
     ) -> bool:
         """Handle failures that happen before the provider request starts."""
-        transition = build_transition_state(
-            mode,
-            chat_path=chat_path,
-            chat_data=chat_data,
-            assistant_hex_id=assistant_hex_id,
-        )
+        has_context = _has_chat_context(chat_path, chat_data)
+        has_hex = bool(assistant_hex_id)
         sanitized_error = sanitize_error_message(error_message)
+        error_details = build_provider_error_details(self.manager.assistant)
 
-        if assistant_hex_id and should_release_for_rollback(transition):
-            self.manager.release_hex_id(assistant_hex_id)
+        if has_hex:
+            self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
 
         if mode == "secret":
             self.manager.secret.append_error(
                 sanitized_error,
-                details=build_provider_error_details(self.manager),
+                details=error_details,
             )
             return False
 
-        if not should_rollback_pre_send(transition, chat_data):
+        can_mutate = mode == "normal" and has_context
+        has_trailing_user = (
+            chat_data is not None
+            and chat_data.messages
+            and chat_data.messages[-1].role == "user"
+        )
+        if not (can_mutate and has_trailing_user):
             return False
 
         assert chat_path is not None
@@ -200,10 +202,9 @@ class ResponseHandlersMixin:
         add_error_message(
             chat_data,
             sanitized_error,
-            build_provider_error_details(self.manager),
+            error_details,
         )
-        new_msg_index = len(chat_data.messages) - 1
-        self.manager.assign_message_hex_id(new_msg_index)
+        self.manager.assign_message_hex_id(len(chat_data.messages) - 1)
         await self.manager.save_current_chat(
             chat_path=chat_path,
             chat_data=chat_data,
@@ -220,31 +221,27 @@ class ResponseHandlersMixin:
         assistant_hex_id: Optional[str] = None,
     ) -> PrintAction:
         """Handle AI error and return a user-facing action."""
-        transition = build_transition_state(
-            mode,
-            chat_path=chat_path,
-            chat_data=chat_data,
-            assistant_hex_id=assistant_hex_id,
-        )
+        has_context = _has_chat_context(chat_path, chat_data)
+        has_hex = bool(assistant_hex_id)
         sanitized_error = sanitize_error_message(str(error))
+        error_details = build_provider_error_details(self.manager.assistant)
 
         if mode == "normal":
-            if not can_mutate_normal_chat(transition):
+            if not has_context:
                 return PrintAction(message=f"Error: {sanitized_error}")
             assert chat_path is not None
             assert chat_data is not None
-            if assistant_hex_id and should_release_for_error(transition):
-                self.manager.release_hex_id(assistant_hex_id)
+            if has_hex:
+                self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
             if chat_data is not self.manager.chat:
                 return PrintAction(message=f"Error: {sanitized_error}")
 
             add_error_message(
                 chat_data,
                 sanitized_error,
-                build_provider_error_details(self.manager),
+                error_details,
             )
-            new_msg_index = len(chat_data.messages) - 1
-            self.manager.assign_message_hex_id(new_msg_index)
+            self.manager.assign_message_hex_id(len(chat_data.messages) - 1)
             await self.manager.save_current_chat(
                 chat_path=chat_path,
                 chat_data=chat_data,
@@ -253,12 +250,12 @@ class ResponseHandlersMixin:
             self.manager.secret.append_error(
                 sanitized_error,
                 user_msg=user_input,
-                details=build_provider_error_details(self.manager),
+                details=error_details,
             )
-            if assistant_hex_id and should_release_for_error(transition):
-                self.manager.release_hex_id(assistant_hex_id)
-        elif assistant_hex_id and should_release_for_error(transition):
-            self.manager.release_hex_id(assistant_hex_id)
+            if has_hex:
+                self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
+        elif has_hex:
+            self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
 
         return PrintAction(message=f"Error: {sanitized_error}")
 
@@ -270,28 +267,24 @@ class ResponseHandlersMixin:
         assistant_hex_id: Optional[str] = None,
     ) -> PrintAction:
         """Handle user cancellation during streamed AI response."""
-        transition = build_transition_state(
-            mode,
-            chat_path=chat_path,
-            chat_data=chat_data,
-            assistant_hex_id=assistant_hex_id,
-        )
+        has_context = _has_chat_context(chat_path, chat_data)
+        has_hex = bool(assistant_hex_id)
 
         if mode == "normal":
-            if not can_mutate_normal_chat(transition):
+            if not has_context:
                 return PrintAction(message="[Message cancelled]")
             assert chat_path is not None
             assert chat_data is not None
-            if assistant_hex_id and should_release_for_cancel(transition):
-                self.manager.release_hex_id(assistant_hex_id)
-            if has_trailing_user_message(chat_data):
+            if has_hex:
+                self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
+            if chat_data.messages and chat_data.messages[-1].role == "user":
                 self.manager.pop_message(-1, chat_data)
             await self.manager.save_current_chat(
                 chat_path=chat_path,
                 chat_data=chat_data,
             )
 
-        if mode in ("retry", "secret") and assistant_hex_id and should_release_for_cancel(transition):
-            self.manager.release_hex_id(assistant_hex_id)
+        if mode in ("retry", "secret") and has_hex:
+            self.manager.release_hex_id(assistant_hex_id)  # type: ignore[arg-type]
 
         return PrintAction(message="[Message cancelled]")

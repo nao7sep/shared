@@ -2,20 +2,16 @@
 
 from tk.models import GroupedTaskDisplay, Task, TaskStatus
 
-_PENDING_STATUS = TaskStatus.PENDING.value
-_DONE_STATUS = TaskStatus.DONE.value
-_CANCELLED_STATUS = TaskStatus.CANCELLED.value
-
 
 def group_tasks_for_display(tasks: list[Task]) -> GroupedTaskDisplay:
     """Group and sort tasks for TODO/history display."""
-    pending: list[Task] = [task for task in tasks if task.status == _PENDING_STATUS]
+    pending: list[Task] = [task for task in tasks if task.status == TaskStatus.PENDING]
     pending.sort(key=lambda t: t.created_utc)
 
     done_groups: list[tuple[str, list[Task]]] = []
     cancelled_groups: list[tuple[str, list[Task]]] = []
 
-    for status, target in ((_DONE_STATUS, done_groups), (_CANCELLED_STATUS, cancelled_groups)):
+    for status, target in ((TaskStatus.DONE, done_groups), (TaskStatus.CANCELLED, cancelled_groups)):
         handled_with_indices = [
             (i, task)
             for i, task in enumerate(tasks)
