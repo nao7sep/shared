@@ -148,18 +148,16 @@ def run_setup_wizard() -> Optional[str]:
     print()
     print("PolyChat supports 7 AI providers:")
     for i, (_, display_name, _) in enumerate(PROVIDER_INFO, 1):
-        print(f"  {i}. {display_name}")
+        print(f"{i}. {display_name}")
     print()
     print("Enter your API key for each provider, or press Enter to skip.")
-    print()
 
     # Collect API keys
     api_keys: dict[str, str] = {}
     for provider_id, display_name, _ in PROVIDER_INFO:
         try:
-            key = pt_prompt(f"  {display_name} API key: ").strip()
+            key = pt_prompt(f"{display_name} API key: ").strip()
         except (EOFError, KeyboardInterrupt):
-            print()
             print("Setup cancelled.")
             return None
         if key:
@@ -179,16 +177,15 @@ def run_setup_wizard() -> Optional[str]:
     print("Configured providers:")
     for provider_id, display_name, _ in PROVIDER_INFO:
         if provider_id in api_keys:
-            print(f"  \u2713 {display_name}: {_mask_key(api_keys[provider_id])}")
+            print(f"\u2713 {display_name}: {_mask_key(api_keys[provider_id])}")
         else:
-            print(f"  - {display_name}: (skipped)")
+            print(f"- {display_name}: (skipped)")
     print()
 
     # Ask for confirmation
     try:
         confirm = pt_prompt("Save and start PolyChat? (y/N): ").strip().lower()
     except (EOFError, KeyboardInterrupt):
-        print()
         print("Setup cancelled.")
         return None
 
@@ -212,7 +209,6 @@ def run_setup_wizard() -> Optional[str]:
         ]
     )
 
-    print()
     print(f"Profile:  {profile_path}")
     print(f"API keys: {api_keys_path}")
     print()  # Banner owns no leading blank, so wizard emits trailing separation
