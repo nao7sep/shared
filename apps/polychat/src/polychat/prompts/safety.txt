@@ -20,12 +20,12 @@ Categorize technical/code concerns under Secrets (credentials, keys) or Confiden
 
 REQUIRED OUTPUT FORMAT:
 
-Personal:     ✅ None
-Secrets:      ✅ None
-Financial:    ✅ None
-Confidential: ✅ None
-Offensive:    ✅ None
-Health:       ✅ None
+Personal:      ✅ None
+Secrets:       ✅ None
+Financial:     ✅ None
+Confidential:  ✅ None
+Offensive:     ✅ None
+Health:        ✅ None
 
 Replace "✅ None" with "⚠️ Found: description" when concerns exist.
 Be specific about what was found and where (message location if multiple).

@@ -164,7 +164,7 @@ All commands support shortcuts shown in parentheses.
 
 **history (h)** `[--days N] [--working-days N]` - Show completed/canceled tasks
 ```
-> h                      # all history
+> h                     # all history
 > h --days 7            # last 7 calendar days
 > h --working-days 5    # last 5 days with tasks
 ```
@@ -286,12 +286,12 @@ You can edit tasks.json directly, but:
 ### Profile Fields Reference
 ```json
 {
-  "data_path": "./tasks.json",       // required
-  "output_path": "./TODO.md",        // required
-  "timezone": "America/New_York",    // required, IANA format
-  "subjective_day_start": "04:00:00",// required, HH:MM:SS or HH:MM
-  "auto_sync": true,                 // optional, default: true
-  "sync_on_exit": false              // optional, default: false
+  "data_path": "./tasks.json",         // required
+  "output_path": "./TODO.md",          // required
+  "timezone": "America/New_York",      // required, IANA format
+  "subjective_day_start": "04:00:00",  // required, HH:MM:SS or HH:MM
+  "auto_sync": true,                   // optional, default: true
+  "sync_on_exit": false                // optional, default: false
 }
 ```
 

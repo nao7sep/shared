@@ -41,11 +41,15 @@ revzip --source /absolute/source --dest /absolute/dest [--ignore /absolute/ignor
 - Accepted forms:
   - absolute paths
   - `~` mapped to home
-  - `@` mapped to app root
+  - `@` mapped to the installed `revzip` package directory
+- `@` does not mean repository root.
 - CWD is never used for path resolution.
+- `--source` must already exist.
+- `--source` must be a directory.
 - `--source` and `--dest` must not overlap (same path, ancestor, or descendant).
 - `--dest` is created if missing.
 - `--dest` must be a directory if it already exists.
+- `--ignore` must point to an existing file if provided.
 
 ## REPL Menu
 
@@ -116,7 +120,11 @@ Then it shows only this REPL menu:
 ## Extract Behavior
 
 - Snapshot candidates are discovered from metadata JSON files in destination.
-- Invalid metadata JSON or missing corresponding zip are warned loudly and skipped.
+- Invalid metadata JSON is warned loudly and skipped.
+- Metadata is warned and skipped if:
+  - the corresponding zip is missing
+  - `zip_filename` does not match the sibling `.zip` filename
+  - `created_utc` or `created_at` is invalid
 - Valid snapshots are sorted by `created_utc` descending.
 - Snapshot list rows show index, timestamp, and comment using `|` separators.
 - Snapshot list block (header and rows) is visually isolated with one empty line above and below.
@@ -124,6 +132,8 @@ Then it shows only this REPL menu:
   - numeric selection
   - exact `yes` confirmation
 - Zip integrity is verified before destructive restore.
+- Restore extracts into a staging directory before replacing `--source`.
+- If zip verification or extraction fails, the existing source directory is left unchanged.
 - Restore replaces source contents with the selected snapshot exactly.
 
 ## Timestamp Rules

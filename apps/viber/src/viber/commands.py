@@ -79,6 +79,7 @@ update g<ID> <new-name>                            u g<ID> <new-name>
 update p<ID> name <new-name>                       u p<ID> name <new-name>
 update p<ID> state <active|suspended|deprecated>   u p<ID> state <state>
 update t<ID> <new-description>                     u t<ID> <new-description>
+update t<ID>                                       u t<ID> (prompt)
 update p<ID> t<ID> [comment]                       u p<ID> t<ID> [comment]
 update t<ID> p<ID> [comment]                       u t<ID> p<ID> [comment]
 

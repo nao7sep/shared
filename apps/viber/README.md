@@ -19,7 +19,7 @@ uv run viber --data ~/viber/data.json --check ~/viber/check.html
 uv run viber --help  # or -h
 ```
 
-`--data` is required. `--check` enables per-group HTML output (regenerated after each mutation).
+`--data` is required. If the file does not exist yet, viber starts with an empty database and creates it on the first save. `--check` enables per-group HTML output, rendered on startup when groups already exist and regenerated after each mutation.
 
 ## REPL Commands
 
@@ -41,6 +41,7 @@ update g<ID> <new-name>                     (u g<ID> <new-name>)
 update p<ID> name <new-name>                (u p<ID> name <new-name>)
 update p<ID> state <state>                  (u p<ID> state <state>)
 update t<ID> <new-description>              (u t<ID> <new-description>)
+update t<ID>                                (u t<ID>)
 update p<ID> t<ID> [comment]                (u p<ID> t<ID> [comment])
 update t<ID> p<ID> [comment]                (u t<ID> p<ID> [comment])
 
@@ -76,6 +77,7 @@ exit | quit
 - `undo p<ID> t<ID>` reverts a single assignment to `pending` (no confirmation). `undo g<ID>`, `undo p<ID>`, and `undo t<ID>` revert all resolved assignments for that entity (requires y/N confirmation). Comments are always cleared on undo.
 - `create task` requires explicit scope: trailing `g<ID>` for one group or `all` for all groups.
 - Use explicit project update forms only: `update p<ID> name ...` and `update p<ID> state ...`.
+- Bare `update t<ID>` shows the current description and prompts for a new one. `Ctrl+C`, `Ctrl+D`, or empty input cancels.
 - `update p<ID> t<ID>` with no comment clears the assignment comment.
 - Deletes are cascading: deleting a group also deletes its projects and group-scoped tasks; deleting a project/task deletes related assignments.
 - Tasks with no assignments are auto-pruned during startup and delete cascades.
@@ -115,7 +117,7 @@ Assignments are only generated for `active` projects at task creation time. No b
 
 ## HTML Check Pages
 
-When `--check ~/viber/check.html` is given, viber writes one file per group after each mutation:
+When `--check ~/viber/check.html` is given, viber writes one file per group on startup when groups already exist, and again after each mutation:
 
 - `check-backend.html`, `check-frontend.html`, …
 - Rows = tasks (newest first), columns = non-deprecated projects.
