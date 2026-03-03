@@ -27,7 +27,7 @@ def format_citation_list(citations: list[Citation]) -> list[str]:
     if not citations:
         return []
 
-    lines: list[str] = ["", "Sources:"]
+    lines: list[str] = ["Sources:"]
     for index, citation in enumerate(citations, 1):
         number = citation.get("number", index)
         try:
