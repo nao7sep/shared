@@ -95,7 +95,7 @@ Never use raw dicts for structured data. If data has more than one field and liv
 - `ruff` for linting.
 - `mypy` for type checking.
 - `pytest` for testing.
-- All Python apps use `uv` and define CLI entry points via `pyproject.toml`. Try these commands first, in order of likely need: `uv run <app-name>` (run the app), `uv sync` (install/sync dependencies), `uv run pytest` (run tests), `uv run ruff check .` (lint), `uv run mypy .` (type check). Never use bare `python`, `python3`, `pip`, or `.venv/bin/python` — always go through `uv run`.
+- All Python apps use `uv` and define CLI entry points via `pyproject.toml`. Try these commands first, in order of likely need: `uv run <app-name>` (run the app), `uv sync` (install/sync dependencies), `uv run pytest` (run tests), `uv run ruff check .` (lint), `uv run mypy .` (type check). Always try `uv run` first before reaching for bare `python`, `python3`, `pip`, or `.venv/bin/python`.
 
 ### TypeScript
 
