@@ -30,7 +30,8 @@ from ..domain.chat import ChatDocument
 from ..domain.profile import RuntimeProfile
 from ..timeouts import resolve_profile_timeout
 from ..ui.interaction import ThreadedConsoleInteraction
-from ..ui.theme import POLYCHAT_STYLE
+from ..config import CONFIG_PATH
+from ..ui.theme import get_style
 from .send_pipeline import execute_send_action
 
 
@@ -82,7 +83,7 @@ def create_prompt_session(manager: SessionManager) -> PromptSession:
         key_bindings=build_key_bindings(manager),
         lexer=SimpleLexer("class:user-input"),
         multiline=True,
-        style=POLYCHAT_STYLE,
+        style=get_style(),
     )
 
 
@@ -111,6 +112,7 @@ def print_startup_banner(
     chat_display = Path(chat_path).name if chat_path else "None (use /new or /open)"
     print(f"{'Chats:':<{key_width}}{profile_data.chats_dir}")
     print(f"{'Logs:':<{key_width}}{profile_data.logs_dir}")
+    print(f"{'Config:':<{key_width}}{CONFIG_PATH}")
     print(f"{'Profile:':<{key_width}}{profile_path}")
     print(f"{'Chat:':<{key_width}}{chat_display}")
     print(f"{'Log:':<{key_width}}{log_file}")

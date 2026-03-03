@@ -10,9 +10,9 @@ from ..formatting.chat_list import format_chat_list_item
 from ..formatting.text import make_borderline
 
 
-def format_chat_info(chat: ChatListEntry, index: int) -> str:
+def format_chat_info(chat: ChatListEntry, index: int, width: int = 1) -> str:
     """Format one chat record for display in list."""
-    return format_chat_list_item(chat, index)
+    return format_chat_list_item(chat, index, width)
 
 
 def prompt_chat_selection(
@@ -44,8 +44,9 @@ def prompt_chat_selection(
     print(f"Available chats in: {chats_dir}")
     print(make_borderline())
 
+    width = len(str(len(chats)))
     for i, chat in enumerate(chats, 1):
-        print(format_chat_info(chat, i))
+        print(format_chat_info(chat, i, width))
 
     print(make_borderline())
 

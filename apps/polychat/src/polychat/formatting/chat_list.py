@@ -14,14 +14,21 @@ def _format_updated_time(updated_utc: object) -> str:
     return parse_utc_to_local(updated_utc, DATETIME_FORMAT_SHORT) or str(DISPLAY_UNKNOWN)
 
 
-def format_chat_list_item(chat: ChatListEntry, index: int) -> str:
-    """Format one chat record for interactive list display."""
+def format_chat_list_item(chat: ChatListEntry, index: int, width: int = 1) -> str:
+    """Format one chat record for interactive list display.
+
+    Args:
+        chat: Chat list entry data.
+        index: 1-based position in the list.
+        width: Minimum digit width for left-padding the index so columns align.
+    """
     filename = chat.filename
     title = chat.title
     msg_count = chat.message_count
     updated = _format_updated_time(chat.updated_utc)
 
-    header = f"[{index}] {filename} | {msg_count} msgs | {updated}"
+    indent = " " * (width + 3)
+    header = f"[{index:>{width}}] {filename} | {msg_count} msgs | {updated}"
     if isinstance(title, str) and title.strip():
-        return f"{header}\n    {title}"
+        return f"{header}\n{indent}{title}"
     return header

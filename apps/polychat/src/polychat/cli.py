@@ -8,6 +8,7 @@ import time
 from typing import cast
 
 from . import chat, profile, setup_wizard
+from .config import CONFIG_PATH, ConfigError, load_config
 from .formatting.constants import DISPLAY_UNKNOWN
 from .logging import (
     build_run_log_path,
@@ -131,6 +132,12 @@ def main() -> None:
     if not args.profile:
         print("Error: -p/--profile is required")
         print("Usage: polychat -p <profile-path> [-c <chat-path>] [-l <log-path>]")
+        sys.exit(1)
+
+    try:
+        load_config()
+    except ConfigError as exc:
+        print(f"Error: {exc}")
         sys.exit(1)
 
     try:
