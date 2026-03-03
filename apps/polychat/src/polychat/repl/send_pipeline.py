@@ -17,6 +17,7 @@ from ..orchestrator import ChatOrchestrator
 from ..orchestration.types import PrintAction, SendAction
 from ..session_manager import SessionManager
 from ..streaming import display_streaming_response
+from ..ui.theme import print_cost_line
 
 
 def _resolve_effective_mode(base_mode: str, use_search: bool) -> str:
@@ -67,7 +68,7 @@ def _log_response_metrics(
     cost_line = format_cost_line(manager.current_model, usage)
     if cost_line:
         print()
-        print(cost_line)
+        print_cost_line(cost_line)
 
     cost_est = estimate_cost(manager.current_model, usage)
     log_event(

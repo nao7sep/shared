@@ -9,7 +9,7 @@ import pytest
 from polychat.domain.chat import ChatDocument
 from polychat.orchestrator import ChatOrchestrator
 from polychat.orchestration.types import ContinueAction, PrintAction, SendAction
-from polychat.repl.send_pipeline import execute_send_action
+from polychat.repl.send_pipeline import _log_response_metrics, execute_send_action
 from polychat.session_manager import SessionManager
 from test_helpers import make_profile
 
@@ -213,6 +213,41 @@ async def test_execute_send_action_routes_runtime_error_to_error_handler(
         assistant_hex_id=None,
     )
     assert "Error: network down" in capsys.readouterr().out
+
+
+def test_log_response_metrics_uses_styled_cost_printer(
+    manager: SessionManager,
+) -> None:
+    metadata = {
+        "started": 10.0,
+        "usage": {
+            "prompt_tokens": 120,
+            "completion_tokens": 45,
+            "total_tokens": 165,
+        },
+    }
+
+    with (
+        patch("polychat.repl.send_pipeline.time.perf_counter", return_value=12.0),
+        patch("polychat.repl.send_pipeline.print_cost_line") as mock_print_cost_line,
+        patch("polychat.repl.send_pipeline.log_event") as mock_log_event,
+    ):
+        _log_response_metrics(
+            metadata=metadata,
+            response_text="assistant output",
+            first_token_time=10.5,
+            effective_request_mode="normal",
+            manager=manager,
+            effective_path="/test/chat.json",
+        )
+
+    mock_print_cost_line.assert_called_once()
+    printed_line = mock_print_cost_line.call_args.args[0]
+    assert "$" in printed_line
+    assert "120 input" in printed_line
+    assert "45 output" in printed_line
+    assert "claude-haiku-4-5" in printed_line
+    mock_log_event.assert_called_once()
 
 
 @pytest.mark.asyncio

@@ -714,11 +714,11 @@
     },
     {
       "text": "polychat: lime for user messages?",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-02-28T00:00:10.673024+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
-      "note": null
+      "handled_utc": "2026-03-03T00:15:04.431883+00:00",
+      "subjective_date": "2026-03-03",
+      "note": "and yellow for cost lines"
     },
     {
       "text": "check all apps for dict usage. polychat in serious state :'(",

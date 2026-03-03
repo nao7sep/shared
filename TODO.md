@@ -20,12 +20,12 @@
 - prepare to end gemini subscription + maybe report how
 - extract tasks and ideas from voice recordings
 - play with x api. now we can pay as we go
-- polychat: lime for user messages?
 
 ## History
 
 ### 2026-03-03
 - ✅ check all apps for dict usage. polychat in serious state :'( => refactored 20000 times
+- ✅ polychat: lime for user messages? => and yellow for cost lines
 
 ### 2026-02-28
 - ✅ revzip: extraction should restore timestamps => checked. no timezone support due to zip limitations, but everything else is ok

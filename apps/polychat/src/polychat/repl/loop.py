@@ -10,6 +10,7 @@ from typing import Optional
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import DummyHistory
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.lexers import SimpleLexer
 
 from .. import __version__
 from .. import chat
@@ -29,6 +30,7 @@ from ..domain.chat import ChatDocument
 from ..domain.profile import RuntimeProfile
 from ..timeouts import resolve_profile_timeout
 from ..ui.interaction import ThreadedConsoleInteraction
+from ..ui.theme import POLYCHAT_STYLE
 from .send_pipeline import execute_send_action
 
 
@@ -78,7 +80,9 @@ def create_prompt_session(manager: SessionManager) -> PromptSession:
         # Chat messages are sensitive, so we keep them out of history entirely.
         history=DummyHistory(),
         key_bindings=build_key_bindings(manager),
+        lexer=SimpleLexer("class:user-input"),
         multiline=True,
+        style=POLYCHAT_STYLE,
     )
 
 
