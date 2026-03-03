@@ -95,7 +95,7 @@ class TestMain:
 
         output = capsys.readouterr().out
         assert "Profile Information:" in output
-        assert "Current time: 2026-02-09 10:11:12" in output
+        assert "  Current time:              2026-02-09 10:11:12" in output
         assert captured["session"].profile_path == str(profile_path)
         assert captured["session"].profile is prof
         assert captured["session"].tasks is tasks_data

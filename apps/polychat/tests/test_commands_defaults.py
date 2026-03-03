@@ -58,7 +58,7 @@ async def test_model_default_command(command_handler_defaults, mock_session_mana
     # Should revert to profile default
     assert mock_session_manager_defaults.current_ai == "claude"
     assert mock_session_manager_defaults.current_model == "claude-haiku-4-5"
-    assert "Reverted to profile default: claude (claude-haiku-4-5)" in result
+    assert "Reverted to profile default: claude | claude-haiku-4-5" in result
 
 
 @pytest.mark.asyncio

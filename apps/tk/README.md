@@ -42,10 +42,10 @@ You'll see:
 tk 0.1.0
 
 Profile Information:
-  Timezone: America/New_York
-  DST: No
-  Current time: 2026-02-08 22:48:10
-  Subjective day starts at: 04:00:00
+  Timezone:                  America/New_York
+  DST:                       No
+  Current time:              2026-02-08 22:48:10
+  Subjective day starts at:  04:00:00
 
 Type 'exit' or 'quit' to exit, or Ctrl-D
 

@@ -22,7 +22,7 @@ def display_profile_info(prof: Profile) -> None:
     now = datetime.now(tz)
     dst_in_effect = bool(now.dst())
 
-    # Longest key is "Subjective day starts at:" (25 chars) → values at column 27.
+    # Longest key is "Subjective day starts at:" (25 chars) -> values at column 27.
     key_width = 27
     print()
     print("Profile Information:")
@@ -78,7 +78,7 @@ Examples:
 
             markdown.generate_todo([], prof.output_path)
 
-            # Longest key is "Subjective day starts at:" (25 chars) → values at column 27.
+            # Longest key is "Subjective day starts at:" (25 chars) -> values at column 27.
             key_width = 27
             print(f"{'Data file:':<{key_width}}{prof.data_path}")
             print(f"{'Output file:':<{key_width}}{prof.output_path}")

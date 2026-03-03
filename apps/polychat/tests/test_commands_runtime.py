@@ -236,7 +236,7 @@ async def test_model_switch_reconciles_incompatible_modes(command_handler, mock_
 
     result = await command_handler.set_model("mistral-large-latest")
 
-    assert result.startswith("Switched to mistral (mistral-large-latest)")
+    assert result.startswith("Switched to mistral | mistral-large-latest")
     assert "Search mode auto-disabled" in result
     assert mock_session_manager.search_mode is False
 
@@ -247,7 +247,7 @@ async def test_model_switch_preserves_supported_mode(command_handler, mock_sessi
 
     result = await command_handler.set_model("gpt-5-mini")
 
-    assert result.startswith("Switched to openai (gpt-5-mini)")
+    assert result.startswith("Switched to openai | gpt-5-mini")
     assert "Search mode auto-disabled" not in result
     assert mock_session_manager.search_mode is True
 
@@ -256,7 +256,7 @@ async def test_model_switch_preserves_supported_mode(command_handler, mock_sessi
 async def test_model_partial_match_switches_model(command_handler, mock_session_manager):
     result = await command_handler.set_model("op4")
 
-    assert result == "Switched to claude (claude-opus-4-6) [matched from 'op4']"
+    assert result == "Switched to claude | claude-opus-4-6 [matched from 'op4']"
     assert mock_session_manager.current_ai == "claude"
     assert mock_session_manager.current_model == "claude-opus-4-6"
 
@@ -287,7 +287,7 @@ async def test_model_ambiguous_match_canceled(mock_session_manager):
 async def test_helper_provider_shortcut_sets_profile_model(command_handler, mock_session_manager):
     result = await command_handler.set_helper("gpt")
 
-    assert result == "Helper AI set to openai (gpt-5-mini)"
+    assert result == "Helper AI set to openai | gpt-5-mini"
     assert mock_session_manager.helper_ai == "openai"
     assert mock_session_manager.helper_model == "gpt-5-mini"
 
@@ -296,7 +296,7 @@ async def test_helper_provider_shortcut_sets_profile_model(command_handler, mock
 async def test_helper_partial_match_switches_model(command_handler, mock_session_manager):
     result = await command_handler.set_helper("op4")
 
-    assert result == "Helper AI set to claude (claude-opus-4-6) [matched from 'op4']"
+    assert result == "Helper AI set to claude | claude-opus-4-6 [matched from 'op4']"
     assert mock_session_manager.helper_ai == "claude"
     assert mock_session_manager.helper_model == "claude-opus-4-6"
 
