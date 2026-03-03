@@ -3,7 +3,6 @@
 from typing import TYPE_CHECKING
 
 from .. import hex_id
-from ..config import CONFIG_PATH
 from ..formatting.constants import (
     DATETIME_FORMAT_FULL,
     DATETIME_FORMAT_SHORT,
@@ -200,7 +199,6 @@ class MetadataInspectionCommandHandlers:
             f"Logs:       {profile_data.logs_dir}",
             "",
             "Files",
-            f"Config:     {CONFIG_PATH}",
             f"Profile:    {profile_path}",
             f"Chat:       {chat_path or DISPLAY_NONE}",
             f"Log:        {log_file or DISPLAY_NONE}",

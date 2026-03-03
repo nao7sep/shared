@@ -27,8 +27,7 @@ def format_chat_list_item(chat: ChatListEntry, index: int, width: int = 1) -> st
     msg_count = chat.message_count
     updated = _format_updated_time(chat.updated_utc)
 
-    indent = " " * (width + 3)
-    header = f"[{index:>{width}}] {filename} | {msg_count} msgs | {updated}"
-    if isinstance(title, str) and title.strip():
-        return f"{header}\n{indent}{title}"
-    return header
+    lines = [f"[{index:>{width}}] {filename} | {msg_count} msgs | {updated}"]
+    if title and title.strip():
+        lines.append(f"{' ' * (width + 3)}{title}")
+    return "\n".join(lines)

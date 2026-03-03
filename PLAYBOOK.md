@@ -37,7 +37,7 @@ Developer profile and engineering principles for AI-assisted development.
 
 - `~/code/shared/` contains reusable, publishable code and docs. Assume contents may become public.
 - `~/code/secrets/` contains private configs, credentials, and personal-use utilities. Treat contents as non-public and never copy sensitive data into `shared`.
-- Python apps live under `~/code/shared/apps/<name>/` or `~/code/secrets/apps/<name>/`. When asked to find an app by name, look in those directories first — never search the home directory root or macOS system directories, as doing so triggers iCloud, Photos, and other permission dialogs.
+- Python apps live under `~/code/shared/apps/<name>/` or `~/code/secrets/apps/<name>/`. When asked to find an app by name, look in those directories first — never search the home directory root or macOS system directories.
 
 ### Naming
 
@@ -95,7 +95,7 @@ Never use raw dicts for structured data. If data has more than one field and liv
 - `ruff` for linting.
 - `mypy` for type checking.
 - `pytest` for testing.
-- All Python apps use `uv` and define CLI entry points via `pyproject.toml`. Try these commands first, in order of likely need: `uv run <app-name>` (run the app), `uv sync` (install/sync dependencies), `uv run pytest` (run tests), `uv run ruff check .` (lint), `uv run mypy .` (type check). Always try `uv run` first before reaching for bare `python`, `python3`, `pip`, or `.venv/bin/python`.
+- All Python apps use `uv` and define CLI entry points via `pyproject.toml`. Try these commands first, in order of likely need: `uv run <app-name>` (run the app), `uv sync` (install/sync dependencies), `uv run pytest` (run tests), `uv run ruff check .` (lint), `uv run mypy .` (type check).
 
 ### TypeScript
 

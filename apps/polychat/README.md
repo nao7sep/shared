@@ -285,39 +285,6 @@ When the provider reports cached input tokens, those are shown and factored in a
 
 ## Configuration
 
-### User Config File
-
-`~/.polychat/config.json` is the per-user config file. PolyChat creates it with defaults on first startup if it doesn't exist, and reads it once at startup. Missing keys fall back to defaults.
-
-```json
-{
-  "notifications": {
-    "sound": true,
-    "macos_sound": "Tink",
-    "windows_sound": "SystemAsterisk",
-    "linux_sound": null,
-    "volume": 1.0
-  },
-  "display": {
-    "user_input_color": "ansibrightgreen",
-    "cost_line_color": "ansibrightyellow"
-  }
-}
-```
-
-**Notifications:**
-- `sound` — `true` to play a sound after each AI response or error, `false` to disable.
-- `macos_sound` — Sound name or path, or `null` to disable sound on macOS. Names resolve to `/System/Library/Sounds/<name>.aiff` (e.g. `"Tink"`, `"Glass"`, `"Ping"`). Paths follow the same `~/...`, `@/...`, or absolute format as profile paths.
-- `windows_sound` — Windows sound alias (e.g. `"SystemAsterisk"`, `"SystemExclamation"`) or a file path to a `.wav` file, or `null` to disable sound on Windows.
-- `linux_sound` — Path to a sound file playable by `paplay` (PulseAudio), or `null` to disable sound on Linux. If `paplay` is not installed, sound is silently skipped with no error.
-- `volume` — Playback volume, `0.0` (silent) to `1.0` (full). Applies on macOS (`afplay -v`) and Linux (`paplay --volume`). Windows follows system volume settings.
-
-**Display:**
-- `user_input_color` — prompt-toolkit color for user input text.
-- `cost_line_color` — prompt-toolkit color for the cost summary line after each response.
-
-Valid color values are prompt-toolkit ANSI color names such as `"ansibrightgreen"`, `"ansibrightyellow"`, `"ansiblue"`, `"ansicyan"`, or `""` (default terminal color).
-
 ### Profile File Format
 
 ```json

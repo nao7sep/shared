@@ -18,7 +18,6 @@ from ..orchestration.types import PrintAction, SendAction
 from ..session_manager import SessionManager
 from ..streaming import display_streaming_response
 from ..ui.theme import print_cost_line
-from ..ui.notifications import notify
 
 
 def _resolve_effective_mode(base_mode: str, use_search: bool) -> str:
@@ -166,7 +165,6 @@ async def execute_send_action(
         )
         print()
         print(f"Error: {provider_resolution_error}")
-        notify()
         return
 
     if action.mode == "retry" and action.assistant_hex_id:
@@ -194,7 +192,6 @@ async def execute_send_action(
             response_stream,
             prefix="",
         )
-        notify()
 
     except KeyboardInterrupt:
         cancel_result = await orchestrator.handle_user_cancel(
@@ -218,7 +215,6 @@ async def execute_send_action(
         )
         print()
         print(error_result.message)
-        notify()
         return
 
     citations = normalize_citations(metadata.get("citations"))
