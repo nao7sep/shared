@@ -18,13 +18,13 @@ _USAGE = """\
 Usage: viber --data <path> [--check <path>]
 
 Options:
-  --data <path>    Path to JSON state file (required).
-                   Accepts absolute paths, ~ (home), or @ (app root).
-                   Missing file = start empty and create it on first save.
-  --check <path>   Optional path for HTML check output files.
-                   HTML is rendered on startup when groups exist,
-                   then regenerated after each mutation.
-  --help, -h       Show this help message and exit.
+  --data <path>   Path to JSON state file (required).
+                  Accepts absolute paths, ~ (home), or @ (app root).
+                  Missing file = start empty and create it on first save.
+  --check <path>  Optional path for HTML check output files.
+                  HTML is rendered on startup when groups exist,
+                  then regenerated after each mutation.
+  --help, -h      Show this help message and exit.
 
 Path examples:
   viber --data ~/viber/data.json
