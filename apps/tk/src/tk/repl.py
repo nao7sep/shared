@@ -1,8 +1,6 @@
 """REPL parsing and loop orchestration for tk."""
 
-import os
 import shlex
-import traceback
 from typing import Any
 
 from tk import commands, dispatcher, markdown, prompts
@@ -30,14 +28,6 @@ _HANDLED_COMMAND_TO_STATUS = {
 }
 
 
-def _report_unexpected_error(error: Exception) -> None:
-    """Print an unexpected exception with optional debug traceback."""
-    print(f"ERROR: {error}")
-    if os.getenv("TK_DEBUG"):
-        print("Debug traceback:")
-        traceback.print_exc()
-
-
 def _sync_on_exit(session: Session) -> None:
     """Run exit-time markdown sync behind the REPL error boundary."""
     prof = session.profile
@@ -50,7 +40,7 @@ def _sync_on_exit(session: Session) -> None:
     except AppError as e:
         print(f"ERROR: {e}")
     except Exception as e:
-        _report_unexpected_error(e)
+        print(f"ERROR: {e}")
 
 
 def parse_command(line: str) -> tuple[str, list[Any], dict[str, Any]]:
@@ -213,7 +203,6 @@ def repl(session: Session) -> None:
             print(f"ERROR: {e}")
 
         except Exception as e:
-            # Unexpected errors - provide more detail in debug mode
-            _report_unexpected_error(e)
+            print(f"ERROR: {e}")
 
     _sync_on_exit(session)

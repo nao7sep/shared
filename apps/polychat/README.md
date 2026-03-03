@@ -20,8 +20,16 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 
 ## Installation
 
+For end users:
+
 ```bash
-cd polychat
+uv tool install polychat
+```
+
+From a local checkout:
+
+```bash
+cd /path/to/shared/apps/polychat
 uv sync
 ```
 
@@ -30,7 +38,7 @@ uv sync
 ### 1. Easy Setup (Recommended)
 
 ```bash
-uv run polychat setup
+polychat setup
 ```
 
 The setup wizard:
@@ -44,7 +52,7 @@ You can run `setup` again anytime to reconfigure. It overwrites profile and API 
 ### 2. Create a Profile (Advanced)
 
 ```bash
-uv run polychat init -p ~/my-profile.json
+polychat init -p ~/my-profile.json
 ```
 
 This creates a template file:
@@ -58,10 +66,10 @@ Then edit the template values (models, paths, and `api_keys`) before running Pol
 
 ```bash
 # Start with a specific chat
-uv run polychat -p ~/my-profile.json -c ~/chats/my-chat.json
+polychat -p ~/my-profile.json -c ~/chats/my-chat.json
 
 # Or start without a chat (use /new or /open commands)
-uv run polychat -p ~/my-profile.json
+polychat -p ~/my-profile.json
 ```
 
 The app goes straight to the REPL and shows configured AI providers.
@@ -542,6 +550,13 @@ See LICENSE file for details.
 Contributions welcome! Please follow the existing code style and add tests for new features.
 
 ## Development
+
+Set up a local checkout with:
+
+```bash
+cd /path/to/shared/apps/polychat
+uv sync --group dev
+```
 
 ### Running Tests
 

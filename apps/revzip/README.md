@@ -11,26 +11,17 @@ Each snapshot writes two files into `--dest`:
 - Python `>=3.10`
 - `uv` installed
 
-## Install
+## Setup
 
 ```bash
-cd /path/to/revzip
-uv tool install --editable .
+cd /path/to/shared/apps/revzip
+uv sync
 ```
-
-Or:
-
-```bash
-./scripts/install.command
-```
-
-`.command` files are zsh convenience wrappers (for example on macOS).
-On other platforms, run the equivalent `uv` commands directly.
 
 ## Run
 
 ```bash
-revzip --source /absolute/source --dest /absolute/dest [--ignore /absolute/ignore.txt]
+uv run revzip --source /absolute/source --dest /absolute/dest [--ignore /absolute/ignore.txt]
 ```
 
 ## Startup Path Rules
@@ -41,7 +32,7 @@ revzip --source /absolute/source --dest /absolute/dest [--ignore /absolute/ignor
 - Accepted forms:
   - absolute paths
   - `~` mapped to home
-  - `@` mapped to the installed `revzip` package directory
+  - `@` mapped to the `revzip` package directory used by the app
 - `@` does not mean repository root.
 - CWD is never used for path resolution.
 - `--source` must already exist.

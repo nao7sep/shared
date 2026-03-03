@@ -244,20 +244,13 @@ Generated automatically after each change (if `auto_sync: true`):
 - **No duplicate checking:** Intentional design choice - just cancel or delete if needed
 - **Delete is rare:** Use `cancel` for tasks you won't do; reserve `delete` for mistakes
 
-## Installation for Daily Use
+## Running After Setup
 
-After `uv sync`, you can either:
+After `uv sync`:
 
-**Option 1:** Run via uv
 ```bash
 cd /path/to/shared/apps/tk
 uv run tk -p ~/my-profile.json
-```
-
-**Option 2:** Create an alias
-```bash
-alias tk='uv run --directory /path/to/shared/apps/tk tk'
-tk -p ~/my-profile.json
 ```
 
 ## Troubleshooting
@@ -269,11 +262,6 @@ tk -p ~/my-profile.json
 **Numbers not working:** Task numbers reset after state-changing commands (add, edit, done, etc). Run `list` again.
 
 **Getting help in REPL:** Type `help` to see command list.
-
-**Debug mode:** Set `TK_DEBUG=1` environment variable for detailed error traces:
-```bash
-TK_DEBUG=1 tk -p ~/my-profile.json
-```
 
 ## Advanced Usage
 
