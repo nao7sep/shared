@@ -45,8 +45,8 @@ polychat setup
 The setup wizard:
 - Asks for API keys for each of the 7 supported AI providers (Enter to skip)
 - Shows a summary and asks for confirmation
-- Automatically creates `~/.polychat/config.json` on first startup if missing
 - Creates `~/.polychat/profile.json` and `~/.polychat/api-keys.json`
+- Automatically creates `~/.polychat/config.json` on first startup if missing
 - Enters the REPL immediately
 
 You can run `setup` again anytime to reconfigure. It overwrites profile and API key files but leaves chats and logs intact.
@@ -75,7 +75,7 @@ polychat -p ~/my-profile.json
 ```
 
 The app goes straight to the REPL and shows configured AI providers.
-If `~/.polychat/config.json` does not exist yet, PolyChat creates it automatically before loading the selected profile.
+Use `/new` or `/open` after launch if you start without selecting a chat file.
 
 ### 4. Chat
 
@@ -104,34 +104,20 @@ Claude: Here are the main factors to consider:
 
 ### Basic Commands
 
+Quick Start covers the recommended setup flow. The main CLI forms are:
+
 ```bash
-# Easy setup (interactive wizard)
-polychat setup
-
-# Create new profile (advanced)
-polychat init -p <profile-path>
-
-# Start with profile
 polychat -p <profile-path>
-
-# Start with specific chat
 polychat -p <profile-path> -c <chat-path>
-
-# Enable error logging
 polychat -p <profile-path> -l ~/polychat-debug.log
 ```
 
-CLI path flags use the same path mapping rules:
+CLI path flags use the [Path Mapping](#path-mapping) rules:
 - `-p/--profile` (profile path)
 - `-c/--chat` (chat history path)
 - `-l/--log` (error log path)
 
-Use `~/...`, `@/...`, or absolute paths. Plain relative paths are rejected.
-
-If `-l/--log` is omitted, PolyChat creates one log file for the current app run in the profile's `logs_dir`:
-- `polychat_YYYY-MM-DD_HH-MM-SS.log`
-
-Logs are written in a structured plaintext block format and include contextual events such as app/session start and stop, command execution, chat lifecycle actions, and AI request/response/error details.
+If `-l/--log` is omitted, log output goes to the profile's default `logs_dir`; see [Required Directories](#required-directories).
 
 <!-- BEGIN GENERATED:COMMANDS -->
 ### In-Chat Commands
@@ -326,9 +312,7 @@ If the platform default sound cannot be found on a given machine, startup will a
 - Uses one string field for either a system sound token or a file path.
 - When this value is `null`, PolyChat uses a built-in platform default sound.
 - If the value looks like a plain token (for example `Tink` or `SystemAsterisk`), PolyChat first tries platform-specific system sound lookup.
-- If that fails, PolyChat treats the value as a normal PolyChat file path:
-  - use `~/...`, `@/...`, or an absolute path
-  - plain relative paths are rejected
+- If that fails, PolyChat treats the value as a normal PolyChat file path using the [Path Mapping](#path-mapping) rules.
 - Invalid, missing, or unresolvable sound settings stop startup when sound notifications are enabled.
 - Invalid text color settings also stop startup before the profile is loaded.
 - The notification sound currently plays when an assistant response completes or when a send attempt fails with an error.
@@ -409,7 +393,6 @@ The profile requires two directory paths:
 - One log file per app run: `polychat_YYYY-MM-DD_HH-MM-SS.log`
 - Structured plaintext format with contextual events
 - Includes AI requests/responses, commands, errors
-
 
 Both directories are created automatically if they don't exist.
 
@@ -595,14 +578,6 @@ Chat history files are stored as JSON with git-friendly formatting:
 Note: `system_prompt` is used in both profile and chat history metadata.
 
 Messages are stored as line arrays for better git diffs and readability.
-
-## License
-
-See LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please follow the existing code style and add tests for new features.
 
 ## Development
 
