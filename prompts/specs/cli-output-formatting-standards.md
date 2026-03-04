@@ -23,12 +23,13 @@ This specification does not define implementation details, libraries, or languag
 
 ## The Single Spacing Rule
 
-Every segment MUST emit exactly one leading empty line before its first content line, with two exceptions:
+Every segment MUST emit exactly one leading empty line before its first content line, with one exception:
 
-1. The initial app banner (the very first output after the process starts) MUST NOT emit a leading empty line. The shell prompt above provides sufficient separation.
-2. The final segment MUST NOT emit a trailing empty line after its last content line. The shell prompt below provides sufficient separation.
+The first segment MUST NOT emit a leading empty line. The shell prompt above provides sufficient separation.
 
-No segment ever emits a trailing empty line. The blank line between any two segments always belongs to the later one.
+No segment MUST ever emit a trailing empty line. The shell prompt below the final segment provides sufficient separation.
+
+The blank line between any two segments always belongs to the later one.
 
 ### Rationale
 
@@ -40,7 +41,7 @@ The following is the exhaustive list of recognized segment types. Every block of
 
 | Segment type | Description | Example |
 |---|---|---|
-| Banner | App name, version, startup summary. Always first. | `revzip` / `Loaded parameters: ...` |
+| Banner | App name, version, startup summary. | `revzip` / `Loaded parameters: ...` |
 | Prompt | A line that waits for user input. | `autopage> ` / `Select option: ` |
 | Result | Direct output from a command or operation. | `Captured 10 page(s): 1–10.` |
 | List | One or more rows of homogeneous items. | Snapshot list, task list, file list. |
@@ -55,6 +56,10 @@ The following is the exhaustive list of recognized segment types. Every block of
 ### Prompt and result grouping
 
 A prompt and its immediate result form a tight visual unit. The result lines appear directly after the prompt line with no blank line between them. The next segment's leading blank provides separation afterward.
+
+### Pre-banner segments
+
+Some segments legitimately appear before the banner — for example, an error loading a required config file, a one-time data migration after an app update, or auto-generating a missing config file. These are ordinary segments that happen to be first; the single spacing rule applies as usual: the first one emits no leading empty line, each subsequent one does.
 
 ### Consecutive warnings or errors
 
@@ -127,6 +132,16 @@ ID    NAME        ROLE
 1     admin       owner
 2     alice       editor
 3     bob         viewer
+```
+
+Errors before banner, then interactive REPL:
+```text
+ERROR: Config file missing: ~/.apprc
+
+myapp v1.0
+
+> list
+No items to show.
 ```
 
 Interactive REPL with banner, prompt/result pairs, and farewell:
