@@ -48,6 +48,7 @@ After startup validation, the app prints:
 
 - app banner
 - loaded parameter block (source, destination, ignore file, ignore pattern count)
+- each later output segment owns its leading empty line; no segment emits a trailing empty line
 
 Then it shows only this REPL menu:
 
@@ -118,7 +119,8 @@ Then it shows only this REPL menu:
   - `created_utc` or `created_at` is invalid
 - Valid snapshots are sorted by `created_utc` descending.
 - Snapshot list rows show index, timestamp, and comment using `|` separators.
-- Snapshot list block (header and rows) is visually isolated with one empty line above and below.
+- Snapshot list block gets a leading empty line when it is not the first segment.
+- The blank line before `Select snapshot number:` belongs to that prompt segment, not to the snapshot list.
 - Restore requires:
   - numeric selection
   - exact `yes` confirmation

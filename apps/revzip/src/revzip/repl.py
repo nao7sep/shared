@@ -12,6 +12,7 @@ from .archive_service import create_snapshot
 from .errors import RevzipError
 from .extract_service import restore_snapshot
 from .models import IgnoreRuleSet, ResolvedPaths, SnapshotRecord
+from .output_segments import start_output_segment
 from .presenters import (
     render_app_banner,
     render_error,
@@ -26,8 +27,9 @@ from .snapshot_catalog_service import discover_snapshots
 
 
 def run_repl(*, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet) -> int:
+    start_output_segment()
     print(render_app_banner())
-    print()
+    start_output_segment()
     for line in render_loaded_parameters(
         resolved_paths=resolved_paths,
         ignore_rule_set=ignore_rule_set,
@@ -35,7 +37,7 @@ def run_repl(*, resolved_paths: ResolvedPaths, ignore_rule_set: IgnoreRuleSet) -
         print(line)
 
     while True:
-        print()
+        start_output_segment()
         print(render_main_menu())
         try:
             choice_raw = _read_line("Select option: ")
@@ -90,25 +92,25 @@ def _run_archive_action(
         )
     except KeyboardInterrupt:
         progress.close_open_lines()
-        print()
+        start_output_segment()
         print("[Operation Canceled]")
         return
     except RevzipError as exc:
         progress.close_open_lines()
-        print()
+        start_output_segment()
         print(render_error(str(exc)))
         return
     except Exception as exc:
         progress.close_open_lines()
-        print()
+        start_output_segment()
         print(render_error(f"Unexpected error: {exc}"))
         return
 
     if archive_result.skipped_symlinks_rel:
-        print()
+        start_output_segment()
         for symlink_rel in archive_result.skipped_symlinks_rel:
             print(render_warning(f"Skipped symlink: {symlink_rel}"))
-    print()
+    start_output_segment()
     print(
         "Archived "
         f"{archive_result.archived_file_count} file(s) and "
@@ -125,26 +127,26 @@ def _run_extract_action(*, resolved_paths: ResolvedPaths) -> None:
             dest_dir_abs=resolved_paths.dest_dir_abs
         )
     except Exception as exc:
-        print()
+        start_output_segment()
         print(render_error(f"Unexpected error discovering snapshots: {exc}"))
         return
 
     if snapshot_warnings:
-        print()
+        start_output_segment()
         for warning_line in render_snapshot_warning_lines(snapshot_warnings):
             print(warning_line)
 
     if not snapshot_records:
-        print()
+        start_output_segment()
         print("No valid snapshots available for extraction.")
         return
 
-    print()
+    start_output_segment()
     print("Available snapshots:")
     for row in render_snapshot_rows(snapshot_records):
         print(row)
 
-    print()
+    start_output_segment()
     try:
         selected_record = _prompt_snapshot_selection(snapshot_records)
     except KeyboardInterrupt:

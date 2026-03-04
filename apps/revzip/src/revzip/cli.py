@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .errors import RevzipError
 from .ignore_rules import load_ignore_rule_set
+from .output_segments import reset_output_segments, start_output_segment
 from .path_mapping import resolve_startup_paths
 from .presenters import render_error
 from .repl import run_repl
@@ -16,6 +17,7 @@ from .repl import run_repl
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    reset_output_segments()
 
     app_root_abs = Path(__file__).resolve().parent
 
@@ -36,9 +38,11 @@ def main(argv: list[str] | None = None) -> int:
         print("Canceled.")
         return 0
     except RevzipError as exc:
+        start_output_segment()
         print(render_error(str(exc)))
         return 1
     except Exception as exc:
+        start_output_segment(file=sys.stderr)
         print(render_error(str(exc)), file=sys.stderr)
         return 1
 
