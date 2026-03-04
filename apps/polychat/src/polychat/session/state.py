@@ -28,6 +28,7 @@ class SessionState:
     chat: ChatDocument
     chat_path: Optional[str] = None
     profile_path: Optional[str] = None
+    config_path: Optional[str] = None
     log_file: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_path: Optional[str] = None

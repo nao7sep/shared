@@ -114,11 +114,13 @@ def print_startup_banner(
     # All banner key-value lines aligned globally.
     # Longest key is "Configured AIs:" (15 chars) → values at column 17.
     key_width = 17
+    config_path = manager.config_path or DISPLAY_UNKNOWN
     profile_path = manager.profile_path or DISPLAY_UNKNOWN
     log_file = manager.log_file or DISPLAY_NONE
     chat_display = Path(chat_path).name if chat_path else "None (use /new or /open)"
     print(f"{'Chats:':<{key_width}}{profile_data.chats_dir}")
     print(f"{'Logs:':<{key_width}}{profile_data.logs_dir}")
+    print(f"{'Config:':<{key_width}}{config_path}")
     print(f"{'Profile:':<{key_width}}{profile_path}")
     print(f"{'Chat:':<{key_width}}{chat_display}")
     print(f"{'Log:':<{key_width}}{log_file}")
@@ -168,6 +170,7 @@ async def repl_loop(
     system_prompt: Optional[str] = None,
     system_prompt_path: Optional[str] = None,
     profile_path: Optional[str] = None,
+    config_path: Optional[str] = None,
     log_file: Optional[str] = None,
 ) -> None:
     """Run the REPL loop."""
@@ -187,6 +190,7 @@ async def repl_loop(
         chat=chat_data,
         chat_path=chat_path,
         profile_path=profile_path,
+        config_path=config_path,
         log_file=log_file,
         system_prompt=system_prompt,
         system_prompt_path=system_prompt_path,
@@ -201,6 +205,7 @@ async def repl_loop(
     log_event(
         "session_start",
         level=logging.INFO,
+        config_file=config_path,
         profile_file=profile_path,
         chat_file=chat_path,
         log_file=log_file,

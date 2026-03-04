@@ -152,6 +152,7 @@ class MetadataInspectionCommandHandlers:
         """Show current session status and key paths."""
         profile_data = self._deps.manager.profile
 
+        config_path = self._deps.manager.config_path or DISPLAY_UNKNOWN
         profile_path = self._deps.manager.profile_path or DISPLAY_UNKNOWN
         chat_path = self._deps.manager.chat_path
         log_file = self._deps.manager.log_file
@@ -199,6 +200,7 @@ class MetadataInspectionCommandHandlers:
             f"Logs:       {profile_data.logs_dir}",
             "",
             "Files",
+            f"Config:     {config_path}",
             f"Profile:    {profile_path}",
             f"Chat:       {chat_path or DISPLAY_NONE}",
             f"Log:        {log_file or DISPLAY_NONE}",

@@ -59,6 +59,7 @@ def test_print_startup_banner_has_no_leading_blank_when_first_segment(
         helper_ai="claude",
         helper_model="claude-haiku-4-5",
         profile_path="/test/profile.json",
+        config_path="/test/config.json",
         log_file="/test/polychat.log",
     )
 
@@ -85,6 +86,7 @@ def test_print_startup_banner_emits_leading_blank_when_not_first_segment(
         helper_ai="claude",
         helper_model="claude-haiku-4-5",
         profile_path="/test/profile.json",
+        config_path="/test/config.json",
         log_file="/test/polychat.log",
     )
 

@@ -78,6 +78,7 @@ def state_to_dict(
         "chat": state.chat.to_dict(),
         "chat_path": state.chat_path,
         "profile_path": state.profile_path,
+        "config_path": state.config_path,
         "log_file": state.log_file,
         "system_prompt": state.system_prompt,
         "system_prompt_path": state.system_prompt_path,

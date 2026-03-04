@@ -14,6 +14,7 @@ async def test_show_status_all_fields_align_values(command_handler, mock_session
     field_prefixes = (
         "Chats:",
         "Logs:",
+        "Config:",
         "Profile:",
         "Chat:",
         "Log:",
@@ -34,7 +35,7 @@ async def test_show_status_all_fields_align_values(command_handler, mock_session
     field_lines = [line for line in result.splitlines() if any(line.startswith(prefix) for prefix in field_prefixes)]
 
     # Should have all fields
-    assert len(field_lines) >= 18
+    assert len(field_lines) >= 19
 
     value_starts = []
     for line in field_lines:

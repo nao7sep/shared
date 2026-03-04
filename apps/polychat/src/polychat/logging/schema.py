@@ -15,6 +15,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "assistant_model",
         "helper_provider",
         "helper_model",
+        "config_file",
         "profile_file",
         "chat_file",
         "log_file",
@@ -39,6 +40,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
         "assistant_model",
         "helper_provider",
         "helper_model",
+        "config_file",
         "profile_file",
         "chat_file",
         "log_file",
@@ -248,6 +250,7 @@ EVENT_KEY_ORDER: dict[str, list[str]] = {
 
 
 LOG_PATH_FIELDS: set[str] = {
+    "config_file",
     "profile_file",
     "chat_file",
     "log_file",

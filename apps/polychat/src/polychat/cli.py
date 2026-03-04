@@ -217,6 +217,7 @@ def main() -> None:
         log_event(
             "app_start",
             level=logging.INFO,
+            config_file=startup_app_config.path,
             profile_file=mapped_profile_path,
             chat_file=mapped_chat_path,
             log_file=effective_log_path,
@@ -246,6 +247,7 @@ def main() -> None:
                 system_prompt_content,
                 system_prompt_path,
                 mapped_profile_path,
+                startup_app_config.path,
                 effective_log_path,
             )
         )

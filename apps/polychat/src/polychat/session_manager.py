@@ -55,6 +55,7 @@ class SessionManager:
     system_prompt_path = StateField[Optional[str]]("system_prompt_path")
     chat_path = StateField[Optional[str]]("chat_path")
     profile_path = StateField[Optional[str]]("profile_path")
+    config_path = StateField[Optional[str]]("config_path")
     log_file = StateField[Optional[str]]("log_file")
     input_mode = StateField[str]("input_mode", validator=_validate_input_mode)
     search_mode = StateField[bool]("search_mode", coerce=bool)
@@ -70,6 +71,7 @@ class SessionManager:
         chat: Optional[ChatDocument] = None,
         chat_path: Optional[str] = None,
         profile_path: Optional[str] = None,
+        config_path: Optional[str] = None,
         log_file: Optional[str] = None,
         system_prompt: Optional[str] = None,
         system_prompt_path: Optional[str] = None,
@@ -86,6 +88,7 @@ class SessionManager:
             chat: Current chat data (optional)
             chat_path: Current chat file path (optional)
             profile_path: Active profile file path (optional)
+            config_path: App config file path (optional)
             log_file: Active log file path (optional)
             system_prompt: System prompt text (optional)
             system_prompt_path: System prompt path (optional)
@@ -108,6 +111,7 @@ class SessionManager:
             chat=chat_doc,
             chat_path=chat_path,
             profile_path=profile_path,
+            config_path=config_path,
             log_file=log_file,
             system_prompt=system_prompt,
             system_prompt_path=system_prompt_path,

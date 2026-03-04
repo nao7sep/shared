@@ -19,7 +19,7 @@ uv run viber --data ~/viber/data.json --check ~/viber/check.html
 uv run viber --help  # or -h
 ```
 
-`--data` is required. If the file does not exist yet, viber starts with an empty database and creates it on the first save. `--check` enables per-group HTML output, rendered on startup when groups already exist and regenerated after each mutation.
+`--data` is required. If the file does not exist yet, viber starts with an empty database and creates it on the first save. `--check` enables per-group HTML output.
 
 ## REPL Commands
 
@@ -43,7 +43,6 @@ update p<ID> state <state>             (u p<ID> state <state>)
 update t<ID> <new-description>         (u t<ID> <new-description>)
 update t<ID>                           (u t<ID>)
 update p<ID> t<ID> [comment]           (u p<ID> t<ID> [comment])
-update t<ID> p<ID> [comment]           (u t<ID> p<ID> [comment])
 
 delete g<ID>                           (d g<ID>)
 delete p<ID>                           (d p<ID>)
@@ -54,12 +53,9 @@ view p<ID>                             (v p<ID>)
 view t<ID>                             (v t<ID>)
 
 ok p<ID> t<ID>                         (o p<ID> t<ID>)
-ok t<ID> p<ID>                         (o t<ID> p<ID>)
 nah p<ID> t<ID>                        (n p<ID> t<ID>)
-nah t<ID> p<ID>                        (n t<ID> p<ID>)
 
 undo p<ID> t<ID>                       (z p<ID> t<ID>)
-undo t<ID> p<ID>                       (z t<ID> p<ID>)
 undo g<ID>                             (z g<ID>)
 undo p<ID>                             (z p<ID>)
 undo t<ID>                             (z t<ID>)
@@ -73,7 +69,7 @@ exit | quit
 
 ### Notes
 
-- `ok` and `nah` accept tokens in either order: `ok p3 t1` or `ok t1 p3`. No confirmation required; prompts for optional comment only. `Ctrl+C` during the comment prompt cancels.
+- Commands that operate on a project/task pair accept `p<ID>` and `t<ID>` in either order: `update ... [comment]`, `ok`, `nah`, and `undo`. Example: `ok p3 t1` or `ok t1 p3`. No confirmation is required for `ok`/`nah`; they only prompt for an optional comment, and `Ctrl+C` during that prompt cancels.
 - `undo p<ID> t<ID>` reverts a single assignment to `pending` (no confirmation). `undo g<ID>`, `undo p<ID>`, and `undo t<ID>` revert all resolved assignments for that entity (requires y/N confirmation). Comments are always cleared on undo.
 - `create task` requires explicit scope: trailing `g<ID>` for one group or `all` for all groups.
 - Use explicit project update forms only: `update p<ID> name ...` and `update p<ID> state ...`.
@@ -82,8 +78,6 @@ exit | quit
 - Deletes are cascading: deleting a group also deletes its projects and group-scoped tasks; deleting a project/task deletes related assignments.
 - Tasks with no assignments are auto-pruned during startup and delete cascades.
 - All `delete` commands require `y` or `yes`; Enter or any other input cancels.
-- Project data rows use `project | group | state | local-created-time`.
-- Task data rows use `task | group-or-all | local-created-time`.
 - `view` shows `project | group | task`; `view p<ID>` and `view t<ID>` show header row + matching rows (no timestamps).
 - `work` shows all pending items, then prompts for item number (or `q` to quit), then action `[o]k / [n]ah / [c]ancel`, then optional comment (Enter to skip).
 - In `work`, pressing `Ctrl+C` at any prompt cancels the current step safely.

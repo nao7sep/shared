@@ -125,6 +125,7 @@ def mock_session_manager():
         chat=ChatDocument.from_raw({"metadata": {}, "messages": []}),
         chat_path="/test/chat.json",
         profile_path="/test/profile.json",
+        config_path="/test/config.json",
         log_file="/test/log.txt",
     )
     return manager
