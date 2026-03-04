@@ -119,8 +119,6 @@ Then it shows only this REPL menu:
   - `created_utc` or `created_at` is invalid
 - Valid snapshots are sorted by `created_utc` descending.
 - Snapshot list rows show index, timestamp, and comment using `|` separators.
-- Snapshot list block gets a leading empty line when it is not the first segment.
-- The blank line before `Select snapshot number:` belongs to that prompt segment, not to the snapshot list.
 - Restore requires:
   - numeric selection
   - exact `yes` confirmation
@@ -129,18 +127,12 @@ Then it shows only this REPL menu:
 - If zip verification or extraction fails, the existing source directory is left unchanged.
 - Restore replaces source contents with the selected snapshot exactly.
 
-## Timestamp Rules
-
-- Internal timestamp field: UTC ISO 8601 with microseconds and `Z` (`created_utc`).
-- User-facing timestamp field: local `YYYY-MM-DD HH:MM:SS` (`created_at`).
-- UTC fields include `utc` in their names.
-
 ## Metadata JSON
 
 Each snapshot metadata file contains:
 
-- `created_utc`
-- `created_at`
+- `created_utc`: UTC ISO 8601 with microseconds and `Z`
+- `created_at`: local `YYYY-MM-DD HH:MM:SS`
 - `comment`
 - `comment_filename_segment`
 - `zip_filename`
@@ -148,6 +140,7 @@ Each snapshot metadata file contains:
 - `empty_directories` (sorted)
 
 `archived_files` and `empty_directories` use platform-native path separators.
+UTC metadata fields include `utc` in their names.
 
 ## Development
 

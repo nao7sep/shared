@@ -80,7 +80,7 @@ If it's 2 AM and you haven't slept yet, it still feels like yesterday. tk uses a
 Example: Mark a task done at 3 AM on Feb 6th → recorded as completed on Feb 5th.
 
 ### Number-Based Workflow
-After running `list` or `history`, you reference tasks by their displayed number:
+After running `list`, `history`, `today`, `yesterday`, or `recent`, you reference tasks by their displayed number:
 ```
 > l
 1. task one
@@ -93,18 +93,7 @@ Numbers are only valid until you run another command that changes the list.
 
 ### Interactive Prompts
 
-When marking tasks as done or canceled, tk prompts for details:
-
-```
-> d 1
-Task: implement user login
-Will be marked as: done
-Subjective date: 2026-02-06
-(Press Ctrl+C to cancel)
-Note (press Enter to skip): deployed to staging
-Date override (press Enter to use 2026-02-06): 2026-02-05
-Task marked as done.
-```
+When marking tasks as done or canceled, tk prompts for an optional note and an optional date override.
 
 **Prompt behavior:**
 - Press Enter to skip optional fields
@@ -132,12 +121,24 @@ Task deleted.
 **Note**: Profile file paths passed via `--profile` must be absolute or use `~/` or `@/` (relative profile paths are rejected).
 
 A profile JSON contains:
-- `timezone`: IANA timezone (e.g., "Asia/Tokyo")
-- `subjective_day_start`: Time when your day starts (e.g., "04:00:00")
-- `data_path`: Where tasks.json is stored (relative paths supported)
-- `output_path`: Where TODO.md is generated
-- `auto_sync`: Auto-regenerate TODO.md after changes (default: true)
-- `sync_on_exit`: Regenerate TODO.md on exit (default: false)
+
+```json
+{
+  "data_path": "./tasks.json",
+  "output_path": "./TODO.md",
+  "timezone": "America/New_York",
+  "subjective_day_start": "04:00:00",
+  "auto_sync": true,
+  "sync_on_exit": false
+}
+```
+
+- `timezone`: Required. IANA timezone (for example `"Asia/Tokyo"`).
+- `subjective_day_start`: Required. Day boundary in `HH:MM` or `HH:MM:SS`.
+- `data_path`: Required. Where `tasks.json` is stored.
+- `output_path`: Required. Where `TODO.md` is generated.
+- `auto_sync`: Optional. Regenerate `TODO.md` after changes. Default: `true`.
+- `sync_on_exit`: Optional. Regenerate `TODO.md` on exit. Default: `false`.
 
 ## Commands
 
@@ -234,23 +235,11 @@ Generated automatically after each change (if `auto_sync: true`):
 
 ## Tips
 
-- **Use help command:** Type `help` in REPL to see available commands
-- **Numbers reset:** After any command that changes state, run `list` or `history` again to get fresh numbers
 - **Use shortcuts:** `a`, `l`, `d`, `c`, `e` for speed
-- **Ctrl+C cancels:** Interactive prompts (done/cancel/delete) can be canceled anytime
 - **Update after handling:** Use `note <num> [<text>]` and `date <num> <YYYY-MM-DD>` on handled tasks
 - **Unknown handled date:** If a handled task has no subjective date (from manual JSON edits), it appears under `unknown` in both `history` output and `TODO.md`
 - **No duplicate checking:** Intentional design choice - just cancel or delete if needed
 - **Delete is rare:** Use `cancel` for tasks you won't do; reserve `delete` for mistakes
-
-## Running After Setup
-
-After `uv sync`:
-
-```bash
-cd /path/to/shared/apps/tk
-uv run tk -p ~/my-profile.json
-```
 
 ## Troubleshooting
 
@@ -258,9 +247,7 @@ uv run tk -p ~/my-profile.json
 
 **"Unknown command" error:** Check for typos or unsupported commands. Use `help` in REPL to see valid commands.
 
-**Numbers not working:** Task numbers reset after state-changing commands (add, edit, done, etc). Run `list` again.
-
-**Getting help in REPL:** Type `help` to see command list.
+**Numbers not working:** Task numbers reset after state-changing commands (add, edit, done, etc). Run `list` or another view command again.
 
 ## Advanced Usage
 
@@ -270,18 +257,6 @@ You can edit tasks.json directly, but:
 - Tasks without `subjective_date` will appear as "unknown" in history
 - Running any command will validate and may fail if structure is invalid
 
-### Profile Fields Reference
-```json
-{
-  "data_path": "./tasks.json",         // required
-  "output_path": "./TODO.md",          // required
-  "timezone": "America/New_York",      // required, IANA format
-  "subjective_day_start": "04:00:00",  // required, HH:MM:SS or HH:MM
-  "auto_sync": true,                   // optional, default: true
-  "sync_on_exit": false                // optional, default: false
-}
-```
-
 ## Windows & One-File Packaging Notes
 
 These are current project assumptions, documented for future packaging work:
@@ -289,14 +264,3 @@ These are current project assumptions, documented for future packaging work:
 - Windows `.exe` one-file packaging is not an active goal right now.
 - Timezone behavior on Windows is expected to depend on runtime packaging details (for example bundled timezone data); verify during actual packaging/testing.
 - `@/` paths resolve to the source package directory.
-
-## License
-
-This project is licensed under the MIT License. See `LICENSE`.
-
-## Support
-
-For bugs or feature requests, open an issue in this repository with:
-- your command input
-- the exact error/output
-- your profile settings (redacted as needed)
