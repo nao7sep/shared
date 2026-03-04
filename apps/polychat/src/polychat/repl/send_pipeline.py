@@ -17,7 +17,9 @@ from ..orchestrator import ChatOrchestrator
 from ..orchestration.types import PrintAction, SendAction
 from ..session_manager import SessionManager
 from ..streaming import display_streaming_response
+from ..ui.notifications import NotificationPlayer
 from ..ui.theme import print_cost_line
+from ..domain.config import AppConfig
 
 
 def _resolve_effective_mode(base_mode: str, use_search: bool) -> str:
@@ -54,6 +56,7 @@ def _log_response_metrics(
     effective_request_mode: str,
     manager: SessionManager,
     effective_path: Optional[str],
+    app_config: AppConfig,
 ) -> None:
     """Calculate timing/cost metrics and emit a structured log event."""
     end_time = time.perf_counter()
@@ -68,7 +71,7 @@ def _log_response_metrics(
     cost_line = format_cost_line(manager.current_model, usage)
     if cost_line:
         print()
-        print_cost_line(cost_line)
+        print_cost_line(cost_line, app_config=app_config)
 
     cost_est = estimate_cost(manager.current_model, usage)
     log_event(
@@ -86,7 +89,9 @@ def _log_response_metrics(
         cache_write_tokens=usage.get("cache_write_tokens"),
         output_tokens=usage.get("completion_tokens"),
         total_tokens=usage.get("total_tokens"),
-        estimated_cost=format_cost_usd(cost_est.total_cost) if cost_est is not None else None,
+        estimated_cost=format_cost_usd(cost_est.total_cost)
+        if cost_est is not None
+        else None,
     )
 
 
@@ -132,6 +137,8 @@ async def execute_send_action(
     *,
     manager: SessionManager,
     orchestrator: ChatOrchestrator,
+    app_config: AppConfig,
+    notification_player: NotificationPlayer,
 ) -> None:
     """Execute one orchestrator SendAction and print response output."""
     use_search = (
@@ -165,6 +172,7 @@ async def execute_send_action(
         )
         print()
         print(f"Error: {provider_resolution_error}")
+        notification_player.notify()
         return
 
     if action.mode == "retry" and action.assistant_hex_id:
@@ -192,6 +200,7 @@ async def execute_send_action(
             response_stream,
             prefix="",
         )
+        notification_player.notify()
 
     except KeyboardInterrupt:
         cancel_result = await orchestrator.handle_user_cancel(
@@ -215,6 +224,7 @@ async def execute_send_action(
         )
         print()
         print(error_result.message)
+        notification_player.notify()
         return
 
     citations = normalize_citations(metadata.get("citations"))
@@ -238,6 +248,7 @@ async def execute_send_action(
             effective_request_mode=effective_request_mode,
             manager=manager,
             effective_path=manager.chat_path,
+            app_config=app_config,
         )
     except Exception as exc:
         _warn_nonfatal_post_stream_failure(

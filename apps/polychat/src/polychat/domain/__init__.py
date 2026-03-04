@@ -6,6 +6,7 @@ from .chat import (
     ChatMessage,
     ChatMetadata,
 )
+from .config import AppConfig
 from .profile import RuntimeProfile
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "ChatDocument",
     "ChatMetadata",
     "ChatMessage",
+    "AppConfig",
     "RuntimeProfile",
 ]

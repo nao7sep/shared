@@ -23,6 +23,9 @@ LOG_FILE_EXTENSION = ".log"
 # User data directory (created in home directory)
 USER_DATA_DIR = f"~/.{APP_NAME}"
 
+# Default app-level config path
+DEFAULT_APP_CONFIG_PATH = f"{USER_DATA_DIR}/config.json"
+
 # Default directories for profile template
 DEFAULT_CHATS_DIR = f"{USER_DATA_DIR}/chats"
 DEFAULT_LOGS_DIR = f"{USER_DATA_DIR}/logs"

@@ -15,6 +15,7 @@ from prompt_toolkit.lexers import SimpleLexer
 from .. import __version__
 from .. import chat
 from ..commands import CommandHandler
+from ..domain.config import AppConfig
 from ..formatting.constants import BORDERLINE_CHAR, BORDERLINE_WIDTH, DISPLAY_NONE, DISPLAY_UNKNOWN
 from ..logging import log_event, summarize_command_args
 from ..orchestrator import ChatOrchestrator
@@ -30,6 +31,8 @@ from ..domain.chat import ChatDocument
 from ..domain.profile import RuntimeProfile
 from ..timeouts import resolve_profile_timeout
 from ..ui.interaction import ThreadedConsoleInteraction
+from ..ui.notifications import NotificationPlayer
+from ..ui.theme import build_interactive_style
 from .send_pipeline import execute_send_action
 
 
@@ -72,7 +75,10 @@ def build_key_bindings(manager: SessionManager) -> KeyBindings:
     return key_bindings
 
 
-def create_prompt_session(manager: SessionManager) -> PromptSession:
+def create_prompt_session(
+    manager: SessionManager,
+    app_config: AppConfig,
+) -> PromptSession:
     """Create prompt-toolkit session for REPL input."""
     return PromptSession(
         # DummyHistory: up-arrow retrieves nothing; no data written to disk.
@@ -81,7 +87,7 @@ def create_prompt_session(manager: SessionManager) -> PromptSession:
         key_bindings=build_key_bindings(manager),
         lexer=SimpleLexer("class:user-input"),
         multiline=True,
-        style=#todo
+        style=build_interactive_style(app_config),
     )
 
 
@@ -151,6 +157,8 @@ def print_mode_banner(manager: SessionManager, chat_data: Optional[ChatDocument]
 
 
 async def repl_loop(
+    app_config: AppConfig,
+    notification_player: NotificationPlayer,
     profile_data: RuntimeProfile,
     chat_data: Optional[ChatDocument] = None,
     chat_path: Optional[str] = None,
@@ -207,7 +215,7 @@ async def repl_loop(
         message_count=len(manager.chat.messages),
     )
 
-    prompt_session = create_prompt_session(manager)
+    prompt_session = create_prompt_session(manager, app_config)
     print_startup_banner(manager, profile_data, manager.chat_path)
 
     while True:
@@ -266,6 +274,8 @@ async def repl_loop(
                             action,
                             manager=manager,
                             orchestrator=orchestrator,
+                            app_config=app_config,
+                            notification_player=notification_player,
                         )
 
                 except ValueError as error:
@@ -312,6 +322,8 @@ async def repl_loop(
                     action,
                     manager=manager,
                     orchestrator=orchestrator,
+                    app_config=app_config,
+                    notification_player=notification_player,
                 )
                 continue
 

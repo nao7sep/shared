@@ -14,7 +14,11 @@ This document defines package-level ownership boundaries after the 2026-02 refac
   - Owns typed boundary models used by persistence and runtime adapters.
   - Current domain models:
     - `chat.py` (`ChatDocument`, `ChatMetadata`, `ChatMessage`)
+    - `config.py` (`AppConfig`)
     - `profile.py` (`RuntimeProfile`)
+
+- `src/polychat/config/`
+  - Owns app-level config file loading, validation, first-run template creation, and config startup preparation.
 
 - `src/polychat/chat/`
   - Owns persisted chat storage schema, chat message mutations, and chat-file operations.
@@ -65,6 +69,16 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 - `src/polychat/formatting/`
   - Owns all display and text formatting helpers:
     - `text.py`, `history.py`, `chat_list.py`, `citations.py`, `costs.py`
+
+- `src/polychat/ui/`
+  - Owns terminal-specific interaction/rendering helpers and non-persistent output devices.
+  - `runtime.py` owns UI runtime preparation from app config.
+  - `theme.py` owns prompt-toolkit style construction from app config.
+  - `notifications/` owns sound-notification resolution and playback wiring:
+    - `contracts.py` owns notification player/runtime contracts
+    - `resolution.py` owns config-to-sound resolution policy
+    - `platform_lookup.py` owns platform system-sound lookup
+    - `playback.py` owns runtime playback backends and startup probing
 
 - `src/polychat/prompts/`
   - Owns prompt template builders (`templates.py`), system-prompt loading (`system_prompt.py`), and prompt assets (`prompts/system/*`).

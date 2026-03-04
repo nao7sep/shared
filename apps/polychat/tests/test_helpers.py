@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
+from polychat.domain.config import AppConfig
 from polychat.domain.profile import RuntimeProfile
 
 _DEV_API_KEYS_FILENAME = ".dev-api-keys.json"
@@ -25,6 +26,23 @@ def make_profile(**overrides: Any) -> RuntimeProfile:
     }
     defaults.update(overrides)
     return RuntimeProfile.from_dict(defaults)
+
+
+def make_app_config(**overrides: Any) -> AppConfig:
+    """Build an AppConfig with sensible test defaults."""
+    defaults: dict[str, Any] = {
+        "sound_notifications": {
+            "enabled": None,
+            "sound": None,
+            "volume": None,
+        },
+        "text_colors": {
+            "user_input": None,
+            "cost_line": None,
+        },
+    }
+    defaults.update(overrides)
+    return AppConfig.from_dict(defaults)
 
 
 def find_test_api_keys_file() -> Optional[Path]:

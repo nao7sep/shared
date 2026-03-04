@@ -16,6 +16,7 @@ PolyChat is a command-line chat interface that supports multiple AI providers (O
 - **System Prompts**: Predefined and custom system prompts with version control
 - **Streaming Responses**: Real-time response display with async streaming
 - **Profile-Based**: Each profile contains AI preferences, API keys, and default settings
+- **App-Level Config**: Shared text colors and notification sounds live in one app config for all profiles
 - **Centralized Runtime Policy**: Optional per-provider output limits and shared timeout policy
 
 ## Installation
@@ -44,6 +45,7 @@ polychat setup
 The setup wizard:
 - Asks for API keys for each of the 7 supported AI providers (Enter to skip)
 - Shows a summary and asks for confirmation
+- Automatically creates `~/.polychat/config.json` on first startup if missing
 - Creates `~/.polychat/profile.json` and `~/.polychat/api-keys.json`
 - Enters the REPL immediately
 
@@ -73,6 +75,7 @@ polychat -p ~/my-profile.json
 ```
 
 The app goes straight to the REPL and shows configured AI providers.
+If `~/.polychat/config.json` does not exist yet, PolyChat creates it automatically before loading the selected profile.
 
 ### 4. Chat
 
@@ -284,6 +287,58 @@ When the provider reports cached input tokens, those are shown and factored in a
 **Important:** Displayed costs are estimates based on published list prices embedded in the app. Actual charges may differ due to provider pricing changes, batch discounts, or billing-tier adjustments. If you notice a significant discrepancy, please contact `nao7sep@gmail.com`.
 
 ## Configuration
+
+### App Config File
+
+PolyChat has one app-level config file shared by all profiles:
+
+- Path: `~/.polychat/config.json`
+- Missing file: created automatically on startup
+- Broken file: startup stops immediately with a config-specific error
+
+Current app-level settings:
+
+```json
+{
+  "sound_notifications": {
+    "enabled": null,
+    "sound": null,
+    "volume": null
+  },
+  "text_colors": {
+    "user_input": null,
+    "cost_line": null
+  }
+}
+```
+
+Runtime defaults when values are `null`:
+
+- `sound_notifications.enabled` → `true`
+- `sound_notifications.sound` → platform default system sound when available
+- `sound_notifications.volume` → `1.0`
+- `text_colors.user_input` → bright green
+- `text_colors.cost_line` → bright yellow
+
+If the platform default sound cannot be found on a given machine, startup will ask you to set `sound_notifications.sound` explicitly or turn notifications off.
+
+**`sound_notifications.sound`**
+- Uses one string field for either a system sound token or a file path.
+- When this value is `null`, PolyChat uses a built-in platform default sound.
+- If the value looks like a plain token (for example `Tink` or `SystemAsterisk`), PolyChat first tries platform-specific system sound lookup.
+- If that fails, PolyChat treats the value as a normal PolyChat file path:
+  - use `~/...`, `@/...`, or an absolute path
+  - plain relative paths are rejected
+- Invalid, missing, or unresolvable sound settings stop startup when sound notifications are enabled.
+- Invalid text color settings also stop startup before the profile is loaded.
+- The notification sound currently plays when an assistant response completes or when a send attempt fails with an error.
+
+**Platform notes**
+- macOS uses `afplay`
+- Windows resolves system aliases to WAV files and plays them with the standard `winsound` module
+  - custom notification files must be `.wav`
+  - `sound_notifications.volume` is ignored on Windows because `winsound` uses the system output volume
+- Linux requires either `paplay` or `ffplay`
 
 ### Profile File Format
 

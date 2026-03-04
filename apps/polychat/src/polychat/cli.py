@@ -5,9 +5,10 @@ import asyncio
 import logging
 import sys
 import time
-from typing import cast
+from typing import NoReturn, cast
 
-from . import chat, profile, setup_wizard
+from . import chat, config as app_config, profile, setup_wizard
+from .domain.profile import RuntimeProfile
 from .formatting.constants import DISPLAY_UNKNOWN
 from .logging import (
     build_run_log_path,
@@ -19,6 +20,7 @@ from .path_utils import map_path
 from .repl import repl_loop
 from .session_manager import SessionManager
 from .timeouts import resolve_profile_timeout
+from .ui import prepare_ui_runtime
 
 __all__ = ["main", "sanitize_error_message"]
 
@@ -42,6 +44,31 @@ def _map_cli_arg(path: str | None, arg_name: str) -> str | None:
         return cast(str, map_path(path))
     except ValueError as e:
         raise ValueError(f"Invalid {arg_name} path: {e}")
+
+
+def _print_error_segment(message: str, *, leading_blank: bool) -> None:
+    """Print one error segment using the shared CLI output format."""
+    if leading_blank:
+        print()
+    print(f"ERROR: {message}")
+
+
+def _exit_startup_error(message: str) -> NoReturn:
+    """Print a startup error and exit before entering the REPL."""
+    _print_error_segment(message, leading_blank=False)
+    sys.exit(1)
+
+
+def _load_startup_profile(profile_path: str) -> RuntimeProfile:
+    """Load the startup profile with dedicated fast-fail messaging."""
+    try:
+        return profile.load_profile(profile_path)
+    except FileNotFoundError as e:
+        _exit_startup_error(str(e))
+    except OSError as e:
+        _exit_startup_error(f"Could not read profile file {profile_path}: {e}")
+    except ValueError as e:
+        _exit_startup_error(f"Profile file is invalid: {profile_path}: {e}")
 
 
 def main() -> None:
@@ -79,12 +106,15 @@ def main() -> None:
 
     if args.command == "init":
         if not raw_args or raw_args[0] != "init":
-            print("Error: 'init' must be the first argument")
+            _print_error_segment("'init' must be the first argument", leading_blank=False)
             print("Usage: polychat init -p <profile-path>")
             sys.exit(1)
 
         if not args.profile:
-            print("Error: -p/--profile is required for init command")
+            _print_error_segment(
+                "-p/--profile is required for init command",
+                leading_blank=False,
+            )
             print("Usage: polychat init -p <profile-path>")
             sys.exit(1)
         try:
@@ -97,15 +127,15 @@ def main() -> None:
                 print(message)
             sys.exit(0)
         except ValueError as e:
-            print(f"Error: {e}")
+            _print_error_segment(str(e), leading_blank=False)
             sys.exit(1)
         except Exception as e:
-            print(f"Error creating profile: {e}")
+            _print_error_segment(f"creating profile: {e}", leading_blank=False)
             sys.exit(1)
 
     if args.command == "setup":
         if not raw_args or raw_args[0] != "setup":
-            print("Error: 'setup' must be the first argument")
+            _print_error_segment("'setup' must be the first argument", leading_blank=False)
             print("Usage: polychat setup")
             sys.exit(1)
 
@@ -120,7 +150,7 @@ def main() -> None:
         args.command = None
 
     if args.command:
-        print(f"Error: unknown command '{args.command}'")
+        _print_error_segment(f"unknown command '{args.command}'", leading_blank=False)
         print("Supported commands: init, setup")
         print("Usage:")
         print("  polychat init -p <profile-path>")
@@ -129,11 +159,28 @@ def main() -> None:
         sys.exit(1)
 
     if not args.profile:
-        print("Error: -p/--profile is required")
+        _print_error_segment("-p/--profile is required", leading_blank=False)
         print("Usage: polychat -p <profile-path> [-c <chat-path>] [-l <log-path>]")
         sys.exit(1)
 
     try:
+        try:
+            startup_app_config = app_config.load_or_create_startup_config()
+        except app_config.AppConfigStartupError as e:
+            _exit_startup_error(str(e))
+
+        pre_banner_messages = startup_app_config.messages
+        for message in pre_banner_messages:
+            print(message)
+        app_config_data = startup_app_config.config
+
+        try:
+            ui_runtime = prepare_ui_runtime(app_config_data)
+        except ValueError as e:
+            _exit_startup_error(
+                f"App config file is invalid: {startup_app_config.path}: {e}"
+            )
+
         # Map CLI path arguments
         mapped_profile_path = _map_cli_arg(args.profile, "profile")
         mapped_chat_path = _map_cli_arg(args.chat, "chat")
@@ -141,8 +188,10 @@ def main() -> None:
         if mapped_profile_path is None:
             raise ValueError("Invalid profile path: path is required")
 
-        profile_data = profile.load_profile(mapped_profile_path)
-        effective_log_path = mapped_log_path or build_run_log_path(profile_data.logs_dir)
+        profile_data = _load_startup_profile(mapped_profile_path)
+        effective_log_path = mapped_log_path or build_run_log_path(
+            profile_data.logs_dir
+        )
         setup_logging(effective_log_path)
 
         chat_path = None
@@ -152,12 +201,14 @@ def main() -> None:
             chat_path = mapped_chat_path
             chat_data = chat.load_chat(chat_path)
 
-        (system_prompt_content, system_prompt_path), system_prompt_warning = SessionManager.load_system_prompt(
-            profile_data,
-            mapped_profile_path,
+        (system_prompt_content, system_prompt_path), system_prompt_warning = (
+            SessionManager.load_system_prompt(
+                profile_data,
+                mapped_profile_path,
+            )
         )
         if system_prompt_warning:
-            print(f"Error: {system_prompt_warning}")
+            _print_error_segment(system_prompt_warning, leading_blank=False)
             sys.exit(1)
 
         log_event(
@@ -169,7 +220,9 @@ def main() -> None:
             chats_dir=profile_data.chats_dir,
             logs_dir=profile_data.logs_dir,
             assistant_provider=profile_data.default_ai,
-            assistant_model=profile_data.models.get(profile_data.default_ai, DISPLAY_UNKNOWN),
+            assistant_model=profile_data.models.get(
+                profile_data.default_ai, DISPLAY_UNKNOWN
+            ),
             helper_provider=profile_data.default_helper_ai or profile_data.default_ai,
             helper_model=profile_data.models.get(
                 profile_data.default_helper_ai or profile_data.default_ai,
@@ -180,8 +233,16 @@ def main() -> None:
             system_prompt=system_prompt_path,
         )
 
+        if pre_banner_messages:
+            # The startup banner is the first REPL segment and must not emit a
+            # leading blank line, so pre-banner startup output owns this one
+            # trailing separator when normal startup reaches the banner.
+            print()
+
         asyncio.run(
             repl_loop(
+                app_config_data,
+                ui_runtime.notification_player,
                 profile_data,
                 chat_data,
                 chat_path,
@@ -209,8 +270,7 @@ def main() -> None:
         print("Interrupted")
         sys.exit(0)
     except Exception as e:
-        print()
-        print(f"Error: {e}")
+        _print_error_segment(str(e), leading_blank=True)
         log_event(
             "app_stop",
             level=logging.ERROR,
