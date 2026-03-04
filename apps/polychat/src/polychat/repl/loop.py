@@ -32,6 +32,7 @@ from ..domain.profile import RuntimeProfile
 from ..timeouts import resolve_profile_timeout
 from ..ui.interaction import ThreadedConsoleInteraction
 from ..ui.notifications import NotificationPlayer
+from ..ui.segments import begin_output_segment
 from ..ui.theme import build_interactive_style
 from .send_pipeline import execute_send_action
 
@@ -97,6 +98,8 @@ def print_startup_banner(
     chat_path: Optional[str],
 ) -> None:
     """Print REPL startup context and key usage hints."""
+    begin_output_segment()
+
     configured_ais = []
     for provider, model in profile_data.models.items():
         if provider in profile_data.api_keys:

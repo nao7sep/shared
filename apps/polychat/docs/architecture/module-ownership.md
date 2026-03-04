@@ -73,6 +73,7 @@ This document defines package-level ownership boundaries after the 2026-02 refac
 - `src/polychat/ui/`
   - Owns terminal-specific interaction/rendering helpers and non-persistent output devices.
   - `runtime.py` owns UI runtime preparation from app config.
+  - `segments.py` owns the minimal CLI segment-boundary helper used to keep leading-only spacing consistent without threading `is_first_segment` flags through the app.
   - `theme.py` owns prompt-toolkit style construction from app config.
   - `notifications/` owns sound-notification resolution and playback wiring:
     - `contracts.py` owns notification player/runtime contracts

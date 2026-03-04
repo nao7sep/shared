@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 from tk.models import Profile, Task, TaskListItem, TaskStore
+from tk.output_segments import reset_output_segments
 from tk.session import Session
 
 
@@ -98,3 +99,11 @@ def frozen_time():
     from freezegun import freeze_time
     with freeze_time("2026-02-09 10:00:00"):
         yield
+
+
+@pytest.fixture(autouse=True)
+def reset_cli_output_segments():
+    """Keep output segment state isolated across tests."""
+    reset_output_segments()
+    yield
+    reset_output_segments()

@@ -21,6 +21,7 @@ from .constants import (
 )
 from .formatting.constants import BORDERLINE_CHAR, BORDERLINE_WIDTH
 from .timeouts import DEFAULT_PROFILE_TIMEOUT_SEC
+from .ui.segments import begin_output_segment
 
 # Fixed paths for setup wizard
 SETUP_PROFILE_PATH = f"{USER_DATA_DIR}/profile.json"
@@ -142,6 +143,7 @@ def run_setup_wizard() -> Optional[str]:
     """
     borderline = BORDERLINE_CHAR * BORDERLINE_WIDTH
 
+    begin_output_segment()
     print(borderline)
     print("PolyChat Setup")
     print(borderline)
@@ -163,10 +165,9 @@ def run_setup_wizard() -> Optional[str]:
         if key:
             api_keys[provider_id] = key
 
-    print()
-
     # Check if any keys were provided
     if not api_keys:
+        begin_output_segment()
         print("No API keys were provided.")
         print("At least one API key is required to use PolyChat.")
         print()
@@ -174,16 +175,17 @@ def run_setup_wizard() -> Optional[str]:
         return None
 
     # Show summary
+    begin_output_segment()
     print("Configured providers:")
     for provider_id, display_name, _ in PROVIDER_INFO:
         if provider_id in api_keys:
             print(f"\u2713 {display_name}: {_mask_key(api_keys[provider_id])}")
         else:
             print(f"- {display_name}: (skipped)")
-    print()
 
     # Ask for confirmation
     try:
+        begin_output_segment()
         confirm = pt_prompt("Save and start PolyChat? (y/N): ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print("Setup canceled.")
@@ -211,7 +213,6 @@ def run_setup_wizard() -> Optional[str]:
 
     print(f"Profile:  {profile_path}")
     print(f"API keys: {api_keys_path}")
-    print()  # Banner owns no leading blank, so wizard emits trailing separation
 
     return str(profile_path)
 

@@ -10,8 +10,10 @@ from .command_parser import CommandParseError, parse_command
 from .commands import MutationHook, execute_command
 from .errors import ViberError
 from .models import Database
+from .output_segments import start_output_segment
 from .renderer import remove_check_page, render_check_pages
 from .store import save_database
+
 
 def _make_banner() -> str:
     from . import __version__
@@ -64,11 +66,12 @@ def run_repl(
 
 
 def _run_loop(db: Database, after_mutation: MutationHook) -> None:
+    start_output_segment()
     print(_make_banner())
 
     while True:
         try:
-            print()
+            start_output_segment()
             raw = input("> ")
         except EOFError:
             print()
@@ -111,4 +114,3 @@ def _run_loop(db: Database, after_mutation: MutationHook) -> None:
             print(f"ERROR: {exc}")
         except Exception as exc:  # noqa: BLE001
             print(f"ERROR: Unexpected: {exc}")
-

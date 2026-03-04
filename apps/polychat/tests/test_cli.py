@@ -209,11 +209,11 @@ def test_startup_creates_missing_app_config_before_loading_profile(monkeypatch):
     assert call_order == ["config-startup", "ui-runtime", "profile-load"]
 
 
-def test_startup_creation_message_owns_trailing_blank_before_banner(
+def test_startup_creation_message_emits_no_trailing_blank_before_banner_segment(
     monkeypatch,
     capsys,
 ):
-    """Pre-banner config creation output should separate itself from the banner."""
+    """Pre-banner config creation output should not emit its own separator."""
     app_config_data = make_app_config()
     profile_path = "/tmp/polychat-profile.json"
     profile_data = make_profile(
@@ -251,7 +251,9 @@ def test_startup_creation_message_owns_trailing_blank_before_banner(
     ):
         main()
 
-    assert "Created app config: /tmp/polychat-config.json\n\nBANNER\n" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "Created app config: /tmp/polychat-config.json\nBANNER\n" in output
+    assert "Created app config: /tmp/polychat-config.json\n\nBANNER\n" not in output
 
 
 def test_startup_exits_fast_when_app_config_is_invalid(monkeypatch, capsys):

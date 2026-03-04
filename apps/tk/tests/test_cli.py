@@ -5,6 +5,7 @@ import sys
 
 import pytest
 
+from tk import __version__
 from tk import cli
 from tk.errors import AppError
 from tk.models import Profile, TaskStore
@@ -45,7 +46,16 @@ class TestMain:
         cli.main()
 
         output = capsys.readouterr().out
-        assert f"Profile created: {profile_path}" in output
+        expected = (
+            f"tk {__version__}\n\n"
+            f"Profile created: {profile_path}\n"
+            f"{'Data file:':<27}{prof.data_path}\n"
+            f"{'Output file:':<27}{prof.output_path}\n"
+            f"{'Timezone:':<27}{prof.timezone}\n"
+            f"{'Subjective day starts at:':<27}{prof.subjective_day_start}\n\n"
+            f"Start the app with: tk --profile {profile_path}\n"
+        )
+        assert output == expected
         assert captured["save"][0] == prof.data_path
         assert isinstance(captured["save"][1], TaskStore)
         assert captured["todo"] == ([], prof.output_path)
@@ -66,7 +76,7 @@ class TestMain:
 
         output = capsys.readouterr().out
         assert exc_info.value.code == 1
-        assert "ERROR: Bad profile path" in output
+        assert output == f"tk {__version__}\n\nERROR: Bad profile path\n"
 
     def test_startup_loads_profile_and_enters_repl(self, tmp_path, monkeypatch, capsys):
         """Test that normal startup loads data, prints profile info, and starts REPL."""
@@ -94,8 +104,15 @@ class TestMain:
         cli.main()
 
         output = capsys.readouterr().out
-        assert "Profile Information:" in output
-        assert "  Current time:              2026-02-09 10:11:12" in output
+        expected = (
+            f"tk {__version__}\n\n"
+            "Profile Information:\n"
+            "  Timezone:                  Asia/Tokyo\n"
+            "  DST:                       No\n"
+            "  Current time:              2026-02-09 10:11:12\n"
+            "  Subjective day starts at:  04:00:00\n"
+        )
+        assert output == expected
         assert captured["session"].profile_path == str(profile_path)
         assert captured["session"].profile is prof
         assert captured["session"].tasks is tasks_data
@@ -116,8 +133,11 @@ class TestMain:
 
         output = capsys.readouterr().out
         assert exc_info.value.code == 1
-        assert f"ERROR: Profile not found: {profile_path}" in output
-        assert f"Create it with: tk init --profile {profile_path}" in output
+        assert output == (
+            f"tk {__version__}\n\n"
+            f"ERROR: Profile not found: {profile_path}\n"
+            f"Create it with: tk init --profile {profile_path}\n"
+        )
 
     def test_startup_without_profile_exits_with_usage_hint(self, monkeypatch, capsys):
         """Test startup guidance when no profile flag is provided."""
@@ -128,5 +148,11 @@ class TestMain:
 
         output = capsys.readouterr().out
         assert exc_info.value.code == 1
-        assert "ERROR: No profile specified" in output
-        assert "tk init --profile <path>" in output
+        assert output == (
+            f"tk {__version__}\n\n"
+            "ERROR: No profile specified\n\n"
+            "Create a new profile:\n"
+            "  tk init --profile <path>\n\n"
+            "Or start with an existing profile:\n"
+            "  tk --profile <path>\n"
+        )

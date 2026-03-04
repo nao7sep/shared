@@ -20,7 +20,9 @@ from viber.command_parser import (
     parse_command,
 )
 from viber.commands import execute_command
+from viber.formatter import format_project_ref, format_task, format_task_ref
 from viber.models import AssignmentStatus, Database, ProjectState, assignment_key
+from viber.output_segments import start_output_segment
 from viber.service import create_group, create_project, create_task
 
 
@@ -208,6 +210,20 @@ def test_run_loop_eof_exits_cleanly(
     assert "Goodbye." in out
 
 
+def test_run_loop_formats_banner_and_prompt_segments_without_trailing_blank_line(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _install_scripted_input(monkeypatch, [EOFError()])
+
+    repl_module._run_loop(Database(), lambda _gids, _removed: None)
+
+    out = capsys.readouterr().out
+    assert out == f"{repl_module._make_banner()}\n\n> \nGoodbye.\n"
+    assert not out.startswith("\n")
+    assert not out.endswith("\n\n")
+
+
 def test_run_loop_unknown_command_shows_helpful_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -266,6 +282,66 @@ def test_work_loop_project_cancel_keeps_assignment_pending(monkeypatch: pytest.M
     )
 
     assert db.assignments[assignment_key(p.id, t.id)].status == AssignmentStatus.PENDING
+
+
+def test_work_loop_project_repeated_list_gets_single_leading_blank_line(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t1 = create_task(db, "Task A", None)
+    t2 = create_task(db, "Task B", None)
+
+    _install_scripted_input(monkeypatch, ["2", "o", "", "q"])
+    start_output_segment()
+
+    execute_command(
+        WorkEntityCommand(kind="project", entity_id=p.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    out = capsys.readouterr().out
+    updated_assignment = (
+        f"Updated assignment: {format_project_ref(p)} | {format_task_ref(t2)} | ok"
+    )
+    repeated_segment = (
+        f"{updated_assignment}\n\n"
+        f"Work loop: {format_project_ref(p)}\n"
+        f"1. {format_task(t1, db)}\n"
+    )
+    assert repeated_segment in out
+    assert f"{updated_assignment}\n\n\nWork loop:" not in out
+    assert not out.endswith("\n\n")
+
+
+def test_work_loop_project_completion_gets_single_leading_blank_line(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task A", None)
+
+    _install_scripted_input(monkeypatch, ["1", "o", ""])
+    start_output_segment()
+
+    execute_command(
+        WorkEntityCommand(kind="project", entity_id=p.id),
+        db,
+        lambda _gids, _removed: None,
+    )
+
+    out = capsys.readouterr().out
+    updated_assignment = (
+        f"Updated assignment: {format_project_ref(p)} | {format_task_ref(t)} | ok"
+    )
+    assert f"{updated_assignment}\n\nWork loop complete.\n" in out
+    assert f"{updated_assignment}\n\n\nWork loop complete.\n" not in out
+    assert not out.endswith("\n\n")
 
 
 # ---------------------------------------------------------------------------
@@ -674,3 +750,20 @@ def test_run_repl_renders_only_affected_groups_after_mutation(
     repl_module.run_repl(db, data_path, check_path)
 
     assert events == ["save", "render:affected"]
+
+
+def _install_scripted_input(
+    monkeypatch: pytest.MonkeyPatch,
+    responses: list[str | BaseException],
+) -> None:
+    response_iter = iter(responses)
+
+    def _input(prompt: str) -> str:
+        print(prompt, end="")
+        response = next(response_iter)
+        if isinstance(response, BaseException):
+            raise response
+        print(response)
+        return response
+
+    monkeypatch.setattr("builtins.input", _input)

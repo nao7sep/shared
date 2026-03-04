@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from tk.errors import ConfigError
 from tk.models import Profile
+from tk.output_segments import start_output_segment
 
 _TIME_WITH_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2}):(\d{2})$")
 _TIME_WITHOUT_SECONDS_RE = re.compile(r"^(\d{1,2}):(\d{2})$")
@@ -240,6 +241,7 @@ def create_profile(path: str) -> Profile:
         system_timezone = str(tz)
     except Exception as e:
         # Fallback to UTC if detection fails
+        start_output_segment()
         print(f"WARNING: Could not detect system timezone ({e})")
         print("Falling back to UTC. Edit the profile JSON to set your timezone manually.")
         system_timezone = "UTC"

@@ -88,6 +88,7 @@ exit | quit
 - `work` shows all pending items, then prompts for item number (or `q` to quit), then action `[o]k / [n]ah / [c]ancel`, then optional comment (Enter to skip).
 - In `work`, pressing `Ctrl+C` at any prompt cancels the current step safely.
 - `exit` and `quit` are full-word only (no single-letter aliases).
+- CLI output follows the shared segment-spacing rule: the first segment has no leading blank line, later segments own one leading blank line, and no segment emits a trailing blank line. Startup warnings can therefore appear before the banner, and the banner will then start with its own leading blank line.
 
 ## Concepts
 

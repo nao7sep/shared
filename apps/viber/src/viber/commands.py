@@ -36,6 +36,7 @@ from .formatter import (
     format_task_ref,
 )
 from .models import Assignment, AssignmentStatus, Database, Project, Task, assignment_key
+from .output_segments import start_output_segment
 from .queries import pending_all, pending_by_project, pending_by_task
 from .service import (
     create_group,
@@ -424,12 +425,12 @@ def _work_by_project(
         results = pending_by_project(db, project.id)
         if not results:
             if continued:
-                print()
+                start_output_segment()
             print("Work loop complete.")
             return
 
         if continued:
-            print()
+            start_output_segment()
         print(f"Work loop: {format_project_ref(project)}")
         for i, (task, _assignment) in enumerate(results, 1):
             print(f"{i}. {format_task(task, db)}")
@@ -475,12 +476,12 @@ def _work_by_task(
         results = pending_by_task(db, task.id)
         if not results:
             if continued:
-                print()
+                start_output_segment()
             print("Work loop complete.")
             return
 
         if continued:
-            print()
+            start_output_segment()
         print(f"Work loop: {format_task_ref(task)}")
         for i, (project, group, _assignment) in enumerate(results, 1):
             print(f"{i}. {format_project(project, group)}")

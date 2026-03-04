@@ -20,6 +20,7 @@ from .path_utils import map_path
 from .repl import repl_loop
 from .session_manager import SessionManager
 from .timeouts import resolve_profile_timeout
+from .ui.segments import begin_output_segment, reset_output_segments
 from .ui import prepare_ui_runtime
 
 __all__ = ["main", "sanitize_error_message"]
@@ -46,16 +47,15 @@ def _map_cli_arg(path: str | None, arg_name: str) -> str | None:
         raise ValueError(f"Invalid {arg_name} path: {e}")
 
 
-def _print_error_segment(message: str, *, leading_blank: bool) -> None:
+def _print_error_segment(message: str) -> None:
     """Print one error segment using the shared CLI output format."""
-    if leading_blank:
-        print()
+    begin_output_segment()
     print(f"ERROR: {message}")
 
 
 def _exit_startup_error(message: str) -> NoReturn:
     """Print a startup error and exit before entering the REPL."""
-    _print_error_segment(message, leading_blank=False)
+    _print_error_segment(message)
     sys.exit(1)
 
 
@@ -73,6 +73,8 @@ def _load_startup_profile(profile_path: str) -> RuntimeProfile:
 
 def main() -> None:
     """Main entry point for PolyChat CLI."""
+    reset_output_segments()
+
     parser = argparse.ArgumentParser(
         prog="polychat",
         description="PolyChat - Multi-AI CLI Chat Tool",
@@ -106,15 +108,12 @@ def main() -> None:
 
     if args.command == "init":
         if not raw_args or raw_args[0] != "init":
-            _print_error_segment("'init' must be the first argument", leading_blank=False)
+            _print_error_segment("'init' must be the first argument")
             print("Usage: polychat init -p <profile-path>")
             sys.exit(1)
 
         if not args.profile:
-            _print_error_segment(
-                "-p/--profile is required for init command",
-                leading_blank=False,
-            )
+            _print_error_segment("-p/--profile is required for init command")
             print("Usage: polychat init -p <profile-path>")
             sys.exit(1)
         try:
@@ -123,19 +122,21 @@ def main() -> None:
                 raise ValueError("Invalid profile path: path is required")
             _, messages = profile.create_profile(mapped_init_profile_path)
             # Display status messages returned by create_profile
-            for message in messages:
-                print(message)
+            if messages:
+                begin_output_segment()
+                for message in messages:
+                    print(message)
             sys.exit(0)
         except ValueError as e:
-            _print_error_segment(str(e), leading_blank=False)
+            _print_error_segment(str(e))
             sys.exit(1)
         except Exception as e:
-            _print_error_segment(f"creating profile: {e}", leading_blank=False)
+            _print_error_segment(f"creating profile: {e}")
             sys.exit(1)
 
     if args.command == "setup":
         if not raw_args or raw_args[0] != "setup":
-            _print_error_segment("'setup' must be the first argument", leading_blank=False)
+            _print_error_segment("'setup' must be the first argument")
             print("Usage: polychat setup")
             sys.exit(1)
 
@@ -150,7 +151,7 @@ def main() -> None:
         args.command = None
 
     if args.command:
-        _print_error_segment(f"unknown command '{args.command}'", leading_blank=False)
+        _print_error_segment(f"unknown command '{args.command}'")
         print("Supported commands: init, setup")
         print("Usage:")
         print("  polychat init -p <profile-path>")
@@ -159,7 +160,7 @@ def main() -> None:
         sys.exit(1)
 
     if not args.profile:
-        _print_error_segment("-p/--profile is required", leading_blank=False)
+        _print_error_segment("-p/--profile is required")
         print("Usage: polychat -p <profile-path> [-c <chat-path>] [-l <log-path>]")
         sys.exit(1)
 
@@ -170,8 +171,10 @@ def main() -> None:
             _exit_startup_error(str(e))
 
         pre_banner_messages = startup_app_config.messages
-        for message in pre_banner_messages:
-            print(message)
+        if pre_banner_messages:
+            begin_output_segment()
+            for message in pre_banner_messages:
+                print(message)
         app_config_data = startup_app_config.config
 
         try:
@@ -208,7 +211,7 @@ def main() -> None:
             )
         )
         if system_prompt_warning:
-            _print_error_segment(system_prompt_warning, leading_blank=False)
+            _print_error_segment(system_prompt_warning)
             sys.exit(1)
 
         log_event(
@@ -232,12 +235,6 @@ def main() -> None:
             timeout=resolve_profile_timeout(profile_data),
             system_prompt=system_prompt_path,
         )
-
-        if pre_banner_messages:
-            # The startup banner is the first REPL segment and must not emit a
-            # leading blank line, so pre-banner startup output owns this one
-            # trailing separator when normal startup reaches the banner.
-            print()
 
         asyncio.run(
             repl_loop(
@@ -266,11 +263,11 @@ def main() -> None:
             reason="keyboard_interrupt",
             uptime_ms=round((time.perf_counter() - app_started) * 1000, 1),
         )
-        print()
+        begin_output_segment()
         print("Interrupted")
         sys.exit(0)
     except Exception as e:
-        _print_error_segment(str(e), leading_blank=True)
+        _print_error_segment(str(e))
         log_event(
             "app_stop",
             level=logging.ERROR,

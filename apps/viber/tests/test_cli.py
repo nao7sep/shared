@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import viber.cli as cli_module
+import viber.repl as repl_module
 from viber.errors import StartupValidationError, ViberError
 from viber.models import Database
 from viber.service import create_group
@@ -21,6 +22,26 @@ def test_parse_args_help_prints_usage_and_returns_none(
     assert result is None
     out = capsys.readouterr().out
     assert "Usage: viber --data <path> [--check <path>]" in out
+
+
+def test_main_resets_segment_spacing_between_calls(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr("sys.argv", ["viber", "--help"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.main()
+    assert exc_info.value.code == 0
+    first = capsys.readouterr().out
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.main()
+    assert exc_info.value.code == 0
+    second = capsys.readouterr().out
+
+    assert first == cli_module._USAGE
+    assert second == cli_module._USAGE
 
 
 def test_parse_args_maps_data_and_check_paths(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -181,6 +202,36 @@ def test_main_warns_on_check_render_failure_but_still_starts_repl(
     assert "WARNING: Could not generate HTML check pages: disk full" in err
 
 
+def test_main_gives_banner_a_leading_blank_after_startup_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    db = Database()
+    create_group(db, "Backend")
+
+    monkeypatch.setattr(
+        cli_module,
+        "parse_args",
+        lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=CHECK_PATH),
+    )
+    monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
+    monkeypatch.setattr(cli_module, "prune_orphan_tasks", lambda _db: [])
+
+    def fake_render_check_pages(_db: Database, _check_path: Path) -> None:
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(cli_module, "render_check_pages", fake_render_check_pages)
+    _install_scripted_input(monkeypatch, [EOFError()])
+
+    cli_module.main()
+
+    captured = capsys.readouterr()
+    assert captured.err == "WARNING: Could not generate HTML check pages: disk full\n"
+    assert captured.out == f"\n{repl_module._make_banner()}\n\n> \nGoodbye.\n"
+    assert captured.out.startswith("\n")
+    assert not captured.out.endswith("\n\n")
+
+
 def test_main_exits_on_fatal_repl_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -204,3 +255,20 @@ def test_main_exits_on_fatal_repl_error(
     assert exc_info.value.code == 1
     err = capsys.readouterr().err
     assert "ERROR: Fatal: fatal" in err
+
+
+def _install_scripted_input(
+    monkeypatch: pytest.MonkeyPatch,
+    responses: list[str | BaseException],
+) -> None:
+    response_iter = iter(responses)
+
+    def _input(prompt: str) -> str:
+        print(prompt, end="")
+        response = next(response_iter)
+        if isinstance(response, BaseException):
+            raise response
+        print(response)
+        return response
+
+    monkeypatch.setattr("builtins.input", _input)

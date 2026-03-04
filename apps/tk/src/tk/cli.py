@@ -12,8 +12,17 @@ if sys.platform != "win32":
 from tk import data, markdown, profile
 from tk.errors import AppError
 from tk.models import Profile, TaskStore
+from tk.output_segments import reset_output_segments, start_output_segment
 from tk.repl import repl
 from tk.session import Session
+
+
+def print_app_banner() -> None:
+    """Display the application banner as a CLI output segment."""
+    from tk import __version__
+
+    start_output_segment()
+    print(f"tk {__version__}")
 
 
 def display_profile_info(prof: Profile) -> None:
@@ -24,12 +33,24 @@ def display_profile_info(prof: Profile) -> None:
 
     # Longest key is "Subjective day starts at:" (25 chars) -> values at column 27.
     key_width = 27
-    print()
+    start_output_segment()
     print("Profile Information:")
     print(f"  {'Timezone:':<{key_width}}{prof.timezone}")
     print(f"  {'DST:':<{key_width}}{'Yes' if dst_in_effect else 'No'}")
     print(f"  {'Current time:':<{key_width}}{now.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  {'Subjective day starts at:':<{key_width}}{prof.subjective_day_start}")
+
+
+def _print_lines_segment(*lines: str) -> None:
+    """Print one output segment with no trailing blank line."""
+    start_output_segment()
+    for line in lines:
+        print(line)
+
+
+def _print_error_segment(message: str, *details: str) -> None:
+    """Print one error segment using the shared spacing rules."""
+    _print_lines_segment(f"ERROR: {message}", *details)
 
 
 def main() -> None:
@@ -61,17 +82,13 @@ Examples:
 
     parser.add_argument("--profile", "-p", help="Path to profile JSON file")
 
+    reset_output_segments()
     args = parser.parse_args()
-
-    from tk import __version__
-    print(f"tk {__version__}")
+    print_app_banner()
 
     if args.command == "init":
         try:
             prof = profile.create_profile(args.profile)
-
-            print()
-            print(f"Profile created: {args.profile}")
 
             tasks_data = TaskStore()
             data.save_tasks(prof.data_path, tasks_data)
@@ -80,19 +97,20 @@ Examples:
 
             # Longest key is "Subjective day starts at:" (25 chars) -> values at column 27.
             key_width = 27
+            start_output_segment()
+            print(f"Profile created: {args.profile}")
             print(f"{'Data file:':<{key_width}}{prof.data_path}")
             print(f"{'Output file:':<{key_width}}{prof.output_path}")
             print(f"{'Timezone:':<{key_width}}{prof.timezone}")
             print(f"{'Subjective day starts at:':<{key_width}}{prof.subjective_day_start}")
 
-            print()
-            print(f"Start the app with: tk --profile {args.profile}")
+            _print_lines_segment(f"Start the app with: tk --profile {args.profile}")
 
         except AppError as e:
-            print(f"\nERROR: {e}")
+            _print_error_segment(str(e))
             sys.exit(1)
         except Exception as e:
-            print(f"\nERROR: {e}")
+            _print_error_segment(str(e))
             sys.exit(1)
 
         return
@@ -111,25 +129,28 @@ Examples:
             display_profile_info(prof)
 
         except FileNotFoundError:
-            print(f"\nERROR: Profile not found: {args.profile}")
-            print(f"Create it with: tk init --profile {args.profile}")
+            _print_error_segment(
+                f"Profile not found: {args.profile}",
+                f"Create it with: tk init --profile {args.profile}",
+            )
             sys.exit(1)
 
         except AppError as e:
-            print(f"\nERROR: {e}")
+            _print_error_segment(str(e))
             sys.exit(1)
         except Exception as e:
-            print(f"\nERROR: {e}")
+            _print_error_segment(str(e))
             sys.exit(1)
     else:
-        print()
-        print("ERROR: No profile specified")
-        print()
-        print("Create a new profile:")
-        print("  tk init --profile <path>")
-        print()
-        print("Or start with an existing profile:")
-        print("  tk --profile <path>")
+        _print_error_segment("No profile specified")
+        _print_lines_segment(
+            "Create a new profile:",
+            "  tk init --profile <path>",
+        )
+        _print_lines_segment(
+            "Or start with an existing profile:",
+            "  tk --profile <path>",
+        )
         sys.exit(1)
 
     repl(session)

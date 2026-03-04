@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import NoReturn
 
 from .errors import StartupValidationError, ViberError
+from .output_segments import reset_output_segments, start_output_segment
 from .path_mapping import map_path
 from .renderer import render_check_pages
 from .repl import run_repl
@@ -43,6 +44,7 @@ def parse_args(argv: list[str] | None = None) -> AppArgs | None:
     args = argv if argv is not None else sys.argv[1:]
 
     if "--help" in args or "-h" in args:
+        start_output_segment()
         print(_USAGE, end="")
         return None
 
@@ -75,6 +77,8 @@ def parse_args(argv: list[str] | None = None) -> AppArgs | None:
 
 def main() -> None:
     """Application entry point."""
+    reset_output_segments()
+
     try:
         app_args = parse_args()
     except StartupValidationError as exc:
@@ -85,6 +89,7 @@ def main() -> None:
     try:
         db = load_database(app_args.data_path)
     except Exception as exc:  # noqa: BLE001
+        start_output_segment(file=sys.stderr)
         print(f"ERROR: Could not load data file: {exc}", file=sys.stderr)
         sys.exit(1)
 
@@ -93,6 +98,7 @@ def main() -> None:
         try:
             save_database(db, app_args.data_path)
         except Exception as exc:  # noqa: BLE001
+            start_output_segment(file=sys.stderr)
             print(f"ERROR: Could not save pruned data file: {exc}", file=sys.stderr)
             sys.exit(1)
 
@@ -101,17 +107,20 @@ def main() -> None:
         try:
             render_check_pages(db, app_args.check_path)
         except Exception as exc:  # noqa: BLE001
+            start_output_segment(file=sys.stderr)
             print(f"WARNING: Could not generate HTML check pages: {exc}", file=sys.stderr)
 
     try:
         run_repl(db, app_args.data_path, app_args.check_path)
     except KeyboardInterrupt:
-        print()
+        start_output_segment()
         print("Interrupted.")
     except ViberError as exc:
+        start_output_segment(file=sys.stderr)
         print(f"ERROR: Fatal: {exc}", file=sys.stderr)
         sys.exit(1)
     except Exception as exc:  # noqa: BLE001
+        start_output_segment(file=sys.stderr)
         print(f"ERROR: Unexpected: {exc}", file=sys.stderr)
         sys.exit(1)
 
@@ -128,6 +137,7 @@ def _resolve_path(raw: str, arg_name: str) -> Path:
 
 
 def _die(message: str) -> NoReturn:
+    start_output_segment(file=sys.stderr)
     print(f"ERROR: {message}", file=sys.stderr)
     print("Run 'viber --help' for usage.", file=sys.stderr)
     sys.exit(1)

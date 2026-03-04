@@ -116,7 +116,6 @@ Task marked as done.
 > delete 1
 Task: old task
 Status: pending
-
 Delete permanently? (yes/N): yes
 Task deleted.
 ```

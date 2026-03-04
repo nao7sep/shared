@@ -104,6 +104,77 @@ def test_run_setup_wizard_writes_profile_and_api_keys(monkeypatch, tmp_path) -> 
     assert saved_profile["logs_dir"] == str(tmp_path / ".polychat" / "logs")
 
 
+def test_run_setup_wizard_success_emits_no_trailing_blank(
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    """Successful setup output should end on the final result line."""
+    profile_path, api_keys_path = _configure_setup_paths(monkeypatch, tmp_path)
+    responses = iter(
+        [
+            "sk-test-openai-1234567890",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "y",
+        ]
+    )
+    monkeypatch.setattr(setup_wizard, "pt_prompt", lambda _prompt: next(responses))
+
+    result = setup_wizard.run_setup_wizard()
+
+    output = capsys.readouterr().out
+    expected_suffix = (
+        f"Profile:  {Path(profile_path)}\n"
+        f"API keys: {Path(api_keys_path)}\n"
+    )
+    assert result == profile_path
+    assert output.endswith(expected_suffix)
+    assert not output.endswith(expected_suffix + "\n")
+
+
+def test_run_setup_wizard_keeps_confirmation_prompt_and_success_result_together(
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    """The final result block should follow the confirmation prompt directly."""
+    profile_path, api_keys_path = _configure_setup_paths(monkeypatch, tmp_path)
+    responses = iter(
+        [
+            "sk-test-openai-1234567890",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "y",
+        ]
+    )
+
+    def _fake_prompt(prompt_text: str) -> str:
+        response = next(responses)
+        print(f"{prompt_text}{response}")
+        return response
+
+    monkeypatch.setattr(setup_wizard, "pt_prompt", _fake_prompt)
+
+    result = setup_wizard.run_setup_wizard()
+
+    output = capsys.readouterr().out
+    assert result == profile_path
+    assert (
+        f"Save and start PolyChat? (y/N): y\n"
+        f"Profile:  {Path(profile_path)}\n"
+        f"API keys: {Path(api_keys_path)}\n"
+    ) in output
+
+
 def test_atomic_write_json_cleans_up_temp_file_on_replace_failure(
     monkeypatch,
     tmp_path,

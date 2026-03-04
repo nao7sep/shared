@@ -6,6 +6,7 @@ from typing import Any
 from tk import commands, dispatcher, markdown, prompts
 from tk.errors import AppError, UsageError
 from tk.models import TaskStatus
+from tk.output_segments import start_output_segment
 from tk.session import Session
 
 _NO_FLAG_COMMANDS = frozenset(
@@ -38,8 +39,10 @@ def _sync_on_exit(session: Session) -> None:
     try:
         markdown.generate_todo(tasks_data.tasks, prof.output_path)
     except AppError as e:
+        start_output_segment()
         print(f"ERROR: {e}")
     except Exception as e:
+        start_output_segment()
         print(f"ERROR: {e}")
 
 
@@ -161,11 +164,11 @@ def _prepare_interactive_command(
 
 def repl(session: Session) -> None:
     """Run the REPL loop."""
-    print()
+    start_output_segment()
     print("Type 'exit' or 'quit' to exit, or Ctrl-D")
 
     while True:
-        print()
+        start_output_segment()
         try:
             line = input("> ")
 
