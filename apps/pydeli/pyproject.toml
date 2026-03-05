@@ -1,0 +1,28 @@
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
+name = "pydeli"
+version = "0.1.0.dev1"
+description = "A wizard-style Python release helper for publishing apps to TestPyPI and PyPI."
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "nao7sep", email = "nao7sep@gmail.com" }]
+dependencies = [
+    "httpx>=0.27",
+    "packaging>=24.0",
+    "platformdirs>=4.0",
+    "prompt-toolkit>=3.0",
+    "questionary>=2.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+pydeli = "pydeli.__main__:main"
+
+[dependency-groups]
+dev = ["mypy", "pytest", "ruff"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
