@@ -130,10 +130,17 @@ def _run_scan(args: argparse.Namespace) -> None:
     output_path = output_dir / filename
     output_path.write_text(html_content, encoding="utf-8")
 
-    _print_summary(result.findings, output_path)
+    paths_filename = now_local.strftime("%Y-%m-%d_%H-%M-%S_scanned-paths.txt")
+    paths_output = output_dir / paths_filename
+    paths_output.write_text(
+        "\n".join(str(p) for p in sorted(result.scanned_files)) + "\n",
+        encoding="utf-8",
+    )
+
+    _print_summary(result.findings, output_path, paths_output)
 
 
-def _print_summary(findings: list, output_path: Path) -> None:
+def _print_summary(findings: list, output_path: Path, paths_output: Path) -> None:
     red_count = sum(1 for f in findings if f.entry.risk_level == RiskLevel.RED)
     yellow_count = sum(1 for f in findings if f.entry.risk_level == RiskLevel.YELLOW)
     none_count = sum(1 for f in findings if f.entry.risk_level == RiskLevel.NONE)
@@ -154,4 +161,5 @@ def _print_summary(findings: list, output_path: Path) -> None:
         print(f"{label:<{col}} {value}")
 
     start_segment()
-    print(f"Report written to {output_path}")
+    print(f"Report written to    {output_path}")
+    print(f"Scanned paths log to {paths_output}")

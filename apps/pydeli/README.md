@@ -11,11 +11,15 @@ A wizard-style Python release helper for publishing one app at a time from a mon
 
 ## Installation
 
-From the monorepo root:
-
 ```bash
 cd shared/apps/pydeli
 uv sync
+```
+
+Or use the script:
+
+```bash
+shared/apps/pydeli/scripts/install.command
 ```
 
 ## Usage
@@ -24,28 +28,36 @@ uv sync
 pydeli <app-dir> --archive-dir <archive-dir>
 ```
 
-- `<app-dir>`: Absolute path (or `~`-prefixed) to the target app directory containing `pyproject.toml`.
-- `--archive-dir`: Absolute path (or `~`-prefixed) to the archive root for storing build artifacts.
+- `<app-dir>`: Path to the target app directory containing `pyproject.toml`. Accepts absolute paths, `~`, or `@` (pydeli package root).
+- `--archive-dir`: Path to the archive root for storing build artifacts. Same prefix rules apply.
 
 ### Example
 
 ```bash
-pydeli ~/code/shared/apps/myapp --archive-dir ~/code/secrets/archives/myapp
+pydeli ~/code/shared/apps/myapp --archive-dir ~/code/secrets/apps/myapp/data/archives
 ```
 
-### Using .command Wrappers
+### run.command
 
-Create a `release.command` file for each app:
+The launcher lives in `secrets/apps/pydeli/scripts/run.command`. Double-click it (or run from the terminal) and paste the target app directory path when prompted:
 
-```bash
-#!/bin/bash
-cd "$(dirname "$0")"
-uv run pydeli ~/code/shared/apps/myapp --archive-dir ~/code/secrets/archives/myapp
+```
+App directory: ~/code/shared/apps/myapp
 ```
 
-Make it executable: `chmod +x release.command`
+It derives the archive directory automatically as `~/code/secrets/apps/<app-name>/data/archives`, then runs pydeli.
 
-Double-click to run on macOS, or execute from the terminal.
+### scripts/ layout
+
+```
+shared/apps/pydeli/scripts/
+  clean.command     remove caches, dist, .venv
+  install.command   uv sync
+  test.command      uv sync + pytest
+
+secrets/apps/pydeli/scripts/
+  run.command       ask for app dir, then release
+```
 
 ## Workflow
 
@@ -114,6 +126,12 @@ uv sync
 uv run pytest          # run tests
 uv run ruff check .    # lint
 uv run mypy src/       # type check
+```
+
+Or use the scripts:
+
+```bash
+shared/apps/pydeli/scripts/test.command
 ```
 
 ## License

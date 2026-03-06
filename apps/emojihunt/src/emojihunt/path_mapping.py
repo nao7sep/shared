@@ -1,18 +1,22 @@
 import re
 import unicodedata
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from .errors import EmojihuntError
 
 _WINDOWS_DRIVE_RELATIVE_RE = re.compile(r"^[A-Za-z]:[^/\\]")
 
+# App root is the package directory containing this file.
+_APP_ROOT: Path = Path(__file__).resolve().parent
+
 
 def map_user_path(path_text: str) -> Path:
     """Map user-supplied path text to an absolute Path.
 
-    Accepts absolute paths and ~-prefixed paths.
-    Rejects relative paths, empty paths, paths with NUL, and
+    Accepts absolute paths, ~-prefixed paths, and @-prefixed app-root-relative paths.
+    Rejects pure relative paths, empty paths, paths with NUL, and
     Windows rooted-but-not-fully-qualified forms.
+    CWD is never used for resolution.
     """
     normalized = _normalize_path_text(path_text)
     if _is_windows_rooted_not_qualified(normalized):
@@ -20,13 +24,35 @@ def map_user_path(path_text: str) -> Path:
             "Windows rooted path forms like '\\temp' and 'C:temp' are not supported."
         )
 
+    if normalized.startswith("@"):
+        return _resolve_app_root_path(normalized)
+
     candidate = Path(_normalize_separators(normalized)).expanduser()
     if candidate.is_absolute():
         return candidate.resolve()
 
     raise EmojihuntError(
-        "Relative paths are not supported. Use absolute paths or '~'-prefixed paths."
+        "Relative paths are not supported. Use absolute paths, '~', or '@'."
     )
+
+
+def _resolve_app_root_path(normalized: str) -> Path:
+    root = _APP_ROOT
+
+    suffix = _normalize_separators(normalized[1:]).lstrip("/")
+    if not suffix:
+        return root
+
+    parts = PurePosixPath(suffix).parts
+    if any(part == ".." for part in parts):
+        raise EmojihuntError("'@'-prefixed paths cannot escape the app root.")
+
+    candidate = root.joinpath(*parts).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as err:
+        raise EmojihuntError("'@'-prefixed paths cannot escape the app root.") from err
+    return candidate
 
 
 def _normalize_path_text(path_text: str) -> str:

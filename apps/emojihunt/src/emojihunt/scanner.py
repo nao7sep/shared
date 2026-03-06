@@ -1,16 +1,16 @@
 """Scan files and directories for emoji sequences."""
 
 import os
+import re
 from collections import Counter
 from pathlib import Path
 
 import emoji as emoji_lib
-import pathspec
 
 from .errors import EmojihuntError
 from .models import EmojiEntry, ScanFinding, ScanResult
 
-_ALWAYS_SKIP_DIRS = frozenset({".git", ".hg", ".svn", "__pycache__", "node_modules"})
+IgnorePatterns = list[re.Pattern[str]]
 
 
 def scan_targets(
@@ -20,14 +20,17 @@ def scan_targets(
 ) -> ScanResult:
     """Scan targets for emoji and return aggregated findings with warnings."""
     counts: Counter[str] = Counter()
+    scanned_files: list[Path] = []
     warnings: list[str] = []
-    custom_ignore = _load_custom_ignore(ignore_file)
+    ignore_patterns = _load_ignore_patterns(ignore_file)
 
     for target in targets:
-        if target.is_file():
-            _scan_file(target, counts, warnings)
+        if _is_ignored(target, ignore_patterns):
+            warnings.append(f"Target is ignored by ignore patterns: {target}")
+        elif target.is_file():
+            _scan_file(target, counts, scanned_files, warnings)
         elif target.is_dir():
-            _scan_directory(target, counts, [], custom_ignore, target, warnings)
+            _scan_directory(target, counts, scanned_files, ignore_patterns, warnings)
         else:
             warnings.append(f"Target not found or not a file/directory: {target}")
 
@@ -37,16 +40,17 @@ def scan_targets(
         if emoji_str in dataset
     ]
 
-    return ScanResult(findings=findings, warnings=warnings)
+    return ScanResult(findings=findings, scanned_files=scanned_files, warnings=warnings)
 
 
-def _scan_file(path: Path, counts: Counter[str], warnings: list[str]) -> None:
+def _scan_file(path: Path, counts: Counter[str], scanned_files: list[Path], warnings: list[str]) -> None:
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except (OSError, PermissionError) as e:
         warnings.append(f"Cannot read {path}: {e}")
         return
 
+    scanned_files.append(path)
     for match in emoji_lib.emoji_list(text):
         counts[match["emoji"]] += 1
 
@@ -54,17 +58,11 @@ def _scan_file(path: Path, counts: Counter[str], warnings: list[str]) -> None:
 def _scan_directory(
     directory: Path,
     counts: Counter[str],
-    inherited_gitignores: list[tuple[Path, pathspec.PathSpec]],
-    custom_ignore: pathspec.PathSpec | None,
-    scan_root: Path,
+    scanned_files: list[Path],
+    ignore_patterns: IgnorePatterns,
     warnings: list[str],
 ) -> None:
-    """Lazy directory traversal: inspect each entry before entering."""
-    gitignores = list(inherited_gitignores)
-    local_gi = _load_gitignore(directory)
-    if local_gi is not None:
-        gitignores.append((directory, local_gi))
-
+    """Lazy directory traversal: check each entry before entering."""
     try:
         entries = sorted(os.scandir(directory), key=lambda e: e.name)
     except (OSError, PermissionError) as e:
@@ -75,64 +73,39 @@ def _scan_directory(
         entry_path = Path(entry.path)
         is_dir = entry.is_dir(follow_symlinks=False)
 
-        if is_dir and entry.name in _ALWAYS_SKIP_DIRS:
-            continue
-
-        if _should_ignore(entry_path, is_dir, gitignores, custom_ignore, scan_root):
+        if _is_ignored(entry_path, ignore_patterns):
             continue
 
         if is_dir:
-            _scan_directory(
-                entry_path, counts, gitignores, custom_ignore, scan_root, warnings
-            )
+            _scan_directory(entry_path, counts, scanned_files, ignore_patterns, warnings)
         elif entry.is_file(follow_symlinks=False):
-            _scan_file(entry_path, counts, warnings)
+            _scan_file(entry_path, counts, scanned_files, warnings)
 
 
-def _should_ignore(
-    path: Path,
-    is_dir: bool,
-    gitignores: list[tuple[Path, pathspec.PathSpec]],
-    custom_ignore: pathspec.PathSpec | None,
-    scan_root: Path,
-) -> bool:
-    for gi_dir, gi_spec in gitignores:
-        try:
-            rel = str(path.relative_to(gi_dir))
-        except ValueError:
-            continue
-        check = rel + "/" if is_dir else rel
-        if gi_spec.match_file(check):
-            return True
-
-    if custom_ignore is not None:
-        try:
-            rel = str(path.relative_to(scan_root))
-        except ValueError:
-            rel = path.name
-        check = rel + "/" if is_dir else rel
-        if custom_ignore.match_file(check):
-            return True
-
-    return False
+def _is_ignored(path: Path, patterns: IgnorePatterns) -> bool:
+    path_str = str(path)
+    return any(p.search(path_str) for p in patterns)
 
 
-def _load_custom_ignore(ignore_file: Path | None) -> pathspec.PathSpec | None:
+def _load_ignore_patterns(ignore_file: Path | None) -> IgnorePatterns:
+    """Load regex ignore patterns from file. Each non-empty, non-comment line is a pattern."""
     if ignore_file is None:
-        return None
+        return []
     try:
         text = ignore_file.read_text(encoding="utf-8")
-        return pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
     except (OSError, PermissionError) as e:
         raise EmojihuntError(f"Cannot read ignore file {ignore_file}: {e}") from e
 
+    patterns: IgnorePatterns = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        try:
+            patterns.append(re.compile(stripped))
+        except re.error as e:
+            raise EmojihuntError(
+                f"Invalid regex on line {lineno} of {ignore_file}: {e}"
+            ) from e
+    return patterns
 
-def _load_gitignore(directory: Path) -> pathspec.PathSpec | None:
-    gitignore_path = directory / ".gitignore"
-    if not gitignore_path.is_file():
-        return None
-    try:
-        text = gitignore_path.read_text(encoding="utf-8")
-        return pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
-    except (OSError, PermissionError):
-        return None

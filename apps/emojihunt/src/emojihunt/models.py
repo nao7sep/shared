@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 
 
 class RiskLevel(Enum):
@@ -52,4 +53,5 @@ class ScanFinding:
 @dataclass
 class ScanResult:
     findings: list[ScanFinding] = field(default_factory=list)
+    scanned_files: list[Path] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
