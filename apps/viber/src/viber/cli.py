@@ -12,7 +12,7 @@ from .output_segments import reset_output_segments, start_output_segment
 from .path_mapping import map_path
 from .renderer import render_check_pages
 from .repl import run_repl
-from .service import prune_orphan_tasks
+from .service import repair_active_project_assignments
 from .store import load_database, save_database
 
 _USAGE = """\
@@ -93,13 +93,13 @@ def main() -> None:
         print(f"ERROR: Could not load data file: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    removed_tasks = prune_orphan_tasks(db)
-    if removed_tasks:
+    repaired_assignments = repair_active_project_assignments(db)
+    if repaired_assignments:
         try:
             save_database(db, app_args.data_path)
         except Exception as exc:  # noqa: BLE001
             start_output_segment(file=sys.stderr)
-            print(f"ERROR: Could not save pruned data file: {exc}", file=sys.stderr)
+            print(f"ERROR: Could not save repaired data file: {exc}", file=sys.stderr)
             sys.exit(1)
 
     # If --check is configured and we have data, generate initial HTML.

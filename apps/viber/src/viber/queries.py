@@ -86,7 +86,7 @@ def pending_by_task(
     Ordered by group name asc, project name asc.
     Raises TaskNotFoundError if task not found.
     """
-    task = get_task(db, task_id)
+    get_task(db, task_id)
 
     group_map = {g.id: g for g in db.groups}
     results: list[tuple[Project, Group, Assignment]] = []

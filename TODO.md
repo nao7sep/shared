@@ -25,10 +25,12 @@
 - implement pydeli
 - implement emojihunt
 - make rules regarding constants
-- viber: all old tasks are assigned to new projects
-- viber: fix json key order
+- tk: fix json key order
 
 ## History
+
+### 2026-03-13
+- ✅ viber: all old tasks are assigned to new projects
 
 ### 2026-03-03
 - ✅ check all apps for dict usage. polychat in serious state :'( => refactored 20000 times

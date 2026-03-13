@@ -63,13 +63,12 @@ def delete_group(db: Database, group_id: int) -> Group:
     task_ids = [t.id for t in db.tasks if t.group_id == group_id]
 
     for project_id in project_ids:
-        delete_project(db, project_id, prune_orphans=False)
+        delete_project(db, project_id)
 
     for task_id in task_ids:
         delete_task(db, task_id)
 
     db.groups.remove(group)
-    prune_orphan_tasks(db)
     return group
 
 
@@ -79,7 +78,7 @@ def delete_group(db: Database, group_id: int) -> Group:
 
 
 def create_project(db: Database, name: str, group_id: int) -> Project:
-    """Create a new project in active state. No backfill of existing tasks."""
+    """Create a new active project and backfill all applicable existing tasks."""
     get_group(db, group_id)  # validate group exists
     _check_project_name_unique(db, name, group_id, exclude_id=None)
     project = Project(
@@ -91,6 +90,7 @@ def create_project(db: Database, name: str, group_id: int) -> Project:
     )
     db.next_project_id += 1
     db.projects.append(project)
+    ensure_active_project_assignments(db, project.id)
     return project
 
 
@@ -115,13 +115,16 @@ def update_project_name(db: Database, project_id: int, name: str) -> Project:
 
 
 def set_project_state(db: Database, project_id: int, new_state: ProjectState) -> Project:
-    """Transition project to any state. No assignment side effects."""
+    """Transition project to any state, backfilling on revival to active."""
     project = get_project(db, project_id)
+    previous_state = project.state
     project.state = new_state
+    if previous_state != ProjectState.ACTIVE and new_state == ProjectState.ACTIVE:
+        ensure_active_project_assignments(db, project.id)
     return project
 
 
-def delete_project(db: Database, project_id: int, *, prune_orphans: bool = True) -> Project:
+def delete_project(db: Database, project_id: int) -> Project:
     """Cascade-delete all assignments for this project, then remove it."""
     project = get_project(db, project_id)
     keys_to_delete = [
@@ -130,8 +133,6 @@ def delete_project(db: Database, project_id: int, *, prune_orphans: bool = True)
     for k in keys_to_delete:
         del db.assignments[k]
     db.projects.remove(project)
-    if prune_orphans:
-        prune_orphan_tasks(db)
     return project
 
 
@@ -209,21 +210,38 @@ def delete_task(db: Database, task_id: int) -> Task:
     return task
 
 
-def prune_orphan_tasks(db: Database) -> list[Task]:
-    """Delete tasks that have no remaining assignments and return removed tasks."""
-    task_ids_with_assignments = {a.task_id for a in db.assignments.values()}
-    removed: list[Task] = []
-    kept: list[Task] = []
+def ensure_active_project_assignments(db: Database, project_id: int) -> list[Assignment]:
+    """Create missing pending assignments for one active project's applicable tasks."""
+    project = get_project(db, project_id)
+    if project.state != ProjectState.ACTIVE:
+        raise ValueError(f"Project p{project_id} is not active.")
 
+    created: list[Assignment] = []
     for task in db.tasks:
-        if task.id in task_ids_with_assignments:
-            kept.append(task)
-        else:
-            removed.append(task)
+        if not _task_applies_to_project(task, project):
+            continue
+        key = assignment_key(project.id, task.id)
+        if key in db.assignments:
+            continue
+        assignment = Assignment(
+            project_id=project.id,
+            task_id=task.id,
+            status=AssignmentStatus.PENDING,
+            handled_utc=None,
+        )
+        db.assignments[key] = assignment
+        created.append(assignment)
+    return created
 
-    if removed:
-        db.tasks = kept
-    return removed
+
+def repair_active_project_assignments(db: Database) -> list[Assignment]:
+    """Backfill missing assignments for legacy active projects."""
+    created: list[Assignment] = []
+    for project in db.projects:
+        if project.state != ProjectState.ACTIVE:
+            continue
+        created.extend(ensure_active_project_assignments(db, project.id))
+    return created
 
 
 # ---------------------------------------------------------------------------
@@ -312,6 +330,10 @@ def _check_project_name_unique(
             continue
         if p.name.lower() == name_lower:
             raise DuplicateNameError(name)
+
+
+def _task_applies_to_project(task: Task, project: Project) -> bool:
+    return task.group_id is None or task.group_id == project.group_id
 
 
 def _now_utc_iso_z() -> str:

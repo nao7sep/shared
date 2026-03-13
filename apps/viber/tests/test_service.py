@@ -17,10 +17,12 @@ from viber.service import (
     delete_group,
     delete_project,
     delete_task,
+    ensure_active_project_assignments,
     get_assignment,
     get_group,
     get_project,
     get_task,
+    repair_active_project_assignments,
     resolve_assignment,
     set_project_state,
     undo_assignment,
@@ -127,7 +129,7 @@ def test_delete_group_success() -> None:
     assert db.groups == []
 
 
-def test_delete_group_prunes_orphan_all_group_tasks() -> None:
+def test_delete_group_keeps_orphan_all_group_tasks() -> None:
     db = make_db()
     g = create_group(db, "Backend")
     create_project(db, "api", g.id)
@@ -138,7 +140,7 @@ def test_delete_group_prunes_orphan_all_group_tasks() -> None:
 
     assert db.groups == []
     assert db.projects == []
-    assert db.tasks == []
+    assert db.tasks == [t]
     assert db.assignments == {}
 
 
@@ -197,13 +199,31 @@ def test_create_project_same_name_different_group_allowed() -> None:
     assert p2.group_id == g2.id
 
 
-def test_project_no_backfill_on_creation() -> None:
+def test_create_project_backfills_existing_applicable_tasks() -> None:
+    db = make_db()
+    g1 = create_group(db, "Backend")
+    g2 = create_group(db, "Frontend")
+    t_all = create_task(db, "All task", None)
+    t_g1 = create_task(db, "Backend task", g1.id)
+    t_g2 = create_task(db, "Frontend task", g2.id)
+
+    p = create_project(db, "api", g1.id)
+
+    assert assignment_key(p.id, t_all.id) in db.assignments
+    assert assignment_key(p.id, t_g1.id) in db.assignments
+    assert assignment_key(p.id, t_g2.id) not in db.assignments
+
+
+def test_create_project_backfills_as_pending() -> None:
     db = make_db()
     g = create_group(db, "Backend")
-    create_task(db, "Task 1", None)  # task created before project
+    t = create_task(db, "Task 1", None)
     p = create_project(db, "api", g.id)
-    key = assignment_key(p.id, 1)
-    assert key not in db.assignments
+    assignment = db.assignments[assignment_key(p.id, t.id)]
+
+    assert assignment.status == AssignmentStatus.PENDING
+    assert assignment.comment is None
+    assert assignment.handled_utc is None
 
 
 def test_set_project_state() -> None:
@@ -244,7 +264,7 @@ def test_delete_project_cascades_assignments() -> None:
     assert db.projects == []
 
 
-def test_delete_project_prunes_orphan_tasks() -> None:
+def test_delete_project_keeps_tasks_without_assignments() -> None:
     db = make_db()
     g = create_group(db, "Backend")
     p = create_project(db, "api", g.id)
@@ -254,7 +274,7 @@ def test_delete_project_prunes_orphan_tasks() -> None:
     delete_project(db, p.id)
 
     assert db.projects == []
-    assert db.tasks == []
+    assert db.tasks == [t]
     assert db.assignments == {}
 
 
@@ -418,25 +438,69 @@ def test_get_assignment_not_found() -> None:
         get_assignment(db, 999, 1)
 
 
-def test_reactivated_project_no_backfill() -> None:
-    """After reactivation, only NEW tasks generate assignments."""
+def test_reactivating_suspended_project_backfills_missing_tasks() -> None:
     db = make_db()
     g = create_group(db, "Backend")
     p = create_project(db, "api", g.id)
-    # suspend project
     set_project_state(db, p.id, ProjectState.SUSPENDED)
-    # create task while suspended
     t1 = create_task(db, "Task during suspension", None)
     assert assignment_key(p.id, t1.id) not in db.assignments
 
-    # reactivate
     set_project_state(db, p.id, ProjectState.ACTIVE)
-    # still no backfill for t1
-    assert assignment_key(p.id, t1.id) not in db.assignments
+    assert assignment_key(p.id, t1.id) in db.assignments
 
-    # new task after reactivation → gets assignment
     t2 = create_task(db, "Task after reactivation", None)
     assert assignment_key(p.id, t2.id) in db.assignments
+
+
+def test_reactivating_deprecated_project_backfills_missing_tasks() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    set_project_state(db, p.id, ProjectState.DEPRECATED)
+
+    t = create_task(db, "Task during deprecation", None)
+    assert assignment_key(p.id, t.id) not in db.assignments
+
+    set_project_state(db, p.id, ProjectState.ACTIVE)
+    assert assignment_key(p.id, t.id) in db.assignments
+
+
+def test_ensure_active_project_assignments_is_idempotent() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    p = create_project(db, "api", g.id)
+    t = create_task(db, "Task", None)
+    key = assignment_key(p.id, t.id)
+
+    del db.assignments[key]
+
+    created = ensure_active_project_assignments(db, p.id)
+    created_again = ensure_active_project_assignments(db, p.id)
+
+    assert [assignment.task_id for assignment in created] == [t.id]
+    assert created_again == []
+    assert key in db.assignments
+
+
+def test_repair_active_project_assignments_only_repairs_active_projects() -> None:
+    db = make_db()
+    g = create_group(db, "Backend")
+    active = create_project(db, "api", g.id)
+    inactive = create_project(db, "worker", g.id)
+    t = create_task(db, "Task", None)
+    active_key = assignment_key(active.id, t.id)
+    inactive_key = assignment_key(inactive.id, t.id)
+
+    set_project_state(db, inactive.id, ProjectState.SUSPENDED)
+    del db.assignments[active_key]
+    del db.assignments[inactive_key]
+
+    created = repair_active_project_assignments(db)
+
+    assert [assignment.project_id for assignment in created] == [active.id]
+    assert active_key in db.assignments
+    assert inactive_key not in db.assignments
 
 
 # ---------------------------------------------------------------------------

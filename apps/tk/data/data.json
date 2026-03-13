@@ -770,14 +770,14 @@
     },
     {
       "text": "viber: all old tasks are assigned to new projects",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-03-13T00:26:16.791084+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
+      "handled_utc": "2026-03-13T01:38:14.555151+00:00",
+      "subjective_date": "2026-03-13",
       "note": null
     },
     {
-      "text": "viber: fix json key order",
+      "text": "tk: fix json key order",
       "status": "pending",
       "created_utc": "2026-03-13T00:29:20.360767+00:00",
       "handled_utc": null,

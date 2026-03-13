@@ -76,7 +76,7 @@ exit | quit
 - Bare `update t<ID>` shows the current description and prompts for a new one. `Ctrl+C`, `Ctrl+D`, or empty input cancels.
 - `update p<ID> t<ID>` with no comment clears the assignment comment.
 - Deletes are cascading: deleting a group also deletes its projects and group-scoped tasks; deleting a project/task deletes related assignments.
-- Tasks with no assignments are auto-pruned during startup and delete cascades.
+- Tasks persist even when they currently have no assignments, so future or revived projects can inherit them.
 - All `delete` commands require `y` or `yes`; Enter or any other input cancels.
 - `view` shows `project | group | task`; `view p<ID>` and `view t<ID>` show header row + matching rows (no timestamps).
 - `work` shows all pending items, then prompts for item number (or `q` to quit), then action `[o]k / [n]ah / [c]ancel`, then optional comment (Enter to skip).
@@ -95,11 +95,11 @@ exit | quit
 
 ### Project states
 
-- `active` — receives new task assignments when tasks are created.
+- `active` — receives new task assignments when tasks are created, and is caught up to any older applicable tasks when the project is created or revived.
 - `suspended` — paused; excluded from `view` but shown in HTML check pages.
 - `deprecated` — retired; excluded from `view` and HTML check pages.
 
-Assignments are only generated for `active` projects at task creation time. No backfilling.
+New tasks generate assignments only for projects that are `active` at task creation time. Tasks created while a project is `suspended` or `deprecated` remain missing assignments until that project is set back to `active`, at which point viber backfills all applicable missing assignments.
 
 ### Timestamps
 
@@ -110,13 +110,24 @@ Assignments are only generated for `active` projects at task creation time. No b
 - `read projects` / `read p<ID>` display `project | group | state | local-created-time`.
 - `read tasks` / `read t<ID>` display `task | group-or-all | local-created-time`.
 
+## JSON Persistence
+
+- The JSON state file is written with a fixed logical key order for stable diffs.
+- Top-level order is `next_group_id`, `next_project_id`, `next_task_id`, `groups`, `projects`, `tasks`, `assignments`.
+- Entity key order is:
+  - `Group`: `id`, `name`
+  - `Project`: `id`, `name`, `group_id`, `state`, `created_utc`
+  - `Task`: `id`, `description`, `group_id`, `created_utc`
+  - `Assignment`: `project_id`, `task_id`, `status`, `comment`, `handled_utc`
+- `groups`, `projects`, and `tasks` keep their existing list order; `assignments` are written sorted by numeric `(project_id, task_id)`.
+
 ## HTML Check Pages
 
 When `--check ~/viber/check.html` is given, viber writes one file per group on startup when groups already exist, and again after each mutation:
 
 - `check-backend.html`, `check-frontend.html`, …
 - Rows = tasks (newest first), columns = non-deprecated projects.
-- ✅ ok · ❌ nah · blank cell pending · gray cell = lifecycle gap (no assignment).
+- ✅ ok · ❌ nah · blank cell pending · gray cell = task created while that project was inactive; the missing assignment will be created when the project is revived.
 
 ## Path Syntax
 

@@ -63,19 +63,49 @@ def test_render_shows_suspended_project_with_label(tmp_path: Path) -> None:
     assert "suspended" in content
 
 
-def test_render_gray_cell_for_lifecycle_gap(tmp_path: Path) -> None:
-    """Project added AFTER task creation → gap cell (gray)."""
+def test_render_gray_cell_for_task_created_while_project_is_suspended(tmp_path: Path) -> None:
     db = Database()
     g = create_group(db, "Backend")
-    # Create task first
+    p = create_project(db, "sleepy-service", g.id)
+    set_project_state(db, p.id, ProjectState.SUSPENDED)
     create_task(db, "Old task", None)
-    # Then create project (no assignment generated)
-    create_project(db, "new-project", g.id)
 
     check_base = tmp_path / "check.html"
     render_check_pages(db, check_base)
     content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
     assert 'class="gap"' in content
+
+
+def test_render_new_project_is_immediately_backfilled(tmp_path: Path) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    create_task(db, "Old task", None)
+    create_project(db, "new-project", g.id)
+
+    check_base = tmp_path / "check.html"
+    render_check_pages(db, check_base)
+    content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    assert 'class="gap"' not in content
+    assert "&nbsp;" in content
+
+
+def test_render_gap_disappears_after_reactivation(tmp_path: Path) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    p = create_project(db, "sleepy-service", g.id)
+    set_project_state(db, p.id, ProjectState.SUSPENDED)
+    create_task(db, "Old task", None)
+
+    check_base = tmp_path / "check.html"
+    render_check_pages(db, check_base)
+    before = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    assert 'class="gap"' in before
+
+    set_project_state(db, p.id, ProjectState.ACTIVE)
+    render_check_pages(db, check_base)
+    after = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+    assert 'class="gap"' not in after
+    assert "&nbsp;" in after
 
 
 def test_render_status_symbols(tmp_path: Path) -> None:

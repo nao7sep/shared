@@ -124,7 +124,7 @@ def test_main_saves_pruned_database_before_starting_repl(
         cli_module, "parse_args", lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=None)
     )
     monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
-    monkeypatch.setattr(cli_module, "prune_orphan_tasks", lambda _db: [1])
+    monkeypatch.setattr(cli_module, "repair_active_project_assignments", lambda _db: [1])
 
     def fake_save_database(saved_db: Database, saved_path: Path) -> None:
         assert saved_db is db
@@ -155,7 +155,7 @@ def test_main_exits_when_save_after_pruning_fails(
         cli_module, "parse_args", lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=None)
     )
     monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
-    monkeypatch.setattr(cli_module, "prune_orphan_tasks", lambda _db: [1])
+    monkeypatch.setattr(cli_module, "repair_active_project_assignments", lambda _db: [1])
 
     def fake_save_database(_db: Database, _path: Path) -> None:
         raise OSError("disk full")
@@ -167,7 +167,73 @@ def test_main_exits_when_save_after_pruning_fails(
 
     assert exc_info.value.code == 1
     err = capsys.readouterr().err
-    assert "ERROR: Could not save pruned data file: disk full" in err
+    assert "ERROR: Could not save repaired data file: disk full" in err
+
+
+def test_main_skips_save_when_startup_repair_makes_no_changes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = Database()
+    events: list[str] = []
+
+    monkeypatch.setattr(
+        cli_module, "parse_args", lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=None)
+    )
+    monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
+    monkeypatch.setattr(cli_module, "repair_active_project_assignments", lambda _db: [])
+    monkeypatch.setattr(
+        cli_module,
+        "save_database",
+        lambda _db, _path: (_ for _ in ()).throw(AssertionError("save should not run")),
+    )
+
+    def fake_run_repl(_db: Database, _data_path: Path, _check_path: Path | None) -> None:
+        events.append("repl")
+
+    monkeypatch.setattr(cli_module, "run_repl", fake_run_repl)
+
+    cli_module.main()
+
+    assert events == ["repl"]
+
+
+def test_main_repairs_before_rendering_check_pages(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = Database()
+    create_group(db, "Backend")
+    events: list[str] = []
+
+    monkeypatch.setattr(
+        cli_module,
+        "parse_args",
+        lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=CHECK_PATH),
+    )
+    monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
+
+    def fake_repair_active_project_assignments(_db: Database) -> list[int]:
+        events.append("repair")
+        return [1]
+
+    def fake_save_database(_db: Database, _path: Path) -> None:
+        events.append("save")
+
+    def fake_render_check_pages(_db: Database, _check_path: Path) -> None:
+        events.append("render")
+
+    def fake_run_repl(_db: Database, _data_path: Path, _check_path: Path | None) -> None:
+        events.append("repl")
+
+    monkeypatch.setattr(
+        cli_module, "repair_active_project_assignments", fake_repair_active_project_assignments
+    )
+    monkeypatch.setattr(cli_module, "save_database", fake_save_database)
+    monkeypatch.setattr(cli_module, "render_check_pages", fake_render_check_pages)
+    monkeypatch.setattr(cli_module, "run_repl", fake_run_repl)
+
+    cli_module.main()
+
+    assert events == ["repair", "save", "render", "repl"]
 
 
 def test_main_warns_on_check_render_failure_but_still_starts_repl(
@@ -184,7 +250,7 @@ def test_main_warns_on_check_render_failure_but_still_starts_repl(
         lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=CHECK_PATH),
     )
     monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
-    monkeypatch.setattr(cli_module, "prune_orphan_tasks", lambda _db: [])
+    monkeypatch.setattr(cli_module, "repair_active_project_assignments", lambda _db: [])
 
     def fake_render_check_pages(_db: Database, _check_path: Path) -> None:
         raise RuntimeError("disk full")
@@ -215,7 +281,7 @@ def test_main_gives_banner_a_leading_blank_after_startup_warning(
         lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=CHECK_PATH),
     )
     monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
-    monkeypatch.setattr(cli_module, "prune_orphan_tasks", lambda _db: [])
+    monkeypatch.setattr(cli_module, "repair_active_project_assignments", lambda _db: [])
 
     def fake_render_check_pages(_db: Database, _check_path: Path) -> None:
         raise RuntimeError("disk full")
@@ -242,7 +308,7 @@ def test_main_exits_on_fatal_repl_error(
         cli_module, "parse_args", lambda: cli_module.AppArgs(data_path=DATA_PATH, check_path=None)
     )
     monkeypatch.setattr(cli_module, "load_database", lambda _path: db)
-    monkeypatch.setattr(cli_module, "prune_orphan_tasks", lambda _db: [])
+    monkeypatch.setattr(cli_module, "repair_active_project_assignments", lambda _db: [])
 
     def fake_run_repl(_db: Database, _data_path: Path, _check_path: Path | None) -> None:
         raise ViberError("fatal")
