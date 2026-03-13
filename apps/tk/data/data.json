@@ -727,6 +727,62 @@
       "handled_utc": "2026-03-02T23:37:01.050884+00:00",
       "subjective_date": "2026-03-03",
       "note": "refactored 20000 times"
+    },
+    {
+      "text": "run all tests of all projects",
+      "status": "pending",
+      "created_utc": "2026-03-13T00:25:29.367995+00:00",
+      "handled_utc": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "simplify polychat's readme.md",
+      "status": "pending",
+      "created_utc": "2026-03-13T00:25:38.388463+00:00",
+      "handled_utc": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "implement pydeli",
+      "status": "pending",
+      "created_utc": "2026-03-13T00:25:46.979601+00:00",
+      "handled_utc": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "implement emojihunt",
+      "status": "pending",
+      "created_utc": "2026-03-13T00:25:54.151979+00:00",
+      "handled_utc": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "make rules regarding constants",
+      "status": "pending",
+      "created_utc": "2026-03-13T00:26:03.001744+00:00",
+      "handled_utc": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "viber: all old tasks are assigned to new projects",
+      "status": "pending",
+      "created_utc": "2026-03-13T00:26:16.791084+00:00",
+      "handled_utc": null,
+      "subjective_date": null,
+      "note": null
+    },
+    {
+      "text": "viber: fix json key order",
+      "status": "pending",
+      "created_utc": "2026-03-13T00:29:20.360767+00:00",
+      "handled_utc": null,
+      "subjective_date": null,
+      "note": null
     }
   ]
 }

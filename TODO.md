@@ -20,6 +20,13 @@
 - prepare to end gemini subscription + maybe report how
 - extract tasks and ideas from voice recordings
 - play with x api. now we can pay as we go
+- run all tests of all projects
+- simplify polychat's readme.md
+- implement pydeli
+- implement emojihunt
+- make rules regarding constants
+- viber: all old tasks are assigned to new projects
+- viber: fix json key order
 
 ## History
 
