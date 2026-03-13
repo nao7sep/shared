@@ -1,0 +1,31 @@
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
+name = "emojihunt"
+version = "0.1.0"
+description = "Scan directories for emoji usage and generate HTML risk reports"
+authors = [{name = "nao7sep", email = "nao7sep@gmail.com"}]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.9",
+    "emoji>=2.0",
+]
+
+[project.scripts]
+emojihunt = "emojihunt.cli:main"
+
+[dependency-groups]
+dev = ["pytest", "ruff", "mypy"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+strict = true
