@@ -15,3 +15,6 @@ pydeli = "pydeli.__main__:main"
 
 [dependency-groups]
 dev = ["pytest", "ruff", "mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
