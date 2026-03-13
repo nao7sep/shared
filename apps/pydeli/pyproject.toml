@@ -1,0 +1,17 @@
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
+name = "pydeli"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "packaging",
+]
+
+[project.scripts]
+pydeli = "pydeli.__main__:main"
+
+[dependency-groups]
+dev = ["pytest", "ruff", "mypy"]
