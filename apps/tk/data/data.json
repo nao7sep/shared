@@ -730,18 +730,18 @@
     },
     {
       "text": "run all tests of all projects",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-03-13T00:25:29.367995+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
+      "handled_utc": "2026-03-13T02:06:45.216185+00:00",
+      "subjective_date": "2026-03-13",
       "note": null
     },
     {
       "text": "simplify polychat's readme.md",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-03-13T00:25:38.388463+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
+      "handled_utc": "2026-03-13T02:04:49.896771+00:00",
+      "subjective_date": "2026-03-13",
       "note": null
     },
     {
@@ -762,10 +762,10 @@
     },
     {
       "text": "make rules regarding constants",
-      "status": "pending",
+      "status": "done",
       "created_utc": "2026-03-13T00:26:03.001744+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
+      "handled_utc": "2026-03-13T02:01:24.062070+00:00",
+      "subjective_date": "2026-03-13",
       "note": null
     },
     {

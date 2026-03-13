@@ -1,6 +1,6 @@
 # Update Dependencies
 
-Update the current project's dependencies to their latest compatible versions and verify nothing breaks.
+Update the current project's dependencies to their latest compatible versions and verify nothing breaks. Steps reference specific package managers, but the workflow applies to any ecosystem — follow the detected project type.
 
 ## Detect Project Type
 

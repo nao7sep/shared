@@ -16,6 +16,10 @@ Covers:
 
 Does not cover language-specific constant mechanisms (e.g., `enum`, `const`, `final`, `frozen`), configuration file formats, or runtime feature flags.
 
+## Applicability
+
+This specification is language-agnostic in intent. Code examples and library references use Python for concreteness, but all behavioral rules apply equally to any implementation language. When working in a different ecosystem, substitute equivalent libraries and idioms — the rules describe *what* the code must do, not *which package* does it.
+
 ## Terms
 
 - Magic value: A literal whose meaning, origin, or reason for its specific value is not obvious at the usage site.

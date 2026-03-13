@@ -1,6 +1,6 @@
 # Check Platform Compatibility
 
-Audit the current project's source code for cross-platform compatibility issues.
+Audit the current project's source code for cross-platform compatibility issues. Examples reference Python, but the checks apply to any language — substitute equivalent idioms as needed.
 
 ## Scope
 

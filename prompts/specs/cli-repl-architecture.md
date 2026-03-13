@@ -21,6 +21,10 @@ Covers:
 
 Does not cover application business logic, data models, or network layer design.
 
+## Applicability
+
+The behavioral rules in this specification are language-agnostic. The package recommendations (e.g., `prompt_toolkit`, `Rich`, `Typer`) target the Python ecosystem; when implementing in another language, substitute equivalent libraries that satisfy the same behavioral requirements.
+
 ## Terms
 
 | Term | Definition |

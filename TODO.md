@@ -20,17 +20,17 @@
 - prepare to end gemini subscription + maybe report how
 - extract tasks and ideas from voice recordings
 - play with x api. now we can pay as we go
-- run all tests of all projects
-- simplify polychat's readme.md
 - implement pydeli
 - implement emojihunt
-- make rules regarding constants
 - tk: fix json key order
 
 ## History
 
 ### 2026-03-13
 - ✅ viber: all old tasks are assigned to new projects
+- ✅ make rules regarding constants
+- ✅ simplify polychat's readme.md
+- ✅ run all tests of all projects
 
 ### 2026-03-03
 - ✅ check all apps for dict usage. polychat in serious state :'( => refactored 20000 times

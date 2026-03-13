@@ -596,14 +596,6 @@ Note: `system_prompt` is used in both profile and chat history metadata.
 
 Messages are stored as line arrays for better git diffs and readability.
 
-## License
-
-See LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please follow the existing code style and add tests for new features.
-
 ## Development
 
 Set up a local checkout with:
