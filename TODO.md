@@ -22,7 +22,6 @@
 - play with x api. now we can pay as we go
 - implement pydeli
 - implement emojihunt
-- tk: fix json key order
 
 ## History
 
@@ -31,6 +30,7 @@
 - ✅ make rules regarding constants
 - ✅ simplify polychat's readme.md
 - ✅ run all tests of all projects
+- ❌ tk: fix json key order => already ok
 
 ### 2026-03-03
 - ✅ check all apps for dict usage. polychat in serious state :'( => refactored 20000 times

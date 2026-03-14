@@ -117,7 +117,6 @@ Then it shows only this REPL menu:
   - the corresponding zip is missing
   - `zip_filename` does not match the sibling `.zip` filename
   - `created_utc` or `created_at` is invalid
-- Valid snapshots are sorted by `created_utc` descending.
 - Snapshot list rows show index, timestamp, and comment using `|` separators.
 - Restore requires:
   - numeric selection
@@ -136,8 +135,8 @@ Each snapshot metadata file contains:
 - `comment`
 - `comment_filename_segment`
 - `zip_filename`
-- `archived_files` (sorted)
-- `empty_directories` (sorted)
+- `archived_files`
+- `empty_directories`
 
 `archived_files` and `empty_directories` use platform-native path separators.
 UTC metadata fields include `utc` in their names.

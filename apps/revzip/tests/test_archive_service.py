@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -121,3 +122,48 @@ def test_create_snapshot_removes_partial_outputs_when_metadata_write_fails(
         )
 
     assert list(dest_dir.iterdir()) == []
+
+
+def test_create_snapshot_writes_sorted_metadata_paths(tmp_path: Path) -> None:
+    source_dir = tmp_path / "source"
+    dest_dir = tmp_path / "dest"
+    source_dir.mkdir()
+    dest_dir.mkdir()
+    (source_dir / "zeta").mkdir()
+    (source_dir / "zeta" / "b.txt").write_text("b", encoding="utf-8")
+    (source_dir / "alpha").mkdir()
+    (source_dir / "alpha" / "a.txt").write_text("a", encoding="utf-8")
+    (source_dir / "root.txt").write_text("root", encoding="utf-8")
+    (source_dir / "日本語").mkdir()
+    (source_dir / "日本語" / "文字.txt").write_text("utf8", encoding="utf-8")
+    (source_dir / "z-empty").mkdir()
+    (source_dir / "a-empty").mkdir()
+
+    resolved_paths = resolve_startup_paths(
+        source_arg_raw=str(source_dir),
+        dest_arg_raw=str(dest_dir),
+        ignore_arg_raw=None,
+        app_root_abs=tmp_path,
+    )
+    ignore_rule_set = load_ignore_rule_set(None)
+    fixed_now_utc = datetime(2026, 2, 25, 4, 5, 6, tzinfo=timezone.utc)
+
+    archive_result = archive_service.create_snapshot(
+        resolved_paths=resolved_paths,
+        ignore_rule_set=ignore_rule_set,
+        comment_raw="sorted",
+        now_utc_dt=fixed_now_utc,
+    )
+
+    metadata_payload = json.loads(archive_result.metadata_path.read_text(encoding="utf-8"))
+
+    assert metadata_payload["archived_files"] == [
+        str(Path("alpha") / "a.txt"),
+        "root.txt",
+        str(Path("zeta") / "b.txt"),
+        str(Path("日本語") / "文字.txt"),
+    ]
+    assert metadata_payload["empty_directories"] == [
+        "a-empty",
+        "z-empty",
+    ]

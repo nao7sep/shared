@@ -778,11 +778,11 @@
     },
     {
       "text": "tk: fix json key order",
-      "status": "pending",
+      "status": "canceled",
       "created_utc": "2026-03-13T00:29:20.360767+00:00",
-      "handled_utc": null,
-      "subjective_date": null,
-      "note": null
+      "handled_utc": "2026-03-13T06:01:56.258734+00:00",
+      "subjective_date": "2026-03-13",
+      "note": "already ok"
     }
   ]
 }

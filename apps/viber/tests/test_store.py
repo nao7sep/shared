@@ -130,6 +130,53 @@ def test_save_uses_canonical_key_order(tmp_path: Path) -> None:
     ]
 
 
+def test_save_preserves_existing_entity_list_order(tmp_path: Path) -> None:
+    path = tmp_path / "data.json"
+    db = Database(
+        groups=[
+            Group(id=2, name="Zulu"),
+            Group(id=1, name="Alpha"),
+        ],
+        projects=[
+            Project(
+                id=5,
+                name="zeta-service",
+                group_id=2,
+                state=ProjectState.ACTIVE,
+                created_utc="2026-03-05T00:00:00Z",
+            ),
+            Project(
+                id=3,
+                name="alpha-service",
+                group_id=1,
+                state=ProjectState.SUSPENDED,
+                created_utc="2026-03-04T00:00:00Z",
+            ),
+        ],
+        tasks=[
+            Task(
+                id=9,
+                description="Z task",
+                group_id=None,
+                created_utc="2026-03-06T00:00:00Z",
+            ),
+            Task(
+                id=4,
+                description="A task",
+                group_id=1,
+                created_utc="2026-03-03T00:00:00Z",
+            ),
+        ],
+    )
+
+    save_database(db, path)
+
+    parsed = json.loads(path.read_text(encoding="utf-8"))
+    assert [group["id"] for group in parsed["groups"]] == [2, 1]
+    assert [project["id"] for project in parsed["projects"]] == [5, 3]
+    assert [task["id"] for task in parsed["tasks"]] == [9, 4]
+
+
 def test_save_sorts_assignment_keys_numerically(tmp_path: Path) -> None:
     path = tmp_path / "data.json"
     db = Database(

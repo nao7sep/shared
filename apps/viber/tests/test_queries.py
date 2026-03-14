@@ -2,7 +2,15 @@
 
 import pytest
 
-from viber.models import AssignmentStatus, Database, ProjectState
+from viber.models import (
+    Assignment,
+    AssignmentStatus,
+    Database,
+    Group,
+    Project,
+    ProjectState,
+    Task,
+)
 from viber.queries import pending_all, pending_by_project, pending_by_task
 from viber.service import (
     create_group,
@@ -87,6 +95,54 @@ def test_pending_by_project_returns_empty_for_suspended() -> None:
     set_project_state(db, p.id, ProjectState.SUSPENDED)
     results = pending_by_project(db, p.id)
     assert results == []
+
+
+def test_pending_by_project_orders_by_created_time_not_storage_order() -> None:
+    db = Database(
+        groups=[Group(id=1, name="Backend")],
+        projects=[
+            Project(
+                id=1,
+                name="api",
+                group_id=1,
+                state=ProjectState.ACTIVE,
+                created_utc="2026-03-01T00:00:00Z",
+            )
+        ],
+        tasks=[
+            Task(
+                id=2,
+                description="Later task",
+                group_id=None,
+                created_utc="2026-03-03T00:00:00Z",
+            ),
+            Task(
+                id=1,
+                description="Earlier task",
+                group_id=None,
+                created_utc="2026-03-02T00:00:00Z",
+            ),
+        ],
+        assignments={
+            "1-2": Assignment(
+                project_id=1,
+                task_id=2,
+                status=AssignmentStatus.PENDING,
+                comment=None,
+                handled_utc=None,
+            ),
+            "1-1": Assignment(
+                project_id=1,
+                task_id=1,
+                status=AssignmentStatus.PENDING,
+                comment=None,
+                handled_utc=None,
+            ),
+        },
+    )
+
+    results = pending_by_project(db, 1)
+    assert [task.id for task, _assignment in results] == [1, 2]
 
 
 def test_pending_by_project_not_found() -> None:

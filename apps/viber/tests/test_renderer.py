@@ -143,6 +143,24 @@ def test_render_tasks_newest_first(tmp_path: Path) -> None:
     assert pos_second < pos_first, "Newer task should appear first in HTML"
 
 
+def test_render_projects_sorted_case_insensitively(tmp_path: Path) -> None:
+    db = Database()
+    g = create_group(db, "Backend")
+    create_project(db, "zeta-service", g.id)
+    create_project(db, "Alpha-service", g.id)
+    create_project(db, "beta-service", g.id)
+    create_task(db, "Task", None)
+
+    check_base = tmp_path / "check.html"
+    render_check_pages(db, check_base)
+    content = (tmp_path / "check-backend.html").read_text(encoding="utf-8")
+
+    pos_alpha = content.find("Alpha-service")
+    pos_beta = content.find("beta-service")
+    pos_zeta = content.find("zeta-service")
+    assert pos_alpha < pos_beta < pos_zeta
+
+
 def test_render_multiple_groups(tmp_path: Path) -> None:
     db = Database()
     g1 = create_group(db, "Backend")

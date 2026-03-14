@@ -102,3 +102,50 @@ def test_discover_snapshots_skips_metadata_zip_filename_mismatch(tmp_path: Path)
     assert "Metadata zip filename mismatch" in warnings[0].message
     assert "snapshot.zip" in warnings[0].message
     assert "other.zip" in warnings[0].message
+
+
+def test_discover_snapshots_orders_records_by_created_utc_descending(
+    tmp_path: Path,
+) -> None:
+    older_utc_dt = datetime(2026, 2, 25, 9, 10, 11, 123456, tzinfo=timezone.utc)
+    newer_utc_dt = datetime(2026, 2, 25, 9, 10, 12, 123456, tzinfo=timezone.utc)
+
+    older_zip = tmp_path / "a-older.zip"
+    with zipfile.ZipFile(older_zip, mode="w") as zf:
+        zf.writestr("older.txt", "old")
+    newer_zip = tmp_path / "z-newer.zip"
+    with zipfile.ZipFile(newer_zip, mode="w") as zf:
+        zf.writestr("newer.txt", "new")
+
+    write_snapshot_metadata(
+        metadata_path_abs=tmp_path / "a-older.json",
+        snapshot_metadata=SnapshotMetadata(
+            created_utc=format_created_utc(older_utc_dt),
+            created_at=format_created_at(older_utc_dt),
+            comment="older",
+            comment_filename_segment="older",
+            zip_filename=older_zip.name,
+            archived_files=["older.txt"],
+            empty_directories=[],
+        ),
+    )
+    write_snapshot_metadata(
+        metadata_path_abs=tmp_path / "z-newer.json",
+        snapshot_metadata=SnapshotMetadata(
+            created_utc=format_created_utc(newer_utc_dt),
+            created_at=format_created_at(newer_utc_dt),
+            comment="newer",
+            comment_filename_segment="newer",
+            zip_filename=newer_zip.name,
+            archived_files=["newer.txt"],
+            empty_directories=[],
+        ),
+    )
+
+    records, warnings = discover_snapshots(dest_dir_abs=tmp_path)
+
+    assert warnings == []
+    assert [record.zip_path.name for record in records] == [
+        "z-newer.zip",
+        "a-older.zip",
+    ]

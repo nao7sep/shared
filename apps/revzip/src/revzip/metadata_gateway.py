@@ -10,19 +10,21 @@ from .errors import MetadataError
 from .models import SnapshotMetadata
 from .timestamps import parse_created_at, parse_created_utc
 
+_SNAPSHOT_METADATA_KEY_ORDER = (
+    "created_utc",
+    "created_at",
+    "comment",
+    "comment_filename_segment",
+    "zip_filename",
+    "archived_files",
+    "empty_directories",
+)
+
 
 def write_snapshot_metadata(
     *, metadata_path_abs: Path, snapshot_metadata: SnapshotMetadata
 ) -> None:
-    payload = {
-        "created_utc": snapshot_metadata.created_utc,
-        "created_at": snapshot_metadata.created_at,
-        "comment": snapshot_metadata.comment,
-        "comment_filename_segment": snapshot_metadata.comment_filename_segment,
-        "zip_filename": snapshot_metadata.zip_filename,
-        "archived_files": snapshot_metadata.archived_files,
-        "empty_directories": snapshot_metadata.empty_directories,
-    }
+    payload = _build_snapshot_metadata_payload(snapshot_metadata)
     try:
         metadata_path_abs.write_text(
             f"{json.dumps(payload, ensure_ascii=False, indent=2)}\n",
@@ -81,6 +83,15 @@ def read_snapshot_metadata(*, metadata_path_abs: Path) -> SnapshotMetadata:
         archived_files=archived_files,
         empty_directories=empty_directories,
     )
+
+
+def _build_snapshot_metadata_payload(
+    snapshot_metadata: SnapshotMetadata,
+) -> dict[str, str | list[str]]:
+    return {
+        key: getattr(snapshot_metadata, key)
+        for key in _SNAPSHOT_METADATA_KEY_ORDER
+    }
 
 
 def _get_required_str(payload: dict[str, Any], key: str, metadata_path_abs: Path) -> str:
