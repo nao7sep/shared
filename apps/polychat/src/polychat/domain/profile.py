@@ -26,6 +26,82 @@ _KNOWN_PROFILE_KEYS = {
     "ai_limits",
 }
 
+_PROFILE_PROMPT_KEYS = (
+    "system_prompt",
+    "title_prompt",
+    "summary_prompt",
+    "safety_prompt",
+)
+
+_API_KEY_FIELD_ORDER: dict[str, tuple[str, ...]] = {
+    "env": ("type", "key"),
+    "json": ("type", "path", "key"),
+    "keychain": ("type", "service", "account"),
+    "credential": ("type", "service", "account"),
+    "direct": ("type", "value"),
+}
+
+_AI_LIMIT_SECTION_ORDER = ("default", "providers", "helper")
+_AI_LIMIT_BLOCK_FIELD_ORDER = ("max_output_tokens", "search_max_output_tokens")
+
+
+def _ordered_mapping(
+    raw: Mapping[str, Any],
+    preferred_keys: tuple[str, ...],
+) -> dict[str, Any]:
+    """Return a dict with known keys first and extras kept afterward."""
+    payload: dict[str, Any] = {}
+    for key in preferred_keys:
+        if key in raw:
+            payload[key] = raw[key]
+    for key, value in raw.items():
+        if key not in payload:
+            payload[str(key)] = value
+    return payload
+
+
+def _serialize_api_keys(api_keys: Mapping[str, Any]) -> dict[str, Any]:
+    """Serialize API key configs with stable per-type field ordering."""
+    payload: dict[str, Any] = {}
+    for provider, key_config in api_keys.items():
+        if isinstance(key_config, Mapping):
+            key_type = str(key_config.get("type", ""))
+            preferred_keys = _API_KEY_FIELD_ORDER.get(key_type, ("type",))
+            payload[str(provider)] = _ordered_mapping(key_config, preferred_keys)
+        else:
+            payload[str(provider)] = key_config
+    return payload
+
+
+def _serialize_ai_limit_block(block: Mapping[str, Any]) -> dict[str, Any]:
+    """Serialize one ai_limits block with stable known-key ordering."""
+    return _ordered_mapping(block, _AI_LIMIT_BLOCK_FIELD_ORDER)
+
+
+def _serialize_ai_limits(ai_limits: Mapping[str, Any]) -> dict[str, Any]:
+    """Serialize ai_limits with stable section and block ordering."""
+    payload: dict[str, Any] = {}
+    for key in _AI_LIMIT_SECTION_ORDER:
+        if key not in ai_limits:
+            continue
+        value = ai_limits[key]
+        if key == "providers" and isinstance(value, Mapping):
+            payload[key] = {
+                str(provider): _serialize_ai_limit_block(block)
+                if isinstance(block, Mapping)
+                else block
+                for provider, block in value.items()
+            }
+        elif isinstance(value, Mapping):
+            payload[key] = _serialize_ai_limit_block(value)
+        else:
+            payload[key] = value
+
+    for key, value in ai_limits.items():
+        if key not in payload:
+            payload[str(key)] = value
+    return payload
+
 
 @dataclass(slots=True)
 class RuntimeProfile:
@@ -138,26 +214,18 @@ class RuntimeProfile:
         profile: dict[str, Any] = {"default_ai": self.default_ai}
         if self.default_helper_ai is not None:
             profile["default_helper_ai"] = self.default_helper_ai
-        profile.update(
-            {
-                "models": dict(self.models),
-                "timeout": self.timeout,
-                "input_mode": self.input_mode,
-                "chats_dir": self.chats_dir,
-                "logs_dir": self.logs_dir,
-                "api_keys": dict(self.api_keys),
-            }
-        )
-        if self.system_prompt is not None:
-            profile["system_prompt"] = self.system_prompt
-        if self.title_prompt is not None:
-            profile["title_prompt"] = self.title_prompt
-        if self.summary_prompt is not None:
-            profile["summary_prompt"] = self.summary_prompt
-        if self.safety_prompt is not None:
-            profile["safety_prompt"] = self.safety_prompt
+        profile["models"] = dict(self.models)
+        profile["timeout"] = self.timeout
+        profile["input_mode"] = self.input_mode
+        for key in _PROFILE_PROMPT_KEYS:
+            value = getattr(self, key)
+            if value is not None:
+                profile[key] = value
+        profile["chats_dir"] = self.chats_dir
+        profile["logs_dir"] = self.logs_dir
+        profile["api_keys"] = _serialize_api_keys(self.api_keys)
         if self.ai_limits is not None:
-            profile["ai_limits"] = dict(self.ai_limits)
+            profile["ai_limits"] = _serialize_ai_limits(self.ai_limits)
 
         profile.update(self.extras)
         return profile

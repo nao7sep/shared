@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Mapping
 
 from ..ai.types import Citation
 from ..time_utils import utc_now_iso as _utc_now_roundtrip
@@ -45,6 +45,17 @@ def _normalize_content(raw_content: Any) -> list[str]:
     if isinstance(raw_content, list):
         return [str(part) for part in raw_content]
     raise ValueError("Invalid message content: expected string or list")
+
+
+def _serialize_citation(raw_citation: Mapping[str, Any]) -> Citation:
+    """Serialize one citation with a stable field order."""
+    payload: Citation = {}
+    number = raw_citation.get("number")
+    if isinstance(number, int):
+        payload["number"] = number
+    payload["title"] = raw_citation.get("title")
+    payload["url"] = raw_citation.get("url")
+    return payload
 
 
 @dataclass(slots=True)
@@ -164,14 +175,7 @@ class ChatMessage:
             normalized: list[Citation] = []
             for citation in citations_payload:
                 if isinstance(citation, dict):
-                    number = citation.get("number")
-                    record: Citation = {
-                        "title": citation.get("title"),
-                        "url": citation.get("url"),
-                    }
-                    if isinstance(number, int):
-                        record["number"] = number
-                    normalized.append(record)
+                    normalized.append(_serialize_citation(citation))
             citations = normalized if normalized else None
 
         details_payload = message.get("details")
@@ -241,7 +245,9 @@ class ChatMessage:
                 payload["model"] = self.model
             payload["content"] = list(self.content)
             if self.citations:
-                payload["citations"] = list(self.citations)
+                payload["citations"] = [
+                    _serialize_citation(citation) for citation in self.citations
+                ]
             if self.details is not None:
                 payload["details"] = dict(self.details)
         elif self.role == "error":
@@ -251,13 +257,17 @@ class ChatMessage:
             if self.model is not None:
                 payload["model"] = self.model
             if self.citations:
-                payload["citations"] = list(self.citations)
+                payload["citations"] = [
+                    _serialize_citation(citation) for citation in self.citations
+                ]
         else:
             payload["content"] = list(self.content)
             if self.model is not None:
                 payload["model"] = self.model
             if self.citations:
-                payload["citations"] = list(self.citations)
+                payload["citations"] = [
+                    _serialize_citation(citation) for citation in self.citations
+                ]
             if self.details is not None:
                 payload["details"] = dict(self.details)
 

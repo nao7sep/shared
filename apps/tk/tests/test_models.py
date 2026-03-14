@@ -114,6 +114,25 @@ class TestProfile:
         assert profile.auto_sync is True
         assert profile.timezone == "Asia/Tokyo"
 
+    def test_profile_to_dict_uses_canonical_key_order(self):
+        profile = Profile(
+            timezone="Asia/Tokyo",
+            subjective_day_start="04:00:00",
+            data_path="/tmp/tasks.json",
+            output_path="/tmp/TODO.md",
+            auto_sync=False,
+            sync_on_exit=True,
+        )
+
+        assert list(profile.to_dict().keys()) == [
+            "data_path",
+            "output_path",
+            "timezone",
+            "subjective_day_start",
+            "auto_sync",
+            "sync_on_exit",
+        ]
+
 
 class TestPayloadDtos:
     """Test presenter payload DTOs."""

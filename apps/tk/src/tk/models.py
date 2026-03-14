@@ -183,10 +183,10 @@ class Profile:
     def to_dict(self) -> dict[str, Any]:
         """Serialize profile model to dict payload."""
         return {
-            "timezone": self.timezone,
-            "subjective_day_start": self.subjective_day_start,
             "data_path": self.data_path,
             "output_path": self.output_path,
+            "timezone": self.timezone,
+            "subjective_day_start": self.subjective_day_start,
             "auto_sync": self.auto_sync,
             "sync_on_exit": self.sync_on_exit,
         }

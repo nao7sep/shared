@@ -194,6 +194,40 @@ class TestSaveTasks:
 
         assert loaded["tasks"][0]["text"] == "日本語タスク 🚀"
 
+    def test_save_tasks_normalizes_task_key_order(self, temp_dir):
+        """Test that saved task JSON uses the app's canonical field order."""
+        path = temp_dir / "tasks.json"
+        scrambled_payload = {
+            "tasks": [
+                {
+                    "note": None,
+                    "subjective_date": None,
+                    "handled_utc": None,
+                    "created_utc": "2026-02-09T10:00:00+00:00",
+                    "status": "pending",
+                    "text": "Task one",
+                }
+            ]
+        }
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(scrambled_payload, f)
+
+        tasks_data = data.load_tasks(str(path))
+        data.save_tasks(str(path), tasks_data)
+
+        with open(path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+
+        assert list(loaded["tasks"][0].keys()) == [
+            "text",
+            "status",
+            "created_utc",
+            "handled_utc",
+            "subjective_date",
+            "note",
+        ]
+
 
 class TestAddTask:
     """Test TaskStore.add_task method."""
@@ -367,6 +401,18 @@ class TestGroupHandledTasks:
         dates = [group.date for group in result]
         assert "2026-02-09" in dates
         assert "unknown" in dates
+
+    def test_group_handled_tasks_places_unknown_last(self):
+        """Test that unknown-date tasks are always rendered after dated groups."""
+        tasks = [
+            (0, Task(text="t1", status="done", created_utc="2026-02-08T09:00:00+00:00", subjective_date=None, handled_utc="2026-02-08T10:00:00+00:00")),
+            (1, Task(text="t2", status="done", created_utc="2026-02-09T09:00:00+00:00", subjective_date="2026-02-09", handled_utc="2026-02-09T10:00:00+00:00")),
+            (2, Task(text="t3", status="done", created_utc="2026-02-07T09:00:00+00:00", subjective_date="2026-02-07", handled_utc="2026-02-07T10:00:00+00:00")),
+        ]
+
+        result = data.group_handled_tasks(tasks, include_unknown=True)
+
+        assert [group.date for group in result] == ["2026-02-09", "2026-02-07", "unknown"]
 
     def test_group_handled_tasks_sort_dates_desc(self):
         """Test that dates are sorted descending."""
